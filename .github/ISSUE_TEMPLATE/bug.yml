@@ -1,0 +1,36 @@
+name: Bug
+description: Report a bug
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this?
+    validations:
+      required: true
+  - type: dropdown
+    id: agent-safe
+    attributes:
+      label: Agent Safe?
+      description: Can an agent pick up this fix?
+      options:
+        - "Yes — clear root cause, established pattern"
+        - "Partial — agent can investigate, human fixes"
+        - "No — requires human judgment"
+    validations:
+      required: true

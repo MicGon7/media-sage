@@ -1,0 +1,39 @@
+name: Feature
+description: New feature or enhancement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What should this feature do?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know this is done?
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+    validations:
+      required: true
+  - type: dropdown
+    id: agent-safe
+    attributes:
+      label: Agent Safe?
+      description: Can an agent pick up this ticket?
+      options:
+        - "Yes — follows established pattern"
+        - "Partial — agent can help, human leads"
+        - "No — requires human judgment"
+    validations:
+      required: true
+  - type: textarea
+    id: testing
+    attributes:
+      label: Testing Requirements
+      description: What tests are needed?
+    validations:
+      required: true
