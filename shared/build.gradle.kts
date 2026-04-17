@@ -77,6 +77,8 @@ room {
 }
 
 dependencies {
-    // Room KSP processor — runs on each target
-    ksp(libs.androidx.room.compiler)
+    // Room KSP processor — target-specific configurations
+    add("kspAndroid", libs.androidx.room.compiler)
+    add("kspIosArm64", libs.androidx.room.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
 }
