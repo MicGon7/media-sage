@@ -7,6 +7,9 @@ build/
 *.war
 *.ear
 
+# Claude Code
+.claude/
+
 # IDE
 .idea/
 *.iml
