@@ -19,16 +19,37 @@ jobs:
             echo "No Jira ticket found in branch name: $BRANCH"
             echo "found=false" >> "$GITHUB_OUTPUT"
           else
+            echo "Found ticket: $TICKET"
             echo "ticket=$TICKET" >> "$GITHUB_OUTPUT"
             echo "found=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Transition ticket to Done
         if: steps.extract.outputs.found == 'true'
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
-          curl -s -X POST \
-            -u "${{ secrets.JIRA_USER_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+          TICKET="${{ steps.extract.outputs.ticket }}"
+
+          # Verify secrets are available
+          if [ -z "$JIRA_EMAIL" ] || [ -z "$JIRA_TOKEN" ]; then
+            echo "::error::JIRA_USER_EMAIL or JIRA_API_TOKEN secret is missing or empty"
+            exit 1
+          fi
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            -u "${JIRA_EMAIL}:${JIRA_TOKEN}" \
             -H "Content-Type: application/json" \
             -d '{"transition":{"id":"31"}}' \
-            "https://media-sage.atlassian.net/rest/api/3/issue/${{ steps.extract.outputs.ticket }}/transitions"
-          echo "Transitioned ${{ steps.extract.outputs.ticket }} to Done"
+            "https://media-sage.atlassian.net/rest/api/3/issue/${TICKET}/transitions")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Successfully transitioned ${TICKET} to Done (HTTP ${HTTP_CODE})"
+          else
+            echo "::error::Failed to transition ${TICKET} (HTTP ${HTTP_CODE}): ${BODY}"
+            exit 1
+          fi
