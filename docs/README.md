@@ -14,3 +14,4 @@ Learning-oriented docs for each completed ticket. Each doc covers what was built
 | [MS-17](MS-17-testing-infrastructure.md) | Testing infrastructure | 1 |
 | [MS-9](MS-9-room-database-schema.md) | Room database schema (entities, DAOs) | 1 |
 | [MS-11](MS-11-repository-domain-models.md) | Repository pattern & domain models | 1 |
+| [MS-6](MS-6-claude-api-integration.md) | Claude API integration service | 1 |
