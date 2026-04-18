@@ -1,21 +1,28 @@
 package com.mediasage.server
 
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.server.application.Application
+import io.ktor.server.netty.EngineMain
+import io.ktor.server.routing.routing
+import com.mediasage.server.plugins.*
+import com.mediasage.server.routes.*
 
-fun main() {
-    embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
-        configureRouting()
-    }.start(wait = true)
+fun main(args: Array<String>) {
+    EngineMain.main(args)
+}
+
+/** Application module referenced in application.conf. Installs plugins and routes. */
+fun Application.module() {
+    configureContentNegotiation()
+    configureCORS()
+    configureCallLogging()
+    configureStatusPages()
+    configureRouting()
 }
 
 fun Application.configureRouting() {
     routing {
-        get("/health") {
-            call.respondText("OK")
-        }
+        healthRoutes()
+        newsRoutes()
+        analysisRoutes()
     }
 }
