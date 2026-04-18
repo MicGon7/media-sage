@@ -10,3 +10,4 @@ Learning-oriented docs for each completed ticket. Each doc covers what was built
 | [MS-18](MS-18-project-scaffolding.md) | Project scaffolding — KMP + Compose MP + Ktor | 1 |
 | [MS-15](MS-15-claude-md.md) | CLAUDE.md & development conventions | 1 |
 | [MS-16](MS-16-ci-cd-pipeline.md) | CI/CD pipeline setup | 1 |
+| [MS-5](MS-5-ktor-routing-env-config.md) | Ktor routing structure & environment config | 1 |
