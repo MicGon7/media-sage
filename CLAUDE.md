@@ -82,9 +82,13 @@ com.mediasage.server/       — server module
 
 ### Testing
 - Common tests in `commonTest` source sets
-- Server tests use `ktor-server-test-host`
-- Shared module has `ktor-client-mock` for HTTP tests
+- Server tests use `ktor-server-test-host` with `testApplication { }` DSL
+- Shared module has `ktor-client-mock` with `MockEngine` for HTTP tests
+- composeApp tests in `commonTest` — test platform-independent logic
 - Koin test utilities available via `koin-test`
+- Use `runTest` from `kotlinx-coroutines-test` for suspending test functions
+- Every new feature must include tests — run `./gradlew allTests` before creating a PR
+- Test file naming: `{ClassName}Test.kt` in the corresponding test source set
 
 ## Agent Guidelines
 
