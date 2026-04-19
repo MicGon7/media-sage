@@ -35,5 +35,7 @@ dependencies {
     // Testing
     testImplementation(libs.kotlin.test)
     testImplementation(libs.ktor.server.tests)
+    testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.koin.test)
 }
