@@ -27,11 +27,14 @@ data class NewsArticle(
     val keywords: String = "",
     val snippet: String = "",
     val url: String,
-    @SerialName("image_url") val imageUrl: String = "",
+    @SerialName("image_url")
+    val imageUrl: String = "",
     val language: String = "",
-    @SerialName("published_at") val publishedAt: String = "",
+    @SerialName("published_at")
+    val publishedAt: String = "",
     val source: String = "",
     val categories: List<String> = emptyList(),
-    @SerialName("relevance_score") val relevanceScore: Float? = null,
+    @SerialName("relevance_score")
+    val relevanceScore: Float? = null,
     val locale: String = ""
 )

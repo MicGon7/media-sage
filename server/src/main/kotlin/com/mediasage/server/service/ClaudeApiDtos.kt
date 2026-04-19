@@ -8,7 +8,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ClaudeRequest(
     val model: String,
-    @SerialName("max_tokens") val maxTokens: Int,
+    @SerialName("max_tokens")
+    val maxTokens: Int,
     val system: String,
     val messages: List<ClaudeMessage>
 )
@@ -28,7 +29,8 @@ data class ClaudeResponse(
     val role: String,
     val content: List<ContentBlock>,
     val model: String,
-    @SerialName("stop_reason") val stopReason: String? = null,
+    @SerialName("stop_reason")
+    val stopReason: String? = null,
     val usage: Usage
 )
 
@@ -40,8 +42,10 @@ data class ContentBlock(
 
 @Serializable
 data class Usage(
-    @SerialName("input_tokens") val inputTokens: Int,
-    @SerialName("output_tokens") val outputTokens: Int
+    @SerialName("input_tokens")
+    val inputTokens: Int,
+    @SerialName("output_tokens")
+    val outputTokens: Int
 )
 
 // ---- Error Response ----
