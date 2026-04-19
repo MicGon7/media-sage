@@ -12,10 +12,12 @@ plugins {
     alias(libs.plugins.ktor) apply false
     alias(libs.plugins.room) apply false
     alias(libs.plugins.detekt) apply false
+    alias(libs.plugins.kover) apply false
 }
 
 subprojects {
     apply(plugin = "io.gitlab.arturbosch.detekt")
+    apply(plugin = "org.jetbrains.kotlinx.kover")
 
     configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
         config.setFrom(files("${rootProject.projectDir}/detekt.yml"))

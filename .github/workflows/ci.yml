@@ -39,5 +39,14 @@ jobs:
       - name: Build Android app
         run: ./gradlew :composeApp:assembleDebug
 
-      - name: Run all tests
-        run: ./gradlew allTests
+      - name: Run all tests with coverage
+        run: ./gradlew allTests koverXmlReport koverHtmlReport
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            **/build/reports/kover/
+          retention-days: 14
