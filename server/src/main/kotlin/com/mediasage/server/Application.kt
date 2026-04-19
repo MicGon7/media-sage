@@ -16,9 +16,11 @@ fun main(args: Array<String>) {
 fun Application.module() {
     val claudeApiKey = environment.config
         .propertyOrNull("app.claude.apiKey")?.getString() ?: ""
+    val newsApiKey = environment.config
+        .propertyOrNull("app.news.apiKey")?.getString() ?: ""
 
     install(Koin) {
-        modules(serverModule(claudeApiKey))
+        modules(serverModule(claudeApiKey, newsApiKey))
     }
 
     configureContentNegotiation()
