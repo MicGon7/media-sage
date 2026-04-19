@@ -27,6 +27,9 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+      - name: Run Detekt static analysis
+        run: ./gradlew detekt
+
       - name: Build shared module
         run: ./gradlew :shared:build
 

@@ -11,4 +11,15 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.ktor) apply false
     alias(libs.plugins.room) apply false
+    alias(libs.plugins.detekt) apply false
+}
+
+subprojects {
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+        config.setFrom(files("${rootProject.projectDir}/detekt.yml"))
+        buildUponDefaultConfig = true
+        parallel = true
+    }
 }

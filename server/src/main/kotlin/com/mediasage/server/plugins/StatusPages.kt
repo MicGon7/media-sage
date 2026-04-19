@@ -6,14 +6,6 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
-import kotlinx.serialization.Serializable
-
-/** Standard error response returned by all endpoints. */
-@Serializable
-data class ErrorResponse(
-    val status: Int,
-    val message: String
-)
 
 /** Catches exceptions and returns structured JSON error responses instead of stack traces. */
 fun Application.configureStatusPages() {
