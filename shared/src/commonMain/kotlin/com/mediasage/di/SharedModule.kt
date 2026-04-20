@@ -1,5 +1,8 @@
 package com.mediasage.di
 
+import com.mediasage.data.remote.MediaSageApi
+import com.mediasage.data.remote.MediaSageApiImpl
+import com.mediasage.data.remote.createHttpClient
 import com.mediasage.data.repository.FigureRepositoryImpl
 import com.mediasage.data.repository.HeadlineRepositoryImpl
 import com.mediasage.data.repository.MatchRepositoryImpl
@@ -10,7 +13,13 @@ import com.mediasage.domain.repository.MatchRepository
 import com.mediasage.domain.repository.QuoteRepository
 import org.koin.dsl.module
 
-val sharedModule = module {
+fun sharedModule(serverBaseUrl: String = "http://10.0.2.2:8080") = module {
+    // HTTP client for communicating with the Media Sage server
+    single { createHttpClient() }
+
+    // API service — single interface for all server endpoints
+    single<MediaSageApi> { MediaSageApiImpl(get(), serverBaseUrl) }
+
     // Repositories — interface bound to implementation
     single<FigureRepository> { FigureRepositoryImpl(get()) }
     single<QuoteRepository> { QuoteRepositoryImpl(get()) }
