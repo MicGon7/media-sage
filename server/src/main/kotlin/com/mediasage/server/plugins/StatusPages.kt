@@ -2,6 +2,7 @@ package com.mediasage.server.plugins
 
 import com.mediasage.server.service.ClaudeApiException
 import com.mediasage.server.service.NewsApiException
+import com.mediasage.server.service.ScriptureApiException
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.statuspages.*
@@ -14,6 +15,9 @@ fun Application.configureStatusPages() {
             call.respond(HttpStatusCode.fromValue(cause.statusCode), ErrorResponse(cause.statusCode, cause.message))
         }
         exception<NewsApiException> { call, cause ->
+            call.respond(HttpStatusCode.fromValue(cause.statusCode), ErrorResponse(cause.statusCode, cause.message))
+        }
+        exception<ScriptureApiException> { call, cause ->
             call.respond(HttpStatusCode.fromValue(cause.statusCode), ErrorResponse(cause.statusCode, cause.message))
         }
         exception<IllegalArgumentException> { call, cause ->
