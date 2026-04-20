@@ -20,12 +20,11 @@ class NewsApiService(
         language: String = "en",
         limit: Int = 10
     ): List<NewsArticle> {
-        val response = httpClient.get("$BASE_URL/all") {
+        val response = httpClient.get("$BASE_URL/top") {
             parameter("api_token", apiKey)
             parameter("locale", locale)
             parameter("language", language)
             parameter("limit", limit)
-            parameter("sort", "published_at")
             parameter("exclude_categories", EXCLUDED_CATEGORIES)
         }
 
