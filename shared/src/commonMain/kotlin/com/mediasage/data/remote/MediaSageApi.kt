@@ -1,0 +1,10 @@
+package com.mediasage.data.remote
+
+/** Client-side API service for communicating with the Media Sage server. */
+interface MediaSageApi {
+    suspend fun getHeadlines(locale: String = "us", limit: Int = 10): List<NewsArticleDto>
+    suspend fun searchNews(query: String, limit: Int = 10): List<NewsArticleDto>
+    suspend fun matchQuote(request: MatchRequestDto): MatchResultDto
+    suspend fun searchScripture(query: String, limit: Int = 10): List<ScriptureVerseDto>
+    suspend fun getPassage(passageId: String): ScripturePassageDto
+}
