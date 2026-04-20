@@ -20,3 +20,4 @@ Learning-oriented docs for each completed ticket. Each doc covers what was built
 | [MS-23](MS-23-kover-code-coverage.md) | Test code coverage with Kover | 1 |
 | [MS-8](MS-8-scripture-api-integration.md) | Scripture API integration service | 1 |
 | [MS-10](MS-10-ktor-client-shared.md) | Ktor client API services in shared module | 1 |
+| [MS-27](MS-27-news-filter-prompt-update.md) | Filter news categories & update Claude prompt | 1 |

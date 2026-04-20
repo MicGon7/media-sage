@@ -12,6 +12,7 @@ class NewsApiService(
 ) {
     companion object {
         private const val BASE_URL = "https://api.thenewsapi.com/v1/news"
+        private const val EXCLUDED_CATEGORIES = "-sports,-entertainment"
     }
 
     suspend fun getTopHeadlines(
@@ -25,6 +26,7 @@ class NewsApiService(
             parameter("language", language)
             parameter("limit", limit)
             parameter("sort", "published_at")
+            parameter("categories", EXCLUDED_CATEGORIES)
         }
 
         if (!response.status.isSuccess()) {
