@@ -18,9 +18,11 @@ fun Application.module() {
         .propertyOrNull("app.claude.apiKey")?.getString() ?: ""
     val newsApiKey = environment.config
         .propertyOrNull("app.news.apiKey")?.getString() ?: ""
+    val scriptureApiKey = environment.config
+        .propertyOrNull("app.scripture.apiKey")?.getString() ?: ""
 
     install(Koin) {
-        modules(serverModule(claudeApiKey, newsApiKey))
+        modules(serverModule(claudeApiKey, newsApiKey, scriptureApiKey))
     }
 
     configureContentNegotiation()
@@ -35,5 +37,6 @@ fun Application.configureRouting() {
         healthRoutes()
         newsRoutes()
         analysisRoutes()
+        scriptureRoutes()
     }
 }

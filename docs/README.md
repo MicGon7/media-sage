@@ -18,3 +18,4 @@ Learning-oriented docs for each completed ticket. Each doc covers what was built
 | [MS-7](MS-7-news-api-integration.md) | News API integration service | 1 |
 | [MS-24](MS-24-detekt-static-analysis.md) | Detekt static analysis and linting | 1 |
 | [MS-23](MS-23-kover-code-coverage.md) | Test code coverage with Kover | 1 |
+| [MS-8](MS-8-scripture-api-integration.md) | Scripture API integration service | 1 |
