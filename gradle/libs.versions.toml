@@ -22,6 +22,7 @@ logback = "1.5.18"
 material3 = "1.10.0-alpha05"
 detekt = "1.23.8"
 kover = "0.9.8"
+nav3-ui = "1.0.0-alpha05"
 sqlite = "2.5.1"
 
 [libraries]
@@ -80,6 +81,9 @@ koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
 koin-ktor = { module = "io.insert-koin:koin-ktor", version.ref = "koin" }
 koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
+
+# Navigation 3 (Compose Multiplatform)
+navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "nav3-ui" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

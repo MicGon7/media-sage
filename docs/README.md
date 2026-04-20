@@ -22,3 +22,4 @@ Learning-oriented docs for each completed ticket. Each doc covers what was built
 | [MS-10](MS-10-ktor-client-shared.md) | Ktor client API services in shared module | 1 |
 | [MS-27](MS-27-news-filter-prompt-update.md) | Filter news categories & update Claude prompt | 1 |
 | [MS-28](MS-28-news-top-endpoint.md) | Switch News API to /top endpoint | 1 |
+| [MS-12](MS-12-navigation-screen-structure.md) | Navigation & screen structure (Nav3 + MVI) | 1 |
