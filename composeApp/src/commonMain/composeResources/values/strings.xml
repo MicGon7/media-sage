@@ -1,0 +1,27 @@
+<resources>
+    <!-- App -->
+    <string name="app_name">Media Sage</string>
+
+    <!-- Navigation -->
+    <string name="nav_headlines">Headlines</string>
+    <string name="nav_figures">Figures</string>
+    <string name="nav_back">Back</string>
+
+    <!-- Screen titles -->
+    <string name="title_home">Media Sage</string>
+    <string name="title_match">Quote Match</string>
+    <string name="title_figures">Figures</string>
+
+    <!-- Home screen -->
+    <string name="home_headlines_feed">Headlines Feed</string>
+    <string name="home_coming_soon">Coming in MS-13</string>
+    <string name="home_view_sample">View Sample Match</string>
+
+    <!-- Match screen -->
+    <string name="match_headline_id">Headline #%1$d</string>
+    <string name="match_coming_soon">Quote match coming in MS-14</string>
+
+    <!-- Figures screen -->
+    <string name="figures_title">Theologians, Mystics &amp; Figures</string>
+    <string name="figures_coming_soon">Figure selection coming soon</string>
+</resources>
