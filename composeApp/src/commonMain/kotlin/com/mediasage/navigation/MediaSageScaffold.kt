@@ -31,22 +31,24 @@ fun MediaSageScaffold(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(appState.titleRes)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-                navigationIcon = {
-                    if (!appState.isTopLevel) {
-                        IconButton(onClick = { appState.navigateBack() }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(Res.string.nav_back)
-                            )
+            if (appState.showTopBar) {
+                TopAppBar(
+                    title = { Text(stringResource(appState.titleRes)) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                    navigationIcon = {
+                        if (!appState.isTopLevel) {
+                            IconButton(onClick = { appState.navigateBack() }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(Res.string.nav_back)
+                                )
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             MediaSageBottomBar(

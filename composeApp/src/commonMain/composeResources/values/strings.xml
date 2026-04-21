@@ -16,7 +16,8 @@
     <string name="home_headlines_feed">Headlines Feed</string>
     <string name="home_coming_soon">Coming in MS-13</string>
     <string name="home_view_sample">View Sample Match</string>
-    <string name="home_tagline">Discover wisdom in today\'s news</string>
+    <string name="home_retry">Retry</string>
+    <string name="home_tagline">Discover wisdom in today's news</string>
 
     <!-- Match screen -->
     <string name="match_headline_id">Headline #%1$d</string>

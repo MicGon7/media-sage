@@ -23,6 +23,9 @@ class MediaSageAppState(
     val isTopLevel: Boolean
         get() = currentDestination in TopLevelDestination.entries.map { it.route }
 
+    val showTopBar: Boolean
+        get() = currentDestination !is Route.Home
+
     val titleRes: StringResource
         get() = when (currentDestination) {
             is Route.Home -> Res.string.title_home
