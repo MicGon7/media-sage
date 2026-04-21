@@ -7,12 +7,6 @@ import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.savedstate.serialization.SavedStateConfiguration
-import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.title_voices
-import mediasage.composeapp.generated.resources.title_home
-import mediasage.composeapp.generated.resources.title_match
-import org.jetbrains.compose.resources.StringResource
-
 @Stable
 class MediaSageAppState(
     val backStack: NavBackStack<NavKey>
@@ -23,19 +17,8 @@ class MediaSageAppState(
     val isTopLevel: Boolean
         get() = currentDestination in TopLevelDestination.entries.map { it.route }
 
-    val showTopBar: Boolean
-        get() = currentDestination !is Route.Home
-
     val showBottomBar: Boolean
         get() = isTopLevel
-
-    val titleRes: StringResource
-        get() = when (currentDestination) {
-            is Route.Home -> Res.string.title_home
-            is Route.Match -> Res.string.title_match
-            is Route.Figures -> Res.string.title_voices
-            else -> Res.string.title_home
-        }
 
     fun navigateToTopLevel(destination: TopLevelDestination) {
         if (currentDestination != destination.route) {

@@ -41,4 +41,5 @@ private val sampleMatchState = MatchContract.UiState.Success(
     matchExplanation = "This headline about communities coming together to transform " +
         "their neighborhoods through shared purpose echoes Bonhoeffer's belief that " +
         "faith is lived out in community and action, not in isolation.",
+    matchTheme = "Community & Purpose",
 )

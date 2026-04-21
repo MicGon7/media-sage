@@ -14,6 +14,7 @@ object MatchContract {
             val figureRole: String,
             val scriptureReference: String,
             val matchExplanation: String,
+            val matchTheme: String = "",
         ) : UiState
         data class Error(val message: String) : UiState
     }

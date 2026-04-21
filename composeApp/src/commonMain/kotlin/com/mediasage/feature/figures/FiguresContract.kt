@@ -2,7 +2,7 @@ package com.mediasage.feature.figures
 
 import com.mediasage.domain.model.FigureCategory
 
-/** MVI contract for the Figures browser feature. */
+/** MVI contract for the Voices (Figures) browser feature. */
 object FiguresContract {
 
     sealed interface UiState {
@@ -30,5 +30,7 @@ data class FigureItem(
     val id: Long,
     val name: String,
     val category: FigureCategory,
-    val century: String
+    val role: String = "",
+    val lifespan: String = "",
+    val description: String = ""
 )

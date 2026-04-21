@@ -1,8 +1,8 @@
 package com.mediasage.navigation
 
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,37 +19,14 @@ import com.mediasage.feature.home.HomeViewModel
 import com.mediasage.feature.match.MatchContract
 import com.mediasage.feature.match.MatchScreen
 import com.mediasage.feature.match.MatchViewModel
-import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaSageScaffold(
     appState: MediaSageAppState = rememberMediaSageAppState()
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            if (appState.showTopBar) {
-                TopAppBar(
-                    title = { Text(stringResource(appState.titleRes)) },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                    navigationIcon = {
-                        if (!appState.isTopLevel) {
-                            IconButton(onClick = { appState.navigateBack() }) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(Res.string.nav_back)
-                                )
-                            }
-                        }
-                    }
-                )
-            }
-        },
         bottomBar = {
             if (appState.showBottomBar) {
                 MediaSageBottomBar(
@@ -83,7 +60,8 @@ fun MediaSageScaffold(
                     MatchScreen(
                         headlineId = route.headlineId,
                         state = state,
-                        onIntent = vm::onIntent
+                        onIntent = vm::onIntent,
+                        onNavigateBack = { appState.navigateBack() }
                     )
                 }
                 is Route.Figures -> NavEntry(route) {
