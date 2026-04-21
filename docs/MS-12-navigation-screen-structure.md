@@ -9,7 +9,9 @@ Navigation 3 framework with MVI feature-based architecture for the Compose Multi
 
 ### Navigation
 - **`navigation/Routes.kt`** — Sealed interface `Route` with `Home`, `Match(headlineId)`, `Figures`. Polymorphic serialization for KMP state saving.
-- **`navigation/MediaSageScaffold.kt`** — Top-level Scaffold with TopAppBar, bottom NavigationBar, and NavDisplay. ViewModels created per destination.
+- **`navigation/TopLevelDestination.kt`** — Enum of bottom nav tabs (Headlines, Figures) with route, label resource, and icon.
+- **`navigation/MediaSageAppState.kt`** — Centralizes navigation state: `isTopLevel` (back button), `titleRes` (screen title), navigation methods.
+- **`navigation/MediaSageScaffold.kt`** — Top-level Scaffold driven by AppState. MediaSageBottomBar iterates TopLevelDestination declaratively.
 
 ### Feature modules (MVI Contract pattern)
 Each feature has 3 files:
@@ -30,13 +32,15 @@ Each feature has 3 files:
 ## Architecture
 
 ```
-App() → MaterialTheme → MediaSageScaffold
-  ├── TopAppBar (dynamic title, conditional back)
-  ├── NavigationBar (Headlines, Figures)
-  └── NavDisplay
-        ├── Route.Home → HomeViewModel → HomeScreen
-        ├── Route.Match → MatchViewModel → MatchScreen
-        └── Route.Figures → FiguresViewModel → FiguresScreen
+App() → MaterialTheme → MediaSageScaffold(appState)
+  ├── TopAppBar
+  │     title = stringResource(appState.titleRes)
+  │     back button visible when !appState.isTopLevel
+  ├── MediaSageBottomBar(TopLevelDestination.entries)
+  └── NavDisplay(appState.backStack)
+        ├── Route.Home → HomeViewModel → HomeScreen(state, onIntent, onNavigateToDetail)
+        ├── Route.Match → MatchViewModel → MatchScreen(headlineId, state, onIntent)
+        └── Route.Figures → FiguresViewModel → FiguresScreen(state, onIntent)
 ```
 
 ## Key decisions & why
@@ -46,6 +50,9 @@ App() → MaterialTheme → MediaSageScaffold
 - **Channels for side effects**: One-off events via `Channel` → `receiveAsFlow()`. Guarantees exactly-once delivery when UI is active. Chose over state-based "consumed events" to avoid clearing ceremony boilerplate.
 - **`state` not `uiState`**: Inside a ViewModel, there's no ambiguity — the UiState type name already says it's UI state. Shorter, cleaner.
 - **No base ViewModel**: Three ViewModels don't justify a generic abstraction. Convention (same file structure) provides consistency.
+- **Stateless screens**: Screens receive `state`, `onIntent`, and navigation lambdas — no ViewModel dependency. Previewable and testable. ViewModel wiring happens in MediaSageScaffold's NavDisplay entries.
+- **TopLevelDestination enum**: Bottom nav tabs defined as enum with route, label, and icon. Bottom bar iterates entries declaratively — adding a tab is one enum entry.
+- **MediaSageAppState**: Centralizes navigation logic. `isTopLevel` drives back button visibility, `titleRes` provides screen title, navigation methods handle all routing. Pattern from Google's Now in Android sample.
 - **Scaffold at top level only**: Screens are content composables. No nested Scaffolds.
 - **String resources**: All UI strings externalized in `composeResources/values/strings.xml`.
 - **Feature packages, not Gradle modules**: Convention-based structure for now. Defer submodules until codebase grows.
@@ -62,3 +69,5 @@ App() → MaterialTheme → MediaSageScaffold
 - Material Icons require `compose.materialIconsExtended` — deprecated, migrate to Material Symbols later.
 - `TopAppBar` requires `@OptIn(ExperimentalMaterial3Api::class)`.
 - Nav3 online docs showed APIs (`entry()`, `startKey`) that don't match the actual 1.0.0-alpha05 library.
+- Back button on top-level destinations crashes the app — fixed by checking `appState.isTopLevel` before showing it.
+- `collectAsStateWithLifecycle` is Android-only — use `collectAsState()` in KMP commonMain.
