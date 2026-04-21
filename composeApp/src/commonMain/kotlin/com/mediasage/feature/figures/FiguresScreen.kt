@@ -24,12 +24,18 @@ fun FiguresScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = stringResource(Res.string.figures_title),
+            text = stringResource(Res.string.title_voices),
             style = MaterialTheme.typography.headlineMedium
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = stringResource(Res.string.figures_coming_soon),
+            text = stringResource(Res.string.voices_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(Res.string.voices_coming_soon),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
