@@ -21,7 +21,7 @@ import com.mediasage.data.local.entity.QuoteEntity
         HeadlineEntity::class,
         MatchEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
