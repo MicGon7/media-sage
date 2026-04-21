@@ -22,6 +22,8 @@
     <!-- Match screen -->
     <string name="match_headline_id">Headline #%1$d</string>
     <string name="match_coming_soon">Quote match coming in MS-14</string>
+    <string name="match_finding">Finding encouragement…</string>
+    <string name="match_retry">Retry</string>
 
     <!-- Voices screen -->
     <string name="voices_subtitle">Theologians, mystics, and faithful witnesses</string>

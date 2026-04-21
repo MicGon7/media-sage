@@ -51,11 +51,13 @@ fun MediaSageScaffold(
             }
         },
         bottomBar = {
-            MediaSageBottomBar(
-                destinations = TopLevelDestination.entries,
-                currentDestination = appState.currentDestination,
-                onNavigate = { appState.navigateToTopLevel(it) }
-            )
+            if (appState.showBottomBar) {
+                MediaSageBottomBar(
+                    destinations = TopLevelDestination.entries,
+                    currentDestination = appState.currentDestination,
+                    onNavigate = { appState.navigateToTopLevel(it) }
+                )
+            }
         }
     ) { padding ->
         NavDisplay(
