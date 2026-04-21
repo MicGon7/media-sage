@@ -3,8 +3,6 @@ package com.mediasage.feature.home
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -15,11 +13,10 @@ import org.jetbrains.compose.resources.stringResource
 /** Headlines feed screen — full implementation in MS-13. */
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel,
-    onHeadlineClick: (Long) -> Unit
+    state: HomeContract.UiState,
+    onIntent: (HomeContract.Intent) -> Unit,
+    onNavigateToDetail: (Long) -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -38,7 +35,7 @@ fun HomeScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = { onHeadlineClick(1L) }) {
+        Button(onClick = { onNavigateToDetail(1L) }) {
             Text(stringResource(Res.string.home_view_sample))
         }
     }

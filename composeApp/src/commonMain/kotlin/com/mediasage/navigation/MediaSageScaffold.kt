@@ -7,12 +7,16 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
+import com.mediasage.feature.detail.DetailContract
 import com.mediasage.feature.detail.DetailScreen
 import com.mediasage.feature.detail.DetailViewModel
 import com.mediasage.feature.figures.FiguresScreen
@@ -93,22 +97,33 @@ fun MediaSageScaffold() {
         ) { route ->
             when (route) {
                 is Route.Home -> NavEntry(route) {
-                    val viewModel = viewModel { HomeViewModel() }
+                    val vm = viewModel { HomeViewModel() }
+                    val state by vm.state.collectAsState()
                     HomeScreen(
-                        viewModel = viewModel,
-                        onHeadlineClick = { id -> backStack.add(Route.Detail(id)) }
+                        state = state,
+                        onIntent = vm::onIntent,
+                        onNavigateToDetail = { id -> backStack.add(Route.Detail(id)) }
                     )
                 }
                 is Route.Detail -> NavEntry(route) {
-                    val viewModel = viewModel { DetailViewModel() }
+                    val vm = viewModel { DetailViewModel() }
+                    val state by vm.state.collectAsState()
+                    LaunchedEffect(route.headlineId) {
+                        vm.onIntent(DetailContract.Intent.LoadMatch(route.headlineId))
+                    }
                     DetailScreen(
                         headlineId = route.headlineId,
-                        viewModel = viewModel
+                        state = state,
+                        onIntent = vm::onIntent
                     )
                 }
                 is Route.Figures -> NavEntry(route) {
-                    val viewModel = viewModel { FiguresViewModel() }
-                    FiguresScreen(viewModel = viewModel)
+                    val vm = viewModel { FiguresViewModel() }
+                    val state by vm.state.collectAsState()
+                    FiguresScreen(
+                        state = state,
+                        onIntent = vm::onIntent
+                    )
                 }
                 else -> NavEntry(route) {}
             }

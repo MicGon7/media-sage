@@ -3,9 +3,6 @@ package com.mediasage.feature.detail
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -17,14 +14,9 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun DetailScreen(
     headlineId: Long,
-    viewModel: DetailViewModel
+    state: DetailContract.UiState,
+    onIntent: (DetailContract.Intent) -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
-
-    LaunchedEffect(headlineId) {
-        viewModel.onIntent(DetailContract.Intent.LoadMatch(headlineId))
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()

@@ -3,8 +3,6 @@ package com.mediasage.feature.figures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -15,10 +13,9 @@ import org.jetbrains.compose.resources.stringResource
 /** Figures browser screen — full implementation in a future ticket. */
 @Composable
 fun FiguresScreen(
-    viewModel: FiguresViewModel
+    state: FiguresContract.UiState,
+    onIntent: (FiguresContract.Intent) -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
-
     Column(
         modifier = Modifier
             .fillMaxSize()
