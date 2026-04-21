@@ -1,7 +1,5 @@
 package com.mediasage.feature.home
 
-import com.mediasage.domain.model.Headline
-
 /** MVI contract for the Home/Headlines feature. */
 object HomeContract {
 
@@ -30,5 +28,8 @@ data class HeadlineItem(
     val id: Long,
     val title: String,
     val source: String,
-    val imageUrl: String?
+    val category: String = "",
+    val snippet: String = "",
+    val imageUrl: String?,
+    val publishedAt: Long = 0L
 )
