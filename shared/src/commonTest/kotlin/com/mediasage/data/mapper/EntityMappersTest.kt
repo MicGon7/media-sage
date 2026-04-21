@@ -18,23 +18,52 @@ class EntityMappersTest {
     fun figureEntityToDomain() {
         val entity = FigureEntity(
             id = 1, name = "Augustine", category = "theologian",
-            century = "4th", description = "Bishop of Hippo"
+            century = "4th", description = "Bishop of Hippo",
+            role = "Bishop & Church Father", lifespan = "354-430"
         )
         val domain = entity.toDomain()
         assertEquals(1, domain.id)
         assertEquals("Augustine", domain.name)
         assertEquals(FigureCategory.THEOLOGIAN, domain.category)
         assertEquals("4th", domain.century)
+        assertEquals("Bishop & Church Father", domain.role)
+        assertEquals("354-430", domain.lifespan)
     }
 
     @Test
     fun figureDomainToEntity() {
         val domain = Figure(
             id = 1, name = "Augustine", category = FigureCategory.THEOLOGIAN,
-            century = "4th", description = "Bishop of Hippo"
+            century = "4th", description = "Bishop of Hippo",
+            role = "Bishop & Church Father", lifespan = "354-430"
         )
         val entity = domain.toEntity()
         assertEquals("theologian", entity.category)
+        assertEquals("Bishop & Church Father", entity.role)
+        assertEquals("354-430", entity.lifespan)
+    }
+
+    @Test
+    fun figureRoundTrip() {
+        val entity = FigureEntity(
+            id = 1, name = "Bonhoeffer", category = "theologian",
+            century = "20th", description = "German pastor",
+            role = "Theologian & Martyr", lifespan = "1906-1945"
+        )
+        val domain = entity.toDomain()
+        val backToEntity = domain.toEntity()
+        assertEquals(entity, backToEntity)
+    }
+
+    @Test
+    fun figureDefaultsForNewFields() {
+        val entity = FigureEntity(
+            id = 1, name = "Augustine", category = "theologian",
+            century = "4th", description = "Bishop of Hippo"
+        )
+        val domain = entity.toDomain()
+        assertEquals("", domain.role)
+        assertEquals("", domain.lifespan)
     }
 
     @Test

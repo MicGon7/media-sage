@@ -16,7 +16,9 @@ fun FigureEntity.toDomain() = Figure(
     name = name,
     category = FigureCategory.fromString(category),
     century = century,
-    description = description
+    description = description,
+    role = role,
+    lifespan = lifespan
 )
 
 fun Figure.toEntity() = FigureEntity(
@@ -24,7 +26,9 @@ fun Figure.toEntity() = FigureEntity(
     name = name,
     category = category.name.lowercase(),
     century = century,
-    description = description
+    description = description,
+    role = role,
+    lifespan = lifespan
 )
 
 // Quote

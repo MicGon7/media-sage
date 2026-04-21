@@ -5,7 +5,9 @@ data class Figure(
     val name: String,
     val category: FigureCategory,
     val century: String,
-    val description: String
+    val description: String,
+    val role: String = "",
+    val lifespan: String = ""
 )
 
 enum class FigureCategory {
