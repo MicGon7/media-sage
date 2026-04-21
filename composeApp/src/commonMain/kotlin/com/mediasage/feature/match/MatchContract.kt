@@ -1,7 +1,7 @@
-package com.mediasage.feature.detail
+package com.mediasage.feature.match
 
-/** MVI contract for the Match Detail feature. */
-object DetailContract {
+/** MVI contract for the Match feature. */
+object MatchContract {
 
     sealed interface UiState {
         data object Loading : UiState

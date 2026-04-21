@@ -9,7 +9,7 @@
 
     <!-- Screen titles -->
     <string name="title_home">Media Sage</string>
-    <string name="title_detail">Match Detail</string>
+    <string name="title_match">Quote Match</string>
     <string name="title_figures">Figures</string>
 
     <!-- Home screen -->
@@ -17,9 +17,9 @@
     <string name="home_coming_soon">Coming in MS-13</string>
     <string name="home_view_sample">View Sample Match</string>
 
-    <!-- Detail screen -->
-    <string name="detail_headline_id">Headline #%1$d</string>
-    <string name="detail_coming_soon">Quote match detail coming in MS-14</string>
+    <!-- Match screen -->
+    <string name="match_headline_id">Headline #%1$d</string>
+    <string name="match_coming_soon">Quote match coming in MS-14</string>
 
     <!-- Figures screen -->
     <string name="figures_title">Theologians, Mystics &amp; Figures</string>

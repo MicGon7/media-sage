@@ -1,4 +1,4 @@
-package com.mediasage.feature.detail
+package com.mediasage.feature.match
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -10,12 +10,12 @@ import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
-/** Match detail screen — full implementation in MS-14. */
+/** Match screen — full implementation in MS-14. */
 @Composable
-fun DetailScreen(
+fun MatchScreen(
     headlineId: Long,
-    state: DetailContract.UiState,
-    onIntent: (DetailContract.Intent) -> Unit
+    state: MatchContract.UiState,
+    onIntent: (MatchContract.Intent) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -25,12 +25,12 @@ fun DetailScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = stringResource(Res.string.detail_headline_id, headlineId),
+            text = stringResource(Res.string.match_headline_id, headlineId),
             style = MaterialTheme.typography.headlineMedium
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = stringResource(Res.string.detail_coming_soon),
+            text = stringResource(Res.string.match_coming_soon),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

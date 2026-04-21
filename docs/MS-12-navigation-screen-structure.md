@@ -8,7 +8,7 @@
 Navigation 3 framework with MVI feature-based architecture for the Compose Multiplatform app.
 
 ### Navigation
-- **`navigation/Routes.kt`** — Sealed interface `Route` with `Home`, `Detail(headlineId)`, `Figures`. Polymorphic serialization for KMP state saving.
+- **`navigation/Routes.kt`** — Sealed interface `Route` with `Home`, `Match(headlineId)`, `Figures`. Polymorphic serialization for KMP state saving.
 - **`navigation/MediaSageScaffold.kt`** — Top-level Scaffold with TopAppBar, bottom NavigationBar, and NavDisplay. ViewModels created per destination.
 
 ### Feature modules (MVI Contract pattern)
@@ -21,7 +21,7 @@ Each feature has 3 files:
 | `Screen.kt` | Composable UI, observes state, dispatches intents |
 
 - **`feature/home/`** — Headlines feed (HomeContract, HomeViewModel, HomeScreen)
-- **`feature/detail/`** — Match detail (DetailContract, DetailViewModel, DetailScreen)
+- **`feature/match/`** — Quote match (MatchContract, MatchViewModel, MatchScreen)
 - **`feature/figures/`** — Figures browser (FiguresContract, FiguresViewModel, FiguresScreen)
 
 ### Resources
@@ -35,7 +35,7 @@ App() → MaterialTheme → MediaSageScaffold
   ├── NavigationBar (Headlines, Figures)
   └── NavDisplay
         ├── Route.Home → HomeViewModel → HomeScreen
-        ├── Route.Detail → DetailViewModel → DetailScreen
+        ├── Route.Match → MatchViewModel → MatchScreen
         └── Route.Figures → FiguresViewModel → FiguresScreen
 ```
 

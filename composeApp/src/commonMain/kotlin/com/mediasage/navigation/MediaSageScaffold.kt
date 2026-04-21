@@ -16,13 +16,13 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
-import com.mediasage.feature.detail.DetailContract
-import com.mediasage.feature.detail.DetailScreen
-import com.mediasage.feature.detail.DetailViewModel
 import com.mediasage.feature.figures.FiguresScreen
 import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.home.HomeScreen
 import com.mediasage.feature.home.HomeViewModel
+import com.mediasage.feature.match.MatchContract
+import com.mediasage.feature.match.MatchScreen
+import com.mediasage.feature.match.MatchViewModel
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -46,7 +46,7 @@ fun MediaSageScaffold() {
                     Text(
                         when (currentRoute) {
                             is Route.Home -> stringResource(Res.string.title_home)
-                            is Route.Detail -> stringResource(Res.string.title_detail)
+                            is Route.Match -> stringResource(Res.string.title_match)
                             is Route.Figures -> stringResource(Res.string.title_figures)
                             else -> stringResource(Res.string.title_home)
                         }
@@ -102,16 +102,16 @@ fun MediaSageScaffold() {
                     HomeScreen(
                         state = state,
                         onIntent = vm::onIntent,
-                        onNavigateToDetail = { id -> backStack.add(Route.Detail(id)) }
+                        onNavigateToDetail = { id -> backStack.add(Route.Match(id)) }
                     )
                 }
-                is Route.Detail -> NavEntry(route) {
-                    val vm = viewModel { DetailViewModel() }
+                is Route.Match -> NavEntry(route) {
+                    val vm = viewModel { MatchViewModel() }
                     val state by vm.state.collectAsState()
                     LaunchedEffect(route.headlineId) {
-                        vm.onIntent(DetailContract.Intent.LoadMatch(route.headlineId))
+                        vm.onIntent(MatchContract.Intent.LoadMatch(route.headlineId))
                     }
-                    DetailScreen(
+                    MatchScreen(
                         headlineId = route.headlineId,
                         state = state,
                         onIntent = vm::onIntent
