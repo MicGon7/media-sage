@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Media Sage is a Kotlin Multiplatform (KMP) app with a Ktor backend that matches news headlines with encouraging quotes from Christian theologians, mystics, and biblical figures using Claude AI. It targets Android, iOS, and a JVM server.
+Media Sage (public name: **The New Life Times**) is a Kotlin Multiplatform (KMP) app with a Ktor backend that matches news headlines with encouraging quotes from Christian theologians, mystics, and biblical figures using Claude AI. It targets Android, iOS, and a JVM server.
 
 ## Architecture
 
@@ -89,11 +89,12 @@ Managed in `gradle/libs.versions.toml`:
 ```
 composeApp/src/commonMain/kotlin/com/mediasage/
 ├── App.kt
+├── theme/               — Color, Type, Theme (MediaSageTheme)
 ├── navigation/          — Routes, AppState, Scaffold, TopLevelDestination
 └── feature/
     ├── home/            — HomeContract, HomeViewModel, HomeScreen
     ├── match/           — MatchContract, MatchViewModel, MatchScreen
-    └── figures/         — FiguresContract, FiguresViewModel, FiguresScreen
+    └── figures/         — FiguresContract, FiguresViewModel, FiguresScreen (UI label: "Voices")
 
 shared/src/commonMain/kotlin/com/mediasage/
 ├── di/                  — Koin modules

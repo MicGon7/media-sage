@@ -8,7 +8,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.savedstate.serialization.SavedStateConfiguration
 import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.title_figures
+import mediasage.composeapp.generated.resources.title_voices
 import mediasage.composeapp.generated.resources.title_home
 import mediasage.composeapp.generated.resources.title_match
 import org.jetbrains.compose.resources.StringResource
@@ -27,7 +27,7 @@ class MediaSageAppState(
         get() = when (currentDestination) {
             is Route.Home -> Res.string.title_home
             is Route.Match -> Res.string.title_match
-            is Route.Figures -> Res.string.title_figures
+            is Route.Figures -> Res.string.title_voices
             else -> Res.string.title_home
         }
 

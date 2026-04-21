@@ -29,9 +29,13 @@ fun MediaSageScaffold(
     appState: MediaSageAppState = rememberMediaSageAppState()
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(appState.titleRes)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
                 navigationIcon = {
                     if (!appState.isTopLevel) {
                         IconButton(onClick = { appState.navigateBack() }) {
@@ -98,7 +102,9 @@ private fun MediaSageBottomBar(
     currentDestination: Any?,
     onNavigate: (TopLevelDestination) -> Unit
 ) {
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
         destinations.forEach { destination ->
             NavigationBarItem(
                 selected = currentDestination == destination.route,
