@@ -7,11 +7,13 @@ object MatchContract {
         data object Loading : UiState
         data class Success(
             val headlineTitle: String,
+            val headlineSource: String,
+            val headlineCategory: String,
             val quoteText: String,
             val figureName: String,
+            val figureRole: String,
+            val scriptureReference: String,
             val matchExplanation: String,
-            val confidence: Float,
-            val connectionThemes: List<String>
         ) : UiState
         data class Error(val message: String) : UiState
     }
