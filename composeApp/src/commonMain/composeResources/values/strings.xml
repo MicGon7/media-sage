@@ -9,7 +9,7 @@
 
     <!-- Screen titles -->
     <string name="title_home">The New Life Times</string>
-    <string name="title_match">Quote Match</string>
+    <string name="title_match">Today's Word</string>
     <string name="title_voices">Spiritual Voices</string>
 
     <!-- Home screen -->
@@ -28,4 +28,5 @@
     <!-- Voices screen -->
     <string name="voices_subtitle">Theologians, mystics, and faithful witnesses</string>
     <string name="voices_coming_soon">Voice selection coming soon</string>
+    <string name="voices_retry">Retry</string>
 </resources>
