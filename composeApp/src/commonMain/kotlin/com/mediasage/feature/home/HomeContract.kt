@@ -1,5 +1,7 @@
 package com.mediasage.feature.home
 
+import com.mediasage.ui.ErrorType
+
 /** MVI contract for the Home/Headlines feature. */
 object HomeContract {
 
@@ -9,7 +11,7 @@ object HomeContract {
             val headlines: List<HeadlineItem>,
             val isRefreshing: Boolean = false
         ) : UiState
-        data class Error(val message: String) : UiState
+        data class Error(val errorType: ErrorType) : UiState
     }
 
     sealed interface Intent {

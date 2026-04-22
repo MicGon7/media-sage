@@ -17,6 +17,8 @@
     <string name="home_coming_soon">Coming in MS-13</string>
     <string name="home_view_sample">View Sample Match</string>
     <string name="home_retry">Retry</string>
+    <string name="home_error_network">Unable to reach the server. Check your connection and try again.</string>
+    <string name="home_error_generic">Something went wrong. Please try again.</string>
     <string name="home_tagline">Discover wisdom in today's news</string>
 
     <!-- Match screen -->

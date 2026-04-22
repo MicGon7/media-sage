@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,6 +16,8 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import com.mediasage.ui.ErrorType
 import com.mediasage.ui.HeadlineImage
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.*
@@ -27,11 +32,16 @@ fun HomeScreen(
     when (state) {
         is HomeContract.UiState.Loading -> LoadingState()
         is HomeContract.UiState.Error -> ErrorState(
-            message = state.message,
+            message = when (state.errorType) {
+                ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
+                ErrorType.GENERIC -> stringResource(Res.string.home_error_generic)
+            },
             onRetry = { onIntent(HomeContract.Intent.LoadHeadlines) }
         )
         is HomeContract.UiState.Success -> HeadlinesFeed(
             headlines = state.headlines,
+            isRefreshing = state.isRefreshing,
+            onRefresh = { onIntent(HomeContract.Intent.RefreshHeadlines) },
             onHeadlineClick = onNavigateToDetail
         )
     }
@@ -64,25 +74,46 @@ private fun Masthead() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HeadlinesFeed(
     headlines: List<HeadlineItem>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onHeadlineClick: (Long) -> Unit
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item { Masthead() }
+    val pullToRefreshState = rememberPullToRefreshState()
 
-        items(headlines, key = { it.id }) { headline ->
-            HeadlineRow(
-                headline = headline,
-                onClick = { onHeadlineClick(headline.id) }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pullToRefresh(
+                isRefreshing = isRefreshing,
+                state = pullToRefreshState,
+                onRefresh = onRefresh
             )
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant,
-                thickness = 0.5.dp
-            )
+    ) {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            item { Masthead() }
+
+            items(headlines, key = { it.id }) { headline ->
+                HeadlineRow(
+                    headline = headline,
+                    onClick = { onHeadlineClick(headline.id) }
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 0.5.dp
+                )
+            }
         }
+
+        PullToRefreshDefaults.Indicator(
+            state = pullToRefreshState,
+            isRefreshing = isRefreshing,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 }
 
