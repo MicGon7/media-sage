@@ -196,10 +196,20 @@ private fun MatchContent(state: MatchContract.UiState.Success) {
         if (state.scriptureReference.isNotBlank()) {
             Text(
                 text = state.scriptureReference,
-                style = MaterialTheme.typography.bodyMedium,
-                fontStyle = FontStyle.Italic,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
             )
+            if (state.scriptureText.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = state.scriptureText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp,
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -207,8 +217,9 @@ private fun MatchContent(state: MatchContract.UiState.Success) {
         if (state.matchExplanation.isNotBlank()) {
             Text(
                 text = state.matchExplanation,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp,
             )
         }
     }
