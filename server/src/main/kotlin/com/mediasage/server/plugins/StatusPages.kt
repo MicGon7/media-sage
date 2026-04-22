@@ -24,6 +24,7 @@ fun Application.configureStatusPages() {
             call.respond(HttpStatusCode.BadRequest, ErrorResponse(400, cause.message ?: "Bad request"))
         }
         exception<Throwable> { call, cause ->
+            call.application.log.error("Unhandled exception", cause)
             call.respond(
                 HttpStatusCode.InternalServerError,
                 ErrorResponse(500, cause.message ?: "Internal server error")

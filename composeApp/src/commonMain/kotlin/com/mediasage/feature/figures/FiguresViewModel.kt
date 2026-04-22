@@ -21,8 +21,8 @@ class FiguresViewModel : ViewModel() {
 
     fun onIntent(intent: FiguresContract.Intent) {
         when (intent) {
-            is FiguresContract.Intent.LoadFigures -> { /* TODO */ }
-            is FiguresContract.Intent.FilterByCategory -> { /* TODO */ }
+            is FiguresContract.Intent.LoadFigures -> { /* TODO MS-45 */ }
+            is FiguresContract.Intent.FilterByCategory -> { /* TODO MS-45 */ }
             is FiguresContract.Intent.FigureClicked -> { /* Handled via navigation callback */ }
         }
     }

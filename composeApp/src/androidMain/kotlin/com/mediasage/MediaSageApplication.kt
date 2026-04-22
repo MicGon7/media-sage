@@ -13,7 +13,7 @@ class MediaSageApplication : Application() {
         super.onCreate()
         startKoin {
             androidContext(this@MediaSageApplication)
-            modules(databaseModule, sharedModule(), appModule)
+            modules(databaseModule, sharedModule(BuildConfig.SERVER_BASE_URL), appModule)
         }
     }
 }

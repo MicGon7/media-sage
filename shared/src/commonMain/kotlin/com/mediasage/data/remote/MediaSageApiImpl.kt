@@ -24,6 +24,14 @@ class MediaSageApiImpl(
         }.body()
     }
 
+    override suspend fun encourage(request: EncourageRequestDto): EncourageResultDto {
+        return httpClient.post("$baseUrl/api/analysis/encourage") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+    }
+
+    @Suppress("DEPRECATION")
     override suspend fun matchQuote(request: MatchRequestDto): MatchResultDto {
         return httpClient.post("$baseUrl/api/analysis/match") {
             contentType(ContentType.Application.Json)

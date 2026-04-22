@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">10.0.2.2</domain>
-        <domain includeSubdomains="true">localhost</domain>
-    </domain-config>
+    <!--
+        Debug only: allows cleartext HTTP for local development.
+        For physical device testing, the server IP must be listed here.
+        TODO MS-44: Use debug/release variants with separate configs before release.
+    -->
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

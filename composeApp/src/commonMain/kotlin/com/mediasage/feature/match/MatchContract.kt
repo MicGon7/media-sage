@@ -1,6 +1,8 @@
 package com.mediasage.feature.match
 
-/** MVI contract for the Match feature. */
+import com.mediasage.ui.ErrorType
+
+/** MVI contract for the Match (Headline Detail) feature. */
 object MatchContract {
 
     sealed interface UiState {
@@ -9,18 +11,21 @@ object MatchContract {
             val headlineTitle: String,
             val headlineSource: String,
             val headlineCategory: String,
+            val headlineImageUrl: String?,
+            val summary: String?,
             val quoteText: String,
             val figureName: String,
             val figureRole: String,
             val scriptureReference: String,
+            val scriptureText: String,
             val matchExplanation: String,
             val matchTheme: String = "",
+            val tone: String = "",
         ) : UiState
-        data class Error(val message: String) : UiState
+        data class Error(val errorType: ErrorType) : UiState
     }
 
     sealed interface Intent {
-        data class LoadMatch(val headlineId: Long) : Intent
         data object RetryMatch : Intent
     }
 
