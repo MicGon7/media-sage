@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.map
 
 class MatchRepositoryImpl(
     private val matchDao: MatchDao
-    // TODO: Add remote matching API service when MS-10 is complete
+    // TODO: Add remote matching API service when MS-14 is complete
 ) : MatchRepository {
 
     override fun getAllMatches(): Flow<List<Match>> =
@@ -22,8 +22,8 @@ class MatchRepositoryImpl(
         // Check cache first
         matchDao.getByHeadline(headlineId)?.let { return it.toDomain() }
 
-        // TODO: Call remote matching API, save result to Room (MS-10)
+        // TODO: Call remote matching API, save result to Room (MS-14)
         // For now, throw until remote API is wired up
-        throw NotImplementedError("Remote matching API not yet connected (MS-10)")
+        throw NotImplementedError("Remote matching API not yet connected (MS-14)")
     }
 }

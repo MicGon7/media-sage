@@ -8,6 +8,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
 import mediasage.composeapp.generated.resources.Res
@@ -46,7 +50,10 @@ fun MatchScreen(
         when (state) {
             is MatchContract.UiState.Loading -> LoadingState()
             is MatchContract.UiState.Error -> ErrorState(
-                message = state.message,
+                message = when (state.errorType) {
+                    ErrorType.NETWORK -> stringResource(Res.string.match_error_network)
+                    ErrorType.GENERIC -> stringResource(Res.string.match_error_generic)
+                },
                 onRetry = { onIntent(MatchContract.Intent.RetryMatch) }
             )
             is MatchContract.UiState.Success -> MatchContent(state = state)
@@ -60,7 +67,21 @@ private fun MatchContent(state: MatchContract.UiState.Success) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 16.dp)
+    ) {
+        // Hero image
+        if (state.headlineImageUrl != null) {
+            AsyncImage(
+                model = state.headlineImageUrl,
+                contentDescription = state.headlineTitle,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentScale = ContentScale.Crop,
+            )
+        }
+
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
         // Headline section
         if (state.headlineCategory.isNotBlank()) {
@@ -175,10 +196,20 @@ private fun MatchContent(state: MatchContract.UiState.Success) {
         if (state.scriptureReference.isNotBlank()) {
             Text(
                 text = state.scriptureReference,
-                style = MaterialTheme.typography.bodyMedium,
-                fontStyle = FontStyle.Italic,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
             )
+            if (state.scriptureText.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = state.scriptureText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp,
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -186,10 +217,12 @@ private fun MatchContent(state: MatchContract.UiState.Success) {
         if (state.matchExplanation.isNotBlank()) {
             Text(
                 text = state.matchExplanation,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp,
             )
         }
+    }
     }
 }
 

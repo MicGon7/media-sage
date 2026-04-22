@@ -175,7 +175,7 @@ You must:
 1. Discern the appropriate tone (COMFORT, EXHORTATION, or CORRECTION)
 2. If article text is provided, write a brief summary (2-3 sentences) capturing the main point — like a journalist's lede. If no article text, set summary to null.
 3. Select a real, verified quote from a real historical Christian figure (theologian, mystic, prophet, apostle, or modern witness) — do NOT fabricate quotes
-4. Identify a relevant scripture passage
+4. Identify a relevant scripture passage — scriptureReference is the citation (e.g. "Romans 8:28"), scriptureText is the FULL quoted verse text. These are two separate fields and both are REQUIRED.
 5. Explain the connection in 2-3 sentences
 
 Guidelines:
@@ -195,7 +195,7 @@ Respond ONLY with valid JSON in this exact format:
   "figureName": "<full name of the figure>",
   "figureRole": "<short role descriptor>",
   "scriptureReference": "<e.g. Romans 8:28>",
-  "scriptureText": "<the scripture passage text>",
+  "scriptureText": "<the full verse text, e.g. 'And we know that in all things God works for the good of those who love him, who have been called according to his purpose.'>",
   "explanation": "<2-3 sentence explanation>",
   "connectionThemes": ["theme1", "theme2"],
   "matchTheme": "<2-3 word theme label>",

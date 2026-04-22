@@ -1,45 +1,74 @@
 package com.mediasage.feature.match
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mediasage.data.remote.EncourageRequestDto
+import com.mediasage.data.remote.MediaSageApi
+import com.mediasage.domain.repository.HeadlineRepository
+import com.mediasage.ui.toErrorType
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 
-/** ViewModel for the Match screen — wired to real data in MS-14. */
-class MatchViewModel : ViewModel() {
+class MatchViewModel(
+    private val headlineId: Long,
+    private val headlineRepository: HeadlineRepository,
+    private val api: MediaSageApi
+) : ViewModel() {
 
-    private val _state = MutableStateFlow<MatchContract.UiState>(
-        sampleMatchState
-    )
+    private val _state = MutableStateFlow<MatchContract.UiState>(MatchContract.UiState.Loading)
     val state: StateFlow<MatchContract.UiState> = _state.asStateFlow()
 
     private val _sideEffects = Channel<MatchContract.SideEffect>()
     val sideEffects = _sideEffects.receiveAsFlow()
 
+    init {
+        loadMatch()
+    }
+
     fun onIntent(intent: MatchContract.Intent) {
         when (intent) {
-            is MatchContract.Intent.LoadMatch -> { /* TODO: MS-14 */ }
-            is MatchContract.Intent.RetryMatch -> { /* TODO: MS-14 */ }
+            is MatchContract.Intent.RetryMatch -> retryMatch()
         }
     }
-}
 
-// Sample data for layout preview — replaced with real API data in MS-14
-private val sampleMatchState = MatchContract.UiState.Success(
-    headlineTitle = "Community Gardens Transform Urban Neighborhoods",
-    headlineSource = "AP News",
-    headlineCategory = "Society",
-    quoteText = "The glory of God is a human being fully alive, " +
-        "and the life of a human being is the vision of God.",
-    figureName = "Dietrich Bonhoeffer",
-    figureRole = "Theologian & Martyr",
-    scriptureReference = "Romans 8:28 — And we know that in all things God works " +
-        "for the good of those who love him, who have been called " +
-        "according to his purpose.",
-    matchExplanation = "This headline about communities coming together to transform " +
-        "their neighborhoods through shared purpose echoes Bonhoeffer's belief that " +
-        "faith is lived out in community and action, not in isolation.",
-    matchTheme = "Community & Purpose",
-)
+    private fun loadMatch() {
+        _state.value = MatchContract.UiState.Loading
+
+        viewModelScope.launch {
+            try {
+                val headline = headlineRepository.getHeadlineById(headlineId)
+                    ?: throw IllegalStateException("Headline not found")
+
+                val result = api.encourage(
+                    EncourageRequestDto(headlineTitle = headline.title)
+                )
+
+                _state.value = MatchContract.UiState.Success(
+                    headlineTitle = headline.title,
+                    headlineSource = headline.source,
+                    headlineCategory = "",
+                    headlineImageUrl = headline.imageUrl,
+                    summary = result.summary,
+                    quoteText = result.quoteText,
+                    figureName = result.figureName,
+                    figureRole = result.figureRole,
+                    scriptureReference = result.scriptureReference,
+                    scriptureText = result.scriptureText,
+                    matchExplanation = result.explanation,
+                    matchTheme = result.matchTheme,
+                    tone = result.tone,
+                )
+            } catch (e: Exception) {
+                _state.value = MatchContract.UiState.Error(e.toErrorType())
+            }
+        }
+    }
+
+    private fun retryMatch() {
+        loadMatch()
+    }
+}

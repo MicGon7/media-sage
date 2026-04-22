@@ -20,7 +20,30 @@ data class NewsArticleDto(
     val categories: List<String> = emptyList()
 )
 
-// ---- Analysis/Match endpoint DTOs ----
+// ---- Encourage endpoint DTOs ----
+
+@Serializable
+data class EncourageRequestDto(
+    val headlineTitle: String,
+    val locale: String = "en",
+    val articleText: String? = null
+)
+
+@Serializable
+data class EncourageResultDto(
+    val summary: String? = null,
+    val quoteText: String,
+    val figureName: String,
+    val figureRole: String,
+    val scriptureReference: String,
+    val scriptureText: String,
+    val explanation: String,
+    val connectionThemes: List<String>,
+    val matchTheme: String,
+    val tone: String
+)
+
+// ---- Legacy Match endpoint DTOs (deprecated — TODO MS-46) ----
 
 @Serializable
 data class MatchRequestDto(

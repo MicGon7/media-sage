@@ -5,19 +5,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import com.mediasage.feature.figures.FiguresScreen
 import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.home.HomeScreen
 import com.mediasage.feature.home.HomeViewModel
-import com.mediasage.feature.match.MatchContract
 import com.mediasage.feature.match.MatchScreen
 import com.mediasage.feature.match.MatchViewModel
 import org.jetbrains.compose.resources.stringResource
@@ -53,11 +52,11 @@ fun MediaSageScaffold(
                     )
                 }
                 is Route.Match -> NavEntry(route) {
-                    val vm = viewModel { MatchViewModel() }
+                    val vm = koinViewModel<MatchViewModel>(
+                        key = "match-${route.headlineId}",
+                        parameters = { parametersOf(route.headlineId) }
+                    )
                     val state by vm.state.collectAsState()
-                    LaunchedEffect(route.headlineId) {
-                        vm.onIntent(MatchContract.Intent.LoadMatch(route.headlineId))
-                    }
                     MatchScreen(
                         headlineId = route.headlineId,
                         state = state,
