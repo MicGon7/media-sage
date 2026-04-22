@@ -10,6 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import com.mediasage.feature.figures.FiguresScreen
@@ -43,7 +44,7 @@ fun MediaSageScaffold(
         ) { route ->
             when (route) {
                 is Route.Home -> NavEntry(route) {
-                    val vm = viewModel { HomeViewModel() }
+                    val vm = koinViewModel<HomeViewModel>()
                     val state by vm.state.collectAsState()
                     HomeScreen(
                         state = state,

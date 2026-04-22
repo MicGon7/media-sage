@@ -4,6 +4,7 @@ import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.HeadlineEntity
 import com.mediasage.data.local.entity.MatchEntity
 import com.mediasage.data.local.entity.QuoteEntity
+import com.mediasage.data.remote.NewsArticleDto
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.Headline
@@ -46,6 +47,16 @@ fun Quote.toEntity() = QuoteEntity(
     text = text,
     source = source,
     themes = themes.joinToString(",")
+)
+
+// DTO → Entity (API response → local storage)
+fun NewsArticleDto.toEntity(fetchedAt: Long = 0L) = HeadlineEntity(
+    title = title,
+    source = source,
+    url = url,
+    imageUrl = imageUrl.ifBlank { null },
+    publishedAt = fetchedAt, // Server returns ISO string; using fetchedAt as fallback
+    fetchedAt = fetchedAt
 )
 
 // Headline
