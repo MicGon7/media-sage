@@ -9,7 +9,14 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import org.koin.ktor.ext.inject
 
-// ---- Request/Response DTOs for the endpoint ----
+// ---- Request/Response DTOs ----
+
+@Serializable
+data class EncourageRequest(
+    val headlineTitle: String,
+    val locale: String = "en",
+    val articleText: String? = null
+)
 
 @Serializable
 data class MatchRequest(
@@ -26,33 +33,65 @@ data class MatchCandidate(
     val themes: List<String> = emptyList()
 )
 
-/** Quote matching endpoints — Claude AI matches headlines to quotes. */
+/** Analysis endpoints — Claude AI provides encouragement for headlines. */
 fun Route.analysisRoutes() {
     val claudeService by inject<ClaudeApiService>()
 
     route("/api/analysis") {
-        post("/match") {
-            val request = call.receive<MatchRequest>()
+        encourageRoute(claudeService)
+        @Suppress("DEPRECATION")
+        matchRoute(claudeService)
+    }
+}
 
-            if (request.candidates.isEmpty()) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "At least one candidate quote is required"))
-                return@post
-            }
+private fun Route.encourageRoute(claudeService: ClaudeApiService) {
+    post("/encourage") {
+        val request = call.receive<EncourageRequest>()
 
-            val result = claudeService.matchQuoteToHeadline(
-                headlineTitle = request.headlineTitle,
-                candidateQuotes = request.candidates.map { candidate ->
-                    QuoteCandidate(
-                        id = candidate.id,
-                        figureName = candidate.figureName,
-                        text = candidate.text,
-                        source = candidate.source,
-                        themes = candidate.themes
-                    )
-                }
+        if (request.headlineTitle.isBlank()) {
+            call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf("error" to "headlineTitle is required")
             )
-
-            call.respond(result)
+            return@post
         }
+
+        val result = claudeService.encourageHeadline(
+            headlineTitle = request.headlineTitle,
+            locale = request.locale,
+            articleText = request.articleText
+        )
+
+        call.respond(result)
+    }
+}
+
+@Deprecated("Use encourageRoute instead — TODO MS-46")
+private fun Route.matchRoute(claudeService: ClaudeApiService) {
+    post("/match") {
+        val request = call.receive<MatchRequest>()
+
+        if (request.candidates.isEmpty()) {
+            call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf("error" to "At least one candidate quote is required")
+            )
+            return@post
+        }
+
+        val result = claudeService.matchQuoteToHeadline(
+            headlineTitle = request.headlineTitle,
+            candidateQuotes = request.candidates.map { candidate ->
+                QuoteCandidate(
+                    id = candidate.id,
+                    figureName = candidate.figureName,
+                    text = candidate.text,
+                    source = candidate.source,
+                    themes = candidate.themes
+                )
+            }
+        )
+
+        call.respond(result)
     }
 }

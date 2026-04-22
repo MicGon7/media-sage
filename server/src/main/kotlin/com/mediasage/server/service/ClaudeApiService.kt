@@ -27,18 +27,24 @@ class ClaudeApiService(
         }
     }
 
+    suspend fun encourageHeadline(
+        headlineTitle: String,
+        locale: String = "en",
+        articleText: String? = null
+    ): EncourageResult {
+        val userMessage = buildEncourageMessage(headlineTitle, locale, articleText)
+        val response = callClaude(ENCOURAGE_SYSTEM_PROMPT, userMessage)
+        return responseJson.decodeFromString<EncourageResult>(extractJson(response))
+    }
+
+    @Deprecated("Use encourageHeadline instead — TODO MS-46")
     suspend fun matchQuoteToHeadline(
         headlineTitle: String,
         candidateQuotes: List<QuoteCandidate>
     ): MatchResult {
-        // Build the user message with headline and candidate quotes
-        val userMessage = buildUserMessage(headlineTitle, candidateQuotes)
-
-        // Make the API call
-        val response = callClaude(SYSTEM_PROMPT, userMessage)
-
-        // Parse Claude's JSON response into our domain result
-        return parseMatchResponse(response)
+        val userMessage = buildMatchMessage(headlineTitle, candidateQuotes)
+        val response = callClaude(MATCH_SYSTEM_PROMPT, userMessage)
+        return responseJson.decodeFromString<MatchResult>(extractJson(response))
     }
 
     private suspend fun callClaude(systemPrompt: String, userMessage: String): String {
@@ -56,7 +62,6 @@ class ClaudeApiService(
             setBody(request)
         }
 
-        // Handle error responses
         if (!httpResponse.status.isSuccess()) {
             val errorBody = httpResponse.bodyAsText()
             throw ClaudeApiException(
@@ -65,13 +70,29 @@ class ClaudeApiService(
             )
         }
 
-        // Extract the text from the response
         val claudeResponse = httpResponse.body<ClaudeResponse>()
         return claudeResponse.content.firstOrNull()?.text
             ?: throw ClaudeApiException(500, "Empty response from Claude")
     }
 
-    private fun buildUserMessage(
+    private fun buildEncourageMessage(
+        headlineTitle: String,
+        locale: String,
+        articleText: String?
+    ): String = buildString {
+        appendLine("## Headline")
+        appendLine(headlineTitle)
+        if (articleText != null) {
+            appendLine()
+            appendLine("## Article Text")
+            appendLine(articleText)
+        }
+        appendLine()
+        appendLine("## Response Language")
+        appendLine(locale)
+    }
+
+    private fun buildMatchMessage(
         headlineTitle: String,
         candidateQuotes: List<QuoteCandidate>
     ): String = buildString {
@@ -89,15 +110,7 @@ class ClaudeApiService(
         }
     }
 
-    private fun parseMatchResponse(responseText: String): MatchResult {
-        // Claude returns JSON in its text response — parse it
-        // We extract the JSON block in case Claude wraps it in markdown
-        val jsonString = extractJson(responseText)
-        return responseJson.decodeFromString<MatchResult>(jsonString)
-    }
-
     private fun extractJson(text: String): String {
-        // Claude sometimes wraps JSON in ```json ... ``` markdown blocks
         val jsonBlockRegex = Regex("```json?\\s*\\n?(.*?)\\n?```", RegexOption.DOT_MATCHES_ALL)
         val match = jsonBlockRegex.find(text)
         return match?.groupValues?.get(1)?.trim() ?: text.trim()
@@ -115,6 +128,27 @@ data class QuoteCandidate(
 )
 
 @kotlinx.serialization.Serializable
+data class EncourageResult(
+    val summary: String? = null,
+    val quoteText: String,
+    val figureName: String,
+    val figureRole: String,
+    val scriptureReference: String,
+    val scriptureText: String,
+    val explanation: String,
+    val connectionThemes: List<String>,
+    val matchTheme: String,
+    val tone: EncourageTone
+)
+
+@kotlinx.serialization.Serializable
+enum class EncourageTone {
+    COMFORT,
+    EXHORTATION,
+    CORRECTION
+}
+
+@kotlinx.serialization.Serializable
 data class MatchResult(
     val selectedQuoteId: Long,
     val confidence: Float,
@@ -127,9 +161,50 @@ class ClaudeApiException(
     override val message: String
 ) : RuntimeException(message)
 
-// ---- System Prompt ----
+// ---- System Prompts ----
 
-private val SYSTEM_PROMPT = """
+private val ENCOURAGE_SYSTEM_PROMPT = """
+You are a theological advisor for The New Life Times app. Given a news headline (and optionally the full article text), your role is to come alongside the reader with wisdom from the Christian tradition — in the spirit of parakaleo (Greek: to come alongside, encourage, exhort, comfort).
+
+Discern which tone best fits the headline:
+- COMFORT — for headlines about suffering, loss, disaster, or grief. Offer solace, hope, and the assurance of God's presence.
+- EXHORTATION — for headlines about opportunity, community, or faithfulness. Call the reader to action, gratitude, or deeper engagement.
+- CORRECTION — for headlines about moral drift, corruption, complacency, or injustice. Speak truth with love, as the prophets and apostles did — warning and calling people back to God's ways.
+
+You must:
+1. Discern the appropriate tone (COMFORT, EXHORTATION, or CORRECTION)
+2. If article text is provided, write a brief summary (2-3 sentences) capturing the main point — like a journalist's lede. If no article text, set summary to null.
+3. Select a real, verified quote from a real historical Christian figure (theologian, mystic, prophet, apostle, or modern witness) — do NOT fabricate quotes
+4. Identify a relevant scripture passage
+5. Explain the connection in 2-3 sentences
+
+Guidelines:
+- Never trivialize suffering, and genuinely celebrate good news
+- For CORRECTION tone: speak truth firmly but with love — the goal is restoration, not condemnation
+- The figure's role should be a short descriptor (e.g., "Theologian & Martyr", "Bishop & Church Father", "Reformer")
+- The scripture reference should be a specific verse or short passage
+- connectionThemes should be 2-4 thematic connections
+- matchTheme should be a 2-3 word label summarizing the connection
+
+Respond in the language specified by the Response Language field (default: English).
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "summary": "<2-3 sentence article summary, or null if no article text provided>",
+  "quoteText": "<the quote>",
+  "figureName": "<full name of the figure>",
+  "figureRole": "<short role descriptor>",
+  "scriptureReference": "<e.g. Romans 8:28>",
+  "scriptureText": "<the scripture passage text>",
+  "explanation": "<2-3 sentence explanation>",
+  "connectionThemes": ["theme1", "theme2"],
+  "matchTheme": "<2-3 word theme label>",
+  "tone": "<COMFORT or EXHORTATION or CORRECTION>"
+}
+""".trimIndent()
+
+@Deprecated("Use ENCOURAGE_SYSTEM_PROMPT instead — TODO MS-46")
+private val MATCH_SYSTEM_PROMPT = """
 You are a theological advisor for the Media Sage app. Your role is to match news headlines with meaningful quotes from Christian theologians, mystics, and biblical figures.
 
 You handle both troubling AND positive headlines:
