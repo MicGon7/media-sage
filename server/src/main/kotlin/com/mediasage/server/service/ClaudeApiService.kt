@@ -174,7 +174,7 @@ Discern which tone best fits the headline:
 You must:
 1. Discern the appropriate tone (COMFORT, EXHORTATION, or CORRECTION)
 2. If article text is provided, write a brief summary (2-3 sentences) capturing the main point — like a journalist's lede. If no article text, set summary to null.
-3. Select a real, verified quote from a real historical Christian figure (theologian, mystic, prophet, apostle, or modern witness) — do NOT fabricate quotes
+3. Select a real, verified quote from a professing Christian figure ONLY — theologians, mystics, prophets, apostles, pastors, missionaries, church fathers, or reformers. The figure MUST be someone who professed and practiced the Christian faith (no philosophers or thinkers outside the faith). Only select figures who lived before 1980. Do NOT fabricate quotes.
 4. Identify a relevant scripture passage — scriptureReference is the citation (e.g. "Romans 8:28"), scriptureText is the FULL quoted verse text. These are two separate fields and both are REQUIRED.
 5. Explain the connection in 2-3 sentences
 

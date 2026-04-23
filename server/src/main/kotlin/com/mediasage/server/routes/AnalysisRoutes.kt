@@ -1,5 +1,6 @@
 package com.mediasage.server.routes
 
+import com.mediasage.server.service.ArticleScraperService
 import com.mediasage.server.service.ClaudeApiService
 import com.mediasage.server.service.QuoteCandidate
 import io.ktor.http.*
@@ -15,7 +16,7 @@ import org.koin.ktor.ext.inject
 data class EncourageRequest(
     val headlineTitle: String,
     val locale: String = "en",
-    val articleText: String? = null
+    val articleUrl: String? = null
 )
 
 @Serializable
@@ -36,15 +37,19 @@ data class MatchCandidate(
 /** Analysis endpoints — Claude AI provides encouragement for headlines. */
 fun Route.analysisRoutes() {
     val claudeService by inject<ClaudeApiService>()
+    val scraperService by inject<ArticleScraperService>()
 
     route("/api/analysis") {
-        encourageRoute(claudeService)
+        encourageRoute(claudeService, scraperService)
         @Suppress("DEPRECATION")
         matchRoute(claudeService)
     }
 }
 
-private fun Route.encourageRoute(claudeService: ClaudeApiService) {
+private fun Route.encourageRoute(
+    claudeService: ClaudeApiService,
+    scraperService: ArticleScraperService
+) {
     post("/encourage") {
         val request = call.receive<EncourageRequest>()
 
@@ -56,10 +61,12 @@ private fun Route.encourageRoute(claudeService: ClaudeApiService) {
             return@post
         }
 
+        val articleText = request.articleUrl?.let { scraperService.getArticleText(it) }
+
         val result = claudeService.encourageHeadline(
             headlineTitle = request.headlineTitle,
             locale = request.locale,
-            articleText = request.articleText
+            articleText = articleText
         )
 
         call.respond(result)

@@ -26,7 +26,7 @@ data class NewsArticleDto(
 data class EncourageRequestDto(
     val headlineTitle: String,
     val locale: String = "en",
-    val articleText: String? = null
+    val articleUrl: String? = null
 )
 
 @Serializable

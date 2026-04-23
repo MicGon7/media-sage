@@ -8,10 +8,20 @@ object MatchContract {
     sealed interface UiState {
         data object Loading : UiState
         data class Success(
+            // Headline data — available immediately from Room
             val headlineTitle: String,
             val headlineSource: String,
             val headlineCategory: String,
             val headlineImageUrl: String?,
+            // AI content — loaded progressively from Claude
+            val encouragement: EncouragementState = EncouragementState.Loading
+        ) : UiState
+        data class Error(val errorType: ErrorType) : UiState
+    }
+
+    sealed interface EncouragementState {
+        data object Loading : EncouragementState
+        data class Loaded(
             val summary: String?,
             val quoteText: String,
             val figureName: String,
@@ -21,8 +31,8 @@ object MatchContract {
             val matchExplanation: String,
             val matchTheme: String = "",
             val tone: String = "",
-        ) : UiState
-        data class Error(val errorType: ErrorType) : UiState
+        ) : EncouragementState
+        data class Error(val errorType: ErrorType) : EncouragementState
     }
 
     sealed interface Intent {
