@@ -29,6 +29,9 @@ dependencies {
     implementation(libs.koin.core)
     implementation(libs.koin.ktor)
 
+    // HTML scraping
+    implementation(libs.jsoup)
+
     // Serialization
     implementation(libs.kotlinx.serialization.json)
 

@@ -33,36 +33,44 @@ fun MatchScreen(
     onIntent: (MatchContract.Intent) -> Unit,
     onNavigateBack: () -> Unit = {}
 ) {
-    val title = (state as? MatchContract.UiState.Success)?.matchTheme
+    val matchTheme = (state as? MatchContract.UiState.Success)
+        ?.encouragement
+        ?.let { (it as? MatchContract.EncouragementState.Loaded)?.matchTheme }
 
     Column(modifier = Modifier.fillMaxSize()) {
         MediaSageBackRow(onNavigateBack = onNavigateBack) {
             AnimatedVisibility(
-                visible = title != null,
+                visible = matchTheme != null,
                 enter = fadeIn()
             ) {
                 Text(
-                    text = title.orEmpty(),
+                    text = matchTheme.orEmpty(),
                     style = MaterialTheme.typography.titleLarge,
                 )
             }
         }
         when (state) {
-            is MatchContract.UiState.Loading -> LoadingState()
-            is MatchContract.UiState.Error -> ErrorState(
+            is MatchContract.UiState.Loading -> FullLoadingState()
+            is MatchContract.UiState.Error -> FullErrorState(
                 message = when (state.errorType) {
                     ErrorType.NETWORK -> stringResource(Res.string.match_error_network)
                     ErrorType.GENERIC -> stringResource(Res.string.match_error_generic)
                 },
                 onRetry = { onIntent(MatchContract.Intent.RetryMatch) }
             )
-            is MatchContract.UiState.Success -> MatchContent(state = state)
+            is MatchContract.UiState.Success -> MatchContent(
+                state = state,
+                onRetry = { onIntent(MatchContract.Intent.RetryMatch) }
+            )
         }
     }
 }
 
 @Composable
-private fun MatchContent(state: MatchContract.UiState.Success) {
+private fun MatchContent(
+    state: MatchContract.UiState.Success,
+    onRetry: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -80,161 +88,67 @@ private fun MatchContent(state: MatchContract.UiState.Success) {
             )
         }
 
-        Column(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-    ) {
-        // Headline section
-        if (state.headlineCategory.isNotBlank()) {
-            Text(
-                text = state.headlineCategory.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing * 1.5f,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-        }
+        Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+            // Headline section — always visible immediately
+            HeadlineSection(state)
 
-        Text(
-            text = state.headlineTitle,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = state.headlineSource,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Divider
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.primary,
-            thickness = 1.dp
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Quote card
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            color = Color.Transparent,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                // Pull quote
-                Text(
-                    text = "\u201C",
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    lineHeight = 48.sp,
-                )
-
-                Text(
-                    text = state.quoteText,
-                    style = MaterialTheme.typography.headlineMedium,
-                    lineHeight = 36.sp,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-
-                Text(
-                    text = "\u201D",
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.End,
-                    lineHeight = 48.sp,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Figure attribution
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    FigurePlaceholder(
-                        name = state.figureName,
-                        size = 48.dp
-                    )
-
-                    Column {
-                        Text(
-                            text = state.figureName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        if (state.figureRole.isNotBlank()) {
-                            Text(
-                                text = state.figureRole,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontStyle = FontStyle.Italic,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Divider
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant,
-            thickness = 0.5.dp
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Scripture reference
-        if (state.scriptureReference.isNotBlank()) {
-            Text(
-                text = state.scriptureReference,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            if (state.scriptureText.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = state.scriptureText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp,
-                )
-            }
             Spacer(modifier = Modifier.height(16.dp))
-        }
+            HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Explanation
-        if (state.matchExplanation.isNotBlank()) {
-            Text(
-                text = state.matchExplanation,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                lineHeight = 20.sp,
-            )
+            // Encouragement section — progressive loading
+            when (state.encouragement) {
+                is MatchContract.EncouragementState.Loading -> EncouragementLoading()
+                is MatchContract.EncouragementState.Error -> EncouragementError(
+                    errorType = state.encouragement.errorType,
+                    onRetry = onRetry
+                )
+                is MatchContract.EncouragementState.Loaded -> EncouragementContent(
+                    encouragement = state.encouragement
+                )
+            }
         }
-    }
     }
 }
 
 @Composable
-private fun LoadingState() {
+private fun HeadlineSection(state: MatchContract.UiState.Success) {
+    if (state.headlineCategory.isNotBlank()) {
+        Text(
+            text = state.headlineCategory.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing * 1.5f,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+    }
+
+    Text(
+        text = state.headlineTitle,
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Bold,
+    )
+
+    Spacer(modifier = Modifier.height(4.dp))
+
+    Text(
+        text = state.headlineSource,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.primary,
+    )
+}
+
+@Composable
+private fun EncouragementLoading() {
     Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        CircularProgressIndicator()
-        Spacer(modifier = Modifier.height(16.dp))
+        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = stringResource(Res.string.match_finding),
             style = MaterialTheme.typography.bodyMedium,
@@ -245,7 +159,154 @@ private fun LoadingState() {
 }
 
 @Composable
-private fun ErrorState(
+private fun EncouragementError(
+    errorType: ErrorType,
+    onRetry: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = when (errorType) {
+                ErrorType.NETWORK -> stringResource(Res.string.match_error_network)
+                ErrorType.GENERIC -> stringResource(Res.string.match_error_generic)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedButton(onClick = onRetry) {
+            Text(stringResource(Res.string.match_retry))
+        }
+    }
+}
+
+@Composable
+private fun EncouragementContent(encouragement: MatchContract.EncouragementState.Loaded) {
+    // Article summary
+    if (!encouragement.summary.isNullOrBlank()) {
+        Text(
+            text = encouragement.summary,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            lineHeight = 22.sp,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    // Quote card
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "\u201C",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                lineHeight = 48.sp,
+            )
+
+            Text(
+                text = encouragement.quoteText,
+                style = MaterialTheme.typography.headlineMedium,
+                lineHeight = 36.sp,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+
+            Text(
+                text = "\u201D",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.End,
+                lineHeight = 48.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Figure attribution
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FigurePlaceholder(name = encouragement.figureName, size = 48.dp)
+
+                Column {
+                    Text(
+                        text = encouragement.figureName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (encouragement.figureRole.isNotBlank()) {
+                        Text(
+                            text = encouragement.figureRole,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Scripture reference
+    if (encouragement.scriptureReference.isNotBlank()) {
+        Text(
+            text = encouragement.scriptureReference,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        if (encouragement.scriptureText.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = encouragement.scriptureText,
+                style = MaterialTheme.typography.bodyLarge,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp,
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    // Explanation
+    if (encouragement.matchExplanation.isNotBlank()) {
+        Text(
+            text = encouragement.matchExplanation,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            lineHeight = 20.sp,
+        )
+    }
+}
+
+@Composable
+private fun FullLoadingState() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun FullErrorState(
     message: String,
     onRetry: () -> Unit
 ) {

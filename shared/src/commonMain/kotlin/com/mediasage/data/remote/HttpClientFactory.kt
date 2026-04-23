@@ -21,9 +21,9 @@ fun createHttpClient(): HttpClient {
         }
 
         install(HttpTimeout) {
-            requestTimeoutMillis = 30_000
+            requestTimeoutMillis = 60_000  // Scraping + Claude can take 30-45s
             connectTimeoutMillis = 10_000
-            socketTimeoutMillis = 30_000
+            socketTimeoutMillis = 60_000
         }
     }
 }

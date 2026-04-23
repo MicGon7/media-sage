@@ -4,7 +4,9 @@ import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.HeadlineEntity
 import com.mediasage.data.local.entity.MatchEntity
 import com.mediasage.data.local.entity.QuoteEntity
+import com.mediasage.data.remote.EncourageResultDto
 import com.mediasage.data.remote.NewsArticleDto
+import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.Headline
@@ -100,4 +102,18 @@ fun Match.toEntity() = MatchEntity(
     confidence = confidence,
     connectionThemes = connectionThemes.joinToString(","),
     createdAt = createdAt
+)
+
+// Encourage DTO → Domain
+fun EncourageResultDto.toDomain() = Encouragement(
+    summary = summary,
+    quoteText = quoteText,
+    figureName = figureName,
+    figureRole = figureRole,
+    scriptureReference = scriptureReference,
+    scriptureText = scriptureText,
+    explanation = explanation,
+    connectionThemes = connectionThemes,
+    matchTheme = matchTheme,
+    tone = tone
 )

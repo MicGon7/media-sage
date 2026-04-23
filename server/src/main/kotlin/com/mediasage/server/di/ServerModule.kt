@@ -1,10 +1,12 @@
 package com.mediasage.server.di
 
+import com.mediasage.server.service.ArticleScraperService
 import com.mediasage.server.service.ClaudeApiService
 import com.mediasage.server.service.NewsApiService
 import com.mediasage.server.service.ScriptureApiService
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
@@ -20,6 +22,11 @@ fun serverModule(claudeApiKey: String, newsApiKey: String, scriptureApiKey: Stri
                     ignoreUnknownKeys = true
                 })
             }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 60_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 60_000
+            }
         }
     }
 
@@ -31,4 +38,7 @@ fun serverModule(claudeApiKey: String, newsApiKey: String, scriptureApiKey: Stri
 
     // Scripture API service
     single { ScriptureApiService(get(), scriptureApiKey) }
+
+    // Article scraper
+    single { ArticleScraperService() }
 }
