@@ -79,6 +79,7 @@ android {
         versionCode = 1
         versionName = "1.0"
         buildConfigField("String", "SERVER_BASE_URL", "\"$serverBaseUrl\"")
+        buildConfigField("boolean", "USE_MOCK_DATA", localProperties.getProperty("use.mock.data", "false"))
     }
     packaging {
         resources {
