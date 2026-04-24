@@ -2,29 +2,27 @@
 
 ## Problem
 
-On iOS, `NavDisplay` defaulted to a slide transition while Android used a fade. The slide itself was acceptable but the previous screen's content bled into the incoming screen during the transition, making it look buggy.
+On iOS, navigating between screens showed the previous screen's content bleeding through during the slide transition, making it look buggy.
+
+## Root Cause
+
+Composable screens had no opaque background — without a `Surface` wrapper they are transparent by default. During a slide, the outgoing screen was visible beneath the incoming one.
 
 ## Fix
 
-Added `transitionSpec` and `popTransitionSpec` to `NavDisplay` in `MediaSageScaffold.kt`:
+Added `Surface(modifier = Modifier.fillMaxSize())` as the root wrapper in all three screens:
+- `HomeScreen.kt`
+- `MatchScreen.kt`
+- `FiguresScreen.kt`
 
-```kotlin
-NavDisplay(
-    backStack = appState.backStack,
-    modifier = Modifier.padding(padding),
-    transitionSpec = { fadeIn() togetherWith fadeOut() },
-    popTransitionSpec = { fadeIn() togetherWith fadeOut() },
-) { route -> ... }
-```
-
-This applies a cross-fade on both forward and back navigation, consistent across Android and iOS.
+Platform default transitions (slide on iOS, fade on Android) are now preserved since the bleed was caused by transparency, not the transition itself.
 
 ## Key Learnings
 
-### Nav3 Transition API
+### Always wrap screens in Surface
 
-`NavDisplay` in Nav3 1.0.0-alpha05 uses `transitionSpec` and `popTransitionSpec` (not `enterTransition`/`exitTransition`). Both accept `AnimatedContentTransitionScope<Scene<T>>.() -> ContentTransform`.
+In Compose, composables are transparent by default. Any screen used in navigation should have `Surface(modifier = Modifier.fillMaxSize())` at its root to ensure an opaque background during transitions.
 
-### iOS Server URL Config
+### Nav3 transitionSpec Scene.key
 
-`ProcessInfo.processInfo.environment` only receives Xcode scheme env vars when launched via Xcode's Run button — not when tapping the app icon. For local dev on a physical device, hardcoding the IP in `MainViewController.kt` is the pragmatic solution. In production this is a non-issue as the URL will be a real domain.
+Attempted to differentiate top-level tab switches (fade) from detail navigation (slide) via `targetState.key` in `transitionSpec`, but `Scene.key` did not reliably match route instances. Tracked in MS-62 for future investigation.
