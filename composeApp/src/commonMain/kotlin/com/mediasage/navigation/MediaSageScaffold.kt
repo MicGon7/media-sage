@@ -1,8 +1,5 @@
 package com.mediasage.navigation
 
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
@@ -43,8 +40,6 @@ fun MediaSageScaffold(
         NavDisplay(
             backStack = appState.backStack,
             modifier = Modifier.padding(padding),
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            popTransitionSpec = { fadeIn() togetherWith fadeOut() },
         ) { route ->
             when (route) {
                 is Route.Home -> NavEntry(route) {
