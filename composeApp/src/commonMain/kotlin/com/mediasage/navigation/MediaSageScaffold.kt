@@ -58,7 +58,6 @@ fun MediaSageScaffold(
                     )
                     val state by vm.state.collectAsState()
                     MatchScreen(
-                        headlineId = route.headlineId,
                         state = state,
                         onIntent = vm::onIntent,
                         onNavigateBack = { appState.navigateBack() }

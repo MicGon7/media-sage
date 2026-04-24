@@ -26,6 +26,7 @@ detekt = "1.23.8"
 kover = "0.9.8"
 nav3-ui = "1.0.0-alpha05"
 sqlite = "2.5.1"
+compottie = "2.0.0-rc04"
 
 [libraries]
 # Coil (KMP image loading)
@@ -91,6 +92,11 @@ koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
 
 # Navigation 3 (Compose Multiplatform)
 navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "nav3-ui" }
+
+# Compottie (Lottie for Compose Multiplatform)
+compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }
+compottie-dot = { module = "io.github.alexzhirkevich:compottie-dot", version.ref = "compottie" }
+compottie-resources = { module = "io.github.alexzhirkevich:compottie-resources", version.ref = "compottie" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

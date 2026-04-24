@@ -51,6 +51,7 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.navigation3.ui)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.compottie.dot)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

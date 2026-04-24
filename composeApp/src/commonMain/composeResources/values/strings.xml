@@ -24,7 +24,7 @@
     <!-- Match screen -->
     <string name="match_headline_id">Headline #%1$d</string>
     <string name="match_coming_soon">Quote match coming in MS-14</string>
-    <string name="match_finding">Finding encouragement…</string>
+    <string name="match_finding">Finding wisdom…</string>
     <string name="match_retry">Retry</string>
     <string name="match_error_network">Unable to reach the server. Check your connection and try again.</string>
     <string name="match_error_generic">Something went wrong. Please try again.</string>

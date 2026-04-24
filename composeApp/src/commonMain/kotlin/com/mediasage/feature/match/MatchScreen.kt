@@ -3,32 +3,54 @@ package com.mediasage.feature.match
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.*
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import coil3.compose.AsyncImage
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
+import io.github.alexzhirkevich.compottie.DotLottie
+import io.github.alexzhirkevich.compottie.LottieCompositionSpec
+import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
+import io.github.alexzhirkevich.compottie.rememberLottieComposition
+import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.*
+import mediasage.composeapp.generated.resources.match_error_generic
+import mediasage.composeapp.generated.resources.match_error_network
+import mediasage.composeapp.generated.resources.match_finding
+import mediasage.composeapp.generated.resources.match_retry
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MatchScreen(
-    headlineId: Long,
     state: MatchContract.UiState,
     onIntent: (MatchContract.Intent) -> Unit,
     onNavigateBack: () -> Unit = {}
@@ -143,13 +165,32 @@ private fun HeadlineSection(state: MatchContract.UiState.Success) {
 
 @Composable
 private fun EncouragementLoading() {
+    val composition by rememberLottieComposition {
+        LottieCompositionSpec.DotLottie(
+            Res.readBytes("files/book_loader.lottie")
+        )
+    }
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = Int.MAX_VALUE
+    )
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+        if (composition != null) {
+            Image(
+                painter = rememberLottiePainter(composition = composition, progress = { progress }),
+                contentDescription = null,
+                modifier = Modifier.size(120.dp),
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+            )
+        } else {
+            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+        }
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = stringResource(Res.string.match_finding),
