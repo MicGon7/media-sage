@@ -37,6 +37,7 @@ fun MatchScreen(
         ?.encouragement
         ?.let { (it as? MatchContract.EncouragementState.Loaded)?.matchTheme }
 
+    Surface(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {
         MediaSageBackRow(onNavigateBack = onNavigateBack) {
             AnimatedVisibility(
@@ -63,6 +64,7 @@ fun MatchScreen(
                 onRetry = { onIntent(MatchContract.Intent.RetryMatch) }
             )
         }
+    }
     }
 }
 

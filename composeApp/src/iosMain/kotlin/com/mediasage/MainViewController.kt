@@ -6,11 +6,11 @@ import com.mediasage.di.databaseModule
 import com.mediasage.di.sharedModule
 import org.koin.core.context.startKoin
 
-fun initKoin(serverBaseUrl: String) {
+fun initKoin() {
     startKoin {
         modules(
             databaseModule,
-            sharedModule(serverBaseUrl),
+            sharedModule("http://192.168.1.144:8080"),
             appModule,
         )
     }

@@ -39,7 +39,7 @@ fun MediaSageScaffold(
     ) { padding ->
         NavDisplay(
             backStack = appState.backStack,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier.padding(padding),
         ) { route ->
             when (route) {
                 is Route.Home -> NavEntry(route) {

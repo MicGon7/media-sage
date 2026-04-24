@@ -29,6 +29,7 @@ fun HomeScreen(
     onIntent: (HomeContract.Intent) -> Unit,
     onNavigateToDetail: (Long) -> Unit
 ) {
+    Surface(modifier = Modifier.fillMaxSize()) {
     when (state) {
         is HomeContract.UiState.Loading -> LoadingState()
         is HomeContract.UiState.Error -> ErrorState(
@@ -44,6 +45,7 @@ fun HomeScreen(
             onRefresh = { onIntent(HomeContract.Intent.RefreshHeadlines) },
             onHeadlineClick = onNavigateToDetail
         )
+    }
     }
 }
 

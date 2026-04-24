@@ -63,11 +63,13 @@ private fun VoicesHeader() {
 
 @Composable
 private fun VoicesList(figures: List<FigureItem>) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item { VoicesHeader() }
+    Surface(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            item { VoicesHeader() }
 
-        items(figures, key = { it.id }) { figure ->
-            VoiceCard(figure = figure)
+            items(figures, key = { it.id }) { figure ->
+                VoiceCard(figure = figure)
+            }
         }
     }
 }
