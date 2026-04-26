@@ -4,6 +4,7 @@ import com.mediasage.server.service.ArticleScraperService
 import com.mediasage.server.service.ClaudeApiService
 import com.mediasage.server.service.NewsApiService
 import com.mediasage.server.service.ScriptureApiService
+import com.mediasage.server.service.WikimediaService
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -41,4 +42,7 @@ fun serverModule(claudeApiKey: String, newsApiKey: String, scriptureApiKey: Stri
 
     // Article scraper
     single { ArticleScraperService() }
+
+    // Wikimedia portrait lookup
+    single { WikimediaService(get()) }
 }

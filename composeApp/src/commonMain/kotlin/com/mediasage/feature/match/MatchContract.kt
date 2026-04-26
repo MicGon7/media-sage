@@ -26,6 +26,7 @@ object MatchContract {
             val quoteText: String,
             val figureName: String,
             val figureRole: String,
+            val figureImageUrl: String?,
             val scriptureReference: String,
             val scriptureText: String,
             val matchExplanation: String,

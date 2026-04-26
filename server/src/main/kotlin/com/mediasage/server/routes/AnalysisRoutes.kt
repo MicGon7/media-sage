@@ -3,6 +3,7 @@ package com.mediasage.server.routes
 import com.mediasage.server.service.ArticleScraperService
 import com.mediasage.server.service.ClaudeApiService
 import com.mediasage.server.service.QuoteCandidate
+import com.mediasage.server.service.WikimediaService
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -38,9 +39,10 @@ data class MatchCandidate(
 fun Route.analysisRoutes() {
     val claudeService by inject<ClaudeApiService>()
     val scraperService by inject<ArticleScraperService>()
+    val wikimediaService by inject<WikimediaService>()
 
     route("/api/analysis") {
-        encourageRoute(claudeService, scraperService)
+        encourageRoute(claudeService, scraperService, wikimediaService)
         @Suppress("DEPRECATION")
         matchRoute(claudeService)
     }
@@ -48,7 +50,8 @@ fun Route.analysisRoutes() {
 
 private fun Route.encourageRoute(
     claudeService: ClaudeApiService,
-    scraperService: ArticleScraperService
+    scraperService: ArticleScraperService,
+    wikimediaService: WikimediaService
 ) {
     post("/encourage") {
         val request = call.receive<EncourageRequest>()
@@ -69,7 +72,9 @@ private fun Route.encourageRoute(
             articleText = articleText
         )
 
-        call.respond(result)
+        val figureImageUrl = wikimediaService.getPortraitUrl(result.figureName)
+
+        call.respond(result.copy(figureImageUrl = figureImageUrl))
     }
 }
 

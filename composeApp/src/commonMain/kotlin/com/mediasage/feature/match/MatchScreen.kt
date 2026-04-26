@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,9 +26,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -278,7 +283,20 @@ private fun EncouragementContent(encouragement: MatchContract.EncouragementState
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                FigurePlaceholder(name = encouragement.figureName, size = 48.dp)
+                if (encouragement.figureImageUrl != null) {
+                    AsyncImage(
+                        model = encouragement.figureImageUrl,
+                        contentDescription = encouragement.figureName,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop,
+                        error = rememberVectorPainter(Icons.Default.Person),
+                        fallback = rememberVectorPainter(Icons.Default.Person),
+                    )
+                } else {
+                    FigurePlaceholder(name = encouragement.figureName, size = 48.dp)
+                }
 
                 Column {
                     Text(
