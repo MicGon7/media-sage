@@ -58,6 +58,7 @@ class MatchViewModel(
                         quoteText = encouragement.quoteText,
                         figureName = encouragement.figureName,
                         figureRole = encouragement.figureRole,
+                        figureImageUrl = encouragement.figureImageUrl,
                         scriptureReference = encouragement.scriptureReference,
                         scriptureText = encouragement.scriptureText,
                         matchExplanation = encouragement.explanation,

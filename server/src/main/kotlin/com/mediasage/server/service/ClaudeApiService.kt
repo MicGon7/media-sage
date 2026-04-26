@@ -138,7 +138,8 @@ data class EncourageResult(
     val explanation: String,
     val connectionThemes: List<String>,
     val matchTheme: String,
-    val tone: EncourageTone
+    val tone: EncourageTone,
+    val figureImageUrl: String? = null
 )
 
 @kotlinx.serialization.Serializable

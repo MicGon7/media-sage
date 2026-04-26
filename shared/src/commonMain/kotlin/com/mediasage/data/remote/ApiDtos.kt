@@ -40,7 +40,8 @@ data class EncourageResultDto(
     val explanation: String,
     val connectionThemes: List<String>,
     val matchTheme: String,
-    val tone: String
+    val tone: String,
+    val figureImageUrl: String? = null
 )
 
 // ---- Legacy Match endpoint DTOs (deprecated — TODO MS-46) ----

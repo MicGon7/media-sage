@@ -116,7 +116,8 @@ fun EncourageResultDto.toDomain() = Encouragement(
     explanation = explanation,
     connectionThemes = connectionThemes,
     matchTheme = matchTheme,
-    tone = tone
+    tone = tone,
+    figureImageUrl = figureImageUrl
 )
 
 // Encouragement Entity ↔ Domain
@@ -131,7 +132,8 @@ fun EncouragementEntity.toDomain() = Encouragement(
     connectionThemes = if (connectionThemes.isEmpty()) emptyList()
         else connectionThemes.split(",").map { it.trim() },
     matchTheme = matchTheme,
-    tone = tone
+    tone = tone,
+    figureImageUrl = figureImageUrl
 )
 
 fun Encouragement.toEntity(articleUrl: String) = EncouragementEntity(
@@ -145,5 +147,6 @@ fun Encouragement.toEntity(articleUrl: String) = EncouragementEntity(
     explanation = explanation,
     connectionThemes = connectionThemes.joinToString(","),
     matchTheme = matchTheme,
-    tone = tone
+    tone = tone,
+    figureImageUrl = figureImageUrl
 )
