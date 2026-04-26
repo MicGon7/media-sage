@@ -24,16 +24,16 @@ class MatchViewModel(
     private val _sideEffects = Channel<MatchContract.SideEffect>()
     val sideEffects = _sideEffects.receiveAsFlow()
 
-    private var headlineTitle: String = ""
-    private var articleUrl: String = ""
-
     init {
         loadMatch()
     }
 
     fun onIntent(intent: MatchContract.Intent) {
         when (intent) {
-            is MatchContract.Intent.RetryMatch -> retryEncouragement()
+            is MatchContract.Intent.RetryMatch -> {
+                _state.value = MatchContract.UiState.Loading
+                loadMatch()
+            }
         }
     }
 
@@ -43,69 +43,31 @@ class MatchViewModel(
                 val headline = headlineRepository.getHeadlineById(headlineId)
                     ?: throw IllegalStateException("Headline not found")
 
-                headlineTitle = headline.title
-                articleUrl = headline.url
+                val encouragement = encouragementRepository.getEncouragement(
+                    headlineTitle = headline.title,
+                    articleUrl = headline.url
+                )
 
-                // Phase 1: Show headline data immediately
                 _state.value = MatchContract.UiState.Success(
                     headlineTitle = headline.title,
                     headlineSource = headline.source,
                     headlineCategory = "",
                     headlineImageUrl = headline.imageUrl,
+                    encouragement = MatchContract.EncouragementState.Loaded(
+                        summary = encouragement.summary,
+                        quoteText = encouragement.quoteText,
+                        figureName = encouragement.figureName,
+                        figureRole = encouragement.figureRole,
+                        scriptureReference = encouragement.scriptureReference,
+                        scriptureText = encouragement.scriptureText,
+                        matchExplanation = encouragement.explanation,
+                        matchTheme = encouragement.matchTheme,
+                        tone = encouragement.tone,
+                    )
                 )
-
-                // Phase 2: Fetch encouragement from Claude
-                fetchEncouragement()
             } catch (e: Exception) {
                 _state.value = MatchContract.UiState.Error(e.toErrorType())
             }
-        }
-    }
-
-    private fun fetchEncouragement() {
-        viewModelScope.launch {
-            try {
-                val encouragement = encouragementRepository.getEncouragement(
-                    headlineTitle = headlineTitle,
-                    articleUrl = articleUrl
-                )
-
-                val current = _state.value
-                if (current is MatchContract.UiState.Success) {
-                    _state.value = current.copy(
-                        encouragement = MatchContract.EncouragementState.Loaded(
-                            summary = encouragement.summary,
-                            quoteText = encouragement.quoteText,
-                            figureName = encouragement.figureName,
-                            figureRole = encouragement.figureRole,
-                            scriptureReference = encouragement.scriptureReference,
-                            scriptureText = encouragement.scriptureText,
-                            matchExplanation = encouragement.explanation,
-                            matchTheme = encouragement.matchTheme,
-                            tone = encouragement.tone,
-                        )
-                    )
-                }
-            } catch (e: Exception) {
-                val current = _state.value
-                if (current is MatchContract.UiState.Success) {
-                    _state.value = current.copy(
-                        encouragement = MatchContract.EncouragementState.Error(e.toErrorType())
-                    )
-                }
-            }
-        }
-    }
-
-    private fun retryEncouragement() {
-        val current = _state.value
-        if (current is MatchContract.UiState.Success) {
-            _state.value = current.copy(
-                encouragement = MatchContract.EncouragementState.Loading
-            )
-            fetchEncouragement()
-        } else {
-            loadMatch()
         }
     }
 }

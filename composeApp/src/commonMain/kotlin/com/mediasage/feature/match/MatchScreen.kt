@@ -344,7 +344,7 @@ private fun FullLoadingState() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        CircularProgressIndicator()
+        EncouragementLoading()
     }
 }
 
