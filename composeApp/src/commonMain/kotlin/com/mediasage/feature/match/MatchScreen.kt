@@ -291,6 +291,7 @@ private fun EncouragementContent(encouragement: MatchContract.EncouragementState
                             .size(48.dp)
                             .clip(CircleShape),
                         contentScale = ContentScale.Crop,
+                        alignment = Alignment.TopCenter,
                         error = rememberVectorPainter(Icons.Default.Person),
                         fallback = rememberVectorPainter(Icons.Default.Person),
                     )
