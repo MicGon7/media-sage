@@ -1,5 +1,6 @@
 package com.mediasage.data.mapper
 
+import com.mediasage.data.local.entity.EncouragementEntity
 import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.HeadlineEntity
 import com.mediasage.data.local.entity.MatchEntity
@@ -114,6 +115,35 @@ fun EncourageResultDto.toDomain() = Encouragement(
     scriptureText = scriptureText,
     explanation = explanation,
     connectionThemes = connectionThemes,
+    matchTheme = matchTheme,
+    tone = tone
+)
+
+// Encouragement Entity ↔ Domain
+fun EncouragementEntity.toDomain() = Encouragement(
+    summary = summary,
+    quoteText = quoteText,
+    figureName = figureName,
+    figureRole = figureRole,
+    scriptureReference = scriptureReference,
+    scriptureText = scriptureText,
+    explanation = explanation,
+    connectionThemes = if (connectionThemes.isEmpty()) emptyList()
+        else connectionThemes.split(",").map { it.trim() },
+    matchTheme = matchTheme,
+    tone = tone
+)
+
+fun Encouragement.toEntity(articleUrl: String) = EncouragementEntity(
+    articleUrl = articleUrl,
+    summary = summary,
+    quoteText = quoteText,
+    figureName = figureName,
+    figureRole = figureRole,
+    scriptureReference = scriptureReference,
+    scriptureText = scriptureText,
+    explanation = explanation,
+    connectionThemes = connectionThemes.joinToString(","),
     matchTheme = matchTheme,
     tone = tone
 )
