@@ -5,6 +5,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.mediasage.data.local.entity.EncouragementEntity
+import com.mediasage.data.local.entity.VoiceFigureProjection
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface EncouragementDao {
@@ -13,6 +15,19 @@ interface EncouragementDao {
 
     @Query("SELECT * FROM encouragements WHERE articleUrl = :articleUrl")
     suspend fun getByArticleUrl(articleUrl: String): EncouragementEntity?
+
+    @Query(
+        """
+        SELECT figureName, MAX(figureRole) AS figureRole, MAX(figureImageUrl) AS figureImageUrl
+        FROM encouragements
+        GROUP BY figureName
+        ORDER BY figureName ASC
+        """
+    )
+    fun getDistinctFigures(): Flow<List<VoiceFigureProjection>>
+
+    @Query("SELECT * FROM encouragements WHERE figureName = :figureName")
+    fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>>
 
     @Query("DELETE FROM encouragements")
     suspend fun deleteAll()

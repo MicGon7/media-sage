@@ -18,9 +18,13 @@ sealed interface Route : NavKey {
     @Serializable
     data class Match(val headlineId: Long) : Route
 
-    /** Browse and select figures for matching. */
+    /** Browse voices (figures) collected from reading history. */
     @Serializable
     data object Figures : Route
+
+    /** Detail screen for a specific figure. */
+    @Serializable
+    data class FigureDetail(val figureName: String) : Route
 }
 
 /** Serialization config required for Nav3 on non-JVM platforms. */
@@ -29,5 +33,6 @@ val navSerializersModule = SerializersModule {
         subclass(Route.Home::class)
         subclass(Route.Match::class)
         subclass(Route.Figures::class)
+        subclass(Route.FigureDetail::class)
     }
 }

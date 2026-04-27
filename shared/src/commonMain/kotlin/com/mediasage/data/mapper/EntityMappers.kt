@@ -136,7 +136,7 @@ fun EncouragementEntity.toDomain() = Encouragement(
     figureImageUrl = figureImageUrl
 )
 
-fun Encouragement.toEntity(articleUrl: String) = EncouragementEntity(
+fun Encouragement.toEntity(articleUrl: String, headlineTitle: String = "") = EncouragementEntity(
     articleUrl = articleUrl,
     summary = summary,
     quoteText = quoteText,
@@ -148,5 +148,6 @@ fun Encouragement.toEntity(articleUrl: String) = EncouragementEntity(
     connectionThemes = connectionThemes.joinToString(","),
     matchTheme = matchTheme,
     tone = tone,
-    figureImageUrl = figureImageUrl
+    figureImageUrl = figureImageUrl,
+    headlineTitle = headlineTitle
 )
