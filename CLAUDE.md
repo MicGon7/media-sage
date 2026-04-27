@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Media Sage (public name: **The New Life Times**) is a Kotlin Multiplatform (KMP) app with a Ktor backend that matches news headlines with encouraging quotes from Christian theologians, mystics, and biblical figures using Claude AI. It targets Android, iOS, and a JVM server.
+Media Sage (public name: **The Media Sage**) is a Kotlin Multiplatform (KMP) app with a Ktor backend that matches news headlines with encouraging quotes from Christian theologians, mystics, and biblical figures using Claude AI. It targets Android, iOS, and a JVM server.
 
 ## Architecture
 
@@ -174,7 +174,7 @@ source ~/.zshrc && ./gradlew :server:run
 ## Agent Guidelines
 
 ### Workflow
-1. Query Jira for `agent` label tickets: `project = MS AND labels = agent AND status = "To Do"`
+1. Query Jira for assigned tickets: `project = MS AND labels in (assisted, autonomous) AND status = "To Do"`
 2. Create Jira ticket if new work (with acceptance criteria)
 3. Transition ticket to In Progress
 4. Create feature branch (`feature/MS-{ticket}-description`)
@@ -183,7 +183,8 @@ source ~/.zshrc && ./gradlew :server:run
 7. Update `docs/` with ticket learning doc
 8. Update this file (CLAUDE.md) if introducing new patterns
 9. Commit everything, push, create PR
-10. Reply to any PR review comments with `🤖 **Agent:**` prefix
+10. Transition ticket to In Review
+11. Reply to any PR review comments with `🤖 **Agent:**` prefix
 
 ### Before submitting work
 - Run `./gradlew allTests` and ensure all pass
@@ -193,9 +194,78 @@ source ~/.zshrc && ./gradlew :server:run
 - Never push directly to main — always create a PR
 - Never merge a PR — human reviews and merges
 
+### Autonomous Mode
+
+An **autonomous agent** runs the full workflow — Jira, branch, code, tests, docs, commit, PR — without human interaction. The human's only touchpoint is the GitHub PR review.
+
+**Jira labels that control agent behavior:**
+
+- No label — human work with no AI involvement.
+- **`assisted`** — Human and AI work together. Human stays in the loop, approves decisions, and learns the patterns. AI acts as a pair programmer. This is the default for all AI-intended tickets and the expected minimum standard for the team.
+- **`autonomous`** — Explicit upgrade from `assisted`. AI works alone end-to-end, human only reviews the PR. Only appropriate for patterns that are already proven and well-understood.
+
+`assisted` is always the starting point. Promote to `autonomous` only after the pattern has been built and validated in `assisted` mode. When in doubt, stay `assisted`.
+
+**Invocation:**
+```bash
+# Assisted — human approves tool calls (interactive Claude Code session)
+claude
+
+# Autonomous — bootstrap command (always the same, ticket is the prompt)
+claude -p "Check Jira (cloudId: media-sage.atlassian.net) for the next ticket labeled 'autonomous' in project MS with status 'To Do'. Read the ticket description and acceptance criteria for your task. Follow the Agent Guidelines in CLAUDE.md and execute the full workflow." \
+  --dangerously-skip-permissions
+```
+
+The bootstrap command never changes — the **ticket is the prompt**. Every autonomous ticket must include a clear task description and explicit acceptance criteria so the agent has everything it needs without human input.
+
+**Autonomous ticket requirements:**
+- Title: concise task description (agent uses this as the task summary)
+- Description: what needs to change and why
+- Acceptance criteria: explicit checkboxes the agent checks off as it works
+- Label: `autonomous`
+- No ambiguous requirements — if it needs clarification, use `assisted` instead
+
+**Automation levels:**
+
+- **Level 1 — Assisted**: Human writes the prompt and approves every tool call. Run via an interactive `claude` session.
+- **Level 2 — Autonomous (manual trigger)**: Human describes the intent to the assisted agent, which creates the Jira ticket with AC and the `autonomous` label. Human fires the bootstrap command once, then only reviews the PR. Run via `claude -p "..." --dangerously-skip-permissions`.
+- **Level 3 — Autonomous (self-triggering)**: Human describes the intent to the assisted agent, which creates the Jira ticket. Human walks away — a cron job or Jira webhook fires the bootstrap automatically. Human only reviews the PR.
+
+_This project is at Level 2. Level 3 requires a cron job or webhook that polls Jira and fires the bootstrap when an `autonomous` ticket enters To Do._
+
+**Autonomous vs Assisted:**
+
+- **Human touchpoints**: Autonomous = PR review only. Assisted = every tool call.
+- **Speed**: Autonomous = minutes. Assisted = hours.
+- **Best for**: Autonomous = well-defined tasks where all patterns already exist. Assisted = exploratory work, new architecture, anything ambiguous.
+- **Risk**: Autonomous = mistakes reach the PR before any human sees them. Assisted = human can course-correct mid-run.
+
+**When to use autonomous mode:**
+- Task is well-scoped with a clear acceptance criterion
+- All patterns already exist in the codebase (no novel architecture decisions)
+- The diff will be small enough for a reviewer to catch any mistakes
+
+**When NOT to use autonomous mode:**
+- First implementation of a new pattern (e.g., new data layer, new nav pattern)
+- Tasks requiring external smoke tests (live API calls, device testing)
+- Anything that touches database migrations, security, or auth
+- Ambiguous tasks where requirements need clarification
+
+**Pros:**
+- Executes the full workflow in minutes with no context switching for the developer
+- Enforces consistency — never skips detekt, tests, docs, or Jira updates
+- Scales horizontally — multiple agents can work different tickets in parallel
+
+**Cons:**
+- Mistakes run all the way to a PR before anyone sees them — good PR review hygiene is essential
+- Requires pre-approved tool permissions (trust boundary is the whole session)
+- Context window limits: very large tasks may need to be broken into smaller tickets
+- No mid-run judgment — if the task turns out to be more complex, the agent may produce incomplete work rather than stopping to ask
+
 ## Project Tracking
 
 - Jira project: Media Sage (key: MS) at media-sage.atlassian.net
-- Kanban board — no sprints, track time via In Progress → Done transitions
+- Kanban board — no sprints, track time via In Progress → In Review → Done transitions
 - Epics: MS-1 (Server API Layer), MS-2 (Shared Data Layer), MS-3 (App UI), MS-4 (Infrastructure)
 - Auto-transition: Jira tickets move to Done on PR merge via GitHub Actions
+- Board settings: found under the three-dot menu next to the project in the recents sidebar → Board

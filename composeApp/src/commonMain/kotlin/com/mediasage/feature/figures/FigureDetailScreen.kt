@@ -44,6 +44,7 @@ import com.mediasage.ui.MediaSageBackRow
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.figure_detail_biography
 import mediasage.composeapp.generated.resources.figure_detail_quotes_button
+import mediasage.composeapp.generated.resources.figure_detail_quotes_sheet_title
 import mediasage.composeapp.generated.resources.figure_detail_wikipedia_source
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -91,8 +92,11 @@ fun FigureDetailScreen(
                     )
 
                     if (showQuotesSheet) {
-                        ModalBottomSheet(onDismissRequest = { showQuotesSheet = false }) {
-                            QuotesBottomSheet(quotes = state.quotes)
+                        ModalBottomSheet(
+                            onDismissRequest = { showQuotesSheet = false },
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ) {
+                            QuotesSheetContent(quotes = state.quotes)
                         }
                     }
                 }
@@ -195,12 +199,21 @@ private fun FigureDetailContent(
 }
 
 @Composable
-private fun QuotesBottomSheet(quotes: List<FigureQuoteItem>) {
+private fun QuotesSheetContent(quotes: List<FigureQuoteItem>) {
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
     ) {
+        item {
+            Text(
+                text = stringResource(Res.string.figure_detail_quotes_sheet_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
+        }
         items(quotes) { quote ->
             QuoteRow(quote = quote)
             HorizontalDivider(

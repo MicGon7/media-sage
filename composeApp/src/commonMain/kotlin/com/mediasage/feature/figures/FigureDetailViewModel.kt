@@ -7,7 +7,7 @@ import com.mediasage.domain.repository.WikipediaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class FigureDetailViewModel(
@@ -26,21 +26,21 @@ class FigureDetailViewModel(
     private fun load() {
         viewModelScope.launch {
             try {
-                val entities = encouragementDao.getByFigureName(figureName).first()
-                val first = entities.firstOrNull() ?: run {
-                    _state.value = FigureDetailContract.UiState.Error("Figure not found")
-                    return@launch
-                }
-
                 val bio = wikipediaRepository.getBio(figureName)
-
-                _state.value = FigureDetailContract.UiState.Success(
-                    figureName = first.figureName,
-                    figureRole = first.figureRole,
-                    figureImageUrl = first.figureImageUrl,
-                    bio = bio,
-                    quotes = entities.map { FigureQuoteItem(it.quoteText, it.headlineTitle) }
-                )
+                encouragementDao.getByFigureName(figureName).collect { entities ->
+                    val first = entities.firstOrNull()
+                    if (first == null) {
+                        _state.value = FigureDetailContract.UiState.Error("Figure not found")
+                        return@collect
+                    }
+                    _state.value = FigureDetailContract.UiState.Success(
+                        figureName = first.figureName,
+                        figureRole = first.figureRole,
+                        figureImageUrl = first.figureImageUrl,
+                        bio = bio,
+                        quotes = entities.map { FigureQuoteItem(it.quoteText, it.headlineTitle) }
+                    )
+                }
             } catch (e: Exception) {
                 _state.value = FigureDetailContract.UiState.Error(e.message.orEmpty())
             }
