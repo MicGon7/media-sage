@@ -183,7 +183,8 @@ source ~/.zshrc && ./gradlew :server:run
 7. Update `docs/` with ticket learning doc
 8. Update this file (CLAUDE.md) if introducing new patterns
 9. Commit everything, push, create PR
-10. Reply to any PR review comments with `🤖 **Agent:**` prefix
+10. Transition ticket to In Review
+11. Reply to any PR review comments with `🤖 **Agent:**` prefix
 
 ### Before submitting work
 - Run `./gradlew allTests` and ensure all pass
@@ -264,6 +265,7 @@ _This project is at Level 2. Level 3 requires a cron job or webhook that polls J
 ## Project Tracking
 
 - Jira project: Media Sage (key: MS) at media-sage.atlassian.net
-- Kanban board — no sprints, track time via In Progress → Done transitions
+- Kanban board — no sprints, track time via In Progress → In Review → Done transitions
 - Epics: MS-1 (Server API Layer), MS-2 (Shared Data Layer), MS-3 (App UI), MS-4 (Infrastructure)
 - Auto-transition: Jira tickets move to Done on PR merge via GitHub Actions
+- Board settings: found under the three-dot menu next to the project in the recents sidebar → Board
