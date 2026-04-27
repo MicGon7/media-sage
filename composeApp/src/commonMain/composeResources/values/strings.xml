@@ -1,6 +1,6 @@
 <resources>
     <!-- App -->
-    <string name="app_name">The New Life Times</string>
+    <string name="app_name">The Media Sage</string>
 
     <!-- Navigation -->
     <string name="nav_headlines">Headlines</string>
@@ -8,7 +8,7 @@
     <string name="nav_back">Back</string>
 
     <!-- Screen titles -->
-    <string name="title_home">The New Life Times</string>
+    <string name="title_home">The Media Sage</string>
     <string name="title_match">Today's Word</string>
     <string name="title_voices">Gathered Voices</string>
 
