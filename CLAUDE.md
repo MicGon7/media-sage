@@ -231,7 +231,20 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 - **Level 2 — Autonomous (manual trigger)**: Human describes the intent to the assisted agent, which creates the Jira ticket with AC and the `autonomous` label. Human fires the bootstrap command once, then only reviews the PR. Run via `claude -p "..." --dangerously-skip-permissions`.
 - **Level 3 — Autonomous (self-triggering)**: Human describes the intent to the assisted agent, which creates the Jira ticket. Human walks away — a cron job or Jira webhook fires the bootstrap automatically. Human only reviews the PR.
 
-_This project is at Level 2. Level 3 requires a cron job or webhook that polls Jira and fires the bootstrap when an `autonomous` ticket enters To Do._
+_This project is at Level 3. The Jira webhook receiver is live in the `:server` module at `POST /webhook/jira`._
+
+**Level 3 setup (laptop demo):**
+
+1. Add `export AGENT_REPO_PATH="/path/to/media-sage"` to `~/.zshrc` and `source ~/.zshrc`
+2. Start the server: `source ~/.zshrc && ./gradlew :server:run`
+3. Start ngrok: `ngrok http 8080` — copy the public HTTPS URL
+4. Register the Jira webhook at **media-sage.atlassian.net → Settings → System → WebHooks**:
+   - URL: `https://<ngrok-url>/webhook/jira`
+   - Events: Issue **created** and **updated**
+   - JQL filter: `project = MS AND labels = autonomous`
+5. Ask the assisted agent to create an `autonomous` ticket — the agent fires automatically
+
+See `docs/MS-69-level-3-autonomous-agent.md` for full setup details and enterprise architecture.
 
 **Autonomous vs Assisted:**
 

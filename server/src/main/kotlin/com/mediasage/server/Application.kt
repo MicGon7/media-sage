@@ -20,9 +20,11 @@ fun Application.module() {
         .propertyOrNull("app.news.apiKey")?.getString() ?: ""
     val scriptureApiKey = environment.config
         .propertyOrNull("app.scripture.apiKey")?.getString() ?: ""
+    val agentRepoPath = environment.config
+        .propertyOrNull("app.agent.repoPath")?.getString() ?: ""
 
     install(Koin) {
-        modules(serverModule(claudeApiKey, newsApiKey, scriptureApiKey))
+        modules(serverModule(claudeApiKey, newsApiKey, scriptureApiKey, agentRepoPath))
     }
 
     configureContentNegotiation()
@@ -38,5 +40,6 @@ fun Application.configureRouting() {
         newsRoutes()
         analysisRoutes()
         scriptureRoutes()
+        webhookRoutes()
     }
 }
