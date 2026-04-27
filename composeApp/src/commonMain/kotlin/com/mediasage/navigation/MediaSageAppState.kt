@@ -27,8 +27,8 @@ class MediaSageAppState(
         }
     }
 
-    fun navigateToMatch(headlineId: Long) {
-        backStack.add(Route.Match(headlineId))
+    fun navigateToHeadlineDetail(headlineId: Long) {
+        backStack.add(Route.HeadlineDetail(headlineId))
     }
 
     fun navigateToFigureDetail(figureName: String) {

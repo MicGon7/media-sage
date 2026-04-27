@@ -9,7 +9,7 @@
 
     <!-- Screen titles -->
     <string name="title_home">The Media Sage</string>
-    <string name="title_match">Today's Word</string>
+    <string name="title_headline_detail">Today's Word</string>
     <string name="title_voices">Gathered Voices</string>
 
     <!-- Home screen -->
@@ -21,7 +21,7 @@
     <string name="home_error_generic">Something went wrong. Please try again.</string>
     <string name="home_tagline">Discover wisdom in today's news</string>
 
-    <!-- Match screen -->
+    <!-- Headline Detail screen -->
     <string name="match_headline_id">Headline #%1$d</string>
     <string name="match_coming_soon">Quote match coming in MS-14</string>
     <string name="match_finding">Finding wisdom…</string>

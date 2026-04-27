@@ -1,4 +1,4 @@
-package com.mediasage.feature.match
+package com.mediasage.feature.headlinedetail
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -55,14 +55,14 @@ import mediasage.composeapp.generated.resources.match_retry
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun MatchScreen(
-    state: MatchContract.UiState,
-    onIntent: (MatchContract.Intent) -> Unit,
+fun HeadlineDetailScreen(
+    state: HeadlineDetailContract.UiState,
+    onIntent: (HeadlineDetailContract.Intent) -> Unit,
     onNavigateBack: () -> Unit = {}
 ) {
-    val matchTheme = (state as? MatchContract.UiState.Success)
+    val matchTheme = (state as? HeadlineDetailContract.UiState.Success)
         ?.encouragement
-        ?.let { (it as? MatchContract.EncouragementState.Loaded)?.matchTheme }
+        ?.let { (it as? HeadlineDetailContract.EncouragementState.Loaded)?.matchTheme }
 
     Surface(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -78,17 +78,17 @@ fun MatchScreen(
             }
         }
         when (state) {
-            is MatchContract.UiState.Loading -> FullLoadingState()
-            is MatchContract.UiState.Error -> FullErrorState(
+            is HeadlineDetailContract.UiState.Loading -> FullLoadingState()
+            is HeadlineDetailContract.UiState.Error -> FullErrorState(
                 message = when (state.errorType) {
                     ErrorType.NETWORK -> stringResource(Res.string.match_error_network)
                     ErrorType.GENERIC -> stringResource(Res.string.match_error_generic)
                 },
-                onRetry = { onIntent(MatchContract.Intent.RetryMatch) }
+                onRetry = { onIntent(HeadlineDetailContract.Intent.RetryMatch) }
             )
-            is MatchContract.UiState.Success -> MatchContent(
+            is HeadlineDetailContract.UiState.Success -> HeadlineDetailContent(
                 state = state,
-                onRetry = { onIntent(MatchContract.Intent.RetryMatch) }
+                onRetry = { onIntent(HeadlineDetailContract.Intent.RetryMatch) }
             )
         }
     }
@@ -96,8 +96,8 @@ fun MatchScreen(
 }
 
 @Composable
-private fun MatchContent(
-    state: MatchContract.UiState.Success,
+private fun HeadlineDetailContent(
+    state: HeadlineDetailContract.UiState.Success,
     onRetry: () -> Unit
 ) {
     Column(
@@ -127,12 +127,12 @@ private fun MatchContent(
 
             // Encouragement section — progressive loading
             when (state.encouragement) {
-                is MatchContract.EncouragementState.Loading -> EncouragementLoading()
-                is MatchContract.EncouragementState.Error -> EncouragementError(
+                is HeadlineDetailContract.EncouragementState.Loading -> EncouragementLoading()
+                is HeadlineDetailContract.EncouragementState.Error -> EncouragementError(
                     errorType = state.encouragement.errorType,
                     onRetry = onRetry
                 )
-                is MatchContract.EncouragementState.Loaded -> EncouragementContent(
+                is HeadlineDetailContract.EncouragementState.Loaded -> EncouragementContent(
                     encouragement = state.encouragement
                 )
             }
@@ -141,7 +141,7 @@ private fun MatchContent(
 }
 
 @Composable
-private fun HeadlineSection(state: MatchContract.UiState.Success) {
+private fun HeadlineSection(state: HeadlineDetailContract.UiState.Success) {
     if (state.headlineCategory.isNotBlank()) {
         Text(
             text = state.headlineCategory.uppercase(),
@@ -233,7 +233,7 @@ private fun EncouragementError(
 }
 
 @Composable
-private fun EncouragementContent(encouragement: MatchContract.EncouragementState.Loaded) {
+private fun EncouragementContent(encouragement: HeadlineDetailContract.EncouragementState.Loaded) {
     // Article summary
     if (!encouragement.summary.isNullOrBlank()) {
         Text(
@@ -254,7 +254,7 @@ private fun EncouragementContent(encouragement: MatchContract.EncouragementState
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "\u201C",
+                text = "“",
                 style = MaterialTheme.typography.displayLarge,
                 color = MaterialTheme.colorScheme.primary,
                 lineHeight = 48.sp,
@@ -268,7 +268,7 @@ private fun EncouragementContent(encouragement: MatchContract.EncouragementState
             )
 
             Text(
-                text = "\u201D",
+                text = "”",
                 style = MaterialTheme.typography.displayLarge,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.End,

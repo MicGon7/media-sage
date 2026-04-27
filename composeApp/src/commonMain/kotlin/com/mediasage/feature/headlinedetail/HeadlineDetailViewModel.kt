@@ -1,4 +1,4 @@
-package com.mediasage.feature.match
+package com.mediasage.feature.headlinedetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,26 +12,26 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-class MatchViewModel(
+class HeadlineDetailViewModel(
     private val headlineId: Long,
     private val headlineRepository: HeadlineRepository,
     private val encouragementRepository: EncouragementRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<MatchContract.UiState>(MatchContract.UiState.Loading)
-    val state: StateFlow<MatchContract.UiState> = _state.asStateFlow()
+    private val _state = MutableStateFlow<HeadlineDetailContract.UiState>(HeadlineDetailContract.UiState.Loading)
+    val state: StateFlow<HeadlineDetailContract.UiState> = _state.asStateFlow()
 
-    private val _sideEffects = Channel<MatchContract.SideEffect>()
+    private val _sideEffects = Channel<HeadlineDetailContract.SideEffect>()
     val sideEffects = _sideEffects.receiveAsFlow()
 
     init {
         loadMatch()
     }
 
-    fun onIntent(intent: MatchContract.Intent) {
+    fun onIntent(intent: HeadlineDetailContract.Intent) {
         when (intent) {
-            is MatchContract.Intent.RetryMatch -> {
-                _state.value = MatchContract.UiState.Loading
+            is HeadlineDetailContract.Intent.RetryMatch -> {
+                _state.value = HeadlineDetailContract.UiState.Loading
                 loadMatch()
             }
         }
@@ -48,12 +48,12 @@ class MatchViewModel(
                     articleUrl = headline.url
                 )
 
-                _state.value = MatchContract.UiState.Success(
+                _state.value = HeadlineDetailContract.UiState.Success(
                     headlineTitle = headline.title,
                     headlineSource = headline.source,
                     headlineCategory = "",
                     headlineImageUrl = headline.imageUrl,
-                    encouragement = MatchContract.EncouragementState.Loaded(
+                    encouragement = HeadlineDetailContract.EncouragementState.Loaded(
                         summary = encouragement.summary,
                         quoteText = encouragement.quoteText,
                         figureName = encouragement.figureName,
@@ -67,7 +67,7 @@ class MatchViewModel(
                     )
                 )
             } catch (e: Exception) {
-                _state.value = MatchContract.UiState.Error(e.toErrorType())
+                _state.value = HeadlineDetailContract.UiState.Error(e.toErrorType())
             }
         }
     }
