@@ -17,8 +17,8 @@ import com.mediasage.feature.figures.FiguresScreen
 import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.home.HomeScreen
 import com.mediasage.feature.home.HomeViewModel
-import com.mediasage.feature.match.MatchScreen
-import com.mediasage.feature.match.MatchViewModel
+import com.mediasage.feature.headlinedetail.HeadlineDetailScreen
+import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -50,16 +50,16 @@ fun MediaSageScaffold(
                     HomeScreen(
                         state = state,
                         onIntent = vm::onIntent,
-                        onNavigateToDetail = { id -> appState.navigateToMatch(id) }
+                        onNavigateToDetail = { id -> appState.navigateToHeadlineDetail(id) }
                     )
                 }
-                is Route.Match -> NavEntry(route) {
-                    val vm = koinViewModel<MatchViewModel>(
-                        key = "match-${route.headlineId}",
+                is Route.HeadlineDetail -> NavEntry(route) {
+                    val vm = koinViewModel<HeadlineDetailViewModel>(
+                        key = "headline-detail-${route.headlineId}",
                         parameters = { parametersOf(route.headlineId) }
                     )
                     val state by vm.state.collectAsState()
-                    MatchScreen(
+                    HeadlineDetailScreen(
                         state = state,
                         onIntent = vm::onIntent,
                         onNavigateBack = { appState.navigateBack() }

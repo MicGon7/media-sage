@@ -1,9 +1,9 @@
-package com.mediasage.feature.match
+package com.mediasage.feature.headlinedetail
 
 import com.mediasage.ui.ErrorType
 
-/** MVI contract for the Match (Headline Detail) feature. */
-object MatchContract {
+/** MVI contract for the Headline Detail feature. */
+object HeadlineDetailContract {
 
     sealed interface UiState {
         data object Loading : UiState

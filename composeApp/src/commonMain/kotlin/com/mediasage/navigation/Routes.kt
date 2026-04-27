@@ -14,9 +14,9 @@ sealed interface Route : NavKey {
     @Serializable
     data object Home : Route
 
-    /** Quote match for a specific headline. */
+    /** Headline detail with matched quote. */
     @Serializable
-    data class Match(val headlineId: Long) : Route
+    data class HeadlineDetail(val headlineId: Long) : Route
 
     /** Browse voices (figures) collected from reading history. */
     @Serializable
@@ -31,7 +31,7 @@ sealed interface Route : NavKey {
 val navSerializersModule = SerializersModule {
     polymorphic(NavKey::class) {
         subclass(Route.Home::class)
-        subclass(Route.Match::class)
+        subclass(Route.HeadlineDetail::class)
         subclass(Route.Figures::class)
         subclass(Route.FigureDetail::class)
     }
