@@ -1,7 +1,7 @@
 # MS-36: Newspaper-Style Material3 Theme
 
 ## What Changed
-Added a custom Material3 theme with editorial newspaper styling and rebranded the app from "Media Sage" to "The New Life Times."
+Added a custom Material3 theme with editorial newspaper styling and rebranded the app display name (later updated to "The Media Sage" in MS-67).
 
 ## Theme Architecture
 
@@ -27,7 +27,7 @@ Three files under `composeApp/src/commonMain/kotlin/com/mediasage/theme/`:
 - **Dividers**: Rule line (`#D0D0D0`)
 
 ## Other Changes
-- App name: "Media Sage" -> "The New Life Times"
+- App name: "Media Sage" -> "The Media Sage" (renamed in MS-36, finalized in MS-67)
 - Figures tab renamed to "Voices" with Groups icon
 - Scaffold, TopAppBar, NavigationBar explicitly set to theme surface color
 - Dark theme forced off (MS-30)

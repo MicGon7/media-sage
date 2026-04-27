@@ -6,7 +6,7 @@ Replaced the placeholder Home screen with the newspaper-styled headlines feed ma
 ## Screen Layout
 
 ### Masthead
-- App name "The New Life Times" in displaySmall serif
+- App name "The Media Sage" in displaySmall serif
 - Tagline in italic body text
 - Navy rule line divider
 
