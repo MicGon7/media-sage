@@ -16,5 +16,6 @@ data class EncouragementEntity(
     val connectionThemes: String,
     val matchTheme: String,
     val tone: String,
-    val figureImageUrl: String? = null
+    val figureImageUrl: String? = null,
+    val headlineTitle: String = ""
 )

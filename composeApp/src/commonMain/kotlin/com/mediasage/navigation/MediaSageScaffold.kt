@@ -4,15 +4,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import com.mediasage.feature.figures.FigureDetailScreen
+import com.mediasage.feature.figures.FigureDetailViewModel
 import com.mediasage.feature.figures.FiguresScreen
 import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.home.HomeScreen
@@ -20,6 +20,8 @@ import com.mediasage.feature.home.HomeViewModel
 import com.mediasage.feature.match.MatchScreen
 import com.mediasage.feature.match.MatchViewModel
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun MediaSageScaffold(
@@ -64,11 +66,23 @@ fun MediaSageScaffold(
                     )
                 }
                 is Route.Figures -> NavEntry(route) {
-                    val vm = viewModel { FiguresViewModel() }
+                    val vm = koinViewModel<FiguresViewModel>()
                     val state by vm.state.collectAsState()
                     FiguresScreen(
                         state = state,
-                        onIntent = vm::onIntent
+                        onIntent = vm::onIntent,
+                        onNavigateToFigureDetail = { name -> appState.navigateToFigureDetail(name) }
+                    )
+                }
+                is Route.FigureDetail -> NavEntry(route) {
+                    val vm = koinViewModel<FigureDetailViewModel>(
+                        key = "figure-${route.figureName}",
+                        parameters = { parametersOf(route.figureName) }
+                    )
+                    val state by vm.state.collectAsState()
+                    FigureDetailScreen(
+                        state = state,
+                        onNavigateBack = { appState.navigateBack() }
                     )
                 }
                 else -> NavEntry(route) {}
@@ -87,11 +101,24 @@ private fun MediaSageBottomBar(
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         destinations.forEach { destination ->
+            val selected = currentDestination == destination.route
             NavigationBarItem(
-                selected = currentDestination == destination.route,
+                selected = selected,
                 onClick = { onNavigate(destination) },
-                icon = { Icon(destination.icon, contentDescription = null) },
-                label = { Text(stringResource(destination.labelRes)) }
+                icon = {
+                    Icon(
+                        imageVector = if (selected) destination.selectedIcon else destination.unselectedIcon,
+                        contentDescription = null
+                    )
+                },
+                label = { Text(stringResource(destination.labelRes)) },
+                colors = NavigationBarItemDefaults.colors(
+                    indicatorColor = Color.Transparent,
+                    selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             )
         }
     }

@@ -25,7 +25,7 @@ class EncouragementRepositoryImpl(
             EncourageRequestDto(headlineTitle = headlineTitle, articleUrl = articleUrl)
         ).toDomain()
 
-        articleUrl?.let { encouragementDao.insert(encouragement.toEntity(it)) }
+        articleUrl?.let { encouragementDao.insert(encouragement.toEntity(it, headlineTitle)) }
         return encouragement
     }
 }

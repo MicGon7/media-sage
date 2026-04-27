@@ -31,6 +31,10 @@ class MediaSageAppState(
         backStack.add(Route.Match(headlineId))
     }
 
+    fun navigateToFigureDetail(figureName: String) {
+        backStack.add(Route.FigureDetail(figureName))
+    }
+
     fun navigateBack() {
         backStack.removeLastOrNull()
     }

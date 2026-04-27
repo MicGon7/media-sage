@@ -10,7 +10,7 @@
     <!-- Screen titles -->
     <string name="title_home">The New Life Times</string>
     <string name="title_match">Today's Word</string>
-    <string name="title_voices">Spiritual Voices</string>
+    <string name="title_voices">Gathered Voices</string>
 
     <!-- Home screen -->
     <string name="home_headlines_feed">Headlines Feed</string>
@@ -33,4 +33,14 @@
     <string name="voices_subtitle">Theologians, mystics, and faithful witnesses</string>
     <string name="voices_coming_soon">Voice selection coming soon</string>
     <string name="voices_retry">Retry</string>
+    <string name="voices_empty_state">Voices will appear as you read</string>
+
+    <!-- Figure detail screen -->
+    <string name="figure_detail_biography">Biography</string>
+    <string name="figure_detail_wikipedia_source">Sourced from Wikipedia</string>
+
+    <plurals name="figure_detail_quotes_button">
+        <item quantity="one">%1$d Quote</item>
+        <item quantity="other">%1$d Quotes</item>
+    </plurals>
 </resources>
