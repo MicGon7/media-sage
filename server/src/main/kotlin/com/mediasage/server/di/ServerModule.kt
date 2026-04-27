@@ -1,5 +1,6 @@
 package com.mediasage.server.di
 
+import com.mediasage.server.service.AgentLaunchService
 import com.mediasage.server.service.ArticleScraperService
 import com.mediasage.server.service.ClaudeApiService
 import com.mediasage.server.service.NewsApiService
@@ -13,7 +14,12 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
 
-fun serverModule(claudeApiKey: String, newsApiKey: String, scriptureApiKey: String) = module {
+fun serverModule(
+    claudeApiKey: String,
+    newsApiKey: String,
+    scriptureApiKey: String,
+    agentRepoPath: String
+) = module {
     // HTTP client for outbound API calls (Claude, News, Scripture)
     single {
         HttpClient(OkHttp) {
@@ -45,4 +51,7 @@ fun serverModule(claudeApiKey: String, newsApiKey: String, scriptureApiKey: Stri
 
     // Wikimedia portrait lookup
     single { WikimediaService(get()) }
+
+    // Autonomous agent launcher (Level 3 webhook trigger)
+    single { AgentLaunchService(agentRepoPath) }
 }
