@@ -16,6 +16,9 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.Color
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.HeadlineImage
@@ -201,6 +204,13 @@ private fun EmptyState(onRefresh: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.List,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = stringResource(Res.string.home_empty_message),
             style = MaterialTheme.typography.bodyLarge,
