@@ -50,15 +50,20 @@ class AgentLaunchService(
         val worktreePath = "/tmp/media-sage-pr-$prNumber"
         val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
         val worktreeFile = File(worktreePath)
-        val exitCode = ProcessBuilder("git", "worktree", "add", worktreePath, branchRef)
-            .directory(File(repoPath))
-            .redirectError(ProcessBuilder.Redirect.INHERIT)
-            .start()
-            .waitFor()
-        val worktreeCreated = exitCode == 0
+        val worktreeCreated = try {
+            val exitCode = ProcessBuilder("git", "worktree", "add", worktreePath, branchRef)
+                .directory(File(repoPath))
+                .redirectError(ProcessBuilder.Redirect.INHERIT)
+                .start()
+                .waitFor()
+            exitCode == 0
+        } catch (e: Exception) {
+            log.warning("Worktree creation failed for $branchRef: ${e.message}. Running agent in repoPath.")
+            false
+        }
 
         if (!worktreeCreated) {
-            log.warning("Worktree creation failed for $branchRef — branch likely checked out in main repo. Running agent in repoPath.")
+            log.warning("Worktree not created for $branchRef — running agent in repoPath.")
         }
 
         return spawnAgent(
