@@ -29,6 +29,15 @@ interface EncouragementDao {
     @Query("SELECT * FROM encouragements WHERE figureName = :figureName")
     fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>>
 
+    @Query(
+        """
+        SELECT DISTINCT figureName FROM encouragements
+        ORDER BY cachedAt DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun getRecentFigureNames(limit: Int): List<String>
+
     @Query("DELETE FROM encouragements")
     suspend fun deleteAll()
 }
