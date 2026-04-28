@@ -49,20 +49,28 @@ class AgentLaunchService(
         val key = "PR-$prNumber"
         val worktreePath = "/tmp/media-sage-pr-$prNumber"
         val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
-        return spawnAgent(key, prompt, setupWorkDir = {
-            ProcessBuilder("git", "worktree", "add", worktreePath, branchRef)
-                .directory(File(repoPath))
-                .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-                .redirectError(ProcessBuilder.Redirect.INHERIT)
-                .start()
-                .waitFor()
-            File(worktreePath)
-        }, teardown = {
-            ProcessBuilder("git", "worktree", "remove", "--force", worktreePath)
-                .directory(File(repoPath))
-                .start()
-                .waitFor()
-        })
+        val worktreeFile = File(worktreePath)
+        val exitCode = ProcessBuilder("git", "worktree", "add", worktreePath, branchRef)
+            .directory(File(repoPath))
+            .redirectError(ProcessBuilder.Redirect.INHERIT)
+            .start()
+            .waitFor()
+        val worktreeCreated = exitCode == 0
+
+        if (!worktreeCreated) {
+            log.warning("Worktree creation failed for $branchRef — branch likely checked out in main repo. Running agent in repoPath.")
+        }
+
+        return spawnAgent(
+            key, prompt,
+            workDir = if (worktreeCreated) worktreeFile else File(repoPath),
+            teardown = if (worktreeCreated) ({
+                ProcessBuilder("git", "worktree", "remove", "--force", worktreePath)
+                    .directory(File(repoPath))
+                    .start()
+                    .waitFor()
+            }) else null
+        )
     }
 
     fun isActive(key: String): Boolean = key in activeKeys
@@ -70,7 +78,7 @@ class AgentLaunchService(
     private fun spawnAgent(
         key: String,
         prompt: String,
-        setupWorkDir: (() -> File)? = null,
+        workDir: File = File(repoPath),
         teardown: (() -> Unit)? = null
     ): Boolean {
         if (!activeKeys.add(key)) return false
@@ -78,7 +86,6 @@ class AgentLaunchService(
         val command = listOf("claude", "-p", prompt, "--dangerously-skip-permissions")
 
         try {
-            val workDir = setupWorkDir?.invoke() ?: File(repoPath)
             val process = ProcessBuilder(command)
                 .directory(workDir)
                 .redirectOutput(ProcessBuilder.Redirect.INHERIT)
