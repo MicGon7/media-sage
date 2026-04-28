@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.koin.ktor.ext.inject
 import java.security.MessageDigest
+import java.util.logging.Logger
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -66,16 +67,17 @@ data class GitHubComment(
     val body: String
 )
 
-private data class WebhookContext(val ticketKey: String, val prNumber: Int, val commentBody: String)
+private data class WebhookContext(val ticketKey: String, val prNumber: Int, val branchRef: String, val commentBody: String)
 
+private val log = Logger.getLogger("GitHubWebhookRoutes")
 private val ticketKeyRegex = Regex("[A-Z]+-\\d+")
 private val webhookJson = Json { ignoreUnknownKeys = true }
 private val relevantEventActions = mapOf(
-    "pull_request_review" to "submitted",
-    "pull_request_review_comment" to "created"
+    "pull_request_review" to setOf("submitted"),
+    "pull_request_review_comment" to setOf("created", "edited")
 )
 
-fun Route.githubWebhookRoutes(webhookSecret: String, botLogin: String) {
+fun Route.githubWebhookRoutes(webhookSecret: String) {
     val agentService by inject<AgentLaunchService>()
     val jiraLabelChecker by inject<JiraLabelChecker>()
 
@@ -97,27 +99,29 @@ fun Route.githubWebhookRoutes(webhookSecret: String, botLogin: String) {
             return@post
         }
 
-        val context = parseWebhookContext(eventType, rawBody, botLogin)
-        if (context != null && jiraLabelChecker.isAutonomous(context.ticketKey)) {
-            agentService.launchForPrReview(context.ticketKey, context.prNumber, context.commentBody)
+        val context = parseWebhookContext(eventType, rawBody)
+        if (context != null) {
+            log.info("GitHub webhook matched: ticketKey=${context.ticketKey} PR#${context.prNumber}")
+            if (jiraLabelChecker.isAutonomous(context.ticketKey)) {
+                agentService.launchForPrReview(context.ticketKey, context.prNumber, context.branchRef, context.commentBody)
+            }
         }
 
         call.respond(HttpStatusCode.OK)
     }
 }
 
-private fun parseWebhookContext(eventType: String, rawBody: ByteArray, botLogin: String): WebhookContext? {
-    val expectedAction = relevantEventActions[eventType] ?: return null
+private fun parseWebhookContext(eventType: String, rawBody: ByteArray): WebhookContext? {
+    val allowedActions = relevantEventActions[eventType] ?: return null
     val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
     val commentBody = extractCommentBody(eventType, payload)
     val ticketKey = ticketKeyRegex.find(payload.pullRequest.head.ref)?.value
 
     return ticketKey
-        ?.takeIf { payload.action == expectedAction }
-        ?.takeIf { payload.sender.login != botLogin }
+        ?.takeIf { payload.action in allowedActions }
         ?.takeIf { commentBody.isNotBlank() && !commentBody.startsWith("🤖 **Agent:**") }
         ?.takeIf { eventType != "pull_request_review" || payload.review?.state != "approved" }
-        ?.let { WebhookContext(it, payload.pullRequest.number, commentBody) }
+        ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, commentBody) }
 }
 
 private fun extractCommentBody(eventType: String, payload: GitHubWebhookPayload): String =

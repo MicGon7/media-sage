@@ -20,7 +20,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 private const val TEST_SECRET = "test-webhook-secret"
-private const val BOT_LOGIN = "media-sage-bot"
 
 class GitHubWebhookRouteTest {
 
@@ -62,18 +61,6 @@ class GitHubWebhookRouteTest {
         val response = client.post("/webhook/github") {
             contentType(ContentType.Application.Json)
             header("X-GitHub-Event", "push")
-            header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
-            setBody(body)
-        }
-        assertEquals(HttpStatusCode.OK, response.status)
-    }
-
-    @Test
-    fun botSenderReturns200WithoutFiring() = testGitHubApp {
-        val body = prReviewPayload(senderLogin = BOT_LOGIN)
-        val response = client.post("/webhook/github") {
-            contentType(ContentType.Application.Json)
-            header("X-GitHub-Event", "pull_request_review")
             header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
             setBody(body)
         }
@@ -131,6 +118,18 @@ class GitHubWebhookRouteTest {
     @Test
     fun reviewCommentCreatedReturns200() = testGitHubApp(jiraAutonomous = true) {
         val body = reviewCommentPayload(commentBody = "Rename this variable for clarity.")
+        val response = client.post("/webhook/github") {
+            contentType(ContentType.Application.Json)
+            header("X-GitHub-Event", "pull_request_review_comment")
+            header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+            setBody(body)
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    @Test
+    fun reviewCommentEditedReturns200() = testGitHubApp(jiraAutonomous = true) {
+        val body = reviewCommentPayload(action = "edited", commentBody = "Updated: please rename this variable.")
         val response = client.post("/webhook/github") {
             contentType(ContentType.Application.Json)
             header("X-GitHub-Event", "pull_request_review_comment")
@@ -221,7 +220,7 @@ private fun testGitHubApp(
         }
         configureContentNegotiation()
         configureStatusPages()
-        routing { githubWebhookRoutes(TEST_SECRET, BOT_LOGIN) }
+        routing { githubWebhookRoutes(TEST_SECRET) }
     }
     block()
 }
