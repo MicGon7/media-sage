@@ -9,6 +9,8 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import kotlin.test.Test
@@ -69,7 +71,9 @@ private fun webhookPayload(event: String, label: String, status: String) = """
 private fun testWebhookApp(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
     application {
         install(Koin) {
-            modules(module { single { AgentLaunchService(repoPath = "") } })
+            modules(module {
+                single { AgentLaunchService(repoPath = "", scope = CoroutineScope(Dispatchers.IO)) }
+            })
         }
         configureContentNegotiation()
         configureStatusPages()
