@@ -20,6 +20,8 @@
     <string name="home_error_network">Unable to reach the server. Check your connection and try again.</string>
     <string name="home_error_generic">Something went wrong. Please try again.</string>
     <string name="home_tagline">Discover wisdom in today's news</string>
+    <string name="home_empty_message">No headlines available right now.</string>
+    <string name="home_empty_refresh">Refresh</string>
 
     <!-- Headline Detail screen -->
     <string name="match_headline_id">Headline #%1$d</string>

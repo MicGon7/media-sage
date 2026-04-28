@@ -48,6 +48,8 @@ class HomeViewModel(
                     _state.value = HomeContract.UiState.Success(
                         headlines = headlines.map { it.toItem() }
                     )
+                } else if (_state.value !is HomeContract.UiState.Loading) {
+                    _state.value = HomeContract.UiState.Empty
                 }
             }
         }
@@ -61,6 +63,10 @@ class HomeViewModel(
             } catch (e: Exception) {
                 if (_state.value is HomeContract.UiState.Loading) {
                     _state.value = HomeContract.UiState.Error(e.toErrorType())
+                }
+            } finally {
+                if (_state.value is HomeContract.UiState.Loading) {
+                    _state.value = HomeContract.UiState.Empty
                 }
             }
         }

@@ -7,6 +7,7 @@ object HomeContract {
 
     sealed interface UiState {
         data object Loading : UiState
+        data object Empty : UiState
         data class Success(
             val headlines: List<HeadlineItem>,
             val isRefreshing: Boolean = false
