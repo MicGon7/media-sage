@@ -16,13 +16,14 @@ class WikimediaService(private val httpClient: HttpClient) {
         private const val THUMB_SIZE = 300
     }
 
-    // null value = confirmed no image — prevents repeated failed lookups for the same figure
-    private val cache = ConcurrentHashMap<String, String?>()
+    // ConcurrentHashMap forbids null values; "" is the sentinel for "no portrait found"
+    private val cache = ConcurrentHashMap<String, String>()
 
     suspend fun getPortraitUrl(figureName: String): String? {
-        if (cache.containsKey(figureName)) return cache[figureName]
+        val cached = cache[figureName]
+        if (cached != null) return if (cached == "") null else cached
         val url = fetchPortraitUrl(figureName)
-        cache[figureName] = url
+        cache[figureName] = url ?: ""
         return url
     }
 
