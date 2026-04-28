@@ -49,33 +49,32 @@ class AgentLaunchService(
         val key = "PR-$prNumber"
         val worktreePath = "/tmp/media-sage-pr-$prNumber"
         val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
-        val worktreeFile = File(worktreePath)
-        val worktreeCreated = try {
-            val exitCode = ProcessBuilder("git", "worktree", "add", worktreePath, branchRef)
-                .directory(File(repoPath))
-                .redirectError(ProcessBuilder.Redirect.INHERIT)
-                .start()
-                .waitFor()
-            exitCode == 0
-        } catch (e: Exception) {
-            log.warning("Worktree creation failed for $branchRef: ${e.message}. Running agent in repoPath.")
-            false
-        }
-
-        if (!worktreeCreated) {
-            log.warning("Worktree not created for $branchRef — running agent in repoPath.")
-        }
-
+        val worktreeCreated = createWorktree(worktreePath, branchRef)
         return spawnAgent(
             key, prompt,
-            workDir = if (worktreeCreated) worktreeFile else File(repoPath),
-            teardown = if (worktreeCreated) ({
-                ProcessBuilder("git", "worktree", "remove", "--force", worktreePath)
-                    .directory(File(repoPath))
-                    .start()
-                    .waitFor()
-            }) else null
+            workDir = if (worktreeCreated) File(worktreePath) else File(repoPath),
+            teardown = if (worktreeCreated) ({ removeWorktree(worktreePath) }) else null
         )
+    }
+
+    private fun createWorktree(path: String, branchRef: String): Boolean = try {
+        val exitCode = ProcessBuilder("git", "worktree", "add", path, branchRef)
+            .directory(File(repoPath))
+            .redirectError(ProcessBuilder.Redirect.INHERIT)
+            .start()
+            .waitFor()
+        if (exitCode != 0) log.warning("Worktree creation failed for $branchRef — running agent in repoPath.")
+        exitCode == 0
+    } catch (e: Exception) {
+        log.warning("Worktree creation failed for $branchRef: ${e.message}. Running agent in repoPath.")
+        false
+    }
+
+    private fun removeWorktree(path: String) {
+        ProcessBuilder("git", "worktree", "remove", "--force", path)
+            .directory(File(repoPath))
+            .start()
+            .waitFor()
     }
 
     fun isActive(key: String): Boolean = key in activeKeys
