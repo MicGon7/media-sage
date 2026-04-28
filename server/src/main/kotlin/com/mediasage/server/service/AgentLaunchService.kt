@@ -14,8 +14,9 @@ private const val BOOTSTRAP_PROMPT =
 
 private const val PR_REVIEW_PROMPT =
     "PR #%d for ticket %s has a new review comment: \"%s\". " +
-    "Fetch the PR from GitHub (repo: MicGon7/media-sage), read the full diff and comment thread, " +
-    "then either push a fix commit or reply with '🤖 **Agent:**' explaining your decision. " +
+    "Check out branch %s, read the relevant source files, and make the necessary change. " +
+    "Then push a fix commit. If no code change is needed, reply with " +
+    "'🤖 **Agent:**' explaining your decision. " +
     "Follow the Agent Guidelines in CLAUDE.md."
 
 /**
@@ -40,32 +41,58 @@ class AgentLaunchService(
 
     /**
      * Launches an agent to respond to a PR review comment for [ticketKey].
+     * Creates a git worktree at /tmp/media-sage-pr-{prNumber} so the agent works in
+     * isolation and cannot switch branches in the developer's main checkout.
      * De-duplicates by PR number — a second call while one is running is a no-op.
      */
-    fun launchForPrReview(ticketKey: String, prNumber: Int, commentBody: String): Boolean =
-        spawnAgent("PR-$prNumber", PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody))
+    fun launchForPrReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String): Boolean {
+        val key = "PR-$prNumber"
+        val worktreePath = "/tmp/media-sage-pr-$prNumber"
+        val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
+        return spawnAgent(key, prompt, setupWorkDir = {
+            ProcessBuilder("git", "worktree", "add", worktreePath, branchRef)
+                .directory(File(repoPath))
+                .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                .redirectError(ProcessBuilder.Redirect.INHERIT)
+                .start()
+                .waitFor()
+            File(worktreePath)
+        }, teardown = {
+            ProcessBuilder("git", "worktree", "remove", "--force", worktreePath)
+                .directory(File(repoPath))
+                .start()
+                .waitFor()
+        })
+    }
 
     fun isActive(key: String): Boolean = key in activeKeys
 
-    private fun spawnAgent(key: String, prompt: String): Boolean {
+    private fun spawnAgent(
+        key: String,
+        prompt: String,
+        setupWorkDir: (() -> File)? = null,
+        teardown: (() -> Unit)? = null
+    ): Boolean {
         if (!activeKeys.add(key)) return false
 
         val command = listOf("claude", "-p", prompt, "--dangerously-skip-permissions")
 
         try {
+            val workDir = setupWorkDir?.invoke() ?: File(repoPath)
             val process = ProcessBuilder(command)
-                .directory(File(repoPath))
+                .directory(workDir)
                 .redirectOutput(ProcessBuilder.Redirect.INHERIT)
                 .redirectError(ProcessBuilder.Redirect.INHERIT)
                 .start()
 
-            log.info("Agent launched for $key (pid ${process.pid()})")
+            log.info("Agent launched for $key (pid ${process.pid()}) prompt: $prompt")
 
             scope.launch(Dispatchers.IO) {
                 try {
                     val exitCode = process.waitFor()
                     log.info("Agent for $key exited with code $exitCode")
                 } finally {
+                    teardown?.invoke()
                     activeKeys.remove(key)
                 }
             }

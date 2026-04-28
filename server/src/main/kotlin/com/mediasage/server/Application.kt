@@ -38,7 +38,6 @@ fun Application.module() {
 
 fun Application.configureRouting() {
     val githubWebhookSecret = environment.config.propertyOrNull("app.github.webhookSecret")?.getString() ?: ""
-    val githubBotLogin = environment.config.propertyOrNull("app.github.botLogin")?.getString() ?: ""
 
     routing {
         healthRoutes()
@@ -46,6 +45,6 @@ fun Application.configureRouting() {
         analysisRoutes()
         scriptureRoutes()
         webhookRoutes()
-        githubWebhookRoutes(githubWebhookSecret, githubBotLogin)
+        githubWebhookRoutes(githubWebhookSecret)
     }
 }
