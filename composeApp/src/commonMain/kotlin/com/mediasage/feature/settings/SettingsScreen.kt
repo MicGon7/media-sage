@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.nav_back
@@ -44,8 +43,7 @@ fun SettingsScreen(onNavigateBack: () -> Unit = {}) {
                 }
                 Text(
                     text = stringResource(Res.string.title_settings),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge,
                 )
             }
             HorizontalDivider(

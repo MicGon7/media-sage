@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.history_coming_soon
@@ -44,8 +43,7 @@ fun HistoryScreen(onNavigateBack: () -> Unit = {}) {
                 }
                 Text(
                     text = stringResource(Res.string.title_history),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge,
                 )
             }
             HorizontalDivider(
