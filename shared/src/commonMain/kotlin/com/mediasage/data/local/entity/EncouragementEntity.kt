@@ -1,9 +1,13 @@
 package com.mediasage.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "encouragements")
+@Entity(
+    tableName = "encouragements",
+    indices = [Index(value = ["figureName", "quoteText"], unique = true)]
+)
 data class EncouragementEntity(
     @PrimaryKey val articleUrl: String,
     val summary: String?,

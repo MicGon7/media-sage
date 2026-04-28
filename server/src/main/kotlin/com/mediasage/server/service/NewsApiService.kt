@@ -35,7 +35,7 @@ class NewsApiService(
             )
         }
 
-        return response.body<NewsApiResponse>().data
+        return response.body<NewsApiResponse>().data.distinctBy { it.url }
     }
 
     suspend fun searchNews(
@@ -57,7 +57,7 @@ class NewsApiService(
             )
         }
 
-        return response.body<NewsApiResponse>().data
+        return response.body<NewsApiResponse>().data.distinctBy { it.url }
     }
 }
 
