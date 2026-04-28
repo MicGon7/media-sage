@@ -1,0 +1,9 @@
+[build]
+builder = "nixpacks"
+buildCommand = "./gradlew :server:build -x test"
+
+[deploy]
+startCommand = "java $JAVA_OPTS -jar server/build/libs/server.jar"
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+restartPolicyType = "on_failure"
