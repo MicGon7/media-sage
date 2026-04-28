@@ -14,15 +14,17 @@ class WikimediaService(private val httpClient: HttpClient) {
     companion object {
         private const val API_URL = "https://en.wikipedia.org/w/api.php"
         private const val THUMB_SIZE = 300
+        // ConcurrentHashMap forbids null values; use empty string as sentinel for "no portrait found"
+        private const val NO_PORTRAIT = ""
     }
 
-    // null value = confirmed no image — prevents repeated failed lookups for the same figure
-    private val cache = ConcurrentHashMap<String, String?>()
+    private val cache = ConcurrentHashMap<String, String>()
 
     suspend fun getPortraitUrl(figureName: String): String? {
-        if (cache.containsKey(figureName)) return cache[figureName]
+        val cached = cache[figureName]
+        if (cached != null) return if (cached == NO_PORTRAIT) null else cached
         val url = fetchPortraitUrl(figureName)
-        cache[figureName] = url
+        cache[figureName] = url ?: NO_PORTRAIT
         return url
     }
 
