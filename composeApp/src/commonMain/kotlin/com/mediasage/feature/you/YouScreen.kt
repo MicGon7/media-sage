@@ -1,7 +1,5 @@
 package com.mediasage.feature.you
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,10 +21,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.mediasage.theme.MediaSageTheme
+import com.mediasage.ui.MediaSageButton
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.you_activity_subheader
 import mediasage.composeapp.generated.resources.you_greeting
@@ -85,13 +85,13 @@ fun YouScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                YouNavButton(
+                MediaSageButton(
                     icon = Icons.Outlined.Bookmark,
                     label = stringResource(Res.string.you_nav_saved),
                     onClick = onNavigateToBookmarks,
                     modifier = Modifier.weight(1f)
                 )
-                YouNavButton(
+                MediaSageButton(
                     icon = Icons.Outlined.History,
                     label = stringResource(Res.string.you_nav_history),
                     onClick = onNavigateToHistory,
@@ -102,34 +102,13 @@ fun YouScreen(
     }
 }
 
+@Preview(showBackground = true)
 @Composable
-private fun YouNavButton(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge
-            )
-        }
+private fun YouScreenPreview() {
+    MediaSageTheme {
+        YouScreen(
+            state = YouContract.UiState.Ready,
+            onIntent = {}
+        )
     }
 }
