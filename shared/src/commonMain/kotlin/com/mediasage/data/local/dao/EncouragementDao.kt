@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface EncouragementDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(encouragement: EncouragementEntity)
 
     @Query("SELECT * FROM encouragements WHERE articleUrl = :articleUrl")

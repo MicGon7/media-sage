@@ -101,6 +101,73 @@ class NewsApiServiceTest {
         assertEquals(401, exception.statusCode)
     }
 
+    private val duplicateUrlResponse = """
+    {
+        "meta": { "found": 3, "returned": 3, "limit": 10, "page": 1 },
+        "data": [
+            {
+                "uuid": "abc-123", "title": "Global markets rally",
+                "url": "https://example.com/markets", "language": "en",
+                "published_at": "2026-04-19T10:00:00.000000Z",
+                "source": "Reuters", "categories": ["business"], "locale": "us"
+            },
+            {
+                "uuid": "abc-456", "title": "Global markets rally",
+                "url": "https://example.com/markets", "language": "en",
+                "published_at": "2026-04-19T10:00:00.000000Z",
+                "source": "Reuters", "categories": ["business"], "locale": "us"
+            },
+            {
+                "uuid": "def-789", "title": "Earthquake strikes Pacific region",
+                "url": "https://example.com/earthquake", "language": "en",
+                "published_at": "2026-04-19T09:00:00.000000Z",
+                "source": "AP News", "categories": ["general"], "locale": "us"
+            }
+        ]
+    }
+    """.trimIndent()
+
+    private val duplicateSingleUrlResponse = """
+    {
+        "meta": { "found": 2, "returned": 2, "limit": 10, "page": 1 },
+        "data": [
+            {
+                "uuid": "aaa-1", "title": "Climate summit reaches agreement",
+                "url": "https://example.com/climate", "language": "en",
+                "published_at": "2026-04-19T08:00:00.000000Z",
+                "source": "BBC", "categories": ["politics"], "locale": "us"
+            },
+            {
+                "uuid": "aaa-2", "title": "Climate summit reaches agreement",
+                "url": "https://example.com/climate", "language": "en",
+                "published_at": "2026-04-19T08:00:00.000000Z",
+                "source": "BBC", "categories": ["politics"], "locale": "us"
+            }
+        ]
+    }
+    """.trimIndent()
+
+    @Test
+    fun getTopHeadlinesDeduplicatesByUrl() = runTest {
+        val service = NewsApiService(createMockClient(duplicateUrlResponse), "test-api-key")
+
+        val articles = service.getTopHeadlines()
+
+        assertEquals(2, articles.size)
+        assertEquals("https://example.com/markets", articles[0].url)
+        assertEquals("https://example.com/earthquake", articles[1].url)
+    }
+
+    @Test
+    fun searchNewsDeduplicatesByUrl() = runTest {
+        val service = NewsApiService(createMockClient(duplicateSingleUrlResponse), "test-api-key")
+
+        val articles = service.searchNews("climate")
+
+        assertEquals(1, articles.size)
+        assertEquals("https://example.com/climate", articles[0].url)
+    }
+
     @Test
     fun articleFieldsMappedCorrectly() = runTest {
         val client = createMockClient(sampleResponse)
