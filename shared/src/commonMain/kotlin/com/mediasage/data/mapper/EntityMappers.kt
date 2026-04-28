@@ -136,7 +136,7 @@ fun EncouragementEntity.toDomain() = Encouragement(
     figureImageUrl = figureImageUrl
 )
 
-fun Encouragement.toEntity(articleUrl: String, headlineTitle: String = "") = EncouragementEntity(
+fun Encouragement.toEntity(articleUrl: String, headlineTitle: String = "", cachedAt: Long = 0L) = EncouragementEntity(
     articleUrl = articleUrl,
     summary = summary,
     quoteText = quoteText,
@@ -149,5 +149,6 @@ fun Encouragement.toEntity(articleUrl: String, headlineTitle: String = "") = Enc
     matchTheme = matchTheme,
     tone = tone,
     figureImageUrl = figureImageUrl,
-    headlineTitle = headlineTitle
+    headlineTitle = headlineTitle,
+    cachedAt = cachedAt
 )

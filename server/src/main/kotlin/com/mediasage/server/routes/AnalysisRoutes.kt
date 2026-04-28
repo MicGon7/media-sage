@@ -17,7 +17,8 @@ import org.koin.ktor.ext.inject
 data class EncourageRequest(
     val headlineTitle: String,
     val locale: String = "en",
-    val articleUrl: String? = null
+    val articleUrl: String? = null,
+    val recentFigures: List<String> = emptyList()
 )
 
 @Serializable
@@ -69,7 +70,8 @@ private fun Route.encourageRoute(
         val result = claudeService.encourageHeadline(
             headlineTitle = request.headlineTitle,
             locale = request.locale,
-            articleText = articleText
+            articleText = articleText,
+            recentFigures = request.recentFigures
         )
 
         val figureImageUrl = wikimediaService.getPortraitUrl(result.figureName)

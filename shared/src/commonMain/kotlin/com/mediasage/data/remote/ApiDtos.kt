@@ -26,7 +26,8 @@ data class NewsArticleDto(
 data class EncourageRequestDto(
     val headlineTitle: String,
     val locale: String = "en",
-    val articleUrl: String? = null
+    val articleUrl: String? = null,
+    val recentFigures: List<String> = emptyList()
 )
 
 @Serializable

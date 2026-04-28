@@ -21,11 +21,22 @@ class EncouragementRepositoryImpl(
             encouragementDao.getByArticleUrl(url)?.let { return it.toDomain() }
         }
 
+        val recentFigures = encouragementDao.getRecentFigureNames(RECENT_FIGURES_LIMIT)
         val encouragement = api.encourage(
-            EncourageRequestDto(headlineTitle = headlineTitle, articleUrl = articleUrl)
+            EncourageRequestDto(
+                headlineTitle = headlineTitle,
+                articleUrl = articleUrl,
+                recentFigures = recentFigures
+            )
         ).toDomain()
 
-        articleUrl?.let { encouragementDao.insert(encouragement.toEntity(it, headlineTitle)) }
+        articleUrl?.let {
+            encouragementDao.insert(encouragement.toEntity(it, headlineTitle, currentTimeMillis()))
+        }
         return encouragement
+    }
+
+    companion object {
+        private const val RECENT_FIGURES_LIMIT = 10
     }
 }

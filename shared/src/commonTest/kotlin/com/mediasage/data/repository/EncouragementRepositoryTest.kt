@@ -89,6 +89,18 @@ class EncouragementRepositoryTest {
     }
 
     @Test
+    fun passesRecentFiguresToApiOnSecondRequest() = runTest {
+        val dao = FakeEncouragementDao()
+        val api = FakeMediaSageApi(result = sampleResult)
+        val repo = EncouragementRepositoryImpl(api, dao)
+
+        repo.getEncouragement("First headline", "https://example.com/first")
+        repo.getEncouragement("Second headline", "https://example.com/second")
+
+        assertEquals(listOf("Martin Luther King Jr."), api.lastRequest?.recentFigures)
+    }
+
+    @Test
     fun doesNotCallApiWhenArticleUrlIsNull() = runTest {
         val dao = FakeEncouragementDao()
         val api = FakeMediaSageApi(result = sampleResult)
@@ -123,14 +135,23 @@ private class FakeEncouragementDao(preloaded: List<EncouragementEntity> = emptyL
     override fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>> =
         flowOf(store.values.filter { it.figureName == figureName })
 
+    override suspend fun getRecentFigureNames(limit: Int): List<String> =
+        store.values
+            .sortedByDescending { it.cachedAt }
+            .map { it.figureName }
+            .distinct()
+            .take(limit)
+
     override suspend fun deleteAll() { store.clear() }
 }
 
 private class FakeMediaSageApi(private val result: EncourageResultDto) : MediaSageApi {
     var encourageCallCount = 0
+    var lastRequest: EncourageRequestDto? = null
 
     override suspend fun encourage(request: EncourageRequestDto): EncourageResultDto {
         encourageCallCount++
+        lastRequest = request
         return result
     }
 

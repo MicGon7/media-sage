@@ -30,9 +30,10 @@ class ClaudeApiService(
     suspend fun encourageHeadline(
         headlineTitle: String,
         locale: String = "en",
-        articleText: String? = null
+        articleText: String? = null,
+        recentFigures: List<String> = emptyList()
     ): EncourageResult {
-        val userMessage = buildEncourageMessage(headlineTitle, locale, articleText)
+        val userMessage = buildEncourageMessage(headlineTitle, locale, articleText, recentFigures)
         val response = callClaude(ENCOURAGE_SYSTEM_PROMPT, userMessage)
         return responseJson.decodeFromString<EncourageResult>(extractJson(response))
     }
@@ -78,7 +79,8 @@ class ClaudeApiService(
     private fun buildEncourageMessage(
         headlineTitle: String,
         locale: String,
-        articleText: String?
+        articleText: String?,
+        recentFigures: List<String> = emptyList()
     ): String = buildString {
         appendLine("## Headline")
         appendLine(headlineTitle)
@@ -90,6 +92,14 @@ class ClaudeApiService(
         appendLine()
         appendLine("## Response Language")
         appendLine(locale)
+        if (recentFigures.isNotEmpty()) {
+            appendLine()
+            appendLine("## Figure Diversity")
+            appendLine(
+                "Vary the figures you select. Please avoid these recently used figures if a " +
+                    "suitable alternative exists: ${recentFigures.joinToString(", ")}"
+            )
+        }
     }
 
     private fun buildMatchMessage(
