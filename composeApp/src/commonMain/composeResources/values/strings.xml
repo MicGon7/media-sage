@@ -4,14 +4,14 @@
 
     <!-- Navigation -->
     <string name="nav_headlines">Headlines</string>
-    <string name="nav_voices">Voices</string>
+    <string name="nav_voices">Guides</string>
     <string name="nav_you">You</string>
     <string name="nav_back">Back</string>
 
     <!-- Screen titles -->
     <string name="title_home">The Media Sage</string>
     <string name="title_headline_detail">Today's Word</string>
-    <string name="title_voices">Gathered Voices</string>
+    <string name="title_voices">Gathered Guides</string>
 
     <!-- Home screen -->
     <string name="home_headlines_feed">Headlines Feed</string>
@@ -34,9 +34,9 @@
 
     <!-- Voices screen -->
     <string name="voices_subtitle">Theologians, mystics, and faithful witnesses</string>
-    <string name="voices_coming_soon">Voice selection coming soon</string>
+    <string name="voices_coming_soon">Guide selection coming soon</string>
     <string name="voices_retry">Retry</string>
-    <string name="voices_empty_state">Voices will appear as you read</string>
+    <string name="voices_empty_state">Guides will appear as you read</string>
 
     <!-- You screen -->
     <string name="you_greeting">Good morning</string>
