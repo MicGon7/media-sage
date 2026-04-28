@@ -25,6 +25,22 @@ sealed interface Route : NavKey {
     /** Detail screen for a specific figure. */
     @Serializable
     data class FigureDetail(val figureName: String) : Route
+
+    /** You tab — personal content and settings entry point. */
+    @Serializable
+    data object You : Route
+
+    /** Bookmarks screen — saved matches (shell). */
+    @Serializable
+    data object Bookmarks : Route
+
+    /** History screen — reading history (shell). */
+    @Serializable
+    data object History : Route
+
+    /** Settings screen (shell). */
+    @Serializable
+    data object Settings : Route
 }
 
 /** Serialization config required for Nav3 on non-JVM platforms. */
@@ -34,5 +50,9 @@ val navSerializersModule = SerializersModule {
         subclass(Route.HeadlineDetail::class)
         subclass(Route.Figures::class)
         subclass(Route.FigureDetail::class)
+        subclass(Route.You::class)
+        subclass(Route.Bookmarks::class)
+        subclass(Route.History::class)
+        subclass(Route.Settings::class)
     }
 }

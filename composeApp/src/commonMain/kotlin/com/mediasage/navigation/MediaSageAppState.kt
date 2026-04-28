@@ -35,6 +35,18 @@ class MediaSageAppState(
         backStack.add(Route.FigureDetail(figureName))
     }
 
+    fun navigateToBookmarks() {
+        backStack.add(Route.Bookmarks)
+    }
+
+    fun navigateToHistory() {
+        backStack.add(Route.History)
+    }
+
+    fun navigateToSettings() {
+        backStack.add(Route.Settings)
+    }
+
     fun navigateBack() {
         backStack.removeLastOrNull()
     }

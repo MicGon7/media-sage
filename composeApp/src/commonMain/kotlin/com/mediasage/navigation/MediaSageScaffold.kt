@@ -11,14 +11,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import com.mediasage.feature.bookmarks.BookmarksScreen
 import com.mediasage.feature.figures.FigureDetailScreen
 import com.mediasage.feature.figures.FigureDetailViewModel
 import com.mediasage.feature.figures.FiguresScreen
 import com.mediasage.feature.figures.FiguresViewModel
+import com.mediasage.feature.history.HistoryScreen
 import com.mediasage.feature.home.HomeScreen
 import com.mediasage.feature.home.HomeViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailScreen
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
+import com.mediasage.feature.settings.SettingsScreen
+import com.mediasage.feature.you.YouScreen
+import com.mediasage.feature.you.YouViewModel
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -84,6 +89,26 @@ fun MediaSageScaffold(
                         state = state,
                         onNavigateBack = { appState.navigateBack() }
                     )
+                }
+                is Route.You -> NavEntry(route) {
+                    val vm = koinViewModel<YouViewModel>()
+                    val state by vm.state.collectAsState()
+                    YouScreen(
+                        state = state,
+                        onIntent = vm::onIntent,
+                        onNavigateToBookmarks = { appState.navigateToBookmarks() },
+                        onNavigateToHistory = { appState.navigateToHistory() },
+                        onNavigateToSettings = { appState.navigateToSettings() }
+                    )
+                }
+                is Route.Bookmarks -> NavEntry(route) {
+                    BookmarksScreen(onNavigateBack = { appState.navigateBack() })
+                }
+                is Route.History -> NavEntry(route) {
+                    HistoryScreen(onNavigateBack = { appState.navigateBack() })
+                }
+                is Route.Settings -> NavEntry(route) {
+                    SettingsScreen(onNavigateBack = { appState.navigateBack() })
                 }
                 else -> NavEntry(route) {}
             }
