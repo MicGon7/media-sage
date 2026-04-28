@@ -229,9 +229,10 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 
 - **Level 1 — Assisted**: Human writes the prompt and approves every tool call. Run via an interactive `claude` session.
 - **Level 2 — Autonomous (manual trigger)**: Human describes the intent to the assisted agent, which creates the Jira ticket with AC and the `autonomous` label. Human fires the bootstrap command once, then only reviews the PR. Run via `claude -p "..." --dangerously-skip-permissions`.
-- **Level 3 — Autonomous (self-triggering)**: Human describes the intent to the assisted agent, which creates the Jira ticket. Human walks away — a cron job or Jira webhook fires the bootstrap automatically. Human only reviews the PR.
+- **Level 3 — Autonomous (self-triggering)**: Human describes the intent to the assisted agent, which creates the Jira ticket. Human walks away — a Jira webhook fires the bootstrap automatically when the ticket enters To Do. Human only reviews the PR.
+- **Level 4 — Autonomous (self-responding to PR review)**: Human leaves a review comment on a PR for an `autonomous`-labeled ticket. A GitHub webhook fires the agent, which pushes a fix commit or replies with `🤖 **Agent:**`. Human's only touchpoint remains the PR review.
 
-_This project is at Level 3. The Jira webhook receiver is live in the `:server` module at `POST /webhook/jira`._
+_This project is at Level 4. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:server` module._
 
 **Level 3 setup (laptop demo):**
 
@@ -244,7 +245,24 @@ _This project is at Level 3. The Jira webhook receiver is live in the `:server` 
    - JQL filter: `project = MS AND labels = autonomous`
 5. Ask the assisted agent to create an `autonomous` ticket — the agent fires automatically
 
-See `docs/MS-69-level-3-autonomous-agent.md` for full setup details and enterprise architecture.
+**Level 4 setup (laptop demo):**
+
+In addition to Level 3 setup, add to `~/.zshrc`:
+```bash
+export GITHUB_WEBHOOK_SECRET="<openssl rand -hex 32>"
+export GITHUB_BOT_LOGIN="MicGon7"
+export JIRA_EMAIL="micgon7@gmail.com"
+export JIRA_API_TOKEN="<Atlassian account → API tokens>"
+```
+
+Register the GitHub webhook in repo **Settings → Webhooks**:
+- URL: `https://<ngrok-url>/webhook/github`
+- Content type: `application/json`
+- Secret: same as `GITHUB_WEBHOOK_SECRET`
+- Events: `Pull request reviews`, `Pull request review comments`
+
+See `docs/MS-78-level-4-github-webhook.md` for full details and enterprise notes.
+See `docs/MS-69-level-3-autonomous-agent.md` for Level 3 setup details.
 
 **Autonomous vs Assisted:**
 
