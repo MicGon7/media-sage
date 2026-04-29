@@ -8,6 +8,9 @@ import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.data.remote.NewsArticleDto
 import com.mediasage.data.remote.ScripturePassageDto
 import com.mediasage.data.remote.ScriptureVerseDto
+import com.mediasage.domain.model.StreamEvent
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /** Temporary mock API for physical device demos without a server. */
 class MockMediaSageApi : MediaSageApi {
@@ -22,6 +25,8 @@ class MockMediaSageApi : MediaSageApi {
         val headline = MockData.headlines.find { it.title == request.headlineTitle }
         return MockData.encourageResultForHeadline(headline?.uuid ?: "1")
     }
+
+    override fun encourageStream(request: EncourageRequestDto): Flow<StreamEvent> = emptyFlow()
 
     @Deprecated("Use encourage instead — TODO MS-46")
     override suspend fun matchQuote(request: MatchRequestDto): MatchResultDto =

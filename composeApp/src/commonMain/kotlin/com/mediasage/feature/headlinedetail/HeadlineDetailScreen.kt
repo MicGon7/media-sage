@@ -1,10 +1,17 @@
 package com.mediasage.feature.headlinedetail
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +21,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -36,21 +45,17 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.mediasage.domain.model.StreamField
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
-import io.github.alexzhirkevich.compottie.DotLottie
-import io.github.alexzhirkevich.compottie.LottieCompositionSpec
-import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
-import io.github.alexzhirkevich.compottie.rememberLottieComposition
-import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.match_error_generic
 import mediasage.composeapp.generated.resources.match_error_network
-import mediasage.composeapp.generated.resources.match_finding
 import mediasage.composeapp.generated.resources.match_retry
 import org.jetbrains.compose.resources.stringResource
 
@@ -62,7 +67,13 @@ fun HeadlineDetailScreen(
 ) {
     val matchTheme = (state as? HeadlineDetailContract.UiState.Success)
         ?.encouragement
-        ?.let { (it as? HeadlineDetailContract.EncouragementState.Loaded)?.matchTheme }
+        ?.let {
+            when (it) {
+                is HeadlineDetailContract.EncouragementState.Loaded -> it.matchTheme
+                is HeadlineDetailContract.EncouragementState.Streaming -> it.matchTheme.ifBlank { null }
+                else -> null
+            }
+        }
 
     Surface(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -78,7 +89,7 @@ fun HeadlineDetailScreen(
             }
         }
         when (state) {
-            is HeadlineDetailContract.UiState.Loading -> FullLoadingState()
+            is HeadlineDetailContract.UiState.Loading -> { /* Room is fast — imperceptible */ }
             is HeadlineDetailContract.UiState.Error -> FullErrorState(
                 message = when (state.errorType) {
                     ErrorType.NETWORK -> stringResource(Res.string.match_error_network)
@@ -127,7 +138,9 @@ private fun HeadlineDetailContent(
 
             // Encouragement section — progressive loading
             when (state.encouragement) {
-                is HeadlineDetailContract.EncouragementState.Loading -> EncouragementLoading()
+                is HeadlineDetailContract.EncouragementState.Streaming -> EncouragementStreaming(
+                    streaming = state.encouragement
+                )
                 is HeadlineDetailContract.EncouragementState.Error -> EncouragementError(
                     errorType = state.encouragement.errorType,
                     onRetry = onRetry
@@ -169,39 +182,190 @@ private fun HeadlineSection(state: HeadlineDetailContract.UiState.Success) {
 }
 
 @Composable
-private fun EncouragementLoading() {
-    val composition by rememberLottieComposition {
-        LottieCompositionSpec.DotLottie(
-            Res.readBytes("files/book_loader.lottie")
-        )
-    }
-    val progress by animateLottieCompositionAsState(
-        composition = composition,
-        iterations = Int.MAX_VALUE
+private fun ShimmerSkeleton(modifier: Modifier = Modifier, width: Dp = Dp.Unspecified) {
+    val transition = rememberInfiniteTransition()
+    val alpha by transition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.4f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse)
     )
+    Box(
+        modifier = modifier
+            .then(if (width != Dp.Unspecified) Modifier.width(width) else Modifier.fillMaxWidth())
+            .height(16.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = alpha))
+    )
+}
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        if (composition != null) {
-            Image(
-                painter = rememberLottiePainter(composition = composition, progress = { progress }),
-                contentDescription = null,
-                modifier = Modifier.size(120.dp),
-                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
-            )
-        } else {
-            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+@Composable
+private fun EncouragementStreaming(streaming: HeadlineDetailContract.EncouragementState.Streaming) {
+    val active = streaming.activeField.ordinal
+
+    fun started(field: StreamField) = active >= field.ordinal
+
+    // Summary
+    if (!started(StreamField.SUMMARY)) {
+        repeat(2) {
+            ShimmerSkeleton()
+            Spacer(Modifier.height(4.dp))
         }
-        Spacer(modifier = Modifier.height(12.dp))
+        ShimmerSkeleton(width = 220.dp)
+        Spacer(Modifier.height(16.dp))
+    } else if (streaming.summary.isNotBlank()) {
         Text(
-            text = stringResource(Res.string.match_finding),
-            style = MaterialTheme.typography.bodyMedium,
-            fontStyle = FontStyle.Italic,
+            text = streaming.summary,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            lineHeight = 22.sp,
+        )
+        Spacer(Modifier.height(16.dp))
+    }
+
+    // Quote card
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "“",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                lineHeight = 48.sp,
+            )
+            if (!started(StreamField.QUOTE)) {
+                repeat(3) {
+                    ShimmerSkeleton()
+                    Spacer(Modifier.height(4.dp))
+                }
+                ShimmerSkeleton(width = 180.dp)
+            } else {
+                Text(
+                    text = streaming.quoteText,
+                    style = MaterialTheme.typography.headlineMedium,
+                    lineHeight = 36.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+            }
+            Text(
+                text = "”",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.End,
+                lineHeight = 48.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val figureStarted = started(StreamField.FIGURE_NAME)
+                if (streaming.figureImageUrl != null) {
+                    AsyncImage(
+                        model = streaming.figureImageUrl,
+                        contentDescription = streaming.figureName,
+                        modifier = Modifier.size(48.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop,
+                        alignment = Alignment.TopCenter,
+                    )
+                } else if (figureStarted && streaming.figureName.isNotBlank()) {
+                    FigurePlaceholder(name = streaming.figureName, size = 48.dp)
+                } else {
+                    Box(
+                        modifier = Modifier.size(48.dp).clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    )
+                }
+                Column {
+                    if (!figureStarted) {
+                        ShimmerSkeleton(width = 150.dp)
+                        Spacer(Modifier.height(4.dp))
+                        ShimmerSkeleton(width = 100.dp)
+                    } else {
+                        if (streaming.figureName.isNotBlank()) {
+                            Text(
+                                text = streaming.figureName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        if (streaming.figureRole.isNotBlank()) {
+                            Text(
+                                text = streaming.figureRole,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontStyle = FontStyle.Italic,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        } else if (!started(StreamField.FIGURE_ROLE)) {
+                            ShimmerSkeleton(width = 100.dp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Spacer(Modifier.height(16.dp))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+    Spacer(Modifier.height(16.dp))
+
+    // Scripture
+    if (!started(StreamField.SCRIPTURE_REF)) {
+        ShimmerSkeleton(width = 120.dp)
+        Spacer(Modifier.height(8.dp))
+        repeat(2) {
+            ShimmerSkeleton()
+            Spacer(Modifier.height(4.dp))
+        }
+        ShimmerSkeleton(width = 200.dp)
+    } else {
+        if (streaming.scriptureReference.isNotBlank()) {
+            Text(
+                text = streaming.scriptureReference,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        if (streaming.scriptureText.isNotBlank()) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = streaming.scriptureText,
+                style = MaterialTheme.typography.bodyLarge,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp,
+            )
+        } else if (!started(StreamField.SCRIPTURE_TEXT)) {
+            Spacer(Modifier.height(8.dp))
+            repeat(2) {
+                ShimmerSkeleton()
+                Spacer(Modifier.height(4.dp))
+            }
+        }
+    }
+
+    Spacer(Modifier.height(16.dp))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+    Spacer(Modifier.height(16.dp))
+
+    // Explanation
+    if (!started(StreamField.EXPLANATION)) {
+        repeat(3) {
+            ShimmerSkeleton()
+            Spacer(Modifier.height(4.dp))
+        }
+    } else if (streaming.explanation.isNotBlank()) {
+        Text(
+            text = streaming.explanation,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            lineHeight = 20.sp,
         )
     }
 }
@@ -353,17 +517,6 @@ private fun EncouragementContent(encouragement: HeadlineDetailContract.Encourage
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 20.sp,
         )
-    }
-}
-
-@Composable
-private fun FullLoadingState() {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        EncouragementLoading()
     }
 }
 

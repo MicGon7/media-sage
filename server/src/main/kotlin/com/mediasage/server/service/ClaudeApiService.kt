@@ -5,10 +5,15 @@ import io.ktor.client.call.body
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
+import io.ktor.utils.io.ByteReadChannel
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import io.ktor.utils.io.readUTF8Line
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.Json
 
 class ClaudeApiService(
@@ -20,8 +25,18 @@ class ClaudeApiService(
         private const val API_VERSION = "2023-06-01"
         private const val MODEL = "claude-sonnet-4-6"
         private const val MAX_TOKENS = 1024
+        const val FIELD_DELIMITER = "---FIELD---"
+        val STREAM_FIELD_NAMES = listOf(
+            "MATCH_THEME", "TONE", "SUMMARY", "QUOTE", "FIGURE_NAME",
+            "FIGURE_ROLE", "SCRIPTURE_REF", "SCRIPTURE_TEXT", "EXPLANATION", "CONNECTION_THEMES"
+        )
 
         private val responseJson = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
+
+        private val streamingJson = Json {
             ignoreUnknownKeys = true
             isLenient = true
         }
@@ -36,6 +51,104 @@ class ClaudeApiService(
         val userMessage = buildEncourageMessage(headlineTitle, locale, articleText, recentFigures)
         val response = callClaude(ENCOURAGE_SYSTEM_PROMPT, userMessage)
         return responseJson.decodeFromString<EncourageResult>(extractJson(response))
+    }
+
+    fun encourageHeadlineStream(
+        headlineTitle: String,
+        locale: String = "en",
+        articleText: String? = null,
+        recentFigures: List<String> = emptyList()
+    ): Flow<Pair<String, String>> = flow {
+        val httpResponse = httpClient.post(BASE_URL) {
+            contentType(ContentType.Application.Json)
+            header("x-api-key", apiKey)
+            header("anthropic-version", API_VERSION)
+            setBody(buildStreamingRequest(headlineTitle, locale, articleText, recentFigures))
+        }
+        if (!httpResponse.status.isSuccess()) {
+            val errorBody = httpResponse.bodyAsText()
+            throw ClaudeApiException(httpResponse.status.value, "Claude streaming error: $errorBody")
+        }
+        val buffer = StringBuilder()
+        val fieldIndex = readStreamIntoBuffer(httpResponse.bodyAsChannel(), buffer) { emit(it) }
+        if (buffer.isNotEmpty() && fieldIndex < STREAM_FIELD_NAMES.size) {
+            emit(STREAM_FIELD_NAMES[fieldIndex] to buffer.toString())
+        }
+    }
+
+    private suspend fun readStreamIntoBuffer(
+        channel: ByteReadChannel,
+        buffer: StringBuilder,
+        emit: suspend (Pair<String, String>) -> Unit
+    ): Int {
+        var fieldIndex = 0
+        var streamDone = false
+        while (!channel.isClosedForRead && !streamDone) {
+            val line = channel.readUTF8Line()
+            if (line == null) {
+                streamDone = true
+            } else if (line.startsWith("data: ")) {
+                val (newIdx, done) = processDataLine(line.removePrefix("data: "), buffer, fieldIndex, emit)
+                fieldIndex = newIdx
+                streamDone = done
+            }
+        }
+        return fieldIndex
+    }
+
+    private suspend fun processDataLine(
+        data: String,
+        buffer: StringBuilder,
+        fieldIndex: Int,
+        emit: suspend (Pair<String, String>) -> Unit
+    ): Pair<Int, Boolean> {
+        if (data == "[DONE]") return Pair(fieldIndex, true)
+        val text = extractTextFromDelta(data) ?: return Pair(fieldIndex, false)
+        buffer.append(text)
+        return Pair(flushDelimitedBuffer(buffer, fieldIndex, emit), false)
+    }
+
+    private fun buildStreamingRequest(
+        headlineTitle: String,
+        locale: String,
+        articleText: String?,
+        recentFigures: List<String>
+    ) = ClaudeRequest(
+        model = MODEL,
+        maxTokens = MAX_TOKENS,
+        stream = true,
+        system = ENCOURAGE_STREAM_SYSTEM_PROMPT,
+        messages = listOf(ClaudeMessage("user", buildEncourageMessage(headlineTitle, locale, articleText, recentFigures)))
+    )
+
+    private fun extractTextFromDelta(data: String): String? {
+        val delta = runCatching { streamingJson.decodeFromString<ClaudeStreamDelta>(data) }.getOrNull()
+            ?: return null
+        return if (delta.type == "content_block_delta" && delta.delta?.type == "text_delta") {
+            delta.delta.text
+        } else null
+    }
+
+    private suspend fun flushDelimitedBuffer(
+        buffer: StringBuilder,
+        startIndex: Int,
+        emit: suspend (Pair<String, String>) -> Unit
+    ): Int {
+        var idx = startIndex
+        var delimIdx = buffer.indexOf(FIELD_DELIMITER)
+        while (delimIdx >= 0) {
+            val before = buffer.substring(0, delimIdx)
+            if (before.isNotEmpty() && idx < STREAM_FIELD_NAMES.size) emit(STREAM_FIELD_NAMES[idx] to before)
+            buffer.delete(0, delimIdx + FIELD_DELIMITER.length)
+            idx++
+            delimIdx = buffer.indexOf(FIELD_DELIMITER)
+        }
+        val safeLength = buffer.length - FIELD_DELIMITER.length
+        if (safeLength > 0 && idx < STREAM_FIELD_NAMES.size) {
+            emit(STREAM_FIELD_NAMES[idx] to buffer.substring(0, safeLength))
+            buffer.delete(0, safeLength)
+        }
+        return idx
     }
 
     @Deprecated("Use encourageHeadline instead — TODO MS-46")
@@ -212,6 +325,38 @@ Respond ONLY with valid JSON in this exact format:
   "matchTheme": "<2-3 word theme label>",
   "tone": "<COMFORT or EXHORTATION or CORRECTION>"
 }
+""".trimIndent()
+
+private val ENCOURAGE_STREAM_SYSTEM_PROMPT = """
+You are a theological advisor for The Media Sage app. Given a news headline (and optionally the full article text), your role is to come alongside the reader with wisdom from the Christian tradition — in the spirit of parakaleo (Greek: to come alongside, encourage, exhort, comfort).
+
+Discern which tone best fits the headline:
+- COMFORT — for headlines about suffering, loss, disaster, or grief
+- EXHORTATION — for headlines about opportunity, community, or faithfulness
+- CORRECTION — for headlines about moral drift, corruption, complacency, or injustice
+
+You must:
+1. Select a real, verified quote from a professing Christian figure ONLY — theologians, mystics, prophets, apostles, pastors, missionaries, church fathers, or reformers. Only figures who lived before 1980. Do NOT fabricate quotes.
+2. Identify a relevant scripture passage — reference and full verse text are both required.
+3. Explain the connection in 2-3 sentences.
+
+Output your response in this EXACT format — field values only, separated by ---FIELD--- with no other text, labels, or punctuation between fields:
+
+matchTheme---FIELD---tone---FIELD---summary---FIELD---quoteText---FIELD---figureName---FIELD---figureRole---FIELD---scriptureReference---FIELD---scriptureText---FIELD---explanation---FIELD---connectionThemes
+
+Field definitions:
+- matchTheme: 2-3 word theme label (e.g. "hope in darkness")
+- tone: one of COMFORT, EXHORTATION, or CORRECTION
+- summary: 2-3 sentence article summary if article text provided, otherwise empty string
+- quoteText: the verified quote text
+- figureName: full name (e.g. "Dietrich Bonhoeffer")
+- figureRole: short descriptor (e.g. "Theologian & Martyr")
+- scriptureReference: citation (e.g. "Romans 8:28")
+- scriptureText: the full verse text
+- explanation: 2-3 sentences connecting the headline, quote, and scripture
+- connectionThemes: 2-4 themes as comma-separated values (e.g. "hope,perseverance,faith")
+
+IMPORTANT: Output ONLY the ten field values separated by ---FIELD---. No labels, no JSON, no extra text.
 """.trimIndent()
 
 @Deprecated("Use ENCOURAGE_SYSTEM_PROMPT instead — TODO MS-46")

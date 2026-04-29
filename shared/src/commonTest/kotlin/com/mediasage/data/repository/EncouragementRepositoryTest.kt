@@ -12,6 +12,7 @@ import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.data.remote.NewsArticleDto
 import com.mediasage.data.remote.ScripturePassageDto
 import com.mediasage.data.remote.ScriptureVerseDto
+import com.mediasage.domain.model.StreamEvent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -156,6 +157,8 @@ private class FakeMediaSageApi(private val result: EncourageResultDto) : MediaSa
         lastRequest = request
         return result
     }
+
+    override fun encourageStream(request: EncourageRequestDto): Flow<StreamEvent> = emptyFlow()
 
     override suspend fun getHeadlines(locale: String, limit: Int): List<NewsArticleDto> = emptyList()
     override suspend fun searchNews(query: String, limit: Int): List<NewsArticleDto> = emptyList()

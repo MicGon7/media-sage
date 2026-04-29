@@ -11,7 +11,20 @@ data class ClaudeRequest(
     @SerialName("max_tokens")
     val maxTokens: Int,
     val system: String,
-    val messages: List<ClaudeMessage>
+    val messages: List<ClaudeMessage>,
+    val stream: Boolean = false
+)
+
+@Serializable
+data class ClaudeStreamDelta(
+    val type: String,
+    val delta: ClaudeTextDelta? = null
+)
+
+@Serializable
+data class ClaudeTextDelta(
+    val type: String,
+    val text: String = ""
 )
 
 @Serializable

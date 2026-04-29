@@ -1,5 +1,6 @@
 package com.mediasage.feature.headlinedetail
 
+import com.mediasage.domain.model.StreamField
 import com.mediasage.ui.ErrorType
 
 /** MVI contract for the Headline Detail feature. */
@@ -14,13 +15,26 @@ object HeadlineDetailContract {
             val headlineCategory: String,
             val headlineImageUrl: String?,
             // AI content — loaded progressively from Claude
-            val encouragement: EncouragementState = EncouragementState.Loading
+            val encouragement: EncouragementState = EncouragementState.Streaming()
         ) : UiState
         data class Error(val errorType: ErrorType) : UiState
     }
 
     sealed interface EncouragementState {
-        data object Loading : EncouragementState
+        data class Streaming(
+            val activeField: StreamField = StreamField.MATCH_THEME,
+            val matchTheme: String = "",
+            val tone: String = "",
+            val summary: String = "",
+            val quoteText: String = "",
+            val figureName: String = "",
+            val figureRole: String = "",
+            val scriptureReference: String = "",
+            val scriptureText: String = "",
+            val explanation: String = "",
+            val figureImageUrl: String? = null
+        ) : EncouragementState
+
         data class Loaded(
             val summary: String?,
             val quoteText: String,
@@ -33,6 +47,7 @@ object HeadlineDetailContract {
             val matchTheme: String = "",
             val tone: String = "",
         ) : EncouragementState
+
         data class Error(val errorType: ErrorType) : EncouragementState
     }
 
