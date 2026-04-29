@@ -1,10 +1,12 @@
 package com.mediasage.di
 
 import com.mediasage.data.local.dao.EncouragementDao
+import com.mediasage.data.local.dao.HeadlineDao
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.repository.WikipediaRepository
 import com.mediasage.feature.figures.FigureDetailViewModel
 import com.mediasage.feature.figures.FiguresViewModel
+import com.mediasage.feature.history.HistoryViewModel
 import com.mediasage.feature.home.HomeViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
 import com.mediasage.feature.you.YouViewModel
@@ -17,6 +19,7 @@ val appModule = module {
     viewModel { FiguresViewModel(get<EncouragementDao>()) }
     viewModel { (figureName: String) -> FigureDetailViewModel(figureName, get<EncouragementDao>(), get<WikipediaRepository>()) }
     viewModel { YouViewModel() }
+    viewModel { HistoryViewModel(get<EncouragementDao>(), get<HeadlineDao>()) }
 }
 
 /** Temporary module that overrides MediaSageApi with mock data for demos. */
