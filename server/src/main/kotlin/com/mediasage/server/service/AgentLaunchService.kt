@@ -13,10 +13,10 @@ private const val BOOTSTRAP_PROMPT =
     "to execute the full autonomous workflow."
 
 private const val PR_REVIEW_PROMPT =
-    "PR #%d for ticket %s has a new review comment: \"%s\". " +
-    "Check out branch %s, read the relevant source files, and make the necessary change. " +
-    "Then push a fix commit. If no code change is needed, reply with " +
-    "'🤖 **Agent:**' explaining your decision. " +
+    "PR #%1\$d for ticket %2\$s has a new review comment: \"%3\$s\". " +
+    "Check out branch %4\$s, read the relevant source files, and make the necessary change. " +
+    "Then push a fix commit. If no code change is needed, post a comment on the PR using " +
+    "`gh pr comment %1\$d --body '🤖 **Agent:** your explanation here'` and exit. " +
     "Follow the Agent Guidelines in CLAUDE.md."
 
 /**
@@ -92,6 +92,7 @@ class AgentLaunchService(
         try {
             val process = ProcessBuilder(command)
                 .directory(workDir)
+                .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
                 .redirectOutput(ProcessBuilder.Redirect.INHERIT)
                 .redirectError(ProcessBuilder.Redirect.INHERIT)
                 .start()
