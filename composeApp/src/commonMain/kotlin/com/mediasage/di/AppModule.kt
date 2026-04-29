@@ -1,7 +1,6 @@
 package com.mediasage.di
 
 import com.mediasage.data.local.dao.EncouragementDao
-import com.mediasage.data.local.dao.HeadlineDao
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.repository.WikipediaRepository
 import com.mediasage.feature.figures.FigureDetailViewModel
@@ -15,11 +14,11 @@ import org.koin.dsl.module
 
 val appModule = module {
     viewModel { HomeViewModel(get()) }
-    viewModel { (headlineId: Long) -> HeadlineDetailViewModel(headlineId, get(), get()) }
+    viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get()) }
     viewModel { FiguresViewModel(get<EncouragementDao>()) }
     viewModel { (figureName: String) -> FigureDetailViewModel(figureName, get<EncouragementDao>(), get<WikipediaRepository>()) }
     viewModel { YouViewModel() }
-    viewModel { HistoryViewModel(get<EncouragementDao>(), get<HeadlineDao>()) }
+    viewModel { HistoryViewModel(get<EncouragementDao>()) }
 }
 
 /** Temporary module that overrides MediaSageApi with mock data for demos. */

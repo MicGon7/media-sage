@@ -16,7 +16,7 @@ sealed interface Route : NavKey {
 
     /** Headline detail with matched quote. */
     @Serializable
-    data class HeadlineDetail(val headlineId: Long) : Route
+    data class HeadlineDetail(val articleUrl: String) : Route
 
     /** Browse voices (figures) collected from reading history. */
     @Serializable

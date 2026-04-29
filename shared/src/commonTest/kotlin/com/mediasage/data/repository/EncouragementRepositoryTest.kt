@@ -55,7 +55,7 @@ class EncouragementRepositoryTest {
         val api = FakeMediaSageApi(result = sampleResult)
         val repo = EncouragementRepositoryImpl(api, dao)
 
-        val result = repo.getEncouragement("Cached headline", "https://example.com/article")
+        val result = repo.getEncouragement("Cached headline", articleUrl = "https://example.com/article")
 
         assertEquals("Cached quote", result.quoteText)
         assertEquals(0, api.encourageCallCount)
@@ -67,7 +67,7 @@ class EncouragementRepositoryTest {
         val api = FakeMediaSageApi(result = sampleResult)
         val repo = EncouragementRepositoryImpl(api, dao)
 
-        val result = repo.getEncouragement("Breaking news", "https://example.com/news")
+        val result = repo.getEncouragement("Breaking news", articleUrl = "https://example.com/news")
 
         assertEquals("Darkness cannot drive out darkness", result.quoteText)
         assertEquals(1, api.encourageCallCount)
@@ -81,8 +81,8 @@ class EncouragementRepositoryTest {
         val api = FakeMediaSageApi(result = sampleResult)
         val repo = EncouragementRepositoryImpl(api, dao)
 
-        repo.getEncouragement("Article A", "https://example.com/a")
-        repo.getEncouragement("Article B", "https://example.com/b")
+        repo.getEncouragement("Article A", articleUrl = "https://example.com/a")
+        repo.getEncouragement("Article B", articleUrl = "https://example.com/b")
 
         assertEquals(2, api.encourageCallCount)
         assertEquals(1, dao.insertCallCount)
@@ -94,8 +94,8 @@ class EncouragementRepositoryTest {
         val api = FakeMediaSageApi(result = sampleResult)
         val repo = EncouragementRepositoryImpl(api, dao)
 
-        repo.getEncouragement("First headline", "https://example.com/first")
-        repo.getEncouragement("Second headline", "https://example.com/second")
+        repo.getEncouragement("First headline", articleUrl = "https://example.com/first")
+        repo.getEncouragement("Second headline", articleUrl = "https://example.com/second")
 
         assertEquals(listOf("Martin Luther King Jr."), api.lastRequest?.recentFigures)
     }

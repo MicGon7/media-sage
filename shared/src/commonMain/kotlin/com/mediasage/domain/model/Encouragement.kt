@@ -11,5 +11,8 @@ data class Encouragement(
     val connectionThemes: List<String>,
     val matchTheme: String,
     val tone: String,
-    val figureImageUrl: String? = null
+    val figureImageUrl: String? = null,
+    val headlineTitle: String = "",
+    val headlineSource: String = "",
+    val headlineImageUrl: String? = null
 )

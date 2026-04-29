@@ -15,6 +15,8 @@ class EncouragementRepositoryImpl(
 
     override suspend fun getEncouragement(
         headlineTitle: String,
+        headlineSource: String,
+        headlineImageUrl: String?,
         articleUrl: String?
     ): Encouragement {
         articleUrl?.let { url ->
@@ -31,7 +33,9 @@ class EncouragementRepositoryImpl(
         ).toDomain()
 
         articleUrl?.let {
-            encouragementDao.insert(encouragement.toEntity(it, headlineTitle, currentTimeMillis()))
+            encouragementDao.insert(
+                encouragement.toEntity(it, headlineTitle, headlineSource, headlineImageUrl, currentTimeMillis())
+            )
         }
         return encouragement
     }

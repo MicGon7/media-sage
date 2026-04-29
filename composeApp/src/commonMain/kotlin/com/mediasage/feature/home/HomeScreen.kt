@@ -30,7 +30,7 @@ import org.jetbrains.compose.resources.stringResource
 fun HomeScreen(
     state: HomeContract.UiState,
     onIntent: (HomeContract.Intent) -> Unit,
-    onNavigateToDetail: (Long) -> Unit
+    onNavigateToDetail: (String) -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
     when (state) {
@@ -49,7 +49,7 @@ fun HomeScreen(
             headlines = state.headlines,
             isRefreshing = state.isRefreshing,
             onRefresh = { onIntent(HomeContract.Intent.RefreshHeadlines) },
-            onHeadlineClick = onNavigateToDetail
+            onHeadlineClick = { onNavigateToDetail(it.articleUrl) }
         )
     }
     }
@@ -88,7 +88,7 @@ private fun HeadlinesFeed(
     headlines: List<HeadlineItem>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
-    onHeadlineClick: (Long) -> Unit
+    onHeadlineClick: (HeadlineItem) -> Unit
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
 
@@ -107,7 +107,7 @@ private fun HeadlinesFeed(
             items(headlines, key = { it.id }) { headline ->
                 HeadlineRow(
                     headline = headline,
-                    onClick = { onHeadlineClick(headline.id) }
+                    onClick = { onHeadlineClick(headline) }
                 )
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),

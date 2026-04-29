@@ -18,17 +18,18 @@ object HomeContract {
     sealed interface Intent {
         data object LoadHeadlines : Intent
         data object RefreshHeadlines : Intent
-        data class HeadlineClicked(val headlineId: Long) : Intent
+        data class HeadlineClicked(val articleUrl: String) : Intent
     }
 
     sealed interface SideEffect {
-        data class NavigateToDetail(val headlineId: Long) : SideEffect
+        data class NavigateToDetail(val articleUrl: String) : SideEffect
         data class ShowError(val message: String) : SideEffect
     }
 }
 
 data class HeadlineItem(
     val id: Long,
+    val articleUrl: String,
     val title: String,
     val source: String,
     val category: String = "",
