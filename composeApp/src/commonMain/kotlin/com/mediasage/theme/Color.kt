@@ -24,5 +24,8 @@ val CardBorder = Color(0xFFE0E0E0)
 val RuleLine = Color(0xFFD0D0D0)
 val RuleLineDark = Color(0xFF404040)
 
+val DarkBackground = Color(0xFF1C1A14)  // dark warm brown, newspaper aesthetic
+val DarkSurface = Color(0xFF25221A)     // slightly lighter warm dark for card surfaces
+
 val Error = Color(0xFFB00020)
 val ErrorDark = Color(0xFFCF6679)
