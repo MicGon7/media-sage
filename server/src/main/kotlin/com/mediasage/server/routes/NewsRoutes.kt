@@ -34,7 +34,7 @@ fun Route.newsRoutes() {
             val language = call.parameters["language"] ?: "en"
             val limit = call.parameters["limit"]?.toIntOrNull() ?: 10
 
-            val articles = newsService.searchNews(query, language, limit)
+            val articles = newsService.searchNews(query = query, language = language, limit = limit)
 
             scraperService.preScrape(articles.map { it.url })
 
