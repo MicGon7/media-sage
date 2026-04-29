@@ -99,6 +99,7 @@ class HomeViewModel(
 
 private fun com.mediasage.domain.model.Headline.toItem() = HeadlineItem(
     id = id,
+    articleUrl = url,
     title = title,
     source = source,
     imageUrl = imageUrl,

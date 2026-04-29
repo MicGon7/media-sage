@@ -19,6 +19,5 @@ data class HistoryItem(
     val figureName: String,
     val figureRole: String,
     val quotePreview: String,
-    val headlineId: Long?,
-    val imageUrl: String?
+    val headlineImageUrl: String?
 )

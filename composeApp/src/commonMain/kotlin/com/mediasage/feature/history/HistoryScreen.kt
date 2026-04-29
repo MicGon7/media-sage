@@ -47,7 +47,7 @@ fun HistoryScreen(
     state: HistoryContract.UiState,
     onIntent: (HistoryContract.Intent) -> Unit,
     onNavigateBack: () -> Unit = {},
-    onNavigateToDetail: (Long) -> Unit = {}
+    onNavigateToDetail: (String) -> Unit = {}
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -77,7 +77,7 @@ fun HistoryScreen(
                 is HistoryContract.UiState.Empty -> EmptyState()
                 is HistoryContract.UiState.Success -> HistoryList(
                     items = state.items,
-                    onItemClick = { item -> item.headlineId?.let { onNavigateToDetail(it) } }
+                    onItemClick = { item -> onNavigateToDetail(item.articleUrl) }
                 )
             }
         }
@@ -111,9 +111,9 @@ private fun HistoryCard(
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
-        if (item.imageUrl != null) {
+        if (item.headlineImageUrl != null) {
             AsyncImage(
-                model = item.imageUrl,
+                model = item.headlineImageUrl,
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()

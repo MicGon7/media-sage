@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 interface HeadlineRepository {
     fun getHeadlines(): Flow<List<Headline>>
     suspend fun getHeadlineById(id: Long): Headline?
+    suspend fun getHeadlineByUrl(url: String): Headline?
     suspend fun refreshHeadlines()
     suspend fun clearOldHeadlines(olderThanMillis: Long)
 }

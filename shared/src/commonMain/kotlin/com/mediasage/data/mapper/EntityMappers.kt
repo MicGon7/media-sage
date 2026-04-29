@@ -133,10 +133,19 @@ fun EncouragementEntity.toDomain() = Encouragement(
         else connectionThemes.split(",").map { it.trim() },
     matchTheme = matchTheme,
     tone = tone,
-    figureImageUrl = figureImageUrl
+    figureImageUrl = figureImageUrl,
+    headlineTitle = headlineTitle,
+    headlineSource = headlineSource,
+    headlineImageUrl = headlineImageUrl
 )
 
-fun Encouragement.toEntity(articleUrl: String, headlineTitle: String = "", cachedAt: Long = 0L) = EncouragementEntity(
+fun Encouragement.toEntity(
+    articleUrl: String,
+    headlineTitle: String = "",
+    headlineSource: String = "",
+    headlineImageUrl: String? = null,
+    cachedAt: Long = 0L
+) = EncouragementEntity(
     articleUrl = articleUrl,
     summary = summary,
     quoteText = quoteText,
@@ -150,5 +159,7 @@ fun Encouragement.toEntity(articleUrl: String, headlineTitle: String = "", cache
     tone = tone,
     figureImageUrl = figureImageUrl,
     headlineTitle = headlineTitle,
+    headlineSource = headlineSource,
+    headlineImageUrl = headlineImageUrl,
     cachedAt = cachedAt
 )

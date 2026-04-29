@@ -88,6 +88,8 @@ private class FakeHeadlineRepository(
 
     override suspend fun getHeadlineById(id: Long): Headline? = _headlines.value.find { it.id == id }
 
+    override suspend fun getHeadlineByUrl(url: String): Headline? = _headlines.value.find { it.url == url }
+
     override suspend fun refreshHeadlines() {
         refreshCallCount++
     }

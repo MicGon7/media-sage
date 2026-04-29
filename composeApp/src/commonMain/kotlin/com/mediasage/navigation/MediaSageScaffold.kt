@@ -56,13 +56,13 @@ fun MediaSageScaffold(
                     HomeScreen(
                         state = state,
                         onIntent = vm::onIntent,
-                        onNavigateToDetail = { id -> appState.navigateToHeadlineDetail(id) }
+                        onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) }
                     )
                 }
                 is Route.HeadlineDetail -> NavEntry(route) {
                     val vm = koinViewModel<HeadlineDetailViewModel>(
-                        key = "headline-detail-${route.headlineId}",
-                        parameters = { parametersOf(route.headlineId) }
+                        key = "headline-detail-${route.articleUrl}",
+                        parameters = { parametersOf(route.articleUrl) }
                     )
                     val state by vm.state.collectAsState()
                     HeadlineDetailScreen(
@@ -112,7 +112,7 @@ fun MediaSageScaffold(
                         state = state,
                         onIntent = vm::onIntent,
                         onNavigateBack = { appState.navigateBack() },
-                        onNavigateToDetail = { id -> appState.navigateToHeadlineDetail(id) }
+                        onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) }
                     )
                 }
                 is Route.Settings -> NavEntry(route) {

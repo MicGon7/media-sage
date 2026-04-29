@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 class HeadlineDetailViewModel(
-    private val headlineId: Long,
+    private val articleUrl: String,
     private val headlineRepository: HeadlineRepository,
     private val encouragementRepository: EncouragementRepository
 ) : ViewModel() {
@@ -40,19 +40,20 @@ class HeadlineDetailViewModel(
     private fun loadMatch() {
         viewModelScope.launch {
             try {
-                val headline = headlineRepository.getHeadlineById(headlineId)
-                    ?: throw IllegalStateException("Headline not found")
+                val headline = headlineRepository.getHeadlineByUrl(articleUrl)
 
                 val encouragement = encouragementRepository.getEncouragement(
-                    headlineTitle = headline.title,
-                    articleUrl = headline.url
+                    headlineTitle = headline?.title ?: "",
+                    headlineSource = headline?.source ?: "",
+                    headlineImageUrl = headline?.imageUrl,
+                    articleUrl = articleUrl
                 )
 
                 _state.value = HeadlineDetailContract.UiState.Success(
-                    headlineTitle = headline.title,
-                    headlineSource = headline.source,
+                    headlineTitle = headline?.title ?: encouragement.headlineTitle,
+                    headlineSource = headline?.source ?: encouragement.headlineSource,
                     headlineCategory = "",
-                    headlineImageUrl = headline.imageUrl,
+                    headlineImageUrl = headline?.imageUrl ?: encouragement.headlineImageUrl,
                     encouragement = HeadlineDetailContract.EncouragementState.Loaded(
                         summary = encouragement.summary,
                         quoteText = encouragement.quoteText,
