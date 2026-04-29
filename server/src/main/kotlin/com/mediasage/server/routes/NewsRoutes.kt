@@ -6,18 +6,17 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 
-/** News headline endpoints — fetches from TheNewsAPI. */
 fun Route.newsRoutes() {
     val newsService by inject<NewsApiService>()
     val scraperService by inject<ArticleScraperService>()
 
     route("/api/news") {
         get("/headlines") {
-            val locale = call.parameters["locale"] ?: "us"
+            val topic = call.parameters["topic"] ?: "world"
             val language = call.parameters["language"] ?: "en"
             val limit = call.parameters["limit"]?.toIntOrNull() ?: 10
 
-            val articles = newsService.getTopHeadlines(locale, language, limit)
+            val articles = newsService.getTopHeadlines(topic = topic, language = language, limit = limit)
 
             // Pre-scrape articles in the background so text is ready when user taps
             scraperService.preScrape(articles.map { it.url })
@@ -34,7 +33,7 @@ fun Route.newsRoutes() {
             val language = call.parameters["language"] ?: "en"
             val limit = call.parameters["limit"]?.toIntOrNull() ?: 10
 
-            val articles = newsService.searchNews(query, language, limit)
+            val articles = newsService.searchNews(query = query, language = language, limit = limit)
 
             scraperService.preScrape(articles.map { it.url })
 

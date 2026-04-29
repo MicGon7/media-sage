@@ -3,21 +3,35 @@ package com.mediasage.server.service
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-// ---- Response DTOs for TheNewsAPI /v1/news/all endpoint ----
+// ---- Response DTOs for GNews API ----
 
 @Serializable
-data class NewsApiResponse(
-    val meta: NewsApiMeta,
-    val data: List<NewsArticle>
+data class GNewsResponse(
+    @SerialName("totalArticles")
+    val totalArticles: Int,
+    @SerialName("articles")
+    val articles: List<GNewsArticle>
 )
 
 @Serializable
-data class NewsApiMeta(
-    val found: Int,
-    val returned: Int,
-    val limit: Int,
-    val page: Int
+data class GNewsArticle(
+    val title: String,
+    val description: String = "",
+    val content: String = "",
+    val url: String,
+    val image: String? = null,
+    @SerialName("publishedAt")
+    val publishedAt: String = "",
+    val source: GNewsSource
 )
+
+@Serializable
+data class GNewsSource(
+    val name: String,
+    val url: String
+)
+
+// ---- Shared domain model returned to the client ----
 
 @Serializable
 data class NewsArticle(

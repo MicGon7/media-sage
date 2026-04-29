@@ -10,7 +10,7 @@ fun initKoin() {
     startKoin {
         modules(
             databaseModule,
-            sharedModule("http://192.168.1.144:8080"),
+            sharedModule("https://media-sage-production.up.railway.app"),
             appModule,
         )
     }

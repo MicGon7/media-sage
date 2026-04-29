@@ -9,10 +9,11 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 
 class NewsApiServiceTest {
 
@@ -32,35 +33,25 @@ class NewsApiServiceTest {
 
     private val sampleResponse = """
     {
-        "meta": { "found": 2, "returned": 2, "limit": 10, "page": 1 },
-        "data": [
+        "totalArticles": 2,
+        "articles": [
             {
-                "uuid": "abc-123",
                 "title": "Global markets rally on trade deal hopes",
                 "description": "Markets surged today...",
-                "keywords": "markets,trade,economy",
-                "snippet": "Markets surged today after...",
+                "content": "Markets surged today after trade talks...",
                 "url": "https://example.com/markets",
-                "image_url": "https://example.com/img.jpg",
-                "language": "en",
-                "published_at": "2026-04-19T10:00:00.000000Z",
-                "source": "Reuters",
-                "categories": ["business"],
-                "locale": "us"
+                "image": "https://example.com/img.jpg",
+                "publishedAt": "2026-04-19T10:00:00Z",
+                "source": { "name": "Reuters", "url": "https://reuters.com" }
             },
             {
-                "uuid": "def-456",
                 "title": "Earthquake strikes Pacific region",
                 "description": "A 6.5 magnitude earthquake...",
-                "keywords": "earthquake,pacific",
-                "snippet": "A 6.5 magnitude earthquake struck...",
+                "content": "A 6.5 magnitude earthquake struck the Pacific...",
                 "url": "https://example.com/earthquake",
-                "image_url": "",
-                "language": "en",
-                "published_at": "2026-04-19T09:00:00.000000Z",
-                "source": "AP News",
-                "categories": ["general"],
-                "locale": "us"
+                "image": null,
+                "publishedAt": "2026-04-19T09:00:00Z",
+                "source": { "name": "AP News", "url": "https://apnews.com" }
             }
         ]
     }
@@ -68,8 +59,7 @@ class NewsApiServiceTest {
 
     @Test
     fun getTopHeadlinesReturnsArticles() = runTest {
-        val client = createMockClient(sampleResponse)
-        val service = NewsApiService(client, "test-api-key")
+        val service = NewsApiService(createMockClient(sampleResponse), "test-api-key")
 
         val articles = service.getTopHeadlines()
 
@@ -81,8 +71,7 @@ class NewsApiServiceTest {
 
     @Test
     fun searchNewsReturnsArticles() = runTest {
-        val client = createMockClient(sampleResponse)
-        val service = NewsApiService(client, "test-api-key")
+        val service = NewsApiService(createMockClient(sampleResponse), "test-api-key")
 
         val articles = service.searchNews("earthquake")
 
@@ -103,45 +92,34 @@ class NewsApiServiceTest {
 
     private val duplicateUrlResponse = """
     {
-        "meta": { "found": 3, "returned": 3, "limit": 10, "page": 1 },
-        "data": [
+        "totalArticles": 3,
+        "articles": [
             {
-                "uuid": "abc-123", "title": "Global markets rally",
-                "url": "https://example.com/markets", "language": "en",
-                "published_at": "2026-04-19T10:00:00.000000Z",
-                "source": "Reuters", "categories": ["business"], "locale": "us"
+                "title": "Global markets rally",
+                "description": "",
+                "content": "",
+                "url": "https://example.com/markets",
+                "image": null,
+                "publishedAt": "2026-04-19T10:00:00Z",
+                "source": { "name": "Reuters", "url": "https://reuters.com" }
             },
             {
-                "uuid": "abc-456", "title": "Global markets rally",
-                "url": "https://example.com/markets", "language": "en",
-                "published_at": "2026-04-19T10:00:00.000000Z",
-                "source": "Reuters", "categories": ["business"], "locale": "us"
+                "title": "Global markets rally",
+                "description": "",
+                "content": "",
+                "url": "https://example.com/markets",
+                "image": null,
+                "publishedAt": "2026-04-19T10:00:00Z",
+                "source": { "name": "Reuters", "url": "https://reuters.com" }
             },
             {
-                "uuid": "def-789", "title": "Earthquake strikes Pacific region",
-                "url": "https://example.com/earthquake", "language": "en",
-                "published_at": "2026-04-19T09:00:00.000000Z",
-                "source": "AP News", "categories": ["general"], "locale": "us"
-            }
-        ]
-    }
-    """.trimIndent()
-
-    private val duplicateSingleUrlResponse = """
-    {
-        "meta": { "found": 2, "returned": 2, "limit": 10, "page": 1 },
-        "data": [
-            {
-                "uuid": "aaa-1", "title": "Climate summit reaches agreement",
-                "url": "https://example.com/climate", "language": "en",
-                "published_at": "2026-04-19T08:00:00.000000Z",
-                "source": "BBC", "categories": ["politics"], "locale": "us"
-            },
-            {
-                "uuid": "aaa-2", "title": "Climate summit reaches agreement",
-                "url": "https://example.com/climate", "language": "en",
-                "published_at": "2026-04-19T08:00:00.000000Z",
-                "source": "BBC", "categories": ["politics"], "locale": "us"
+                "title": "Earthquake strikes Pacific region",
+                "description": "",
+                "content": "",
+                "url": "https://example.com/earthquake",
+                "image": null,
+                "publishedAt": "2026-04-19T09:00:00Z",
+                "source": { "name": "AP News", "url": "https://apnews.com" }
             }
         ]
     }
@@ -158,9 +136,35 @@ class NewsApiServiceTest {
         assertEquals("https://example.com/earthquake", articles[1].url)
     }
 
+    private val duplicateSearchResponse = """
+    {
+        "totalArticles": 2,
+        "articles": [
+            {
+                "title": "Climate summit reaches agreement",
+                "description": "",
+                "content": "",
+                "url": "https://example.com/climate",
+                "image": null,
+                "publishedAt": "2026-04-19T08:00:00Z",
+                "source": { "name": "BBC", "url": "https://bbc.com" }
+            },
+            {
+                "title": "Climate summit reaches agreement",
+                "description": "",
+                "content": "",
+                "url": "https://example.com/climate",
+                "image": null,
+                "publishedAt": "2026-04-19T08:00:00Z",
+                "source": { "name": "BBC", "url": "https://bbc.com" }
+            }
+        ]
+    }
+    """.trimIndent()
+
     @Test
     fun searchNewsDeduplicatesByUrl() = runTest {
-        val service = NewsApiService(createMockClient(duplicateSingleUrlResponse), "test-api-key")
+        val service = NewsApiService(createMockClient(duplicateSearchResponse), "test-api-key")
 
         val articles = service.searchNews("climate")
 
@@ -170,14 +174,24 @@ class NewsApiServiceTest {
 
     @Test
     fun articleFieldsMappedCorrectly() = runTest {
-        val client = createMockClient(sampleResponse)
-        val service = NewsApiService(client, "test-api-key")
+        val service = NewsApiService(createMockClient(sampleResponse), "test-api-key")
 
         val article = service.getTopHeadlines().first()
 
-        assertEquals("abc-123", article.uuid)
+        assertEquals("https://example.com/markets", article.url)
         assertEquals("https://example.com/img.jpg", article.imageUrl)
-        assertEquals("2026-04-19T10:00:00.000000Z", article.publishedAt)
-        assertTrue(article.categories.contains("business"))
+        assertEquals("2026-04-19T10:00:00Z", article.publishedAt)
+        assertEquals("Reuters", article.source)
+        assertNotNull(article.uuid)
+        assertEquals(UUID.nameUUIDFromBytes("https://example.com/markets".toByteArray()).toString(), article.uuid)
+    }
+
+    @Test
+    fun getTopHeadlinesPassesTopicParam() = runTest {
+        val service = NewsApiService(createMockClient(sampleResponse), "test-api-key")
+
+        val articles = service.getTopHeadlines(topic = "world")
+
+        assertEquals(2, articles.size)
     }
 }

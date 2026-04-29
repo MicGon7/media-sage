@@ -5,27 +5,28 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import java.util.UUID
 
 class NewsApiService(
     private val httpClient: HttpClient,
     private val apiKey: String
 ) {
     companion object {
-        private const val BASE_URL = "https://api.thenewsapi.com/v1/news"
-        private const val EXCLUDED_CATEGORIES = "sports,entertainment"
+        private const val BASE_URL = "https://gnews.io/api/v4"
     }
 
     suspend fun getTopHeadlines(
-        locale: String = "us",
+        topic: String = "world",
         language: String = "en",
+        country: String = "us",
         limit: Int = 10
     ): List<NewsArticle> {
-        val response = httpClient.get("$BASE_URL/top") {
-            parameter("api_token", apiKey)
-            parameter("locale", locale)
-            parameter("language", language)
-            parameter("limit", limit)
-            parameter("exclude_categories", EXCLUDED_CATEGORIES)
+        val response = httpClient.get("$BASE_URL/top-headlines") {
+            parameter("token", apiKey)
+            parameter("topic", topic)
+            parameter("lang", language)
+            parameter("country", country)
+            parameter("max", limit)
         }
 
         if (!response.status.isSuccess()) {
@@ -35,19 +36,23 @@ class NewsApiService(
             )
         }
 
-        return response.body<NewsApiResponse>().data.distinctBy { it.url }
+        return response.body<GNewsResponse>().articles
+            .distinctBy { it.url }
+            .map { it.toNewsArticle() }
     }
 
     suspend fun searchNews(
         query: String,
         language: String = "en",
+        country: String = "us",
         limit: Int = 10
     ): List<NewsArticle> {
-        val response = httpClient.get("$BASE_URL/all") {
-            parameter("api_token", apiKey)
-            parameter("search", query)
-            parameter("language", language)
-            parameter("limit", limit)
+        val response = httpClient.get("$BASE_URL/search") {
+            parameter("token", apiKey)
+            parameter("q", query)
+            parameter("lang", language)
+            parameter("country", country)
+            parameter("max", limit)
         }
 
         if (!response.status.isSuccess()) {
@@ -57,8 +62,21 @@ class NewsApiService(
             )
         }
 
-        return response.body<NewsApiResponse>().data.distinctBy { it.url }
+        return response.body<GNewsResponse>().articles
+            .distinctBy { it.url }
+            .map { it.toNewsArticle() }
     }
+
+    private fun GNewsArticle.toNewsArticle() = NewsArticle(
+        uuid = UUID.nameUUIDFromBytes(url.toByteArray()).toString(),
+        title = title,
+        description = description,
+        snippet = content.take(200),
+        url = url,
+        imageUrl = image.orEmpty(),
+        publishedAt = publishedAt,
+        source = source.name
+    )
 }
 
 class NewsApiException(
