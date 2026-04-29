@@ -56,6 +56,8 @@
     <!-- History screen -->
     <string name="title_history">History</string>
     <string name="history_coming_soon">History coming soon</string>
+    <string name="history_empty_title">No reading history yet</string>
+    <string name="history_empty_subtitle">Articles you read will appear here</string>
 
     <!-- Figure detail screen -->
     <string name="figure_detail_biography">Biography</string>

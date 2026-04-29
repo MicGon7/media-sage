@@ -38,6 +38,9 @@ interface EncouragementDao {
     )
     suspend fun getRecentFigureNames(limit: Int): List<String>
 
+    @Query("SELECT * FROM encouragements ORDER BY cachedAt DESC")
+    fun getAll(): Flow<List<EncouragementEntity>>
+
     @Query("DELETE FROM encouragements")
     suspend fun deleteAll()
 }

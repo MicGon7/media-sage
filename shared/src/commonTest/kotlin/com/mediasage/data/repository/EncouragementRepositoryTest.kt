@@ -142,6 +142,8 @@ private class FakeEncouragementDao(preloaded: List<EncouragementEntity> = emptyL
             .distinct()
             .take(limit)
 
+    override fun getAll(): Flow<List<EncouragementEntity>> = flowOf(store.values.toList())
+
     override suspend fun deleteAll() { store.clear() }
 }
 

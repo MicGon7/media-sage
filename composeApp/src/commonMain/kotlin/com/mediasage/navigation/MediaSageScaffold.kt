@@ -17,6 +17,7 @@ import com.mediasage.feature.figures.FigureDetailViewModel
 import com.mediasage.feature.figures.FiguresScreen
 import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.history.HistoryScreen
+import com.mediasage.feature.history.HistoryViewModel
 import com.mediasage.feature.home.HomeScreen
 import com.mediasage.feature.home.HomeViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailScreen
@@ -105,7 +106,14 @@ fun MediaSageScaffold(
                     BookmarksScreen(onNavigateBack = { appState.navigateBack() })
                 }
                 is Route.History -> NavEntry(route) {
-                    HistoryScreen(onNavigateBack = { appState.navigateBack() })
+                    val vm = koinViewModel<HistoryViewModel>()
+                    val state by vm.state.collectAsState()
+                    HistoryScreen(
+                        state = state,
+                        onIntent = vm::onIntent,
+                        onNavigateBack = { appState.navigateBack() },
+                        onNavigateToDetail = { id -> appState.navigateToHeadlineDetail(id) }
+                    )
                 }
                 is Route.Settings -> NavEntry(route) {
                     SettingsScreen(onNavigateBack = { appState.navigateBack() })

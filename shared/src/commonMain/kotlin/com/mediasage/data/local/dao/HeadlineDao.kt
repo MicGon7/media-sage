@@ -21,6 +21,9 @@ interface HeadlineDao {
     @Query("SELECT * FROM headlines WHERE id = :id")
     suspend fun getById(id: Long): HeadlineEntity?
 
+    @Query("SELECT id FROM headlines WHERE url = :url LIMIT 1")
+    suspend fun getIdByUrl(url: String): Long?
+
     @Query("DELETE FROM headlines WHERE fetchedAt < :olderThan")
     suspend fun deleteOlderThan(olderThan: Long)
 
