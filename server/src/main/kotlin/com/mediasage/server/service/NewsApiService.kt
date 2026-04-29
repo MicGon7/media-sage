@@ -13,16 +13,17 @@ class NewsApiService(
 ) {
     companion object {
         private const val BASE_URL = "https://gnews.io/api/v4"
-        private val EXCLUDED_TOPICS = setOf("sports", "entertainment")
     }
 
     suspend fun getTopHeadlines(
+        topic: String = "world",
         language: String = "en",
         country: String = "us",
         limit: Int = 10
     ): List<NewsArticle> {
         val response = httpClient.get("$BASE_URL/top-headlines") {
             parameter("token", apiKey)
+            parameter("topic", topic)
             parameter("lang", language)
             parameter("country", country)
             parameter("max", limit)
@@ -36,7 +37,6 @@ class NewsApiService(
         }
 
         return response.body<GNewsResponse>().articles
-            .filter { article -> EXCLUDED_TOPICS.none { topic -> article.title.contains(topic, ignoreCase = true) } }
             .distinctBy { it.url }
             .map { it.toNewsArticle() }
     }

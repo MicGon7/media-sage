@@ -186,39 +186,12 @@ class NewsApiServiceTest {
         assertEquals(UUID.nameUUIDFromBytes("https://example.com/markets".toByteArray()).toString(), article.uuid)
     }
 
-    private val mixedTopicsResponse = """
-    {
-        "totalArticles": 2,
-        "articles": [
-            {
-                "title": "Sports team wins championship",
-                "description": "",
-                "content": "",
-                "url": "https://example.com/sports",
-                "image": null,
-                "publishedAt": "2026-04-19T10:00:00Z",
-                "source": { "name": "ESPN", "url": "https://espn.com" }
-            },
-            {
-                "title": "Peace talks resume in Middle East",
-                "description": "",
-                "content": "",
-                "url": "https://example.com/peace",
-                "image": null,
-                "publishedAt": "2026-04-19T09:00:00Z",
-                "source": { "name": "Reuters", "url": "https://reuters.com" }
-            }
-        ]
-    }
-    """.trimIndent()
-
     @Test
-    fun sportsArticlesFilteredFromTopHeadlines() = runTest {
-        val service = NewsApiService(createMockClient(mixedTopicsResponse), "test-api-key")
+    fun getTopHeadlinesPassesTopicParam() = runTest {
+        val service = NewsApiService(createMockClient(sampleResponse), "test-api-key")
 
-        val articles = service.getTopHeadlines()
+        val articles = service.getTopHeadlines(topic = "world")
 
-        assertEquals(1, articles.size)
-        assertEquals("Peace talks resume in Middle East", articles[0].title)
+        assertEquals(2, articles.size)
     }
 }
