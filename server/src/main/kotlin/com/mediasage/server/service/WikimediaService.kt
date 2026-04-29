@@ -32,6 +32,7 @@ class WikimediaService(private val httpClient: HttpClient) {
             val response = httpClient.get(API_URL) {
                 parameter("action", "query")
                 parameter("titles", figureName)
+                parameter("redirects", "")
                 parameter("prop", "pageimages")
                 parameter("pithumbsize", THUMB_SIZE)
                 parameter("format", "json")
