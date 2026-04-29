@@ -7,6 +7,7 @@ interface EncouragementRepository {
         headlineTitle: String,
         headlineSource: String = "",
         headlineImageUrl: String? = null,
-        articleUrl: String?
+        articleUrl: String?,
+        articleSnippet: String? = null
     ): Encouragement
 }

@@ -18,6 +18,7 @@ data class EncourageRequest(
     val headlineTitle: String,
     val locale: String = "en",
     val articleUrl: String? = null,
+    val articleSnippet: String? = null,
     val recentFigures: List<String> = emptyList()
 )
 
@@ -65,7 +66,8 @@ private fun Route.encourageRoute(
             return@post
         }
 
-        val articleText = request.articleUrl?.let { scraperService.getArticleText(it) }
+        val articleText = request.articleSnippet
+            ?: request.articleUrl?.let { scraperService.getArticleText(it) }
 
         val result = claudeService.encourageHeadline(
             headlineTitle = request.headlineTitle,

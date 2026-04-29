@@ -27,6 +27,7 @@ data class EncourageRequestDto(
     val headlineTitle: String,
     val locale: String = "en",
     val articleUrl: String? = null,
+    val articleSnippet: String? = null,
     val recentFigures: List<String> = emptyList()
 )
 

@@ -58,8 +58,9 @@ fun NewsArticleDto.toEntity(fetchedAt: Long = 0L) = HeadlineEntity(
     source = source,
     url = url,
     imageUrl = imageUrl.ifBlank { null },
-    publishedAt = fetchedAt, // Server returns ISO string; using fetchedAt as fallback
-    fetchedAt = fetchedAt
+    publishedAt = fetchedAt,
+    fetchedAt = fetchedAt,
+    snippet = snippet.ifBlank { null }
 )
 
 // Headline
@@ -70,7 +71,8 @@ fun HeadlineEntity.toDomain() = Headline(
     url = url,
     imageUrl = imageUrl,
     publishedAt = publishedAt,
-    fetchedAt = fetchedAt
+    fetchedAt = fetchedAt,
+    snippet = snippet
 )
 
 fun Headline.toEntity() = HeadlineEntity(
@@ -80,7 +82,8 @@ fun Headline.toEntity() = HeadlineEntity(
     url = url,
     imageUrl = imageUrl,
     publishedAt = publishedAt,
-    fetchedAt = fetchedAt
+    fetchedAt = fetchedAt,
+    snippet = snippet
 )
 
 // Match
