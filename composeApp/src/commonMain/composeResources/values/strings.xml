@@ -1,6 +1,6 @@
 <resources>
     <!-- App -->
-    <string name="app_name">Nick\'s Demo</string>
+    <string name="app_name">Nick\'s Example</string>
 
     <!-- Navigation -->
     <string name="nav_headlines">Headlines</string>
@@ -9,7 +9,7 @@
     <string name="nav_back">Back</string>
 
     <!-- Screen titles -->
-    <string name="title_home">Nick\'s Demo</string>
+    <string name="title_home">Nick\'s Example</string>
     <string name="title_headline_detail">Today's Word</string>
     <string name="title_voices">Gathered Guides</string>
 
