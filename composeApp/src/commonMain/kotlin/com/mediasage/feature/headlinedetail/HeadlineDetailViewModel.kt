@@ -46,7 +46,8 @@ class HeadlineDetailViewModel(
                     headlineTitle = headline?.title ?: "",
                     headlineSource = headline?.source ?: "",
                     headlineImageUrl = headline?.imageUrl,
-                    articleUrl = articleUrl
+                    articleUrl = articleUrl,
+                    articleSnippet = headline?.snippet
                 )
 
                 _state.value = HeadlineDetailContract.UiState.Success(

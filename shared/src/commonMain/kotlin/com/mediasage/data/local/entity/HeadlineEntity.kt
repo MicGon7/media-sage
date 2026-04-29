@@ -10,6 +10,7 @@ data class HeadlineEntity(
     val source: String,
     val url: String,
     val imageUrl: String? = null,
-    val publishedAt: Long,       // Epoch millis — avoids type converter for dates
-    val fetchedAt: Long          // When we cached this headline
+    val publishedAt: Long,
+    val fetchedAt: Long,
+    val snippet: String? = null
 )

@@ -17,7 +17,8 @@ class EncouragementRepositoryImpl(
         headlineTitle: String,
         headlineSource: String,
         headlineImageUrl: String?,
-        articleUrl: String?
+        articleUrl: String?,
+        articleSnippet: String?
     ): Encouragement {
         articleUrl?.let { url ->
             encouragementDao.getByArticleUrl(url)?.let { return it.toDomain() }
@@ -28,6 +29,7 @@ class EncouragementRepositoryImpl(
             EncourageRequestDto(
                 headlineTitle = headlineTitle,
                 articleUrl = articleUrl,
+                articleSnippet = articleSnippet,
                 recentFigures = recentFigures
             )
         ).toDomain()
