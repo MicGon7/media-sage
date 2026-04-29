@@ -32,13 +32,15 @@ class HistoryViewModel(
                     _state.value = HistoryContract.UiState.Empty
                 } else {
                     val items = entities.map { entity ->
+                        val headline = headlineDao.getByUrl(entity.articleUrl)
                         HistoryItem(
                             articleUrl = entity.articleUrl,
                             headlineTitle = entity.headlineTitle,
                             figureName = entity.figureName,
                             figureRole = entity.figureRole,
                             quotePreview = entity.quoteText.take(QUOTE_PREVIEW_LENGTH),
-                            headlineId = headlineDao.getIdByUrl(entity.articleUrl)
+                            headlineId = headline?.id,
+                            imageUrl = headline?.imageUrl
                         )
                     }
                     _state.value = HistoryContract.UiState.Success(items)

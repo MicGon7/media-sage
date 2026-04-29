@@ -107,6 +107,35 @@ class HistoryViewModelTest {
     }
 
     @Test
+    fun imageUrlIsPopulatedFromHeadline() = runTest(testDispatcher) {
+        val articleUrl = "https://example.com/article"
+        val entity = buildEncouragementEntity(articleUrl = articleUrl)
+        val headlineDao = FakeHeadlineDao(
+            urlToIdMap = mapOf(articleUrl to 42L),
+            urlToImageMap = mapOf(articleUrl to "https://img.example.com/photo.jpg")
+        )
+        val vm = HistoryViewModel(
+            encouragementDao = FakeEncouragementDao(listOf(entity)),
+            headlineDao = headlineDao
+        )
+
+        val state = assertIs<HistoryContract.UiState.Success>(vm.state.value)
+        assertEquals("https://img.example.com/photo.jpg", state.items.first().imageUrl)
+    }
+
+    @Test
+    fun imageUrlIsNullWhenHeadlineNotFound() = runTest(testDispatcher) {
+        val entity = buildEncouragementEntity(articleUrl = "https://example.com/gone")
+        val vm = HistoryViewModel(
+            encouragementDao = FakeEncouragementDao(listOf(entity)),
+            headlineDao = FakeHeadlineDao()
+        )
+
+        val state = assertIs<HistoryContract.UiState.Success>(vm.state.value)
+        assertNull(state.items.first().imageUrl)
+    }
+
+    @Test
     fun stateUpdatesWhenEncouragementFlowEmitsNewValues() = runTest(testDispatcher) {
         val flow = MutableStateFlow(emptyList<EncouragementEntity>())
         val vm = HistoryViewModel(
@@ -171,10 +200,24 @@ private class FakeEncouragementDao(
 }
 
 private class FakeHeadlineDao(
-    private val urlToIdMap: Map<String, Long> = emptyMap()
+    private val urlToIdMap: Map<String, Long> = emptyMap(),
+    private val urlToImageMap: Map<String, String> = emptyMap()
 ) : HeadlineDao {
 
     override suspend fun getIdByUrl(url: String): Long? = urlToIdMap[url]
+
+    override suspend fun getByUrl(url: String): HeadlineEntity? {
+        val id = urlToIdMap[url] ?: return null
+        return HeadlineEntity(
+            id = id,
+            title = "",
+            source = "",
+            url = url,
+            imageUrl = urlToImageMap[url],
+            publishedAt = 0L,
+            fetchedAt = 0L
+        )
+    }
 
     override suspend fun insert(headline: HeadlineEntity): Long = 0L
 
