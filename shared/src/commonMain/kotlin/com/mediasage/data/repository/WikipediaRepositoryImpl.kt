@@ -20,6 +20,7 @@ class WikipediaRepositoryImpl(private val httpClient: HttpClient) : WikipediaRep
             val response = httpClient.get(API_URL) {
                 parameter("action", "query")
                 parameter("titles", figureName)
+                parameter("redirects", "")
                 parameter("prop", "extracts")
                 parameter("exintro", true)
                 parameter("exsentences", 5)
