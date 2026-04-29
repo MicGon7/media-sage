@@ -1,5 +1,6 @@
 package com.mediasage.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -30,31 +31,30 @@ private val LightColorScheme = lightColorScheme(
 
 private val DarkColorScheme = darkColorScheme(
     primary = NavyMuted,
-    onPrimary = Charcoal,
+    onPrimary = DarkBackground,
     primaryContainer = Navy,
     onPrimaryContainer = InkLight,
     secondary = NavyLight,
-    onSecondary = Charcoal,
+    onSecondary = DarkBackground,
     secondaryContainer = Navy,
     onSecondaryContainer = InkLight,
     tertiary = SlateLight,
-    onTertiary = Charcoal,
-    background = Charcoal,
+    onTertiary = DarkBackground,
+    background = DarkBackground,
     onBackground = InkLight,
-    surface = Charcoal,
+    surface = DarkSurface,
     onSurface = InkLight,
     surfaceVariant = Ink,
     onSurfaceVariant = CharcoalLight,
     outline = RuleLineDark,
     outlineVariant = Slate,
     error = ErrorDark,
-    onError = Charcoal,
+    onError = DarkBackground,
 )
 
 @Composable
 fun MediaSageTheme(
-    @Suppress("UNUSED_PARAMETER")
-    darkTheme: Boolean = false, // TODO MS-30: wire up dark theme
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
