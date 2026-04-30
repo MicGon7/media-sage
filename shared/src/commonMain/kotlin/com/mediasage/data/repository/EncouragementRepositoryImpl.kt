@@ -7,6 +7,7 @@ import com.mediasage.data.remote.EncourageRequestDto
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.repository.EncouragementRepository
+import kotlinx.coroutines.flow.Flow
 
 class EncouragementRepositoryImpl(
     private val api: MediaSageApi,
@@ -40,6 +41,13 @@ class EncouragementRepositoryImpl(
             )
         }
         return encouragement
+    }
+
+    override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> =
+        encouragementDao.observeBookmarkState(articleUrl)
+
+    override suspend fun toggleBookmark(articleUrl: String) {
+        encouragementDao.toggleBookmark(articleUrl)
     }
 
     companion object {

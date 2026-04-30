@@ -52,6 +52,10 @@
     <!-- Bookmarks screen -->
     <string name="title_bookmarks">Saved</string>
     <string name="bookmarks_coming_soon">Bookmarks coming soon</string>
+    <string name="bookmarks_empty_title">No saved articles yet</string>
+    <string name="bookmarks_empty_subtitle">Tap the bookmark icon on any article to save it</string>
+    <string name="bookmark_add">Save article</string>
+    <string name="bookmark_remove">Remove saved article</string>
 
     <!-- History screen -->
     <string name="title_history">History</string>

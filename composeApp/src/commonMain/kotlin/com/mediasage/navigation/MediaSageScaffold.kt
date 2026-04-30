@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import com.mediasage.feature.bookmarks.BookmarksScreen
+import com.mediasage.feature.bookmarks.BookmarksViewModel
 import com.mediasage.feature.figures.FigureDetailScreen
 import com.mediasage.feature.figures.FigureDetailViewModel
 import com.mediasage.feature.figures.FiguresScreen
@@ -103,7 +104,14 @@ fun MediaSageScaffold(
                     )
                 }
                 is Route.Bookmarks -> NavEntry(route) {
-                    BookmarksScreen(onNavigateBack = { appState.navigateBack() })
+                    val vm = koinViewModel<BookmarksViewModel>()
+                    val state by vm.state.collectAsState()
+                    BookmarksScreen(
+                        state = state,
+                        onIntent = vm::onIntent,
+                        onNavigateBack = { appState.navigateBack() },
+                        onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) }
+                    )
                 }
                 is Route.History -> NavEntry(route) {
                     val vm = koinViewModel<HistoryViewModel>()
