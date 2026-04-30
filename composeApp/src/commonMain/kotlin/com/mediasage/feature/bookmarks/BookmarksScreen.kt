@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.mediasage.ui.MediaSageEmptyState
+import com.mediasage.ui.MediaSageLoadingState
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.bookmark_remove
 import mediasage.composeapp.generated.resources.bookmarks_empty_subtitle
@@ -75,8 +75,11 @@ fun BookmarksScreen(
                 thickness = 1.dp
             )
             when (state) {
-                is BookmarksContract.UiState.Loading -> LoadingState()
-                is BookmarksContract.UiState.Empty -> EmptyState()
+                is BookmarksContract.UiState.Loading -> MediaSageLoadingState()
+                is BookmarksContract.UiState.Empty -> MediaSageEmptyState(
+                    title = stringResource(Res.string.bookmarks_empty_title),
+                    subtitle = stringResource(Res.string.bookmarks_empty_subtitle)
+                )
                 is BookmarksContract.UiState.Success -> BookmarkList(
                     items = state.items,
                     onItemClick = { item -> onNavigateToDetail(item.articleUrl) },
@@ -197,36 +200,3 @@ private fun BookmarkCard(
     }
 }
 
-@Composable
-private fun LoadingState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun EmptyState() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = stringResource(Res.string.bookmarks_empty_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = stringResource(Res.string.bookmarks_empty_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            fontStyle = FontStyle.Italic,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
