@@ -1,11 +1,11 @@
-package com.mediasage.feature.history
+package com.mediasage.feature.bookmarks
 
-object HistoryContract {
+object BookmarksContract {
 
     sealed interface UiState {
         data object Loading : UiState
         data object Empty : UiState
-        data class Success(val items: List<HistoryItem>) : UiState
+        data class Success(val items: List<BookmarkItem>) : UiState
     }
 
     sealed interface Intent {
@@ -15,12 +15,11 @@ object HistoryContract {
     sealed interface SideEffect
 }
 
-data class HistoryItem(
+data class BookmarkItem(
     val articleUrl: String,
     val headlineTitle: String,
     val figureName: String,
     val figureRole: String,
     val quotePreview: String,
-    val headlineImageUrl: String?,
-    val isBookmarked: Boolean = false
+    val headlineImageUrl: String?
 )

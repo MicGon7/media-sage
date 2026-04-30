@@ -14,7 +14,8 @@ object HeadlineDetailContract {
             val headlineCategory: String,
             val headlineImageUrl: String?,
             // AI content — loaded progressively from Claude
-            val encouragement: EncouragementState = EncouragementState.Loading
+            val encouragement: EncouragementState = EncouragementState.Loading,
+            val isBookmarked: Boolean = false
         ) : UiState
         data class Error(val errorType: ErrorType) : UiState
     }
@@ -38,6 +39,7 @@ object HeadlineDetailContract {
 
     sealed interface Intent {
         data object RetryMatch : Intent
+        data object ToggleBookmark : Intent
     }
 
     sealed interface SideEffect {

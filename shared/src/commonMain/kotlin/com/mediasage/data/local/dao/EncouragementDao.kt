@@ -41,6 +41,15 @@ interface EncouragementDao {
     @Query("SELECT * FROM encouragements ORDER BY cachedAt DESC")
     fun getAll(): Flow<List<EncouragementEntity>>
 
+    @Query("SELECT * FROM encouragements WHERE bookmarked = 1 ORDER BY cachedAt DESC")
+    fun getBookmarked(): Flow<List<EncouragementEntity>>
+
+    @Query("SELECT bookmarked FROM encouragements WHERE articleUrl = :articleUrl")
+    fun observeBookmarkState(articleUrl: String): Flow<Boolean>
+
+    @Query("UPDATE encouragements SET bookmarked = NOT bookmarked WHERE articleUrl = :articleUrl")
+    suspend fun toggleBookmark(articleUrl: String)
+
     @Query("DELETE FROM encouragements")
     suspend fun deleteAll()
 }

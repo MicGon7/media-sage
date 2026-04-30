@@ -16,8 +16,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -31,8 +37,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -48,6 +52,8 @@ import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.bookmark_add
+import mediasage.composeapp.generated.resources.bookmark_remove
 import mediasage.composeapp.generated.resources.match_error_generic
 import mediasage.composeapp.generated.resources.match_error_network
 import mediasage.composeapp.generated.resources.match_finding
@@ -60,21 +66,41 @@ fun HeadlineDetailScreen(
     onIntent: (HeadlineDetailContract.Intent) -> Unit,
     onNavigateBack: () -> Unit = {}
 ) {
-    val matchTheme = (state as? HeadlineDetailContract.UiState.Success)
-        ?.encouragement
+    val successState = state as? HeadlineDetailContract.UiState.Success
+    val matchTheme = successState?.encouragement
         ?.let { (it as? HeadlineDetailContract.EncouragementState.Loaded)?.matchTheme }
+    val isEncouragementLoaded = successState?.encouragement is HeadlineDetailContract.EncouragementState.Loaded
+    val isBookmarked = successState?.isBookmarked ?: false
 
     Surface(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {
         MediaSageBackRow(onNavigateBack = onNavigateBack) {
-            AnimatedVisibility(
-                visible = matchTheme != null,
-                enter = fadeIn()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = matchTheme.orEmpty(),
-                    style = MaterialTheme.typography.titleLarge,
-                )
+                AnimatedVisibility(
+                    visible = matchTheme != null,
+                    enter = fadeIn()
+                ) {
+                    Text(
+                        text = matchTheme.orEmpty(),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                }
+                if (isEncouragementLoaded) {
+                    IconButton(onClick = { onIntent(HeadlineDetailContract.Intent.ToggleBookmark) }) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = stringResource(
+                                if (isBookmarked) Res.string.bookmark_remove else Res.string.bookmark_add
+                            ),
+                            tint = if (isBookmarked) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             }
         }
         when (state) {

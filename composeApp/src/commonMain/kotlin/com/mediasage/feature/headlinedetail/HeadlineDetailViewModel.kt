@@ -26,6 +26,7 @@ class HeadlineDetailViewModel(
 
     init {
         loadMatch()
+        observeBookmark()
     }
 
     fun onIntent(intent: HeadlineDetailContract.Intent) {
@@ -33,6 +34,20 @@ class HeadlineDetailViewModel(
             is HeadlineDetailContract.Intent.RetryMatch -> {
                 _state.value = HeadlineDetailContract.UiState.Loading
                 loadMatch()
+            }
+            is HeadlineDetailContract.Intent.ToggleBookmark -> {
+                viewModelScope.launch { encouragementRepository.toggleBookmark(articleUrl) }
+            }
+        }
+    }
+
+    private fun observeBookmark() {
+        viewModelScope.launch {
+            encouragementRepository.observeIsBookmarked(articleUrl).collect { isBookmarked ->
+                val current = _state.value
+                if (current is HeadlineDetailContract.UiState.Success) {
+                    _state.value = current.copy(isBookmarked = isBookmarked)
+                }
             }
         }
     }

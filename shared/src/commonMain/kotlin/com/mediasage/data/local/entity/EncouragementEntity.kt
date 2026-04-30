@@ -24,5 +24,6 @@ data class EncouragementEntity(
     val headlineTitle: String = "",
     val headlineSource: String = "",
     val headlineImageUrl: String? = null,
-    val cachedAt: Long = 0L
+    val cachedAt: Long = 0L,
+    val bookmarked: Boolean = false
 )

@@ -14,11 +14,14 @@ import com.mediasage.data.remote.ScripturePassageDto
 import com.mediasage.data.remote.ScriptureVerseDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class EncouragementRepositoryTest {
 
@@ -112,6 +115,44 @@ class EncouragementRepositoryTest {
         assertEquals(1, api.encourageCallCount)
         assertEquals(0, dao.insertCallCount)
     }
+
+    @Test
+    fun toggleBookmarkFlipsBookmarkedState() = runTest {
+        val cached = EncouragementEntity(
+            articleUrl = "https://example.com/article",
+            summary = null,
+            quoteText = "Test quote",
+            figureName = "Augustine",
+            figureRole = "Bishop",
+            scriptureReference = "Psalm 23",
+            scriptureText = "The Lord is my shepherd",
+            explanation = "Explanation",
+            connectionThemes = "peace",
+            matchTheme = "trust",
+            tone = "hopeful",
+            bookmarked = false
+        )
+        val dao = FakeEncouragementDao(preloaded = listOf(cached))
+        val api = FakeMediaSageApi(result = sampleResult)
+        val repo = EncouragementRepositoryImpl(api, dao)
+
+        assertFalse(repo.observeIsBookmarked("https://example.com/article").first())
+
+        repo.toggleBookmark("https://example.com/article")
+        assertTrue(repo.observeIsBookmarked("https://example.com/article").first())
+
+        repo.toggleBookmark("https://example.com/article")
+        assertFalse(repo.observeIsBookmarked("https://example.com/article").first())
+    }
+
+    @Test
+    fun observeIsBookmarkedReturnsFalseForUnknownUrl() = runTest {
+        val dao = FakeEncouragementDao()
+        val api = FakeMediaSageApi(result = sampleResult)
+        val repo = EncouragementRepositoryImpl(api, dao)
+
+        assertFalse(repo.observeIsBookmarked("https://example.com/unknown").first())
+    }
 }
 
 private class FakeEncouragementDao(preloaded: List<EncouragementEntity> = emptyList()) : EncouragementDao {
@@ -143,6 +184,16 @@ private class FakeEncouragementDao(preloaded: List<EncouragementEntity> = emptyL
             .take(limit)
 
     override fun getAll(): Flow<List<EncouragementEntity>> = flowOf(store.values.toList())
+
+    override fun getBookmarked(): Flow<List<EncouragementEntity>> =
+        flowOf(store.values.filter { it.bookmarked })
+
+    override fun observeBookmarkState(articleUrl: String): Flow<Boolean> =
+        flowOf(store[articleUrl]?.bookmarked ?: false)
+
+    override suspend fun toggleBookmark(articleUrl: String) {
+        store[articleUrl]?.let { store[articleUrl] = it.copy(bookmarked = !it.bookmarked) }
+    }
 
     override suspend fun deleteAll() { store.clear() }
 }

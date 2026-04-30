@@ -1,4 +1,4 @@
-package com.mediasage.feature.history
+package com.mediasage.feature.bookmarks
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,43 +10,42 @@ import kotlinx.coroutines.launch
 
 private const val QUOTE_PREVIEW_LENGTH = 120
 
-class HistoryViewModel(
+class BookmarksViewModel(
     private val encouragementDao: EncouragementDao
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<HistoryContract.UiState>(HistoryContract.UiState.Loading)
-    val state: StateFlow<HistoryContract.UiState> = _state.asStateFlow()
+    private val _state = MutableStateFlow<BookmarksContract.UiState>(BookmarksContract.UiState.Loading)
+    val state: StateFlow<BookmarksContract.UiState> = _state.asStateFlow()
 
     init {
-        loadHistory()
+        loadBookmarks()
     }
 
-    fun onIntent(intent: HistoryContract.Intent) {
+    fun onIntent(intent: BookmarksContract.Intent) {
         when (intent) {
-            is HistoryContract.Intent.ToggleBookmark -> {
+            is BookmarksContract.Intent.ToggleBookmark -> {
                 viewModelScope.launch { encouragementDao.toggleBookmark(intent.articleUrl) }
             }
         }
     }
 
-    private fun loadHistory() {
+    private fun loadBookmarks() {
         viewModelScope.launch {
-            encouragementDao.getAll().collect { entities ->
+            encouragementDao.getBookmarked().collect { entities ->
                 if (entities.isEmpty()) {
-                    _state.value = HistoryContract.UiState.Empty
+                    _state.value = BookmarksContract.UiState.Empty
                 } else {
                     val items = entities.map { entity ->
-                        HistoryItem(
+                        BookmarkItem(
                             articleUrl = entity.articleUrl,
                             headlineTitle = entity.headlineTitle,
                             figureName = entity.figureName,
                             figureRole = entity.figureRole,
                             quotePreview = entity.quoteText.take(QUOTE_PREVIEW_LENGTH),
-                            headlineImageUrl = entity.headlineImageUrl,
-                            isBookmarked = entity.bookmarked
+                            headlineImageUrl = entity.headlineImageUrl
                         )
                     }
-                    _state.value = HistoryContract.UiState.Success(items)
+                    _state.value = BookmarksContract.UiState.Success(items)
                 }
             }
         }

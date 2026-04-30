@@ -149,5 +149,13 @@ private class FakeEncouragementDao(
 
     override suspend fun getRecentFigureNames(limit: Int): List<String> = emptyList()
 
+    override fun getBookmarked(): Flow<List<EncouragementEntity>> =
+        MutableStateFlow(_flow.value.filter { it.bookmarked })
+
+    override fun observeBookmarkState(articleUrl: String): Flow<Boolean> =
+        MutableStateFlow(_flow.value.find { it.articleUrl == articleUrl }?.bookmarked ?: false)
+
+    override suspend fun toggleBookmark(articleUrl: String) = Unit
+
     override suspend fun deleteAll() = Unit
 }
