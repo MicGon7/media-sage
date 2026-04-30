@@ -194,6 +194,18 @@ source ~/.zshrc && ./gradlew :server:run
 - Never push directly to main — always create a PR
 - Never merge a PR — human reviews and merges
 
+### After a PR is merged
+Update the Agentic Development Impact page in Confluence (media-sage.atlassian.net, page ID: `163844`) with:
+1. A new row in the **Ticket Log** table covering: ticket key, description, mode (`assisted` or `autonomous`), platform breakdown of engineer hours, total traditional hours, traditional cost, actual wall-clock hours, and key notes
+2. Updated **Running Impact Totals** (cumulative hours and cost)
+
+**Estimation rules for the Ticket Log:**
+- Treat the work as if a digital agency built it in native (separate iOS, Android, and backend engineers — even though KMP shares code)
+- Assign hours per platform only if that platform was actually touched by the ticket
+- Add **25% overhead** on top of engineer hours for PM coordination, QA, code review cycles, staging deployment, and client demos
+- **Rate: $130/h** blended agency rate (Staff $160/h, mid-level iOS/Android $130/h, Backend $140/h, QA $110/h)
+- Example: a ticket touching Backend (8h) + iOS (6h) + Android (6h) = 20 engineer-hours + 5h overhead = 25h total = $3,250
+
 ### Autonomous Mode
 
 An **autonomous agent** runs the full workflow — Jira, branch, code, tests, docs, commit, PR — without human interaction. The human's only touchpoint is the GitHub PR review.
