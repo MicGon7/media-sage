@@ -27,6 +27,8 @@ kover = "0.9.8"
 nav3-ui = "1.0.0-alpha05"
 sqlite = "2.5.1"
 compottie = "2.0.0-rc04"
+exposed = "0.61.0"
+sqlite-jdbc = "3.47.1.0"
 
 [libraries]
 # Coil (KMP image loading)
@@ -92,6 +94,11 @@ koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
 
 # Navigation 3 (Compose Multiplatform)
 navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "nav3-ui" }
+
+# Exposed (server-side SQL framework)
+exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
+exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
 
 # Compottie (Lottie for Compose Multiplatform)
 compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }

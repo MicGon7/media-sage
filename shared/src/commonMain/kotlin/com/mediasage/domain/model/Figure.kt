@@ -7,14 +7,18 @@ data class Figure(
     val century: String,
     val description: String,
     val role: String = "",
-    val lifespan: String = ""
+    val lifespan: String = "",
+    val themes: List<String> = emptyList(),
+    val portraitUrl: String? = null
 )
 
-enum class FigureCategory {
-    THEOLOGIAN,
-    MYSTIC,
-    MODERN,
-    BIBLICAL;
+enum class FigureCategory(val displayName: String) {
+    THEOLOGIAN("Theologians & Reformers"),
+    MYSTIC("Mystics & Contemplatives"),
+    CHURCH_FATHER("Church Fathers"),
+    SOCIAL_JUSTICE("Social Justice & Public Faith"),
+    INTELLECTUAL("Scientists & Intellectuals"),
+    MISSIONARY("Missionaries & Servants");
 
     companion object {
         fun fromString(value: String): FigureCategory =

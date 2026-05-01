@@ -189,7 +189,7 @@ source ~/.zshrc && ./gradlew :server:run
 ### Before submitting work
 - Run `./gradlew allTests` and ensure all pass
 - Run `./gradlew detekt` and ensure no violations
-- Smoke test any external API changes with real APIs
+- Smoke test any external API changes with real APIs before writing the learning doc or opening a PR — docs should describe verified behaviour, not assumed behaviour
 - No API keys or secrets in code — use environment variables
 - Never push directly to main — always create a PR
 - Never merge a PR — human reviews and merges
