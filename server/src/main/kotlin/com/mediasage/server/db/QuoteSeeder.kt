@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 object QuoteSeeder {
 
     private val logger = LoggerFactory.getLogger(QuoteSeeder::class.java)
-    private const val TARGET_QUOTES_PER_FIGURE = 20
+    private const val TARGET_QUOTES_PER_FIGURE = 5
 
     suspend fun seed(claudeService: ClaudeApiService) = withContext(Dispatchers.IO) {
         val figures = loadFigures()

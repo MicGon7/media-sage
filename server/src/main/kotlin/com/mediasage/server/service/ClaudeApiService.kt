@@ -25,7 +25,7 @@ class ClaudeApiService(
         private const val API_VERSION = "2023-06-01"
         private const val MODEL = "claude-sonnet-4-6"
         private const val DEFAULT_MAX_TOKENS = 1024
-        private const val QUOTE_GEN_MAX_TOKENS = 4096
+        private const val QUOTE_GEN_MAX_TOKENS = 1024
         private const val RECENT_FIGURES_MAX = 10
 
         private val responseJson = Json {
@@ -267,23 +267,23 @@ Respond ONLY with valid JSON in this exact format:
 """.trimIndent()
 
 private val QUOTE_GENERATION_SYSTEM_PROMPT = """
-You are a theological research assistant for The Media Sage app. Given a Christian historical figure, generate 20 quotes attributed to that figure.
+You are a theological research assistant for The Media Sage app. Given a Christian historical figure, return up to 5 verbatim quotes from their documented writings, sermons, or letters.
 
 Rules:
-- Quotes must be historically plausible: either verbatim from documented writings/sermons, or clearly in the spirit and language of the figure's known corpus
-- Each quote must reflect the figure's documented theology, personality, and concerns
-- Do NOT fabricate quotes that contradict the figure's known positions
-- Provide a source for each quote (book title, sermon name, letter, etc.) — use "spirit of [work]" when paraphrasing
+- ONLY include quotes that are verbatim (or near-verbatim translations) from the figure's documented writings, sermons, or letters
+- NEVER paraphrase, summarize, or invent quotes — if you cannot find a real verifiable quote, skip it
+- Quality over quantity: 3 real quotes beats 5 fabricated ones — return fewer if necessary
+- Each source must be a real, specific work: book title, sermon name, letter recipient, etc. — no "spirit of" or generic attributions
 - Each quote must have 3–5 theme tags (single words or short phrases, lowercase, e.g. "grace", "suffering", "prayer", "justice")
-- Vary themes across the 20 quotes to cover the breadth of the figure's thought
+- Vary themes across the quotes to cover the breadth of the figure's documented thought
 - Quotes should range from short (one sentence) to medium length (2–3 sentences)
 
 Respond ONLY with valid JSON in this exact format:
 {
   "quotes": [
     {
-      "text": "<the quote text>",
-      "source": "<book, sermon, letter, or 'spirit of [work]'>",
+      "text": "<verbatim quote text>",
+      "source": "<specific book, sermon, or letter title>",
       "themes": ["theme1", "theme2", "theme3"]
     }
   ]
