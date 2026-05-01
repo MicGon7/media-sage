@@ -123,6 +123,6 @@ class EntityMappersTest {
     fun figureCategoryFromStringHandlesUnknown() {
         assertEquals(FigureCategory.THEOLOGIAN, FigureCategory.fromString("unknown"))
         assertEquals(FigureCategory.MYSTIC, FigureCategory.fromString("mystic"))
-        assertEquals(FigureCategory.MODERN, FigureCategory.fromString("MODERN"))
+        assertEquals(FigureCategory.MISSIONARY, FigureCategory.fromString("missionary"))
     }
 }

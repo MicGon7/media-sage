@@ -51,7 +51,7 @@ class FigureRoutesTest {
         install(Koin) { modules(module { single { FigureRepository() } }) }
         routing { figureRoutes() }
 
-        val response = client.get("/figures")
+        val response = client.get("/api/figures")
         assertEquals(HttpStatusCode.OK, response.status)
     }
 }

@@ -10,7 +10,7 @@ import org.koin.ktor.ext.inject
 fun Route.figureRoutes() {
     val figureRepository: FigureRepository by inject()
 
-    get("/figures") {
+    get("/api/figures") {
         val figures = figureRepository.getAllEnabled()
         call.respond(HttpStatusCode.OK, figures)
     }
