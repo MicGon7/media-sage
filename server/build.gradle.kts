@@ -32,6 +32,11 @@ dependencies {
     // HTML scraping
     implementation(libs.jsoup)
 
+    // Exposed + SQLite (server-side persistence)
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.sqlite.jdbc)
+
     // Serialization
     implementation(libs.kotlinx.serialization.json)
 

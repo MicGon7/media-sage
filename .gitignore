@@ -31,6 +31,10 @@ local.properties
 /shared/build/
 /server/build/
 
+# Server SQLite DB files (runtime artefacts)
+*.db
+server/:memory:
+
 # Xcode
 *.xcodeproj/
 *.xcworkspace/

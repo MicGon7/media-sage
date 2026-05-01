@@ -1,12 +1,17 @@
 package com.mediasage.server
 
+import com.mediasage.server.db.FigureSeeder
+import com.mediasage.server.db.ServerDatabase
 import com.mediasage.server.di.JiraConfig
 import com.mediasage.server.di.serverModule
 import com.mediasage.server.plugins.*
 import com.mediasage.server.routes.*
+import io.ktor.client.HttpClient
 import io.ktor.server.application.*
 import io.ktor.server.netty.EngineMain
 import io.ktor.server.routing.routing
+import kotlinx.coroutines.launch
+import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 
 fun main(args: Array<String>) {
@@ -34,6 +39,10 @@ fun Application.module() {
     configureCallLogging()
     configureStatusPages()
     configureRouting()
+
+    ServerDatabase.init()
+    val httpClient: HttpClient by inject()
+    launch { FigureSeeder.seed(httpClient) }
 }
 
 fun Application.configureRouting() {
@@ -44,6 +53,7 @@ fun Application.configureRouting() {
         newsRoutes()
         analysisRoutes()
         scriptureRoutes()
+        figureRoutes()
         webhookRoutes()
         githubWebhookRoutes(githubWebhookSecret)
     }

@@ -24,6 +24,12 @@ interface FigureDao {
     @Query("SELECT * FROM figures WHERE category = :category ORDER BY name ASC")
     fun getByCategory(category: String): Flow<List<FigureEntity>>
 
+    @Query("SELECT * FROM figures WHERE name = :name LIMIT 1")
+    suspend fun getByName(name: String): FigureEntity?
+
     @Query("DELETE FROM figures WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM figures")
+    suspend fun deleteAll()
 }

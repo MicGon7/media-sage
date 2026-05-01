@@ -50,6 +50,7 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.okhttp.logging.interceptor)
         }
 
         iosMain.dependencies {

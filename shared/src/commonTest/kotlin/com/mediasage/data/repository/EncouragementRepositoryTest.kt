@@ -5,6 +5,7 @@ import com.mediasage.data.local.entity.VoiceFigureProjection
 import com.mediasage.data.local.dao.EncouragementDao
 import com.mediasage.data.remote.EncourageRequestDto
 import com.mediasage.data.remote.EncourageResultDto
+import com.mediasage.data.remote.FigureDto
 import com.mediasage.data.remote.MatchCandidateDto
 import com.mediasage.data.remote.MatchRequestDto
 import com.mediasage.data.remote.MatchResultDto
@@ -208,6 +209,7 @@ private class FakeMediaSageApi(private val result: EncourageResultDto) : MediaSa
         return result
     }
 
+    override suspend fun getFigures(): List<FigureDto> = emptyList()
     override suspend fun getHeadlines(locale: String, limit: Int): List<NewsArticleDto> = emptyList()
     override suspend fun searchNews(query: String, limit: Int): List<NewsArticleDto> = emptyList()
 

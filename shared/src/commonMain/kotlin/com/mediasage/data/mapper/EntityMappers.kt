@@ -6,6 +6,7 @@ import com.mediasage.data.local.entity.HeadlineEntity
 import com.mediasage.data.local.entity.MatchEntity
 import com.mediasage.data.local.entity.QuoteEntity
 import com.mediasage.data.remote.EncourageResultDto
+import com.mediasage.data.remote.FigureDto
 import com.mediasage.data.remote.NewsArticleDto
 import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Figure
@@ -20,9 +21,11 @@ fun FigureEntity.toDomain() = Figure(
     name = name,
     category = FigureCategory.fromString(category),
     century = century,
-    description = description,
+    bio = bio,
     role = role,
-    lifespan = lifespan
+    lifespan = lifespan,
+    themes = if (themes.isEmpty()) emptyList() else themes.split(",").map { it.trim() },
+    portraitUrl = portraitUrl
 )
 
 fun Figure.toEntity() = FigureEntity(
@@ -30,9 +33,22 @@ fun Figure.toEntity() = FigureEntity(
     name = name,
     category = category.name.lowercase(),
     century = century,
-    description = description,
+    bio = bio,
     role = role,
-    lifespan = lifespan
+    lifespan = lifespan,
+    themes = themes.joinToString(","),
+    portraitUrl = portraitUrl
+)
+
+fun FigureDto.toEntity() = FigureEntity(
+    name = name,
+    category = category,
+    century = century,
+    bio = bio,
+    role = role,
+    lifespan = lifespan,
+    themes = themes,
+    portraitUrl = portraitUrl
 )
 
 // Quote

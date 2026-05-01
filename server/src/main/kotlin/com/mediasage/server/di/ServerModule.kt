@@ -1,5 +1,6 @@
 package com.mediasage.server.di
 
+import com.mediasage.server.repository.FigureRepository
 import com.mediasage.server.service.AgentLaunchService
 import com.mediasage.server.service.ArticleScraperService
 import com.mediasage.server.service.ClaudeApiService
@@ -48,4 +49,5 @@ fun serverModule(
     single { WikimediaService(get()) }
     single { AgentLaunchService(agentRepoPath, scope) }
     single<JiraLabelChecker> { JiraApiService(get(), jiraConfig.cloudId, jiraConfig.email, jiraConfig.apiToken) }
+    single { FigureRepository() }
 }

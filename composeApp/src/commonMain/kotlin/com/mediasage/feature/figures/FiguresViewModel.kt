@@ -2,14 +2,14 @@ package com.mediasage.feature.figures
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mediasage.data.local.dao.EncouragementDao
+import com.mediasage.domain.repository.FigureRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class FiguresViewModel(
-    private val encouragementDao: EncouragementDao
+    private val figureRepository: FigureRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<FiguresContract.UiState>(FiguresContract.UiState.Loading)
@@ -17,9 +17,9 @@ class FiguresViewModel(
 
     init {
         viewModelScope.launch {
-            encouragementDao.getDistinctFigures().collect { projections ->
+            figureRepository.getAllFigures().collect { figures ->
                 _state.value = FiguresContract.UiState.Success(
-                    figures = projections.map { VoiceFigureItem(it.figureName, it.figureRole, it.figureImageUrl) }
+                    figures = figures.map { VoiceFigureItem(it.name, it.role, it.portraitUrl) }
                 )
             }
         }

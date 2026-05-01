@@ -1,8 +1,9 @@
 package com.mediasage.di
 
+import com.mediasage.AppViewModel
 import com.mediasage.data.local.dao.EncouragementDao
 import com.mediasage.data.remote.MediaSageApi
-import com.mediasage.domain.repository.WikipediaRepository
+import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.feature.bookmarks.BookmarksViewModel
 import com.mediasage.feature.figures.FigureDetailViewModel
 import com.mediasage.feature.figures.FiguresViewModel
@@ -14,10 +15,11 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val appModule = module {
+    viewModel { AppViewModel(get<FigureRepository>()) }
     viewModel { HomeViewModel(get()) }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get()) }
-    viewModel { FiguresViewModel(get<EncouragementDao>()) }
-    viewModel { (figureName: String) -> FigureDetailViewModel(figureName, get<EncouragementDao>(), get<WikipediaRepository>()) }
+    viewModel { FiguresViewModel(get<FigureRepository>()) }
+    viewModel { (figureName: String) -> FigureDetailViewModel(figureName, get<FigureRepository>(), get<EncouragementDao>()) }
     viewModel { YouViewModel() }
     viewModel { HistoryViewModel(get<EncouragementDao>()) }
     viewModel { BookmarksViewModel(get<EncouragementDao>()) }

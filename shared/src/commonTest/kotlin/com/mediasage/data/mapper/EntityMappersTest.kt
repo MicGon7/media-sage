@@ -18,7 +18,7 @@ class EntityMappersTest {
     fun figureEntityToDomain() {
         val entity = FigureEntity(
             id = 1, name = "Augustine", category = "theologian",
-            century = "4th", description = "Bishop of Hippo",
+            century = "4th", bio = "Bishop of Hippo",
             role = "Bishop & Church Father", lifespan = "354-430"
         )
         val domain = entity.toDomain()
@@ -28,26 +28,28 @@ class EntityMappersTest {
         assertEquals("4th", domain.century)
         assertEquals("Bishop & Church Father", domain.role)
         assertEquals("354-430", domain.lifespan)
+        assertEquals("Bishop of Hippo", domain.bio)
     }
 
     @Test
     fun figureDomainToEntity() {
         val domain = Figure(
             id = 1, name = "Augustine", category = FigureCategory.THEOLOGIAN,
-            century = "4th", description = "Bishop of Hippo",
+            century = "4th", bio = "Bishop of Hippo",
             role = "Bishop & Church Father", lifespan = "354-430"
         )
         val entity = domain.toEntity()
         assertEquals("theologian", entity.category)
         assertEquals("Bishop & Church Father", entity.role)
         assertEquals("354-430", entity.lifespan)
+        assertEquals("Bishop of Hippo", entity.bio)
     }
 
     @Test
     fun figureRoundTrip() {
         val entity = FigureEntity(
             id = 1, name = "Bonhoeffer", category = "theologian",
-            century = "20th", description = "German pastor",
+            century = "20th", bio = "German pastor",
             role = "Theologian & Martyr", lifespan = "1906-1945"
         )
         val domain = entity.toDomain()
@@ -58,12 +60,25 @@ class EntityMappersTest {
     @Test
     fun figureDefaultsForNewFields() {
         val entity = FigureEntity(
-            id = 1, name = "Augustine", category = "theologian",
-            century = "4th", description = "Bishop of Hippo"
+            id = 1, name = "Augustine", category = "theologian", century = "4th"
         )
         val domain = entity.toDomain()
         assertEquals("", domain.role)
         assertEquals("", domain.lifespan)
+        assertEquals("", domain.bio)
+        assertEquals(emptyList(), domain.themes)
+        assertEquals(null, domain.portraitUrl)
+    }
+
+    @Test
+    fun figureThemesRoundTrip() {
+        val entity = FigureEntity(
+            id = 1, name = "Augustine", category = "theologian",
+            century = "4th", themes = "grace,faith,redemption"
+        )
+        val domain = entity.toDomain()
+        assertEquals(listOf("grace", "faith", "redemption"), domain.themes)
+        assertEquals("grace,faith,redemption", domain.toEntity().themes)
     }
 
     @Test
@@ -123,6 +138,9 @@ class EntityMappersTest {
     fun figureCategoryFromStringHandlesUnknown() {
         assertEquals(FigureCategory.THEOLOGIAN, FigureCategory.fromString("unknown"))
         assertEquals(FigureCategory.MYSTIC, FigureCategory.fromString("mystic"))
-        assertEquals(FigureCategory.MODERN, FigureCategory.fromString("MODERN"))
+        assertEquals(FigureCategory.MISSIONARY, FigureCategory.fromString("missionary"))
+        assertEquals(FigureCategory.CHURCH_FATHER, FigureCategory.fromString("church_father"))
+        assertEquals(FigureCategory.SOCIAL_JUSTICE, FigureCategory.fromString("social_justice"))
+        assertEquals(FigureCategory.INTELLECTUAL, FigureCategory.fromString("intellectual"))
     }
 }
