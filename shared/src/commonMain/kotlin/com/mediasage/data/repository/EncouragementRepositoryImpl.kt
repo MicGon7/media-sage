@@ -25,13 +25,11 @@ class EncouragementRepositoryImpl(
             encouragementDao.getByArticleUrl(url)?.let { return it.toDomain() }
         }
 
-        val recentFigures = encouragementDao.getRecentFigureNames(RECENT_FIGURES_LIMIT)
         val encouragement = api.encourage(
             EncourageRequestDto(
                 headlineTitle = headlineTitle,
                 articleUrl = articleUrl,
-                articleSnippet = articleSnippet,
-                recentFigures = recentFigures
+                articleSnippet = articleSnippet
             )
         ).toDomain()
 
@@ -50,7 +48,4 @@ class EncouragementRepositoryImpl(
         encouragementDao.toggleBookmark(articleUrl)
     }
 
-    companion object {
-        private const val RECENT_FIGURES_LIMIT = 10
-    }
 }

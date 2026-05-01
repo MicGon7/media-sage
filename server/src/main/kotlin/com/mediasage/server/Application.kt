@@ -1,7 +1,9 @@
 package com.mediasage.server
 
 import com.mediasage.server.db.FigureSeeder
+import com.mediasage.server.db.QuoteSeeder
 import com.mediasage.server.db.ServerDatabase
+import com.mediasage.server.service.ClaudeApiService
 import com.mediasage.server.di.JiraConfig
 import com.mediasage.server.di.serverModule
 import com.mediasage.server.plugins.*
@@ -42,7 +44,11 @@ fun Application.module() {
 
     ServerDatabase.init()
     val httpClient: HttpClient by inject()
-    launch { FigureSeeder.seed(httpClient) }
+    val claudeService: ClaudeApiService by inject()
+    launch {
+        FigureSeeder.seed(httpClient)
+        QuoteSeeder.seed(claudeService)
+    }
 }
 
 fun Application.configureRouting() {

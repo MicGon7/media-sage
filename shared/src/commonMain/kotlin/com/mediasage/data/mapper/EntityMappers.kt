@@ -57,7 +57,8 @@ fun QuoteEntity.toDomain() = Quote(
     figureId = figureId,
     text = text,
     source = source,
-    themes = if (themes.isEmpty()) emptyList() else themes.split(",").map { it.trim() }
+    themes = if (themes.isEmpty()) emptyList() else themes.split(",").map { it.trim() },
+    verified = verified
 )
 
 fun Quote.toEntity() = QuoteEntity(
@@ -65,7 +66,8 @@ fun Quote.toEntity() = QuoteEntity(
     figureId = figureId,
     text = text,
     source = source,
-    themes = themes.joinToString(",")
+    themes = themes.joinToString(","),
+    verified = verified
 )
 
 // DTO → Entity (API response → local storage)
