@@ -5,7 +5,7 @@ data class Figure(
     val name: String,
     val category: FigureCategory,
     val century: String,
-    val description: String,
+    val bio: String = "",
     val role: String = "",
     val lifespan: String = "",
     val themes: List<String> = emptyList(),

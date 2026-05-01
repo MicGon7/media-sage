@@ -7,9 +7,11 @@ import androidx.room.PrimaryKey
 data class FigureEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val category: String,    // theologian, mystic, modern, biblical
-    val century: String,     // e.g. "4th", "16th", "20th"
-    val description: String = "",
-    val role: String = "",       // e.g. "Theologian & Martyr", "Mystic"
-    val lifespan: String = ""    // e.g. "1906-1945", "1342-1416", "1936-present"
+    val category: String,
+    val century: String,
+    val bio: String = "",
+    val role: String = "",
+    val lifespan: String = "",
+    val themes: String = "",
+    val portraitUrl: String? = null
 )

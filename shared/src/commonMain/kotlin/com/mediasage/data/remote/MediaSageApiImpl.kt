@@ -10,6 +10,10 @@ class MediaSageApiImpl(
     private val baseUrl: String
 ) : MediaSageApi {
 
+    override suspend fun getFigures(): List<FigureDto> {
+        return httpClient.get("$baseUrl/api/figures").body()
+    }
+
     override suspend fun getHeadlines(locale: String, limit: Int): List<NewsArticleDto> {
         return httpClient.get("$baseUrl/api/news/headlines") {
             parameter("locale", locale)

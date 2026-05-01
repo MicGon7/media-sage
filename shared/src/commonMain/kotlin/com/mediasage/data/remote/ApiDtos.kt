@@ -71,6 +71,23 @@ data class MatchResultDto(
     val connectionThemes: List<String>
 )
 
+// ---- Figure endpoint DTOs ----
+
+@Serializable
+data class FigureDto(
+    val id: Long,
+    val name: String,
+    val category: String,
+    val century: String,
+    val role: String = "",
+    val lifespan: String = "",
+    val bio: String = "",
+    val themes: String = "",
+    @SerialName("portraitUrl")
+    val portraitUrl: String? = null,
+    val isEnabled: Boolean = true
+)
+
 // ---- Scripture endpoint DTOs ----
 
 @Serializable
