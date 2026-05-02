@@ -5,6 +5,7 @@ import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 import java.io.File
 
 object ServerDatabase {
@@ -52,6 +53,25 @@ object ServerDatabase {
                 )
             }.singleOrNull()
     }
+
+    fun fetchAllFigures(): List<FigureRow> = transaction {
+        FigureTable.selectAll().map { row ->
+            FigureRow(
+                id = row[FigureTable.id],
+                name = row[FigureTable.name],
+                role = row[FigureTable.role],
+                century = row[FigureTable.century],
+                lifespan = row[FigureTable.lifespan],
+                portraitUrl = row[FigureTable.portraitUrl]
+            )
+        }
+    }
+
+    fun updateFigurePortraitUrl(figureId: Long, url: String) = transaction {
+        FigureTable.update({ FigureTable.id eq figureId }) {
+            it[FigureTable.portraitUrl] = url
+        }
+    }
 }
 
 data class QuoteCandidate(
@@ -62,4 +82,13 @@ data class QuoteCandidate(
     val quoteText: String,
     val source: String,
     val themes: String
+)
+
+data class FigureRow(
+    val id: Long,
+    val name: String,
+    val role: String,
+    val century: String,
+    val lifespan: String,
+    val portraitUrl: String?
 )

@@ -8,11 +8,13 @@ import com.mediasage.server.plugins.*
 import com.mediasage.server.routes.*
 import io.ktor.client.HttpClient
 import io.ktor.server.application.*
+import io.ktor.server.http.content.staticFiles
 import io.ktor.server.netty.EngineMain
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.launch
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
+import java.io.File
 
 fun main(args: Array<String>) {
     EngineMain.main(args)
@@ -60,5 +62,6 @@ fun Application.configureRouting() {
         figureRoutes()
         webhookRoutes()
         githubWebhookRoutes(githubWebhookSecret)
+        staticFiles("/images/figures", File("generated-images"))
     }
 }
