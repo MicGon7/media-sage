@@ -40,9 +40,13 @@ fun Application.module() {
     configureStatusPages()
     configureRouting()
 
-    ServerDatabase.init()
+    val dbPath = environment.config.propertyOrNull("app.db.path")?.getString()
+        ?: error("DB_PATH is not set. Export an absolute path: export DB_PATH=\"/path/to/server/mediasage-server.db\"")
+    ServerDatabase.init(dbPath)
     val httpClient: HttpClient by inject()
-    launch { FigureSeeder.seed(httpClient) }
+    launch {
+        FigureSeeder.seed(httpClient)
+    }
 }
 
 fun Application.configureRouting() {

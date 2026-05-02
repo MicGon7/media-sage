@@ -18,8 +18,7 @@ data class EncourageRequest(
     val headlineTitle: String,
     val locale: String = "en",
     val articleUrl: String? = null,
-    val articleSnippet: String? = null,
-    val recentFigures: List<String> = emptyList()
+    val articleSnippet: String? = null
 )
 
 @Serializable
@@ -72,8 +71,7 @@ private fun Route.encourageRoute(
         val result = claudeService.encourageHeadline(
             headlineTitle = request.headlineTitle,
             locale = request.locale,
-            articleText = articleText,
-            recentFigures = request.recentFigures
+            articleText = articleText
         )
 
         val figureImageUrl = wikimediaService.getPortraitUrl(result.figureName)

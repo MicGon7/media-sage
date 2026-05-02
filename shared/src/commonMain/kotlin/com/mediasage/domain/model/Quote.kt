@@ -5,5 +5,6 @@ data class Quote(
     val figureId: Long,
     val text: String,
     val source: String,
-    val themes: List<String>
+    val themes: List<String>,
+    val verified: Boolean = false
 )

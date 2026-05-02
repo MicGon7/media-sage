@@ -93,18 +93,6 @@ class EncouragementRepositoryTest {
     }
 
     @Test
-    fun passesRecentFiguresToApiOnSecondRequest() = runTest {
-        val dao = FakeEncouragementDao()
-        val api = FakeMediaSageApi(result = sampleResult)
-        val repo = EncouragementRepositoryImpl(api, dao)
-
-        repo.getEncouragement("First headline", articleUrl = "https://example.com/first")
-        repo.getEncouragement("Second headline", articleUrl = "https://example.com/second")
-
-        assertEquals(listOf("Martin Luther King Jr."), api.lastRequest?.recentFigures)
-    }
-
-    @Test
     fun doesNotCallApiWhenArticleUrlIsNull() = runTest {
         val dao = FakeEncouragementDao()
         val api = FakeMediaSageApi(result = sampleResult)

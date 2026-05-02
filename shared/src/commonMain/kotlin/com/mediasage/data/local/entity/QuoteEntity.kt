@@ -21,6 +21,7 @@ data class QuoteEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val figureId: Long,
     val text: String,
-    val source: String,          // Book, sermon, letter, etc.
-    val themes: String           // Comma-separated theme tags stored as string
+    val source: String,
+    val themes: String,
+    val verified: Boolean = false
 )

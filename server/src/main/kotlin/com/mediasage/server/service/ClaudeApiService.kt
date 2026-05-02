@@ -9,17 +9,23 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 class ClaudeApiService(
     private val httpClient: HttpClient,
     private val apiKey: String
 ) {
+    private val recentFigures = object : LinkedHashMap<String, Unit>(16, 0.75f, false) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, Unit>) = size > RECENT_FIGURES_MAX
+    }
+
     companion object {
         private const val BASE_URL = "https://api.anthropic.com/v1/messages"
         private const val API_VERSION = "2023-06-01"
         private const val MODEL = "claude-sonnet-4-6"
-        private const val MAX_TOKENS = 1024
+        private const val DEFAULT_MAX_TOKENS = 1024
+        private const val RECENT_FIGURES_MAX = 10
 
         private val responseJson = Json {
             ignoreUnknownKeys = true
@@ -30,12 +36,14 @@ class ClaudeApiService(
     suspend fun encourageHeadline(
         headlineTitle: String,
         locale: String = "en",
-        articleText: String? = null,
-        recentFigures: List<String> = emptyList()
+        articleText: String? = null
     ): EncourageResult {
-        val userMessage = buildEncourageMessage(headlineTitle, locale, articleText, recentFigures)
+        val excluded = synchronized(recentFigures) { recentFigures.keys.toList() }
+        val userMessage = buildEncourageMessage(headlineTitle, locale, articleText, excluded)
         val response = callClaude(ENCOURAGE_SYSTEM_PROMPT, userMessage)
-        return responseJson.decodeFromString<EncourageResult>(extractJson(response))
+        val result = responseJson.decodeFromString<EncourageResult>(extractJson(response))
+        synchronized(recentFigures) { recentFigures[result.figureName] = Unit }
+        return result
     }
 
     @Deprecated("Use encourageHeadline instead — TODO MS-46")
@@ -48,10 +56,14 @@ class ClaudeApiService(
         return responseJson.decodeFromString<MatchResult>(extractJson(response))
     }
 
-    private suspend fun callClaude(systemPrompt: String, userMessage: String): String {
+    private suspend fun callClaude(
+        systemPrompt: String,
+        userMessage: String,
+        maxTokens: Int = DEFAULT_MAX_TOKENS
+    ): String {
         val request = ClaudeRequest(
             model = MODEL,
-            maxTokens = MAX_TOKENS,
+            maxTokens = maxTokens,
             system = systemPrompt,
             messages = listOf(ClaudeMessage(role = "user", content = userMessage))
         )
@@ -80,7 +92,7 @@ class ClaudeApiService(
         headlineTitle: String,
         locale: String,
         articleText: String?,
-        recentFigures: List<String> = emptyList()
+        recentFigures: List<String>
     ): String = buildString {
         appendLine("## Headline")
         appendLine(headlineTitle)

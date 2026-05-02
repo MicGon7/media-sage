@@ -14,7 +14,7 @@ object ServerDatabase {
             driver = "org.sqlite.JDBC"
         )
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(FigureTable)
+            SchemaUtils.createMissingTablesAndColumns(FigureTable, QuoteTable)
         }
     }
 }
