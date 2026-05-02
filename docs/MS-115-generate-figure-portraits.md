@@ -57,21 +57,23 @@ No text, no frames, no borders.
 
 ## How to run
 
+Always include `--no-configuration-cache` so Gradle picks up your `-P` args fresh instead of reusing a cached run.
+
 ```bash
-# Dry run — see cost estimate and Wikimedia coverage, no API calls
-./gradlew :server:generateImages -PscriptArgs="--dry-run"
+# Dry run — see cost estimate, no API calls
+./gradlew :server:generateImages --no-configuration-cache -PscriptArgs="--dry-run"
 
-# Test batch: 5 figures at low quality
-./gradlew :server:generateImages -PscriptArgs="--batch-size=5 --quality=low"
+# Test exactly 5 figures at low quality ($0.03) — review output before committing to all 100
+./gradlew :server:generateImages --no-configuration-cache -PscriptArgs="--limit=5 --quality=low"
 
-# Full run at medium quality
-./gradlew :server:generateImages -PscriptArgs="--quality=medium"
+# Full run at low quality (~$0.60 for 100 figures)
+./gradlew :server:generateImages --no-configuration-cache -PscriptArgs="--quality=low"
 
 # Resume from a specific figure ID (if interrupted)
-./gradlew :server:generateImages -PscriptArgs="--quality=medium --start-from=21"
+./gradlew :server:generateImages --no-configuration-cache -PscriptArgs="--quality=low --start-from=21"
 
-# Re-generate even if portraitUrl already set
-./gradlew :server:generateImages -PscriptArgs="--quality=medium --force"
+# Re-generate a single figure (e.g. figure 25) even if portraitUrl already set
+./gradlew :server:generateImages --no-configuration-cache -PscriptArgs="--start-from=25 --limit=1 --force --quality=low"
 ```
 
 Requires `DB_PATH` and `OPENAI_API_KEY` env vars to be set.

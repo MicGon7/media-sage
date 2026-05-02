@@ -38,8 +38,7 @@ class ImageGenerationService(
         figureRole: String,
         century: String,
         lifespan: String,
-        referenceImageBytes: ByteArray,
-        quality: String = "low"
+        referenceImageBytes: ByteArray
     ): ByteArray {
         val prompt = buildPrompt(figureName, figureRole, century, lifespan)
         val httpResponse = httpClient.post(EDITS_URL) {
@@ -50,7 +49,6 @@ class ImageGenerationService(
                         append("model", MODEL)
                         append("prompt", prompt)
                         append("size", SIZE)
-                        append("quality", quality)
                         append("response_format", "b64_json")
                         append("output_format", OUTPUT_FORMAT)
                         append("output_compression", OUTPUT_COMPRESSION.toString())
@@ -70,9 +68,10 @@ class ImageGenerationService(
         figureRole: String,
         century: String,
         lifespan: String,
-        quality: String = "low"
+        quality: String = "low",
+        promptDetail: String = ""
     ): ByteArray {
-        val prompt = buildPrompt(figureName, figureRole, century, lifespan)
+        val prompt = buildPrompt(figureName, figureRole, century, lifespan, promptDetail)
         val httpResponse = httpClient.post(GENERATIONS_URL) {
             header(HttpHeaders.Authorization, "Bearer $apiKey")
             contentType(ContentType.Application.Json)
@@ -92,15 +91,18 @@ class ImageGenerationService(
         figureName: String,
         figureRole: String,
         century: String,
-        lifespan: String
-    ): String = """
-        A formal portrait of $figureName ($lifespan), $figureRole, $century century.
-        Painted in the style of a Renaissance oil painting.
-        Rich textures, soft candlelit lighting, dignified and contemplative expression.
-        Chest-up composition against a dark neutral background.
-        Historical Christian figure rendered in a classic master's style.
-        No text, no frames, no borders.
-    """.trimIndent()
+        lifespan: String,
+        promptDetail: String = ""
+    ): String = buildString {
+        appendLine("A formal portrait of $figureName ($lifespan), $figureRole, $century century.")
+        appendLine("Painted in the style of a Renaissance oil painting.")
+        appendLine("Rich textures, soft candlelit lighting, dignified and contemplative expression.")
+        appendLine("Chest-up composition against a dark neutral background.")
+        appendLine("Historical Christian figure rendered in a classic master's style.")
+        appendLine("Modest, period-appropriate attire. No exposed neckline or décolletage.")
+        appendLine("No text, no frames, no borders.")
+        if (promptDetail.isNotEmpty()) appendLine(promptDetail)
+    }.trimEnd()
 
     private fun decodeResponse(statusCode: Int, body: String): ByteArray {
         if (statusCode !in 200..299) {
