@@ -25,7 +25,6 @@ class ClaudeApiService(
         private const val API_VERSION = "2023-06-01"
         private const val MODEL = "claude-sonnet-4-6"
         private const val DEFAULT_MAX_TOKENS = 1024
-        private const val QUOTE_GEN_MAX_TOKENS = 1024
         private const val RECENT_FIGURES_MAX = 10
 
         private val responseJson = Json {
@@ -45,18 +44,6 @@ class ClaudeApiService(
         val result = responseJson.decodeFromString<EncourageResult>(extractJson(response))
         synchronized(recentFigures) { recentFigures[result.figureName] = Unit }
         return result
-    }
-
-    suspend fun generateQuotesForFigure(
-        name: String,
-        role: String,
-        category: String,
-        century: String,
-        lifespan: String
-    ): List<GeneratedQuote> {
-        val userMessage = buildQuoteGenerationMessage(name, role, category, century, lifespan)
-        val response = callClaude(QUOTE_GENERATION_SYSTEM_PROMPT, userMessage, QUOTE_GEN_MAX_TOKENS)
-        return responseJson.decodeFromString<GeneratedQuotesResult>(extractJson(response)).quotes
     }
 
     @Deprecated("Use encourageHeadline instead — TODO MS-46")
@@ -99,21 +86,6 @@ class ClaudeApiService(
         val claudeResponse = httpResponse.body<ClaudeResponse>()
         return claudeResponse.content.firstOrNull()?.text
             ?: throw ClaudeApiException(500, "Empty response from Claude")
-    }
-
-    private fun buildQuoteGenerationMessage(
-        name: String,
-        role: String,
-        category: String,
-        century: String,
-        lifespan: String
-    ): String = buildString {
-        appendLine("## Figure")
-        appendLine("Name: $name")
-        appendLine("Role: $role")
-        appendLine("Category: $category")
-        appendLine("Century: $century")
-        appendLine("Lifespan: $lifespan")
     }
 
     private fun buildEncourageMessage(
@@ -168,18 +140,6 @@ class ClaudeApiService(
 }
 
 // ---- Supporting types ----
-
-@Serializable
-data class GeneratedQuote(
-    val text: String,
-    val source: String,
-    val themes: List<String>
-)
-
-@Serializable
-data class GeneratedQuotesResult(
-    val quotes: List<GeneratedQuote>
-)
 
 data class QuoteCandidate(
     val id: Long,
@@ -263,30 +223,6 @@ Respond ONLY with valid JSON in this exact format:
   "connectionThemes": ["theme1", "theme2"],
   "matchTheme": "<2-3 word theme label>",
   "tone": "<COMFORT or EXHORTATION or CORRECTION>"
-}
-""".trimIndent()
-
-private val QUOTE_GENERATION_SYSTEM_PROMPT = """
-You are a theological research assistant for The Media Sage app. Given a Christian historical figure, return up to 5 verbatim quotes from their documented writings, sermons, or letters.
-
-Rules:
-- ONLY include quotes that are verbatim (or near-verbatim translations) from the figure's documented writings, sermons, or letters
-- NEVER paraphrase, summarize, or invent quotes — if you cannot find a real verifiable quote, skip it
-- Quality over quantity: 3 real quotes beats 5 fabricated ones — return fewer if necessary
-- Each source must be a real, specific work: book title, sermon name, letter recipient, etc. — no "spirit of" or generic attributions
-- Each quote must have 3–5 theme tags (single words or short phrases, lowercase, e.g. "grace", "suffering", "prayer", "justice")
-- Vary themes across the quotes to cover the breadth of the figure's documented thought
-- Quotes should range from short (one sentence) to medium length (2–3 sentences)
-
-Respond ONLY with valid JSON in this exact format:
-{
-  "quotes": [
-    {
-      "text": "<verbatim quote text>",
-      "source": "<specific book, sermon, or letter title>",
-      "themes": ["theme1", "theme2", "theme3"]
-    }
-  ]
 }
 """.trimIndent()
 
