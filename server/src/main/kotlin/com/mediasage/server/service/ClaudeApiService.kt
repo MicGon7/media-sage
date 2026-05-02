@@ -1,5 +1,6 @@
 package com.mediasage.server.service
 
+import com.mediasage.server.db.QuoteCandidate as DbQuoteCandidate
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.header
@@ -26,6 +27,8 @@ class ClaudeApiService(
         private const val MODEL = "claude-sonnet-4-6"
         private const val DEFAULT_MAX_TOKENS = 1024
         private const val RECENT_FIGURES_MAX = 10
+        private const val CANDIDATE_POOL_SIZE = 20
+        private const val MAX_QUOTES_PER_FIGURE = 2
 
         private val responseJson = Json {
             ignoreUnknownKeys = true
@@ -35,16 +38,44 @@ class ClaudeApiService(
 
     suspend fun encourageHeadline(
         headlineTitle: String,
+        candidates: List<DbQuoteCandidate>,
         locale: String = "en",
         articleText: String? = null
     ): EncourageResult {
-        val excluded = synchronized(recentFigures) { recentFigures.keys.toList() }
-        val userMessage = buildEncourageMessage(headlineTitle, locale, articleText, excluded)
-        val response = callClaude(ENCOURAGE_SYSTEM_PROMPT, userMessage)
-        val result = responseJson.decodeFromString<EncourageResult>(extractJson(response))
-        synchronized(recentFigures) { recentFigures[result.figureName] = Unit }
-        return result
+        val excluded = synchronized(recentFigures) { recentFigures.keys.toSet() }
+        val pool = sampleCandidates(candidates, excluded)
+        val userMessage = buildEncourageMessage(headlineTitle, locale, articleText, pool)
+        val raw = callClaude(ENCOURAGE_SYSTEM_PROMPT, userMessage)
+        val selection = responseJson.decodeFromString<SelectionResult>(extractJson(raw))
+        val selected = resolveSelection(selection.selectedQuoteId, pool) {
+            val retryMessage = buildEncourageMessage(headlineTitle, locale, articleText, pool, strictIds = true)
+            val retryRaw = callClaude(ENCOURAGE_SYSTEM_PROMPT, retryMessage)
+            responseJson.decodeFromString<SelectionResult>(extractJson(retryRaw)).selectedQuoteId
+        }
+        synchronized(recentFigures) { recentFigures[selected.figureName] = Unit }
+        return EncourageResult(
+            summary = selection.summary,
+            quoteText = selected.quoteText,
+            quoteSource = selected.source,
+            figureName = selected.figureName,
+            figureRole = selected.figureRole,
+            scriptureReference = selection.scriptureReference,
+            scriptureText = selection.scriptureText,
+            explanation = selection.explanation,
+            connectionThemes = selection.connectionThemes,
+            matchTheme = selection.matchTheme,
+            tone = selection.tone
+        )
     }
+
+    private suspend fun resolveSelection(
+        quoteId: Long,
+        pool: List<DbQuoteCandidate>,
+        retryId: suspend () -> Long
+    ): DbQuoteCandidate =
+        pool.find { it.quoteId == quoteId }
+            ?: pool.find { it.quoteId == retryId() }
+            ?: throw ClaudeApiException(500, "Claude returned invalid quoteId after retry")
 
     @Deprecated("Use encourageHeadline instead — TODO MS-46")
     suspend fun matchQuoteToHeadline(
@@ -54,6 +85,26 @@ class ClaudeApiService(
         val userMessage = buildMatchMessage(headlineTitle, candidateQuotes)
         val response = callClaude(MATCH_SYSTEM_PROMPT, userMessage)
         return responseJson.decodeFromString<MatchResult>(extractJson(response))
+    }
+
+    private fun sampleCandidates(
+        all: List<DbQuoteCandidate>,
+        excludedFigures: Set<String>
+    ): List<DbQuoteCandidate> {
+        val quotesPerFigure = mutableMapOf<String, Int>()
+        return all
+            .filter { it.figureName !in excludedFigures }
+            .shuffled()
+            .filter { candidate ->
+                val count = quotesPerFigure.getOrDefault(candidate.figureName, 0)
+                if (count < MAX_QUOTES_PER_FIGURE) {
+                    quotesPerFigure[candidate.figureName] = count + 1
+                    true
+                } else {
+                    false
+                }
+            }
+            .take(CANDIDATE_POOL_SIZE)
     }
 
     private suspend fun callClaude(
@@ -92,7 +143,8 @@ class ClaudeApiService(
         headlineTitle: String,
         locale: String,
         articleText: String?,
-        recentFigures: List<String>
+        candidates: List<DbQuoteCandidate>,
+        strictIds: Boolean = false
     ): String = buildString {
         appendLine("## Headline")
         appendLine(headlineTitle)
@@ -104,13 +156,22 @@ class ClaudeApiService(
         appendLine()
         appendLine("## Response Language")
         appendLine(locale)
-        if (recentFigures.isNotEmpty()) {
+        appendLine()
+        appendLine("## Candidate Quotes")
+        appendLine("Select the best matching quote from this list. You MUST return one of these exact quoteIds.")
+        appendLine()
+        candidates.forEach { candidate ->
+            appendLine("quoteId: ${candidate.quoteId}")
+            appendLine("Figure: ${candidate.figureName} — ${candidate.figureRole}")
+            appendLine("Quote: \"${candidate.quoteText}\"")
+            appendLine("Source: ${candidate.source}")
+            appendLine("Themes: ${candidate.themes}")
             appendLine()
-            appendLine("## Figure Diversity")
-            appendLine(
-                "Vary the figures you select. Please avoid these recently used figures if a " +
-                    "suitable alternative exists: ${recentFigures.joinToString(", ")}"
-            )
+        }
+        if (strictIds) {
+            val ids = candidates.map { it.quoteId }.joinToString(", ")
+            appendLine("## IMPORTANT")
+            appendLine("You must return a selectedQuoteId that is one of these exact values: $ids")
         }
     }
 
@@ -149,10 +210,23 @@ data class QuoteCandidate(
     val themes: List<String>
 )
 
-@kotlinx.serialization.Serializable
+@Serializable
+data class SelectionResult(
+    val selectedQuoteId: Long,
+    val summary: String? = null,
+    val scriptureReference: String,
+    val scriptureText: String,
+    val explanation: String,
+    val connectionThemes: List<String>,
+    val matchTheme: String,
+    val tone: EncourageTone
+)
+
+@Serializable
 data class EncourageResult(
     val summary: String? = null,
     val quoteText: String,
+    val quoteSource: String,
     val figureName: String,
     val figureRole: String,
     val scriptureReference: String,
@@ -164,14 +238,14 @@ data class EncourageResult(
     val figureImageUrl: String? = null
 )
 
-@kotlinx.serialization.Serializable
+@Serializable
 enum class EncourageTone {
     COMFORT,
     EXHORTATION,
     CORRECTION
 }
 
-@kotlinx.serialization.Serializable
+@Serializable
 data class MatchResult(
     val selectedQuoteId: Long,
     val confidence: Float,
@@ -194,17 +268,16 @@ Discern which tone best fits the headline:
 - EXHORTATION — for headlines about opportunity, community, or faithfulness. Call the reader to action, gratitude, or deeper engagement.
 - CORRECTION — for headlines about moral drift, corruption, complacency, or injustice. Speak truth with love, as the prophets and apostles did — warning and calling people back to God's ways.
 
-You must:
+You will be given a list of candidate quotes from verified historical Christian figures. You must:
 1. Discern the appropriate tone (COMFORT, EXHORTATION, or CORRECTION)
 2. If article text is provided, write a brief summary (2-3 sentences) capturing the main point — like a journalist's lede. If no article text, set summary to null.
-3. Select a real, verified quote from a professing Christian figure ONLY — theologians, mystics, prophets, apostles, pastors, missionaries, church fathers, or reformers. The figure MUST be someone who professed and practiced the Christian faith (no philosophers or thinkers outside the faith). Only select figures who lived before 1980. Do NOT fabricate quotes.
+3. Select the best matching quote from the candidates by returning its quoteId. You MUST use one of the provided quoteIds — do not invent a new quote or figure.
 4. Identify a relevant scripture passage — scriptureReference is the citation (e.g. "Romans 8:28"), scriptureText is the FULL quoted verse text. These are two separate fields and both are REQUIRED.
 5. Explain the connection in 2-3 sentences
 
 Guidelines:
 - Never trivialize suffering, and genuinely celebrate good news
 - For CORRECTION tone: speak truth firmly but with love — the goal is restoration, not condemnation
-- The figure's role should be a short descriptor (e.g., "Theologian & Martyr", "Bishop & Church Father", "Reformer")
 - The scripture reference should be a specific verse or short passage
 - connectionThemes should be 2-4 thematic connections
 - matchTheme should be a 2-3 word label summarizing the connection
@@ -213,12 +286,10 @@ Respond in the language specified by the Response Language field (default: Engli
 
 Respond ONLY with valid JSON in this exact format:
 {
+  "selectedQuoteId": <quoteId of the best matching candidate>,
   "summary": "<2-3 sentence article summary, or null if no article text provided>",
-  "quoteText": "<the quote>",
-  "figureName": "<full name of the figure>",
-  "figureRole": "<short role descriptor>",
   "scriptureReference": "<e.g. Romans 8:28>",
-  "scriptureText": "<the full verse text, e.g. 'And we know that in all things God works for the good of those who love him, who have been called according to his purpose.'>",
+  "scriptureText": "<the full verse text>",
   "explanation": "<2-3 sentence explanation>",
   "connectionThemes": ["theme1", "theme2"],
   "matchTheme": "<2-3 word theme label>",

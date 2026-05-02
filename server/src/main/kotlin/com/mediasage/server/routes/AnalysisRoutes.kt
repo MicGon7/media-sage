@@ -1,5 +1,6 @@
 package com.mediasage.server.routes
 
+import com.mediasage.server.db.ServerDatabase
 import com.mediasage.server.service.ArticleScraperService
 import com.mediasage.server.service.ClaudeApiService
 import com.mediasage.server.service.QuoteCandidate
@@ -68,8 +69,10 @@ private fun Route.encourageRoute(
         val articleText = request.articleSnippet
             ?: request.articleUrl?.let { scraperService.getArticleText(it) }
 
+        val candidates = ServerDatabase.fetchQuoteCandidates()
         val result = claudeService.encourageHeadline(
             headlineTitle = request.headlineTitle,
+            candidates = candidates,
             locale = request.locale,
             articleText = articleText
         )
