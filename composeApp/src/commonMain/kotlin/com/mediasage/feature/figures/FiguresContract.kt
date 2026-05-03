@@ -16,5 +16,6 @@ object FiguresContract {
 data class VoiceFigureItem(
     val name: String,
     val role: String,
-    val imageUrl: String?
+    val imageUrl: String?,
+    val quoteCount: Int = 0
 )

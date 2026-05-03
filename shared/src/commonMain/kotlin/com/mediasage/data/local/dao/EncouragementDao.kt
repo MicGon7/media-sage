@@ -2,6 +2,7 @@ package com.mediasage.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.MapInfo
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.mediasage.data.local.entity.EncouragementEntity
@@ -28,6 +29,10 @@ interface EncouragementDao {
 
     @Query("SELECT * FROM encouragements WHERE figureName = :figureName")
     fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>>
+
+    @MapInfo(keyColumn = "figureName", valueColumn = "count")
+    @Query("SELECT figureName, COUNT(*) AS count FROM encouragements GROUP BY figureName")
+    fun countByFigureName(): Flow<Map<String, Int>>
 
     @Query(
         """
