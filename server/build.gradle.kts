@@ -9,6 +9,18 @@ application {
     mainClass.set("com.mediasage.server.ApplicationKt")
 }
 
+tasks.register<JavaExec>("generateImages") {
+    group = "scripts"
+    description = "Generate figure portraits using gpt-image-2. Pass args via -PscriptArgs=\"--batch-size=5 --quality=low --dry-run\""
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.mediasage.server.scripts.GenerateFigureImagesKt")
+    val baseArgs = (project.findProperty("scriptArgs") as String? ?: "").split(" ").filter { it.isNotEmpty() }
+    val promptDetail = project.findProperty("promptDetail") as String? ?: ""
+    args = if (promptDetail.isNotEmpty()) baseArgs + "--prompt-detail=$promptDetail" else baseArgs
+    environment("DB_PATH", System.getenv("DB_PATH") ?: "")
+    environment("OPENAI_API_KEY", System.getenv("OPENAI_API_KEY") ?: "")
+}
+
 dependencies {
     // Ktor Server
     implementation(libs.ktor.server.core)

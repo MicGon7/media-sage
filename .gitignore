@@ -35,6 +35,10 @@ local.properties
 *.db
 server/:memory:
 
+# Generated figure portraits (produced by GenerateFigureImages script — not committed)
+server/generated-images/*.webp
+server/generated-images/*.png
+
 # Xcode
 *.xcodeproj/
 *.xcworkspace/
