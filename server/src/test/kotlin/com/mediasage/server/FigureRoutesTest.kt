@@ -57,7 +57,7 @@ class FigureRoutesTest {
     @Test
     fun figuresEndpointReturnsOnlyEnabledFigures() = testApplication {
         install(ContentNegotiation) { json() }
-        install(Koin) { modules(module { single { FigureRepository() } }) }
+        install(Koin) { modules(module { single { FigureRepository("http://localhost:8080") } }) }
         routing { figureRoutes() }
 
         val response = client.get("/api/figures")

@@ -24,7 +24,8 @@ fun serverModule(
     scriptureApiKey: String,
     agentRepoPath: String,
     jiraConfig: JiraConfig,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    baseUrl: String
 ) = module {
     single {
         HttpClient(OkHttp) {
@@ -49,5 +50,5 @@ fun serverModule(
     single { WikimediaService(get()) }
     single { AgentLaunchService(agentRepoPath, scope) }
     single<JiraLabelChecker> { JiraApiService(get(), jiraConfig.cloudId, jiraConfig.email, jiraConfig.apiToken) }
-    single { FigureRepository() }
+    single { FigureRepository(baseUrl) }
 }
