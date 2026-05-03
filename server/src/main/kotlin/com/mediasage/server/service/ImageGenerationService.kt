@@ -1,18 +1,13 @@
 package com.mediasage.server.service
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
-import io.ktor.http.isSuccess
-import io.ktor.client.request.forms.MultiPartFormDataContent
-import io.ktor.client.request.forms.formData
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -24,43 +19,10 @@ class ImageGenerationService(
 ) {
     companion object {
         private const val GENERATIONS_URL = "https://api.openai.com/v1/images/generations"
-        private const val EDITS_URL = "https://api.openai.com/v1/images/edits"
         private const val MODEL = "gpt-image-2"
         private const val SIZE = "1024x1024"
-        private const val OUTPUT_FORMAT = "webp"
-        private const val OUTPUT_COMPRESSION = 85
 
         private val responseJson = Json { ignoreUnknownKeys = true }
-    }
-
-    suspend fun generateWithReference(
-        figureName: String,
-        figureRole: String,
-        century: String,
-        lifespan: String,
-        referenceImageBytes: ByteArray
-    ): ByteArray {
-        val prompt = buildPrompt(figureName, figureRole, century, lifespan)
-        val httpResponse = httpClient.post(EDITS_URL) {
-            header(HttpHeaders.Authorization, "Bearer $apiKey")
-            setBody(
-                MultiPartFormDataContent(
-                    formData {
-                        append("model", MODEL)
-                        append("prompt", prompt)
-                        append("size", SIZE)
-                        append("response_format", "b64_json")
-                        append("output_format", OUTPUT_FORMAT)
-                        append("output_compression", OUTPUT_COMPRESSION.toString())
-                        append("image", referenceImageBytes, Headers.build {
-                            append(HttpHeaders.ContentType, "image/png")
-                            append(HttpHeaders.ContentDisposition, "filename=\"reference.png\"")
-                        })
-                    }
-                )
-            )
-        }
-        return decodeResponse(httpResponse.status.value, httpResponse.bodyAsText())
     }
 
     suspend fun generateTextOnly(

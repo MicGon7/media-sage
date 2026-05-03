@@ -19,14 +19,21 @@ private const val PRICE_LOW = 0.006
 private const val PRICE_MEDIUM = 0.053
 private const val PRICE_HIGH = 0.211
 
+private data class GenerationConfig(
+    val quality: String,
+    val promptDetail: String
+)
+
 fun main(args: Array<String>) {
     val batchSize = args.argInt("--batch-size", default = 5)
-    val quality = args.argString("--quality", default = "low")
     val startFrom = args.argLong("--start-from", default = 0L)
     val limit = args.argInt("--limit", default = Int.MAX_VALUE)
     val force = "--force" in args
     val dryRun = "--dry-run" in args
-    val promptDetail = args.argString("--prompt-detail", default = "")
+    val config = GenerationConfig(
+        quality = args.argString("--quality", default = "low"),
+        promptDetail = args.argString("--prompt-detail", default = "")
+    )
     val dbPath = System.getenv("DB_PATH") ?: error("DB_PATH env var is not set.")
     val apiKey = System.getenv("OPENAI_API_KEY") ?: error("OPENAI_API_KEY env var is not set.")
     val outputDir = File("generated-images").also { it.mkdirs() }
@@ -36,9 +43,9 @@ fun main(args: Array<String>) {
         .filter { it.id >= startFrom }
         .filter { force || it.portraitUrl == null }
         .take(limit)
-    printSummary(figures, quality, batchSize, limit, outputDir, dryRun)
+    printSummary(figures, config.quality, batchSize, limit, outputDir, dryRun)
     if (dryRun) { runDryRun(figures); httpClient.close(); return }
-    runBatchGeneration(figures, batchSize, quality, promptDetail, outputDir, httpClient, apiKey)
+    runBatchGeneration(figures, batchSize, config, outputDir, httpClient, apiKey)
     httpClient.close()
 }
 
@@ -69,8 +76,7 @@ private fun runDryRun(figures: List<FigureRow>) {
 private fun runBatchGeneration(
     figures: List<FigureRow>,
     batchSize: Int,
-    quality: String,
-    promptDetail: String,
+    config: GenerationConfig,
     outputDir: File,
     httpClient: HttpClient,
     apiKey: String
@@ -82,7 +88,7 @@ private fun runBatchGeneration(
         if (index > 0) { println("  Pausing ${RATE_LIMIT_PAUSE_MS / 1000}s for rate limit..."); delay(RATE_LIMIT_PAUSE_MS) }
         println("Batch ${index + 1} (figures ${batch.first().id}–${batch.last().id})")
         batch.forEach { figure ->
-            val (ok, cost) = generateOne(figure, quality, promptDetail, outputDir, imageService)
+            val (ok, cost) = generateOne(figure, config, outputDir, imageService)
             if (ok) { successCount++; totalCost += cost }
         }
     }
@@ -91,8 +97,7 @@ private fun runBatchGeneration(
 
 private suspend fun generateOne(
     figure: FigureRow,
-    quality: String,
-    promptDetail: String,
+    config: GenerationConfig,
     outputDir: File,
     imageService: ImageGenerationService
 ): Pair<Boolean, Double> {
@@ -100,12 +105,12 @@ private suspend fun generateOne(
     repeat(2) { attempt ->
         try {
             print("(text only) ")
-            val imageBytes = imageService.generateTextOnly(figure.name, figure.role, figure.century, figure.lifespan, quality, promptDetail)
-            val file = File(outputDir, "${figure.id}.webp")
-            file.writeBytes(imageBytes)
-            ServerDatabase.updateFigurePortraitUrl(figure.id, "/images/figures/${figure.id}.webp")
-            println("✓  (${file.length() / 1024}KB)")
-            return true to pricePerImage(quality)
+            val imageBytes = imageService.generateTextOnly(
+                figure.name, figure.role, figure.century, figure.lifespan,
+                config.quality, config.promptDetail
+            )
+            saveImage(figure, imageBytes, outputDir)
+            return true to pricePerImage(config.quality)
         } catch (e: ImageGenerationException) {
             if (e.statusCode in listOf(403, 502) && attempt == 0) {
                 println("(${e.statusCode} — retrying in 30s) ")
@@ -121,6 +126,13 @@ private suspend fun generateOne(
     }
     println("✗  ERROR: failed after retry")
     return false to 0.0
+}
+
+private fun saveImage(figure: FigureRow, imageBytes: ByteArray, outputDir: File) {
+    val file = File(outputDir, "${figure.id}.webp")
+    file.writeBytes(imageBytes)
+    ServerDatabase.updateFigurePortraitUrl(figure.id, "/images/figures/${figure.id}.webp")
+    println("✓  (${file.length() / 1024}KB)")
 }
 
 private fun pricePerImage(quality: String) = when (quality) {
