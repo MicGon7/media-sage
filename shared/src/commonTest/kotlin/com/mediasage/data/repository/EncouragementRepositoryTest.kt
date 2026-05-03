@@ -165,6 +165,9 @@ private class FakeEncouragementDao(preloaded: List<EncouragementEntity> = emptyL
     override fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>> =
         flowOf(store.values.filter { it.figureName == figureName })
 
+    override fun countByFigureName(): Flow<Map<String, Int>> =
+        flowOf(store.values.groupBy { it.figureName }.mapValues { (_, v) -> v.size })
+
     override suspend fun getRecentFigureNames(limit: Int): List<String> =
         store.values
             .sortedByDescending { it.cachedAt }

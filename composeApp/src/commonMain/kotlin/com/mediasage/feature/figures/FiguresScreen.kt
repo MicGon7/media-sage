@@ -1,6 +1,7 @@
 package com.mediasage.feature.figures
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,11 +15,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +35,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mediasage.ui.FigurePlaceholder
 import mediasage.composeapp.generated.resources.Res
@@ -107,48 +111,67 @@ private fun VoicesList(
 
 @Composable
 private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+    Box {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .clickable(onClick = onClick),
+            shape = MaterialTheme.shapes.medium,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         ) {
-            if (figure.imageUrl != null) {
-                AsyncImage(
-                    model = figure.imageUrl,
-                    contentDescription = figure.name,
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop,
-                    alignment = Alignment.TopCenter
-                )
-            } else {
-                FigurePlaceholder(name = figure.name, size = 64.dp)
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = figure.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                if (figure.role.isNotBlank()) {
-                    Text(
-                        text = figure.role,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontStyle = FontStyle.Italic,
-                        color = MaterialTheme.colorScheme.primary,
+            Row(
+                modifier = Modifier.padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (figure.imageUrl != null) {
+                    AsyncImage(
+                        model = figure.imageUrl,
+                        contentDescription = figure.name,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop,
+                        alignment = Alignment.TopCenter
                     )
+                } else {
+                    FigurePlaceholder(name = figure.name, size = 64.dp)
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = figure.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (figure.role.isNotBlank()) {
+                        Text(
+                            text = figure.role,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
             }
+        }
+
+        if (figure.quoteCount > 0) {
+            Text(
+                text = "${figure.quoteCount} Qs",
+                color = MaterialTheme.colorScheme.onPrimary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-20).dp, y = 2.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            )
         }
     }
 }
@@ -188,9 +211,9 @@ private class FiguresStateProvider : PreviewParameterProvider<FiguresContract.Ui
         FiguresContract.UiState.Success(figures = emptyList()),
         FiguresContract.UiState.Success(
             figures = listOf(
-                VoiceFigureItem(name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null),
-                VoiceFigureItem(name = "Dietrich Bonhoeffer", role = "Theologian & Martyr", imageUrl = null),
-                VoiceFigureItem(name = "Martin Luther King Jr.", role = "Pastor & Civil Rights Leader", imageUrl = null),
+                VoiceFigureItem(name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3),
+                VoiceFigureItem(name = "Dietrich Bonhoeffer", role = "Theologian & Martyr", imageUrl = null, quoteCount = 1),
+                VoiceFigureItem(name = "Martin Luther King Jr.", role = "Pastor & Civil Rights Leader", imageUrl = null, quoteCount = 0),
             )
         )
     )

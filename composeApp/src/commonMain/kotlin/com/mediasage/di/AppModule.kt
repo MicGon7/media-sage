@@ -18,7 +18,7 @@ val appModule = module {
     viewModel { AppViewModel(get<FigureRepository>()) }
     viewModel { HomeViewModel(get()) }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get()) }
-    viewModel { FiguresViewModel(get<FigureRepository>()) }
+    viewModel { FiguresViewModel(get<FigureRepository>(), get<EncouragementDao>()) }
     viewModel { (figureName: String) -> FigureDetailViewModel(figureName, get<FigureRepository>(), get<EncouragementDao>()) }
     viewModel { YouViewModel() }
     viewModel { HistoryViewModel(get<EncouragementDao>()) }
