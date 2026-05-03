@@ -30,7 +30,7 @@ class FigureDetailViewModel(
                     _state.value = FigureDetailContract.UiState.Success(
                         figureName = figure?.name ?: figureName,
                         figureRole = figure?.role ?: entities.firstOrNull()?.figureRole.orEmpty(),
-                        figureImageUrl = entities.firstOrNull()?.figureImageUrl,
+                        figureImageUrl = figure?.portraitUrl ?: entities.firstOrNull()?.figureImageUrl,
                         bio = figure?.bio,
                         quotes = entities.map { FigureQuoteItem(it.quoteText, it.headlineTitle) }
                     )

@@ -21,7 +21,19 @@ data class FigureDto(
     val isEnabled: Boolean
 )
 
-class FigureRepository {
+class FigureRepository(private val baseUrl: String) {
+
+    private fun resolveUrl(rawUrl: String?) =
+        if (rawUrl?.startsWith("/") == true) "$baseUrl$rawUrl" else rawUrl
+
+    suspend fun getPortraitUrl(figureName: String): String? = withContext(Dispatchers.IO) {
+        transaction {
+            val rawUrl = FigureTable.selectAll()
+                .where { FigureTable.name eq figureName }
+                .singleOrNull()?.get(FigureTable.portraitUrl)
+            resolveUrl(rawUrl)
+        }
+    }
 
     suspend fun getAllEnabled(): List<FigureDto> = withContext(Dispatchers.IO) {
         transaction {
@@ -37,7 +49,7 @@ class FigureRepository {
                         lifespan = row[FigureTable.lifespan],
                         bio = row[FigureTable.bio],
                         themes = row[FigureTable.themes],
-                        portraitUrl = row[FigureTable.portraitUrl],
+                        portraitUrl = resolveUrl(row[FigureTable.portraitUrl]),
                         isEnabled = row[FigureTable.isEnabled]
                     )
                 }

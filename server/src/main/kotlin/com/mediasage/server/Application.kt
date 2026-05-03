@@ -26,6 +26,7 @@ fun Application.module() {
     val newsApiKey = environment.config.propertyOrNull("app.news.apiKey")?.getString() ?: ""
     val scriptureApiKey = environment.config.propertyOrNull("app.scripture.apiKey")?.getString() ?: ""
     val agentRepoPath = environment.config.propertyOrNull("app.agent.repoPath")?.getString() ?: ""
+    val baseUrl = environment.config.propertyOrNull("app.baseUrl")?.getString() ?: "http://localhost:8080"
     val jiraConfig = JiraConfig(
         email = environment.config.propertyOrNull("app.jira.email")?.getString() ?: "",
         apiToken = environment.config.propertyOrNull("app.jira.apiToken")?.getString() ?: "",
@@ -33,7 +34,7 @@ fun Application.module() {
     )
 
     install(Koin) {
-        modules(serverModule(claudeApiKey, newsApiKey, scriptureApiKey, agentRepoPath, jiraConfig, this@module))
+        modules(serverModule(claudeApiKey, newsApiKey, scriptureApiKey, agentRepoPath, jiraConfig, this@module, baseUrl))
     }
 
     configureContentNegotiation()
