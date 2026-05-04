@@ -8,6 +8,7 @@ import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.repository.EncouragementRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class EncouragementRepositoryImpl(
     private val api: MediaSageApi,
@@ -40,6 +41,9 @@ class EncouragementRepositoryImpl(
         }
         return encouragement
     }
+
+    override fun getByFigureName(figureName: String): Flow<List<Encouragement>> =
+        encouragementDao.getByFigureName(figureName).map { entities -> entities.map { it.toDomain() } }
 
     override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> =
         encouragementDao.observeBookmarkState(articleUrl)
