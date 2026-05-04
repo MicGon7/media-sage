@@ -8,7 +8,6 @@ import com.mediasage.server.service.JiraApiService
 import com.mediasage.server.service.JiraLabelChecker
 import com.mediasage.server.service.NewsApiService
 import com.mediasage.server.service.ScriptureApiService
-import com.mediasage.server.service.WikimediaService
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -47,7 +46,6 @@ fun serverModule(
     single { NewsApiService(get(), newsApiKey) }
     single { ScriptureApiService(get(), scriptureApiKey) }
     single { ArticleScraperService() }
-    single { WikimediaService(get()) }
     single { AgentLaunchService(agentRepoPath, scope) }
     single<JiraLabelChecker> { JiraApiService(get(), jiraConfig.cloudId, jiraConfig.email, jiraConfig.apiToken) }
     single { FigureRepository(baseUrl) }

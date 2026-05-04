@@ -10,12 +10,23 @@ import java.io.File
 
 object ServerDatabase {
 
-    fun init(dbPath: String = "mediasage-server.db") {
-        val dbFile = File(dbPath)
-        Database.connect(
-            url = "jdbc:sqlite:${dbFile.absolutePath}",
-            driver = "org.sqlite.JDBC"
-        )
+    fun init(dbPath: String = "mediasage-server.db", postgresUrl: String? = null) {
+        if (postgresUrl != null) {
+            val uri = java.net.URI(postgresUrl)
+            val (user, password) = uri.userInfo.split(":", limit = 2)
+            Database.connect(
+                url = "jdbc:postgresql://${uri.host}:${uri.port}${uri.path}?sslmode=require",
+                driver = "org.postgresql.Driver",
+                user = user,
+                password = password
+            )
+        } else {
+            val dbFile = File(dbPath)
+            Database.connect(
+                url = "jdbc:sqlite:${dbFile.absolutePath}",
+                driver = "org.sqlite.JDBC"
+            )
+        }
         transaction {
             SchemaUtils.createMissingTablesAndColumns(FigureTable, QuoteTable)
         }
@@ -73,18 +84,6 @@ object ServerDatabase {
         }
     }
 
-    fun migratePortraitUrls(supabaseUrl: String) = transaction {
-        val baseUrl = "$supabaseUrl/storage/v1/object/public/portraits"
-        val rows = FigureTable.selectAll()
-            .where { FigureTable.portraitUrl eq null }
-            .map { it[FigureTable.id] }
-        rows.forEach { id ->
-            FigureTable.update({ FigureTable.id eq id }) {
-                it[FigureTable.portraitUrl] = "$baseUrl/$id.webp"
-            }
-        }
-        if (rows.isNotEmpty()) println("Migrated ${rows.size} portrait URLs to Supabase Storage.")
-    }
 }
 
 data class QuoteCandidate(

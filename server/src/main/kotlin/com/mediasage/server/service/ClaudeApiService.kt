@@ -69,11 +69,11 @@ class ClaudeApiService(
     }
 
     private suspend fun resolveSelection(
-        quoteId: Long,
+        quoteId: Long?,
         pool: List<DbQuoteCandidate>,
-        retryId: suspend () -> Long
+        retryId: suspend () -> Long?
     ): DbQuoteCandidate =
-        pool.find { it.quoteId == quoteId }
+        (if (quoteId != null) pool.find { it.quoteId == quoteId } else null)
             ?: pool.find { it.quoteId == retryId() }
             ?: throw ClaudeApiException(500, "Claude returned invalid quoteId after retry")
 
@@ -212,7 +212,7 @@ data class QuoteCandidate(
 
 @Serializable
 data class SelectionResult(
-    val selectedQuoteId: Long,
+    val selectedQuoteId: Long? = null,
     val summary: String? = null,
     val scriptureReference: String,
     val scriptureText: String,
