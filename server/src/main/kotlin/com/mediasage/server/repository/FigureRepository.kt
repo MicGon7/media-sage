@@ -4,6 +4,7 @@ import com.mediasage.server.db.FigureTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -18,7 +19,8 @@ data class FigureDto(
     val bio: String,
     val themes: String,
     val portraitUrl: String?,
-    val isEnabled: Boolean
+    val isEnabled: Boolean,
+    val updatedAt: Long = 0
 )
 
 class FigureRepository(private val baseUrl: String) {
@@ -35,24 +37,30 @@ class FigureRepository(private val baseUrl: String) {
         }
     }
 
-    suspend fun getAllEnabled(): List<FigureDto> = withContext(Dispatchers.IO) {
+    suspend fun getAllEnabled(since: Long? = null): List<FigureDto> = withContext(Dispatchers.IO) {
         transaction {
-            FigureTable.selectAll()
-                .where { FigureTable.isEnabled eq true }
-                .map { row ->
-                    FigureDto(
-                        id = row[FigureTable.id],
-                        name = row[FigureTable.name],
-                        category = row[FigureTable.category],
-                        century = row[FigureTable.century],
-                        role = row[FigureTable.role],
-                        lifespan = row[FigureTable.lifespan],
-                        bio = row[FigureTable.bio],
-                        themes = row[FigureTable.themes],
-                        portraitUrl = resolveUrl(row[FigureTable.portraitUrl]),
-                        isEnabled = row[FigureTable.isEnabled]
-                    )
+            val query = FigureTable.selectAll().where {
+                if (since != null) {
+                    (FigureTable.isEnabled eq true) and (FigureTable.updatedAt greater since)
+                } else {
+                    FigureTable.isEnabled eq true
                 }
+            }
+            query.map { row ->
+                FigureDto(
+                    id = row[FigureTable.id],
+                    name = row[FigureTable.name],
+                    category = row[FigureTable.category],
+                    century = row[FigureTable.century],
+                    role = row[FigureTable.role],
+                    lifespan = row[FigureTable.lifespan],
+                    bio = row[FigureTable.bio],
+                    themes = row[FigureTable.themes],
+                    portraitUrl = resolveUrl(row[FigureTable.portraitUrl]),
+                    isEnabled = row[FigureTable.isEnabled],
+                    updatedAt = row[FigureTable.updatedAt]
+                )
+            }
         }
     }
 }

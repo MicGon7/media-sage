@@ -13,7 +13,7 @@ import com.mediasage.data.remote.ScriptureVerseDto
 /** Temporary mock API for physical device demos without a server. */
 class MockMediaSageApi : MediaSageApi {
 
-    override suspend fun getFigures(): List<FigureDto> = emptyList()
+    override suspend fun getFigures(since: Long?): List<FigureDto> = emptyList()
 
     override suspend fun getHeadlines(locale: String, limit: Int): List<NewsArticleDto> =
         MockData.headlines

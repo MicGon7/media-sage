@@ -84,7 +84,8 @@ data class FigureDto(
     val themes: String = "",
     @SerialName("portraitUrl")
     val portraitUrl: String? = null,
-    val isEnabled: Boolean = true
+    val isEnabled: Boolean = true,
+    val updatedAt: Long = 0
 )
 
 // ---- Scripture endpoint DTOs ----

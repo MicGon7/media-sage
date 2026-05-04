@@ -1,6 +1,8 @@
 package com.mediasage.data.repository
 
 import com.mediasage.data.local.dao.FigureDao
+import com.mediasage.data.local.dao.SyncMetaDao
+import com.mediasage.data.local.entity.SyncMetaEntity
 import com.mediasage.data.mapper.toDomain
 import com.mediasage.data.mapper.toEntity
 import com.mediasage.data.remote.MediaSageApi
@@ -12,6 +14,7 @@ import kotlinx.coroutines.flow.map
 
 class FigureRepositoryImpl(
     private val figureDao: FigureDao,
+    private val syncMetaDao: SyncMetaDao,
     private val api: MediaSageApi
 ) : FigureRepository {
 
@@ -30,8 +33,20 @@ class FigureRepositoryImpl(
         figureDao.getByName(name)?.toDomain()
 
     override suspend fun syncFigures() {
-        val figures = api.getFigures()
-        figureDao.deleteAll()
-        figureDao.insertAll(figures.map { it.toEntity() })
+        val lastSyncAt = syncMetaDao.get()?.lastFigureSyncAt
+        val syncStartedAt = currentTimeMillis()
+        val isFullSync = lastSyncAt == null || syncStartedAt - lastSyncAt > FULL_SYNC_INTERVAL_MS
+        val figures = api.getFigures(since = if (isFullSync) null else lastSyncAt)
+        if (isFullSync) {
+            figureDao.deleteAll()
+            figureDao.insertAll(figures.map { it.toEntity() })
+        } else if (figures.isNotEmpty()) {
+            figureDao.insertAll(figures.map { it.toEntity() })
+        }
+        syncMetaDao.upsert(SyncMetaEntity(lastFigureSyncAt = syncStartedAt))
+    }
+
+    companion object {
+        private const val FULL_SYNC_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000L
     }
 }

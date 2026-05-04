@@ -11,7 +11,8 @@ fun Route.figureRoutes() {
     val figureRepository: FigureRepository by inject()
 
     get("/api/figures") {
-        val figures = figureRepository.getAllEnabled()
+        val since = call.request.queryParameters["since"]?.toLongOrNull()
+        val figures = figureRepository.getAllEnabled(since)
         call.respond(HttpStatusCode.OK, figures)
     }
 }

@@ -13,6 +13,7 @@ object FigureTable : Table("figures") {
     val themes = text("themes").default("")
     val portraitUrl = varchar("portrait_url", 512).nullable()
     val isEnabled = bool("is_enabled").default(true)
+    val updatedAt = long("updated_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
 }
