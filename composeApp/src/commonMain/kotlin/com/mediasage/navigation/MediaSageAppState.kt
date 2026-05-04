@@ -31,8 +31,8 @@ class MediaSageAppState(
         backStack.add(Route.HeadlineDetail(articleUrl))
     }
 
-    fun navigateToFigureDetail(figureName: String) {
-        backStack.add(Route.FigureDetail(figureName))
+    fun navigateToFigureDetail(figureId: Long) {
+        backStack.add(Route.FigureDetail(figureId))
     }
 
     fun navigateToBookmarks() {

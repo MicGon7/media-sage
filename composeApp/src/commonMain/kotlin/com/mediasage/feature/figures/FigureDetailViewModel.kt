@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class FigureDetailViewModel(
-    private val figureName: String,
+    private val figureId: Long,
     private val figureRepository: FigureRepository,
     private val encouragementRepository: EncouragementRepository
 ) : ViewModel() {
@@ -24,30 +24,15 @@ class FigureDetailViewModel(
 
     private fun load() {
         viewModelScope.launch {
-            try {
-                val figure = figureRepository.getFigureByName(figureName)
-                val figureId = figure?.id
-                if (figureId != null) {
-                    encouragementRepository.getByFigureId(figureId).collect { encouragements ->
-                        _state.value = FigureDetailContract.UiState.Success(
-                            figureName = figure.name,
-                            figureRole = figure.role,
-                            figureImageUrl = figure.portraitUrl,
-                            bio = figure.bio,
-                            quotes = encouragements.map { FigureQuoteItem(it.quoteText, it.headlineTitle) }
-                        )
-                    }
-                } else {
-                    _state.value = FigureDetailContract.UiState.Success(
-                        figureName = figureName,
-                        figureRole = "",
-                        figureImageUrl = null,
-                        bio = null,
-                        quotes = emptyList()
-                    )
-                }
-            } catch (e: Exception) {
-                _state.value = FigureDetailContract.UiState.Error(e.message.orEmpty())
+            val figure = figureRepository.getFigureById(figureId) ?: return@launch
+            encouragementRepository.getByFigureId(figure.id).collect { encouragements ->
+                _state.value = FigureDetailContract.UiState.Success(
+                    figureName = figure.name,
+                    figureRole = figure.role,
+                    figureImageUrl = figure.portraitUrl,
+                    bio = figure.bio,
+                    quotes = encouragements.map { FigureQuoteItem(it.quoteText, it.headlineTitle) }
+                )
             }
         }
     }

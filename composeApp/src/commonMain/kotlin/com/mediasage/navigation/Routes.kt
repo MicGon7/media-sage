@@ -24,7 +24,7 @@ sealed interface Route : NavKey {
 
     /** Detail screen for a specific figure. */
     @Serializable
-    data class FigureDetail(val figureName: String) : Route
+    data class FigureDetail(val figureId: Long) : Route
 
     /** You tab — personal content and settings entry point. */
     @Serializable

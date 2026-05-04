@@ -9,11 +9,12 @@ object FiguresContract {
 
     sealed interface Intent {
         data object LoadFigures : Intent
-        data class FigureClicked(val figureName: String) : Intent
+        data class FigureClicked(val figureId: Long) : Intent
     }
 }
 
 data class VoiceFigureItem(
+    val id: Long,
     val name: String,
     val role: String,
     val imageUrl: String?,
