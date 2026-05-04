@@ -72,6 +72,19 @@ object ServerDatabase {
             it[FigureTable.portraitUrl] = url
         }
     }
+
+    fun migratePortraitUrls(supabaseUrl: String) = transaction {
+        val baseUrl = "$supabaseUrl/storage/v1/object/public/portraits"
+        val rows = FigureTable.selectAll()
+            .where { FigureTable.portraitUrl eq null }
+            .map { it[FigureTable.id] }
+        rows.forEach { id ->
+            FigureTable.update({ FigureTable.id eq id }) {
+                it[FigureTable.portraitUrl] = "$baseUrl/$id.webp"
+            }
+        }
+        if (rows.isNotEmpty()) println("Migrated ${rows.size} portrait URLs to Supabase Storage.")
+    }
 }
 
 data class QuoteCandidate(
