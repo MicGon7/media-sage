@@ -31,9 +31,10 @@ fun sharedModule(serverBaseUrl: String = "http://10.0.2.2:8080") = module {
     single { get<MediaSageDatabase>().headlineDao() }
     single { get<MediaSageDatabase>().matchDao() }
     single { get<MediaSageDatabase>().encouragementDao() }
+    single { get<MediaSageDatabase>().syncMetaDao() }
 
     // Repositories — interface bound to implementation
-    single<FigureRepository> { FigureRepositoryImpl(get(), get()) }
+    single<FigureRepository> { FigureRepositoryImpl(get(), get(), get()) }
     single<QuoteRepository> { QuoteRepositoryImpl(get()) }
     single<HeadlineRepository> { HeadlineRepositoryImpl(get(), get()) }
     single<MatchRepository> { MatchRepositoryImpl(get()) }

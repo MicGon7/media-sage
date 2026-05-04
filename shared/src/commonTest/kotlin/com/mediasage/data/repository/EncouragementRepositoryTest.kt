@@ -200,7 +200,7 @@ private class FakeMediaSageApi(private val result: EncourageResultDto) : MediaSa
         return result
     }
 
-    override suspend fun getFigures(): List<FigureDto> = emptyList()
+    override suspend fun getFigures(since: Long?): List<FigureDto> = emptyList()
     override suspend fun getHeadlines(locale: String, limit: Int): List<NewsArticleDto> = emptyList()
     override suspend fun searchNews(query: String, limit: Int): List<NewsArticleDto> = emptyList()
 
