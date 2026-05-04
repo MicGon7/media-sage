@@ -3,6 +3,7 @@ package com.mediasage.di
 import com.mediasage.AppViewModel
 import com.mediasage.data.local.dao.EncouragementDao
 import com.mediasage.data.remote.MediaSageApi
+import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.feature.bookmarks.BookmarksViewModel
 import com.mediasage.feature.figures.FigureDetailViewModel
@@ -19,7 +20,7 @@ val appModule = module {
     viewModel { HomeViewModel(get()) }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get()) }
     viewModel { FiguresViewModel(get<FigureRepository>(), get<EncouragementDao>()) }
-    viewModel { (figureName: String) -> FigureDetailViewModel(figureName, get<FigureRepository>(), get<EncouragementDao>()) }
+    viewModel { (figureName: String) -> FigureDetailViewModel(figureName, get<FigureRepository>(), get<EncouragementRepository>()) }
     viewModel { YouViewModel() }
     viewModel { HistoryViewModel(get<EncouragementDao>()) }
     viewModel { BookmarksViewModel(get<EncouragementDao>()) }
