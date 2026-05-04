@@ -1,17 +1,13 @@
 package com.mediasage.server
 
-import com.mediasage.server.db.FigureSeeder
 import com.mediasage.server.db.ServerDatabase
 import com.mediasage.server.di.JiraConfig
 import com.mediasage.server.di.serverModule
 import com.mediasage.server.plugins.*
 import com.mediasage.server.routes.*
-import io.ktor.client.HttpClient
 import io.ktor.server.application.*
 import io.ktor.server.netty.EngineMain
 import io.ktor.server.routing.routing
-import kotlinx.coroutines.launch
-import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 
 fun main(args: Array<String>) {
@@ -41,15 +37,18 @@ fun Application.module() {
     configureStatusPages()
     configureRouting()
 
-    val dbPath = environment.config.propertyOrNull("app.db.path")?.getString()
-        ?: error("DB_PATH is not set. Export an absolute path: export DB_PATH=\"/path/to/server/mediasage-server.db\"")
-    ServerDatabase.init(dbPath)
-    val supabaseUrl = environment.config.propertyOrNull("app.supabase.url")?.getString()
-    val httpClient: HttpClient by inject()
-    launch {
-        FigureSeeder.seed(httpClient)
-        if (supabaseUrl != null) ServerDatabase.migratePortraitUrls(supabaseUrl)
+    initDatabase()
+}
+
+private fun Application.initDatabase() {
+    val postgresUrl = environment.config.propertyOrNull("app.supabase.dbUrl")?.getString()
+    if (postgresUrl != null) {
+        ServerDatabase.init(postgresUrl = postgresUrl)
+        return
     }
+    val dbPath = environment.config.propertyOrNull("app.db.path")?.getString()
+        ?: error("DB_PATH is not set. Export an absolute path: export DB_PATH=<path>")
+    ServerDatabase.init(dbPath = dbPath)
 }
 
 fun Application.configureRouting() {

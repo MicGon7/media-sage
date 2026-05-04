@@ -195,7 +195,9 @@ source ~/.zshrc && ./gradlew :server:run
 - Never merge a PR — human reviews and merges
 
 ### After a PR is merged
-Update the Agentic Development Impact page in Confluence (media-sage.atlassian.net, page ID: `163844`) with:
+Update the Agentic Development Impact page in Confluence (media-sage.atlassian.net, page ID: `163844`) at natural milestones — not after every individual PR. Batch small or related tickets (e.g. a hotfix paired with a feature) into a single update. A good trigger is when a feature is fully working end-to-end in production.
+
+For each batch, add:
 1. A new row in the **Ticket Log** table covering: ticket key, description, mode (`assisted` or `autonomous`), platform breakdown of engineer hours, total traditional hours, traditional cost, actual wall-clock hours, and key notes
 2. Updated **Running Impact Totals** (cumulative hours and cost)
 
