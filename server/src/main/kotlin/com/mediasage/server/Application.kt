@@ -45,10 +45,10 @@ fun Application.module() {
         ?: error("DB_PATH is not set. Export an absolute path: export DB_PATH=\"/path/to/server/mediasage-server.db\"")
     ServerDatabase.init(dbPath)
     val supabaseUrl = environment.config.propertyOrNull("app.supabase.url")?.getString()
-    if (supabaseUrl != null) ServerDatabase.migratePortraitUrls(supabaseUrl)
     val httpClient: HttpClient by inject()
     launch {
         FigureSeeder.seed(httpClient)
+        if (supabaseUrl != null) ServerDatabase.migratePortraitUrls(supabaseUrl)
     }
 }
 
