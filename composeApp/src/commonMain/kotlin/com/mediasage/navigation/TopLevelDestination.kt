@@ -27,7 +27,7 @@ enum class TopLevelDestination(
         selectedIcon = Icons.Filled.Home,
         unselectedIcon = Icons.Outlined.Home
     ),
-    VOICES(
+    SAGES(
         route = Route.Figures,
         labelRes = Res.string.nav_voices,
         selectedIcon = Icons.Filled.Groups,
