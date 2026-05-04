@@ -8,13 +8,11 @@ import com.mediasage.server.plugins.*
 import com.mediasage.server.routes.*
 import io.ktor.client.HttpClient
 import io.ktor.server.application.*
-import io.ktor.server.http.content.staticFiles
 import io.ktor.server.netty.EngineMain
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.launch
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
-import java.io.File
 
 fun main(args: Array<String>) {
     EngineMain.main(args)
@@ -46,6 +44,8 @@ fun Application.module() {
     val dbPath = environment.config.propertyOrNull("app.db.path")?.getString()
         ?: error("DB_PATH is not set. Export an absolute path: export DB_PATH=\"/path/to/server/mediasage-server.db\"")
     ServerDatabase.init(dbPath)
+    val supabaseUrl = environment.config.propertyOrNull("app.supabase.url")?.getString()
+    if (supabaseUrl != null) ServerDatabase.migratePortraitUrls(supabaseUrl)
     val httpClient: HttpClient by inject()
     launch {
         FigureSeeder.seed(httpClient)
@@ -63,6 +63,5 @@ fun Application.configureRouting() {
         figureRoutes()
         webhookRoutes()
         githubWebhookRoutes(githubWebhookSecret)
-        staticFiles("/images/figures", File("generated-images"))
     }
 }

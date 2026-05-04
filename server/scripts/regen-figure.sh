@@ -11,7 +11,7 @@ if [ -n "$REFERENCE_URL" ]; then
   SCRIPT_ARGS="$SCRIPT_ARGS --reference-url=$REFERENCE_URL"
 fi
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 ./gradlew :server:generateImages --no-configuration-cache \
   -PscriptArgs="$SCRIPT_ARGS" \
   -PpromptDetail="$PROMPT_DETAIL"
