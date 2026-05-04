@@ -11,6 +11,6 @@ fun getDatabaseBuilder(): RoomDatabase.Builder<MediaSageDatabase> {
         name = dbFilePath
     )
         .setDriver(BundledSQLiteDriver())
-        .addMigrations(MIGRATION_12_13)
+        .addMigrations(MIGRATION_12_13, MIGRATION_13_14)
         .fallbackToDestructiveMigration(dropAllTables = true)
 }

@@ -1,6 +1,7 @@
 package com.mediasage.data.repository
 
 import com.mediasage.data.local.dao.EncouragementDao
+import com.mediasage.data.local.dao.FigureDao
 import com.mediasage.data.mapper.toDomain
 import com.mediasage.data.mapper.toEntity
 import com.mediasage.data.remote.EncourageRequestDto
@@ -8,10 +9,12 @@ import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.repository.EncouragementRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class EncouragementRepositoryImpl(
     private val api: MediaSageApi,
-    private val encouragementDao: EncouragementDao
+    private val encouragementDao: EncouragementDao,
+    private val figureDao: FigureDao
 ) : EncouragementRepository {
 
     override suspend fun getEncouragement(
@@ -34,12 +37,16 @@ class EncouragementRepositoryImpl(
         ).toDomain()
 
         articleUrl?.let {
+            val figureId = figureDao.getByName(encouragement.figureName)?.id
             encouragementDao.insert(
-                encouragement.toEntity(it, headlineTitle, headlineSource, headlineImageUrl, currentTimeMillis())
+                encouragement.toEntity(it, headlineTitle, headlineSource, headlineImageUrl, currentTimeMillis(), figureId)
             )
         }
         return encouragement
     }
+
+    override fun getByFigureId(figureId: Long): Flow<List<Encouragement>> =
+        encouragementDao.getByFigureId(figureId).map { entities -> entities.map { it.toDomain() } }
 
     override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> =
         encouragementDao.observeBookmarkState(articleUrl)

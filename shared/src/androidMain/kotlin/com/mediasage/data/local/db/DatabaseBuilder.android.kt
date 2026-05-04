@@ -10,6 +10,6 @@ fun getDatabaseBuilder(context: Context): RoomDatabase.Builder<MediaSageDatabase
         context = context,
         name = dbFile.absolutePath
     )
-        .addMigrations(MIGRATION_12_13)
+        .addMigrations(MIGRATION_12_13, MIGRATION_13_14)
         .fallbackToDestructiveMigration(dropAllTables = true)
 }

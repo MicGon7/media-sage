@@ -27,7 +27,7 @@ import com.mediasage.data.local.entity.SyncMetaEntity
         EncouragementEntity::class,
         SyncMetaEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

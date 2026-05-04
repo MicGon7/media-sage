@@ -12,6 +12,8 @@ interface EncouragementRepository {
         articleSnippet: String? = null
     ): Encouragement
 
+    fun getByFigureId(figureId: Long): Flow<List<Encouragement>>
+
     fun observeIsBookmarked(articleUrl: String): Flow<Boolean>
 
     suspend fun toggleBookmark(articleUrl: String)

@@ -130,6 +130,7 @@ private class FakeEncouragementDao(
     override suspend fun getByArticleUrl(articleUrl: String): EncouragementEntity? = null
     override fun getDistinctFigures(): Flow<List<VoiceFigureProjection>> = MutableStateFlow(emptyList())
     override fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
+    override fun getByFigureId(figureId: Long): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
     override suspend fun getRecentFigureNames(limit: Int): List<String> = emptyList()
     override fun getAll(): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
     override fun getBookmarked(): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())

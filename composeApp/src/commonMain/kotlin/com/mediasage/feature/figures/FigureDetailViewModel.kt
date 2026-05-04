@@ -2,7 +2,7 @@ package com.mediasage.feature.figures
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mediasage.data.local.dao.EncouragementDao
+import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 class FigureDetailViewModel(
     private val figureName: String,
     private val figureRepository: FigureRepository,
-    private val encouragementDao: EncouragementDao
+    private val encouragementRepository: EncouragementRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<FigureDetailContract.UiState>(FigureDetailContract.UiState.Loading)
@@ -26,13 +26,24 @@ class FigureDetailViewModel(
         viewModelScope.launch {
             try {
                 val figure = figureRepository.getFigureByName(figureName)
-                encouragementDao.getByFigureName(figureName).collect { entities ->
+                val figureId = figure?.id
+                if (figureId != null) {
+                    encouragementRepository.getByFigureId(figureId).collect { encouragements ->
+                        _state.value = FigureDetailContract.UiState.Success(
+                            figureName = figure.name,
+                            figureRole = figure.role,
+                            figureImageUrl = figure.portraitUrl,
+                            bio = figure.bio,
+                            quotes = encouragements.map { FigureQuoteItem(it.quoteText, it.headlineTitle) }
+                        )
+                    }
+                } else {
                     _state.value = FigureDetailContract.UiState.Success(
-                        figureName = figure?.name ?: figureName,
-                        figureRole = figure?.role ?: entities.firstOrNull()?.figureRole.orEmpty(),
-                        figureImageUrl = figure?.portraitUrl ?: entities.firstOrNull()?.figureImageUrl,
-                        bio = figure?.bio,
-                        quotes = entities.map { FigureQuoteItem(it.quoteText, it.headlineTitle) }
+                        figureName = figureName,
+                        figureRole = "",
+                        figureImageUrl = null,
+                        bio = null,
+                        quotes = emptyList()
                     )
                 }
             } catch (e: Exception) {

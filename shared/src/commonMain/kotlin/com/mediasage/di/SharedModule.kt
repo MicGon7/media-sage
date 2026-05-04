@@ -38,6 +38,6 @@ fun sharedModule(serverBaseUrl: String = "http://10.0.2.2:8080") = module {
     single<QuoteRepository> { QuoteRepositoryImpl(get()) }
     single<HeadlineRepository> { HeadlineRepositoryImpl(get(), get()) }
     single<MatchRepository> { MatchRepositoryImpl(get()) }
-    single<EncouragementRepository> { EncouragementRepositoryImpl(get(), get()) }
+    single<EncouragementRepository> { EncouragementRepositoryImpl(get(), get(), get()) }
     single<WikipediaRepository> { WikipediaRepositoryImpl(get()) }
 }
