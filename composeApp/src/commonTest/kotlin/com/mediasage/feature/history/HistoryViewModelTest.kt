@@ -2,9 +2,8 @@
 
 package com.mediasage.feature.history
 
-import com.mediasage.data.local.dao.EncouragementDao
-import com.mediasage.data.local.entity.EncouragementEntity
-import com.mediasage.data.local.entity.VoiceFigureProjection
+import com.mediasage.domain.model.Encouragement
+import com.mediasage.domain.repository.EncouragementRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,21 +34,21 @@ class HistoryViewModelTest {
 
     @Test
     fun emitsEmptyWhenNoEncouragements() = runTest(testDispatcher) {
-        val vm = HistoryViewModel(encouragementDao = FakeEncouragementDao(emptyList()))
+        val vm = HistoryViewModel(encouragementRepository = FakeEncouragementRepository(emptyList()))
 
         assertIs<HistoryContract.UiState.Empty>(vm.state.value)
     }
 
     @Test
     fun emitsSuccessWithItemsWhenEncouragementsCached() = runTest(testDispatcher) {
-        val entity = buildEncouragementEntity(
+        val encouragement = buildEncouragement(
             articleUrl = "https://example.com/article",
             headlineTitle = "Big News",
             figureName = "Augustine",
             figureRole = "Bishop of Hippo",
             quoteText = "Our heart is restless until it finds rest in You."
         )
-        val vm = HistoryViewModel(encouragementDao = FakeEncouragementDao(listOf(entity)))
+        val vm = HistoryViewModel(encouragementRepository = FakeEncouragementRepository(listOf(encouragement)))
 
         val state = assertIs<HistoryContract.UiState.Success>(vm.state.value)
         assertEquals(1, state.items.size)
@@ -62,28 +61,26 @@ class HistoryViewModelTest {
     @Test
     fun quotePreviewIsTruncatedTo120Chars() = runTest(testDispatcher) {
         val longQuote = "A".repeat(200)
-        val entity = buildEncouragementEntity(quoteText = longQuote)
-        val vm = HistoryViewModel(encouragementDao = FakeEncouragementDao(listOf(entity)))
+        val encouragement = buildEncouragement(quoteText = longQuote)
+        val vm = HistoryViewModel(encouragementRepository = FakeEncouragementRepository(listOf(encouragement)))
 
         val state = assertIs<HistoryContract.UiState.Success>(vm.state.value)
         assertEquals(120, state.items.first().quotePreview.length)
     }
 
     @Test
-    fun headlineImageUrlIsReadFromEncouragementEntity() = runTest(testDispatcher) {
-        val entity = buildEncouragementEntity(
-            headlineImageUrl = "https://img.example.com/photo.jpg"
-        )
-        val vm = HistoryViewModel(encouragementDao = FakeEncouragementDao(listOf(entity)))
+    fun headlineImageUrlIsReadFromEncouragement() = runTest(testDispatcher) {
+        val encouragement = buildEncouragement(headlineImageUrl = "https://img.example.com/photo.jpg")
+        val vm = HistoryViewModel(encouragementRepository = FakeEncouragementRepository(listOf(encouragement)))
 
         val state = assertIs<HistoryContract.UiState.Success>(vm.state.value)
         assertEquals("https://img.example.com/photo.jpg", state.items.first().headlineImageUrl)
     }
 
     @Test
-    fun headlineImageUrlIsNullWhenNotStoredInEntity() = runTest(testDispatcher) {
-        val entity = buildEncouragementEntity(headlineImageUrl = null)
-        val vm = HistoryViewModel(encouragementDao = FakeEncouragementDao(listOf(entity)))
+    fun headlineImageUrlIsNullWhenNotStored() = runTest(testDispatcher) {
+        val encouragement = buildEncouragement(headlineImageUrl = null)
+        val vm = HistoryViewModel(encouragementRepository = FakeEncouragementRepository(listOf(encouragement)))
 
         val state = assertIs<HistoryContract.UiState.Success>(vm.state.value)
         assertNull(state.items.first().headlineImageUrl)
@@ -91,25 +88,26 @@ class HistoryViewModelTest {
 
     @Test
     fun stateUpdatesWhenEncouragementFlowEmitsNewValues() = runTest(testDispatcher) {
-        val flow = MutableStateFlow(emptyList<EncouragementEntity>())
-        val vm = HistoryViewModel(encouragementDao = FakeEncouragementDao(flow = flow))
+        val flow = MutableStateFlow(emptyList<Encouragement>())
+        val vm = HistoryViewModel(encouragementRepository = FakeEncouragementRepository(flow = flow))
 
         assertIs<HistoryContract.UiState.Empty>(vm.state.value)
 
-        flow.value = listOf(buildEncouragementEntity())
+        flow.value = listOf(buildEncouragement())
 
         assertIs<HistoryContract.UiState.Success>(vm.state.value)
     }
 }
 
-private fun buildEncouragementEntity(
+private fun buildEncouragement(
     articleUrl: String = "https://example.com",
     headlineTitle: String = "Test Headline",
     figureName: String = "Augustine",
     figureRole: String = "Bishop",
     quoteText: String = "Test quote",
-    headlineImageUrl: String? = null
-) = EncouragementEntity(
+    headlineImageUrl: String? = null,
+    bookmarked: Boolean = false
+) = Encouragement(
     articleUrl = articleUrl,
     summary = null,
     quoteText = quoteText,
@@ -118,50 +116,43 @@ private fun buildEncouragementEntity(
     scriptureReference = "John 3:16",
     scriptureText = "For God so loved the world",
     explanation = "Explanation",
-    connectionThemes = "faith",
+    connectionThemes = listOf("faith"),
     matchTheme = "hope",
     tone = "gentle",
     figureImageUrl = null,
     headlineTitle = headlineTitle,
     headlineImageUrl = headlineImageUrl,
-    cachedAt = 1000L
+    bookmarked = bookmarked
 )
 
-private class FakeEncouragementDao(
-    initialEntities: List<EncouragementEntity> = emptyList(),
-    flow: MutableStateFlow<List<EncouragementEntity>>? = null
-) : EncouragementDao {
+private class FakeEncouragementRepository(
+    initialEncouragements: List<Encouragement> = emptyList(),
+    flow: MutableStateFlow<List<Encouragement>>? = null
+) : EncouragementRepository {
 
-    private val _flow = flow ?: MutableStateFlow(initialEntities)
+    private val _flow = flow ?: MutableStateFlow(initialEncouragements)
 
-    override fun observeAll(): Flow<List<EncouragementEntity>> = _flow
+    override fun observeAll(): Flow<List<Encouragement>> = _flow
 
-    override suspend fun insert(encouragement: EncouragementEntity) = Unit
-
-    override suspend fun getByArticleUrl(articleUrl: String): EncouragementEntity? =
-        _flow.value.find { it.articleUrl == articleUrl }
-
-    override fun observeDistinctFigures(): Flow<List<VoiceFigureProjection>> =
-        MutableStateFlow(emptyList())
-
-    override fun observeByFigureName(figureName: String): Flow<List<EncouragementEntity>> =
-        MutableStateFlow(_flow.value.filter { it.figureName == figureName })
-
-    override fun observeByFigureId(figureId: Long): Flow<List<EncouragementEntity>> =
-        MutableStateFlow(_flow.value.filter { it.figureId == figureId })
+    override fun observeBookmarked(): Flow<List<Encouragement>> =
+        MutableStateFlow(_flow.value.filter { it.bookmarked })
 
     override fun observeCountByFigureName(): Flow<Map<String, Int>> =
         MutableStateFlow(_flow.value.groupBy { it.figureName }.mapValues { (_, v) -> v.size })
 
-    override suspend fun getRecentFigureNames(limit: Int): List<String> = emptyList()
+    override fun observeByFigureId(figureId: Long): Flow<List<Encouragement>> =
+        MutableStateFlow(emptyList())
 
-    override fun observeBookmarked(): Flow<List<EncouragementEntity>> =
-        MutableStateFlow(_flow.value.filter { it.bookmarked })
-
-    override fun observeBookmarkState(articleUrl: String): Flow<Boolean> =
+    override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> =
         MutableStateFlow(_flow.value.find { it.articleUrl == articleUrl }?.bookmarked ?: false)
 
     override suspend fun toggleBookmark(articleUrl: String) = Unit
 
-    override suspend fun deleteAll() = Unit
+    override suspend fun getEncouragement(
+        headlineTitle: String,
+        headlineSource: String,
+        headlineImageUrl: String?,
+        articleUrl: String?,
+        articleSnippet: String?
+    ): Encouragement = _flow.value.first()
 }
