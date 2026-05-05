@@ -22,7 +22,7 @@ val appModule = module {
     viewModel { AppViewModel(get<FigureRepository>()) }
     viewModel { HomeViewModel(get<HeadlineRepository>(), get<PinnedFigureRepository>(), get<DailyReflectionRepository>(), get<FigureRepository>()) }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get()) }
-    viewModel { FiguresViewModel(get<FigureRepository>(), get<EncouragementDao>()) }
+    viewModel { FiguresViewModel(get<FigureRepository>(), get<EncouragementDao>(), get<PinnedFigureRepository>()) }
     viewModel { (figureId: Long) -> FigureDetailViewModel(figureId, get<FigureRepository>(), get<EncouragementRepository>(), get<PinnedFigureRepository>()) }
     viewModel { YouViewModel() }
     viewModel { HistoryViewModel(get<EncouragementDao>()) }

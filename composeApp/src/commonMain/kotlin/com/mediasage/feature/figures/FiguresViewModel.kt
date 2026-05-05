@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.local.dao.EncouragementDao
 import com.mediasage.domain.repository.FigureRepository
+import com.mediasage.domain.repository.PinnedFigureRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +13,8 @@ import kotlinx.coroutines.launch
 
 class FiguresViewModel(
     private val figureRepository: FigureRepository,
-    private val encouragementDao: EncouragementDao
+    private val encouragementDao: EncouragementDao,
+    private val pinnedFigureRepository: PinnedFigureRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<FiguresContract.UiState>(FiguresContract.UiState.Loading)
@@ -22,15 +24,17 @@ class FiguresViewModel(
         viewModelScope.launch {
             combine(
                 figureRepository.getAllFigures(),
-                encouragementDao.countByFigureName()
-            ) { figures, counts ->
+                encouragementDao.countByFigureName(),
+                pinnedFigureRepository.observePinnedFigureId()
+            ) { figures, counts, pinnedId ->
                 figures.map { figure ->
                     VoiceFigureItem(
                         id = figure.id,
                         name = figure.name,
                         role = figure.role,
                         imageUrl = figure.portraitUrl,
-                        quoteCount = counts[figure.name] ?: 0
+                        quoteCount = counts[figure.name] ?: 0,
+                        isPinned = figure.id == pinnedId
                     )
                 }
             }.collect { items ->

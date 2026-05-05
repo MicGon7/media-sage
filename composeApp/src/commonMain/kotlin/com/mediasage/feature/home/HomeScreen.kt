@@ -187,7 +187,17 @@ private fun BriefingCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Figure name
+        Text(
+            text = card.figureName,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Attribution
         if (card.sources.isNotEmpty()) {

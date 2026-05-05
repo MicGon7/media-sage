@@ -22,8 +22,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -173,6 +176,18 @@ private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
                     .padding(horizontal = 6.dp, vertical = 2.dp)
             )
         }
+
+        if (figure.isPinned) {
+            Icon(
+                imageVector = Icons.Filled.PushPin,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = (-24).dp, y = (-8).dp)
+                    .size(16.dp)
+            )
+        }
     }
 }
 
@@ -211,7 +226,7 @@ private class FiguresStateProvider : PreviewParameterProvider<FiguresContract.Ui
         FiguresContract.UiState.Success(figures = emptyList()),
         FiguresContract.UiState.Success(
             figures = listOf(
-                VoiceFigureItem(id = 1L, name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3),
+                VoiceFigureItem(id = 1L, name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3, isPinned = true),
                 VoiceFigureItem(id = 2L, name = "Dietrich Bonhoeffer", role = "Theologian & Martyr", imageUrl = null, quoteCount = 1),
                 VoiceFigureItem(id = 3L, name = "Martin Luther King Jr.", role = "Pastor & Civil Rights Leader", imageUrl = null, quoteCount = 0),
             )
