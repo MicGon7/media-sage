@@ -4,11 +4,12 @@ object FiguresContract {
 
     sealed interface UiState {
         data object Loading : UiState
-        data class Success(val figures: List<VoiceFigureItem>) : UiState
+        data class Success(val figures: List<VoiceFigureItem>, val isRefreshing: Boolean = false) : UiState
     }
 
     sealed interface Intent {
         data object LoadFigures : Intent
+        data object Refresh : Intent
         data class FigureClicked(val figureId: Long) : Intent
     }
 }

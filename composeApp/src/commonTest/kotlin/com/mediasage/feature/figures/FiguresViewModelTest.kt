@@ -86,6 +86,31 @@ class FiguresViewModelTest {
     }
 
     @Test
+    fun refreshSetsIsRefreshingTrueThenFalse() = runTest(testDispatcher) {
+        val figures = listOf(buildFigure("Augustine", "Bishop of Hippo"))
+        val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
+        val repo = FakeEncouragementRepository(MutableStateFlow(emptyMap()))
+        val vm = FiguresViewModel(figureRepo, repo, FakePinnedFigureRepository())
+
+        vm.onIntent(FiguresContract.Intent.Refresh)
+
+        val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
+        assertEquals(false, state.isRefreshing)
+    }
+
+    @Test
+    fun refreshCallsSyncFigures() = runTest(testDispatcher) {
+        val figures = listOf(buildFigure("Augustine", "Bishop of Hippo"))
+        val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
+        val repo = FakeEncouragementRepository(MutableStateFlow(emptyMap()))
+        val vm = FiguresViewModel(figureRepo, repo, FakePinnedFigureRepository())
+
+        vm.onIntent(FiguresContract.Intent.Refresh)
+
+        assertEquals(1, figureRepo.syncCallCount)
+    }
+
+    @Test
     fun quoteCountUpdatesReactivelyWhenNewEncouragementCached() = runTest(testDispatcher) {
         val figures = listOf(buildFigure("Augustine", "Bishop of Hippo"))
         val countsFlow = MutableStateFlow(emptyMap<String, Int>())
@@ -121,11 +146,14 @@ private class FakePinnedFigureRepository : PinnedFigureRepository {
 private class FakeFigureRepository(
     private val flow: MutableStateFlow<List<Figure>>
 ) : FigureRepository {
+    var syncCallCount = 0
+        private set
+
     override fun observeAllFigures(): Flow<List<Figure>> = flow
     override fun observeFiguresByCategory(category: FigureCategory): Flow<List<Figure>> = flow
     override suspend fun getFigureById(id: Long): Figure? = flow.value.firstOrNull { it.id == id }
     override suspend fun getFigureByName(name: String): Figure? = flow.value.firstOrNull { it.name == name }
-    override suspend fun syncFigures() = Unit
+    override suspend fun syncFigures() { syncCallCount++ }
 }
 
 private class FakeEncouragementRepository(

@@ -30,6 +30,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +60,8 @@ fun FiguresScreen(
         is FiguresContract.UiState.Loading -> LoadingState()
         is FiguresContract.UiState.Success -> VoicesList(
             figures = state.figures,
+            isRefreshing = state.isRefreshing,
+            onRefresh = { onIntent(FiguresContract.Intent.Refresh) },
             onFigureClick = { id ->
                 onIntent(FiguresContract.Intent.FigureClicked(id))
                 onNavigateToFigureDetail(id)
@@ -95,19 +100,39 @@ private fun VoicesHeader() {
 @Composable
 private fun VoicesList(
     figures: List<VoiceFigureItem>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onFigureClick: (Long) -> Unit
 ) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            item { VoicesHeader() }
+    val pullToRefreshState = rememberPullToRefreshState()
 
-            if (figures.isEmpty()) {
-                item { EmptyState() }
-            } else {
-                items(figures, key = { it.id }) { figure ->
-                    VoiceCard(figure = figure, onClick = { onFigureClick(figure.id) })
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pullToRefresh(
+                    isRefreshing = isRefreshing,
+                    state = pullToRefreshState,
+                    onRefresh = onRefresh
+                )
+        ) {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                item { VoicesHeader() }
+
+                if (figures.isEmpty()) {
+                    item { EmptyState() }
+                } else {
+                    items(figures, key = { it.id }) { figure ->
+                        VoiceCard(figure = figure, onClick = { onFigureClick(figure.id) })
+                    }
                 }
             }
+
+            PullToRefreshDefaults.Indicator(
+                state = pullToRefreshState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         }
     }
 }
@@ -229,7 +254,8 @@ private class FiguresStateProvider : PreviewParameterProvider<FiguresContract.Ui
                 VoiceFigureItem(id = 1L, name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3, isPinned = true),
                 VoiceFigureItem(id = 2L, name = "Dietrich Bonhoeffer", role = "Theologian & Martyr", imageUrl = null, quoteCount = 1),
                 VoiceFigureItem(id = 3L, name = "Martin Luther King Jr.", role = "Pastor & Civil Rights Leader", imageUrl = null, quoteCount = 0),
-            )
+            ),
+            isRefreshing = false
         )
     )
 }
