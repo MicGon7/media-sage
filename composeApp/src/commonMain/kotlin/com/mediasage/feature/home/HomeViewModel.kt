@@ -58,7 +58,7 @@ class HomeViewModel(
 
     private fun collectHeadlines() {
         viewModelScope.launch {
-            headlineRepository.getHeadlines()
+            headlineRepository.observeHeadlines()
                 .collect { headlines ->
                     val current = _state.value
                     val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
@@ -114,7 +114,7 @@ class HomeViewModel(
         viewModelScope.launch {
             combine(
                 pinnedFigureRepository.observePinnedFigureId(),
-                figureRepository.getAllFigures()
+                figureRepository.observeAllFigures()
             ) { pinnedId, figures -> Pair(pinnedId, figures) }
                 .distinctUntilChanged()
                 .collect { (figureId, figures) ->
@@ -132,7 +132,7 @@ class HomeViewModel(
                     val figure = figureRepository.getFigureById(figureId) ?: return@collect
                     val tone = currentTone()
                     // Read from Room directly — available even before network refresh completes
-                    val headlines = headlineRepository.getHeadlines().first().map { it.title }
+                    val headlines = headlineRepository.observeHeadlines().first().map { it.title }
                     val reflection = dailyReflectionRepository.getOrFetch(
                         figureId = figure.serverId.takeIf { it > 0 } ?: figureId,
                         figureName = figure.name,

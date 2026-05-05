@@ -12,8 +12,8 @@ class MatchRepositoryImpl(
     // TODO: Add remote matching API service when MS-14 is complete
 ) : MatchRepository {
 
-    override fun getAllMatches(): Flow<List<Match>> =
-        matchDao.getAll().map { entities -> entities.map { it.toDomain() } }
+    override fun observeAllMatches(): Flow<List<Match>> =
+        matchDao.observeAll().map { entities -> entities.map { it.toDomain() } }
 
     override suspend fun getMatchForHeadline(headlineId: Long): Match? =
         matchDao.getByHeadline(headlineId)?.toDomain()

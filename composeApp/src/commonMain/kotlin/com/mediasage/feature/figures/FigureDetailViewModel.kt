@@ -39,7 +39,7 @@ class FigureDetailViewModel(
     private fun load() {
         viewModelScope.launch {
             val figure = figureRepository.getFigureById(figureId) ?: return@launch
-            encouragementRepository.getByFigureId(figure.id).collect { encouragements ->
+            encouragementRepository.observeByFigureId(figure.id).collect { encouragements ->
                 val current = _state.value
                 val isPinned = if (current is FigureDetailContract.UiState.Success) current.isPinned else false
                 _state.value = FigureDetailContract.UiState.Success(

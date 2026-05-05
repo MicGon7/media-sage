@@ -2,7 +2,7 @@ package com.mediasage.feature.figures
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mediasage.data.local.dao.EncouragementDao
+import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.PinnedFigureRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 class FiguresViewModel(
     private val figureRepository: FigureRepository,
-    private val encouragementDao: EncouragementDao,
+    private val encouragementRepository: EncouragementRepository,
     private val pinnedFigureRepository: PinnedFigureRepository
 ) : ViewModel() {
 
@@ -23,8 +23,8 @@ class FiguresViewModel(
     init {
         viewModelScope.launch {
             combine(
-                figureRepository.getAllFigures(),
-                encouragementDao.countByFigureName(),
+                figureRepository.observeAllFigures(),
+                encouragementRepository.observeCountByFigureName(),
                 pinnedFigureRepository.observePinnedFigureId()
             ) { figures, counts, pinnedId ->
                 figures.map { figure ->

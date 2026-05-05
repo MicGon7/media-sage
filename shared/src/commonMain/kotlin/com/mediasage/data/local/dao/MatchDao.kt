@@ -16,7 +16,7 @@ interface MatchDao {
     suspend fun getByHeadline(headlineId: Long): MatchEntity?
 
     @Query("SELECT * FROM matches ORDER BY createdAt DESC")
-    fun getAll(): Flow<List<MatchEntity>>
+    fun observeAll(): Flow<List<MatchEntity>>
 
     @Query("DELETE FROM matches WHERE id = :id")
     suspend fun deleteById(id: Long)

@@ -25,17 +25,17 @@ interface EncouragementDao {
         ORDER BY figureName ASC
         """
     )
-    fun getDistinctFigures(): Flow<List<VoiceFigureProjection>>
+    fun observeDistinctFigures(): Flow<List<VoiceFigureProjection>>
 
     @Query("SELECT * FROM encouragements WHERE figureName = :figureName")
-    fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>>
+    fun observeByFigureName(figureName: String): Flow<List<EncouragementEntity>>
 
     @Query("SELECT * FROM encouragements WHERE figureId = :figureId")
-    fun getByFigureId(figureId: Long): Flow<List<EncouragementEntity>>
+    fun observeByFigureId(figureId: Long): Flow<List<EncouragementEntity>>
 
     @MapInfo(keyColumn = "figureName", valueColumn = "count")
     @Query("SELECT figureName, COUNT(*) AS count FROM encouragements GROUP BY figureName")
-    fun countByFigureName(): Flow<Map<String, Int>>
+    fun observeCountByFigureName(): Flow<Map<String, Int>>
 
     @Query(
         """
@@ -47,10 +47,10 @@ interface EncouragementDao {
     suspend fun getRecentFigureNames(limit: Int): List<String>
 
     @Query("SELECT * FROM encouragements ORDER BY cachedAt DESC")
-    fun getAll(): Flow<List<EncouragementEntity>>
+    fun observeAll(): Flow<List<EncouragementEntity>>
 
     @Query("SELECT * FROM encouragements WHERE bookmarked = 1 ORDER BY cachedAt DESC")
-    fun getBookmarked(): Flow<List<EncouragementEntity>>
+    fun observeBookmarked(): Flow<List<EncouragementEntity>>
 
     @Query("SELECT bookmarked FROM encouragements WHERE articleUrl = :articleUrl")
     fun observeBookmarkState(articleUrl: String): Flow<Boolean>

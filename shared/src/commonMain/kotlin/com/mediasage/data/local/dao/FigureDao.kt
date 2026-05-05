@@ -16,13 +16,13 @@ interface FigureDao {
     suspend fun insertAll(figures: List<FigureEntity>)
 
     @Query("SELECT * FROM figures ORDER BY name ASC")
-    fun getAll(): Flow<List<FigureEntity>>
+    fun observeAll(): Flow<List<FigureEntity>>
 
     @Query("SELECT * FROM figures WHERE id = :id")
     suspend fun getById(id: Long): FigureEntity?
 
     @Query("SELECT * FROM figures WHERE category = :category ORDER BY name ASC")
-    fun getByCategory(category: String): Flow<List<FigureEntity>>
+    fun observeByCategory(category: String): Flow<List<FigureEntity>>
 
     @Query("SELECT * FROM figures WHERE name = :name LIMIT 1")
     suspend fun getByName(name: String): FigureEntity?

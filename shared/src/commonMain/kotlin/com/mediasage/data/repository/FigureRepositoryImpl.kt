@@ -18,11 +18,11 @@ class FigureRepositoryImpl(
     private val api: MediaSageApi
 ) : FigureRepository {
 
-    override fun getAllFigures(): Flow<List<Figure>> =
-        figureDao.getAll().map { entities -> entities.map { it.toDomain() } }
+    override fun observeAllFigures(): Flow<List<Figure>> =
+        figureDao.observeAll().map { entities -> entities.map { it.toDomain() } }
 
-    override fun getFiguresByCategory(category: FigureCategory): Flow<List<Figure>> =
-        figureDao.getByCategory(category.name.lowercase()).map { entities ->
+    override fun observeFiguresByCategory(category: FigureCategory): Flow<List<Figure>> =
+        figureDao.observeByCategory(category.name.lowercase()).map { entities ->
             entities.map { it.toDomain() }
         }
 

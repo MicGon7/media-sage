@@ -12,7 +12,13 @@ interface EncouragementRepository {
         articleSnippet: String? = null
     ): Encouragement
 
-    fun getByFigureId(figureId: Long): Flow<List<Encouragement>>
+    fun observeAll(): Flow<List<Encouragement>>
+
+    fun observeBookmarked(): Flow<List<Encouragement>>
+
+    fun observeCountByFigureName(): Flow<Map<String, Int>>
+
+    fun observeByFigureId(figureId: Long): Flow<List<Encouragement>>
 
     fun observeIsBookmarked(articleUrl: String): Flow<Boolean>
 

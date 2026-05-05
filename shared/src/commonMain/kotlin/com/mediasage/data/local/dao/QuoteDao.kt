@@ -16,13 +16,13 @@ interface QuoteDao {
     suspend fun insertAll(quotes: List<QuoteEntity>)
 
     @Query("SELECT * FROM quotes WHERE figureId = :figureId")
-    fun getByFigure(figureId: Long): Flow<List<QuoteEntity>>
+    fun observeByFigure(figureId: Long): Flow<List<QuoteEntity>>
 
     @Query("SELECT * FROM quotes WHERE id = :id")
     suspend fun getById(id: Long): QuoteEntity?
 
     @Query("SELECT * FROM quotes")
-    fun getAll(): Flow<List<QuoteEntity>>
+    fun observeAll(): Flow<List<QuoteEntity>>
 
     @Query("DELETE FROM quotes WHERE id = :id")
     suspend fun deleteById(id: Long)

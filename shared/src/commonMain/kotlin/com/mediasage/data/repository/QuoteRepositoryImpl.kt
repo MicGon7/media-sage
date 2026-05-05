@@ -11,11 +11,11 @@ class QuoteRepositoryImpl(
     private val quoteDao: QuoteDao
 ) : QuoteRepository {
 
-    override fun getAllQuotes(): Flow<List<Quote>> =
-        quoteDao.getAll().map { entities -> entities.map { it.toDomain() } }
+    override fun observeAllQuotes(): Flow<List<Quote>> =
+        quoteDao.observeAll().map { entities -> entities.map { it.toDomain() } }
 
-    override fun getQuotesByFigure(figureId: Long): Flow<List<Quote>> =
-        quoteDao.getByFigure(figureId).map { entities -> entities.map { it.toDomain() } }
+    override fun observeQuotesByFigure(figureId: Long): Flow<List<Quote>> =
+        quoteDao.observeByFigure(figureId).map { entities -> entities.map { it.toDomain() } }
 
     override suspend fun getQuoteById(id: Long): Quote? =
         quoteDao.getById(id)?.toDomain()

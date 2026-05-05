@@ -143,7 +143,7 @@ class EncouragementRepositoryTest {
         val api = FakeMediaSageApi(result = sampleResult)
         val repo = EncouragementRepositoryImpl(api, dao, FakeFigureDao())
 
-        val results = repo.getByFigureId(7L).first()
+        val results = repo.observeByFigureId(7L).first()
 
         assertEquals(1, results.size)
         assertEquals("Test quote", results.first().quoteText)
@@ -204,15 +204,15 @@ private class FakeEncouragementDao(preloaded: List<EncouragementEntity> = emptyL
 
     override suspend fun getByArticleUrl(articleUrl: String): EncouragementEntity? = store[articleUrl]
 
-    override fun getDistinctFigures(): Flow<List<VoiceFigureProjection>> = emptyFlow()
+    override fun observeDistinctFigures(): Flow<List<VoiceFigureProjection>> = emptyFlow()
 
-    override fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>> =
+    override fun observeByFigureName(figureName: String): Flow<List<EncouragementEntity>> =
         flowOf(store.values.filter { it.figureName == figureName })
 
-    override fun getByFigureId(figureId: Long): Flow<List<EncouragementEntity>> =
+    override fun observeByFigureId(figureId: Long): Flow<List<EncouragementEntity>> =
         flowOf(store.values.filter { it.figureId == figureId })
 
-    override fun countByFigureName(): Flow<Map<String, Int>> =
+    override fun observeCountByFigureName(): Flow<Map<String, Int>> =
         flowOf(store.values.groupBy { it.figureName }.mapValues { (_, v) -> v.size })
 
     override suspend fun getRecentFigureNames(limit: Int): List<String> =
@@ -222,9 +222,9 @@ private class FakeEncouragementDao(preloaded: List<EncouragementEntity> = emptyL
             .distinct()
             .take(limit)
 
-    override fun getAll(): Flow<List<EncouragementEntity>> = flowOf(store.values.toList())
+    override fun observeAll(): Flow<List<EncouragementEntity>> = flowOf(store.values.toList())
 
-    override fun getBookmarked(): Flow<List<EncouragementEntity>> =
+    override fun observeBookmarked(): Flow<List<EncouragementEntity>> =
         flowOf(store.values.filter { it.bookmarked })
 
     override fun observeBookmarkState(articleUrl: String): Flow<Boolean> =
@@ -249,11 +249,11 @@ private class FakeFigureDao(figures: List<FigureEntity> = emptyList()) : FigureD
         figures.forEach { store[it.name] = it }
     }
 
-    override fun getAll(): Flow<List<FigureEntity>> = flowOf(store.values.toList())
+    override fun observeAll(): Flow<List<FigureEntity>> = flowOf(store.values.toList())
 
     override suspend fun getById(id: Long): FigureEntity? = store.values.find { it.id == id }
 
-    override fun getByCategory(category: String): Flow<List<FigureEntity>> =
+    override fun observeByCategory(category: String): Flow<List<FigureEntity>> =
         flowOf(store.values.filter { it.category == category })
 
     override suspend fun getByName(name: String): FigureEntity? = store[name]
