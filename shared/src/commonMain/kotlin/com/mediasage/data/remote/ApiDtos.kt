@@ -88,6 +88,27 @@ data class FigureDto(
     val updatedAt: Long = 0
 )
 
+// ---- Daily Reflection endpoint DTOs ----
+
+@Serializable
+data class DailyReflectionRequestDto(
+    @SerialName("figureId")
+    val figureId: Long,
+    @SerialName("figureName")
+    val figureName: String,
+    val headlines: List<String> = emptyList(),
+    val tone: String = "morning"
+)
+
+@Serializable
+data class DailyReflectionResponseDto(
+    val scriptureReference: String,
+    val scriptureText: String,
+    val reflection: String,
+    val sources: List<String>,
+    val tone: String
+)
+
 // ---- Scripture endpoint DTOs ----
 
 @Serializable

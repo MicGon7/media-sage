@@ -1,5 +1,7 @@
 package com.mediasage.di
 
+import com.mediasage.data.remote.DailyReflectionRequestDto
+import com.mediasage.data.remote.DailyReflectionResponseDto
 import com.mediasage.data.remote.EncourageRequestDto
 import com.mediasage.data.remote.EncourageResultDto
 import com.mediasage.data.remote.FigureDto
@@ -35,4 +37,13 @@ class MockMediaSageApi : MediaSageApi {
 
     override suspend fun getPassage(passageId: String): ScripturePassageDto =
         ScripturePassageDto(id = passageId)
+
+    override suspend fun getDailyReflection(request: DailyReflectionRequestDto): DailyReflectionResponseDto =
+        DailyReflectionResponseDto(
+            scriptureReference = "Psalm 46:10",
+            scriptureText = "Be still, and know that I am God.",
+            reflection = "In the noise of this world, the call to stillness is a revolutionary act of faith.",
+            sources = emptyList(),
+            tone = request.tone
+        )
 }

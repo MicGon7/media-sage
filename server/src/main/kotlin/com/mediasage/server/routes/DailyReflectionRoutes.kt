@@ -1,0 +1,55 @@
+package com.mediasage.server.routes
+
+import com.mediasage.server.service.DailyReflectionResult
+import com.mediasage.server.service.DailyReflectionService
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.post
+import kotlinx.serialization.Serializable
+import org.koin.ktor.ext.inject
+
+fun Route.dailyReflectionRoutes() {
+    val service: DailyReflectionService by inject()
+
+    post("/api/analysis/daily-reflection") {
+        val request = call.receive<DailyReflectionRequest>()
+        if (request.figureId <= 0 || request.figureName.isBlank()) {
+            call.respond(HttpStatusCode.BadRequest, mapOf("error" to "figureId and figureName are required"))
+            return@post
+        }
+        val result = service.generate(
+            figureId = request.figureId,
+            figureName = request.figureName,
+            headlines = request.headlines,
+            tone = request.tone.ifBlank { "morning" }
+        )
+        call.respond(HttpStatusCode.OK, result.toResponse())
+    }
+}
+
+@Serializable
+data class DailyReflectionRequest(
+    val figureId: Long,
+    val figureName: String,
+    val headlines: List<String> = emptyList(),
+    val tone: String = "morning"
+)
+
+@Serializable
+data class DailyReflectionResponse(
+    val scriptureReference: String,
+    val scriptureText: String,
+    val reflection: String,
+    val sources: List<String>,
+    val tone: String
+)
+
+private fun DailyReflectionResult.toResponse() = DailyReflectionResponse(
+    scriptureReference = scriptureReference,
+    scriptureText = scriptureText,
+    reflection = reflection,
+    sources = sources,
+    tone = tone
+)

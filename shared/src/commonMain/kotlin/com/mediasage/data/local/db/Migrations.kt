@@ -18,3 +18,18 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
         connection.execSQL("ALTER TABLE encouragements ADD COLUMN figureId INTEGER")
     }
 }
+
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS daily_reflection " +
+                "(id TEXT NOT NULL, figureId INTEGER NOT NULL, epochDay INTEGER NOT NULL, " +
+                "tone TEXT NOT NULL, scriptureReference TEXT NOT NULL, scriptureText TEXT NOT NULL, " +
+                "reflection TEXT NOT NULL, sources TEXT NOT NULL, PRIMARY KEY(id))"
+        )
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS pinned_figure " +
+                "(id INTEGER NOT NULL, figureId INTEGER, PRIMARY KEY(id))"
+        )
+    }
+}

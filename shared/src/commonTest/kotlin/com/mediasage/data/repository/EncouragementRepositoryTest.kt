@@ -5,6 +5,8 @@ import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.VoiceFigureProjection
 import com.mediasage.data.local.dao.EncouragementDao
 import com.mediasage.data.local.dao.FigureDao
+import com.mediasage.data.remote.DailyReflectionRequestDto
+import com.mediasage.data.remote.DailyReflectionResponseDto
 import com.mediasage.data.remote.EncourageRequestDto
 import com.mediasage.data.remote.EncourageResultDto
 import com.mediasage.data.remote.FigureDto
@@ -282,4 +284,6 @@ private class FakeMediaSageApi(private val result: EncourageResultDto) : MediaSa
     override suspend fun searchScripture(query: String, limit: Int): List<ScriptureVerseDto> = emptyList()
     override suspend fun getPassage(passageId: String): ScripturePassageDto =
         ScripturePassageDto(id = "", reference = "", content = "")
+    override suspend fun getDailyReflection(request: DailyReflectionRequestDto): DailyReflectionResponseDto =
+        DailyReflectionResponseDto(scriptureReference = "", scriptureText = "", reflection = "", sources = emptyList(), tone = "morning")
 }

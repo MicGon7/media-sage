@@ -57,7 +57,8 @@ fun MediaSageScaffold(
                     HomeScreen(
                         state = state,
                         onIntent = vm::onIntent,
-                        onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) }
+                        onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) },
+                        onNavigateToFigureDetail = { id -> appState.navigateToFigureDetail(id) }
                     )
                 }
                 is Route.HeadlineDetail -> NavEntry(route) {
@@ -89,6 +90,7 @@ fun MediaSageScaffold(
                     val state by vm.state.collectAsState()
                     FigureDetailScreen(
                         state = state,
+                        onIntent = vm::onIntent,
                         onNavigateBack = { appState.navigateBack() }
                     )
                 }
