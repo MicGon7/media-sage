@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -45,10 +46,12 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mediasage.ui.FigurePlaceholder
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.figure_detail_quotes_button
 import mediasage.composeapp.generated.resources.search_voices_hint
 import mediasage.composeapp.generated.resources.title_voices
 import mediasage.composeapp.generated.resources.voices_empty_state
 import mediasage.composeapp.generated.resources.voices_subtitle
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -76,7 +79,6 @@ private fun VoicesHeader() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Text(
             text = stringResource(Res.string.title_voices),
@@ -105,7 +107,7 @@ private fun SearchBar(query: String, onQueryChanged: (String) -> Unit) {
         onValueChange = onQueryChanged,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(vertical = 16.dp),
         label = { Text(stringResource(Res.string.search_voices_hint)) },
         singleLine = true,
         shape = MaterialTheme.shapes.medium,
@@ -127,7 +129,10 @@ private fun VoicesList(
     onFigureClick: (Long) -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp)
+        ) {
             item { VoicesHeader() }
             item { SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged) }
 
@@ -148,7 +153,7 @@ private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .padding(vertical = 6.dp)
                 .clickable(onClick = onClick),
             shape = MaterialTheme.shapes.medium,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -192,13 +197,13 @@ private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
 
         if (figure.quoteCount > 0) {
             Text(
-                text = "${figure.quoteCount} Qs",
+                text = pluralStringResource(Res.plurals.figure_detail_quotes_button, figure.quoteCount, figure.quoteCount),
                 color = MaterialTheme.colorScheme.onPrimary,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = (-20).dp, y = 2.dp)
+                    .offset(x = (-8).dp, y = 2.dp)
                     .background(
                         color = MaterialTheme.colorScheme.primary,
                         shape = RoundedCornerShape(8.dp)
@@ -214,8 +219,8 @@ private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .offset(x = 20.dp, y = 2.dp)
-                    .size(16.dp)
+                    .offset(x = 8.dp, y = 2.dp)
+                    .size(20.dp)
             )
         }
     }
