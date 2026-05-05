@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -110,9 +111,14 @@ class HomeViewModel(
 
     private fun loadBriefingCard() {
         viewModelScope.launch {
-            pinnedFigureRepository.observePinnedFigureId().distinctUntilChanged().collect { figureId ->
+            combine(
+                pinnedFigureRepository.observePinnedFigureId(),
+                figureRepository.getAllFigures()
+            ) { pinnedId, figures -> Pair(pinnedId, figures) }
+                .distinctUntilChanged()
+                .collect { (figureId, figures) ->
                 if (figureId == null) {
-                    val firstFigure = figureRepository.getAllFigures().first().firstOrNull()
+                    val firstFigure = figures.firstOrNull()
                     if (firstFigure != null) {
                         pinnedFigureRepository.setPinnedFigureId(firstFigure.id)
                     } else {
