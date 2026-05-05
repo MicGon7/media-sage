@@ -1,4 +1,4 @@
-package com.mediasage.server.service
+package com.mediasage.scripts.service
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header

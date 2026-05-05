@@ -1,7 +1,6 @@
 package com.mediasage.server
 
 import com.mediasage.server.db.ServerDatabase
-import com.mediasage.server.di.JiraConfig
 import com.mediasage.server.di.serverModule
 import com.mediasage.server.plugins.*
 import com.mediasage.server.routes.*
@@ -19,16 +18,10 @@ fun Application.module() {
     val claudeApiKey = environment.config.propertyOrNull("app.claude.apiKey")?.getString() ?: ""
     val newsApiKey = environment.config.propertyOrNull("app.news.apiKey")?.getString() ?: ""
     val scriptureApiKey = environment.config.propertyOrNull("app.scripture.apiKey")?.getString() ?: ""
-    val agentRepoPath = environment.config.propertyOrNull("app.agent.repoPath")?.getString() ?: ""
     val baseUrl = environment.config.propertyOrNull("app.baseUrl")?.getString() ?: "http://localhost:8080"
-    val jiraConfig = JiraConfig(
-        email = environment.config.propertyOrNull("app.jira.email")?.getString() ?: "",
-        apiToken = environment.config.propertyOrNull("app.jira.apiToken")?.getString() ?: "",
-        cloudId = environment.config.propertyOrNull("app.jira.cloudId")?.getString() ?: ""
-    )
 
     install(Koin) {
-        modules(serverModule(claudeApiKey, newsApiKey, scriptureApiKey, agentRepoPath, jiraConfig, this@module, baseUrl))
+        modules(serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl))
     }
 
     configureContentNegotiation()
@@ -52,8 +45,6 @@ private fun Application.initDatabase() {
 }
 
 fun Application.configureRouting() {
-    val githubWebhookSecret = environment.config.propertyOrNull("app.github.webhookSecret")?.getString() ?: ""
-
     routing {
         healthRoutes()
         newsRoutes()
@@ -61,7 +52,5 @@ fun Application.configureRouting() {
         dailyReflectionRoutes()
         scriptureRoutes()
         figureRoutes()
-        webhookRoutes()
-        githubWebhookRoutes(githubWebhookSecret)
     }
 }

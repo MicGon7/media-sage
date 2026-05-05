@@ -1,10 +1,10 @@
-package com.mediasage.server
+package com.mediasage.agent
 
-import com.mediasage.server.plugins.configureContentNegotiation
-import com.mediasage.server.plugins.configureStatusPages
-import com.mediasage.server.routes.githubWebhookRoutes
-import com.mediasage.server.service.AgentLaunchService
-import com.mediasage.server.service.JiraLabelChecker
+import com.mediasage.agent.plugins.configureContentNegotiation
+import com.mediasage.agent.plugins.configureStatusPages
+import com.mediasage.agent.routes.githubWebhookRoutes
+import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.JiraLabelChecker
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.application.*

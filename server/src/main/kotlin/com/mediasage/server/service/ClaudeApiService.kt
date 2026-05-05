@@ -94,16 +94,6 @@ class ClaudeApiService(
         )
     }
 
-    @Deprecated("Use encourageHeadline instead — TODO MS-46")
-    suspend fun matchQuoteToHeadline(
-        headlineTitle: String,
-        candidateQuotes: List<QuoteCandidate>
-    ): MatchResult {
-        val userMessage = buildMatchMessage(headlineTitle, candidateQuotes)
-        val response = callClaude(MATCH_SYSTEM_PROMPT, userMessage)
-        return responseJson.decodeFromString<MatchResult>(extractJson(response))
-    }
-
     private fun sampleCandidates(
         all: List<DbQuoteCandidate>,
         excludedFigures: Set<String>
@@ -192,24 +182,6 @@ class ClaudeApiService(
         }
     }
 
-    private fun buildMatchMessage(
-        headlineTitle: String,
-        candidateQuotes: List<QuoteCandidate>
-    ): String = buildString {
-        appendLine("## Headline")
-        appendLine(headlineTitle)
-        appendLine()
-        appendLine("## Candidate Quotes")
-        candidateQuotes.forEach { quote ->
-            appendLine("- ID: ${quote.id}")
-            appendLine("  Figure: ${quote.figureName}")
-            appendLine("  Text: \"${quote.text}\"")
-            appendLine("  Source: ${quote.source}")
-            appendLine("  Themes: ${quote.themes.joinToString(", ")}")
-            appendLine()
-        }
-    }
-
     private fun extractJson(text: String): String {
         val jsonBlockRegex = Regex("```json?\\s*\\n?(.*?)\\n?```", RegexOption.DOT_MATCHES_ALL)
         val match = jsonBlockRegex.find(text)
@@ -225,14 +197,6 @@ data class DailyReflectionRaw(
     @SerialName("scriptureText") val scriptureText: String,
     val reflection: String,
     val sources: List<String>
-)
-
-data class QuoteCandidate(
-    val id: Long,
-    val figureName: String,
-    val text: String,
-    val source: String,
-    val themes: List<String>
 )
 
 @Serializable
@@ -269,14 +233,6 @@ enum class EncourageTone {
     EXHORTATION,
     CORRECTION
 }
-
-@Serializable
-data class MatchResult(
-    val selectedQuoteId: Long,
-    val confidence: Float,
-    val explanation: String,
-    val connectionThemes: List<String>
-)
 
 class ClaudeApiException(
     val statusCode: Int,
@@ -322,26 +278,3 @@ Respond ONLY with valid JSON in this exact format:
 }
 """.trimIndent()
 
-@Deprecated("Use ENCOURAGE_SYSTEM_PROMPT instead — TODO MS-46")
-private val MATCH_SYSTEM_PROMPT = """
-You are a theological advisor for the Media Sage app. Your role is to match news headlines with meaningful quotes from Christian theologians, mystics, and biblical figures.
-
-You handle both troubling AND positive headlines:
-- For troubling news (conflict, disaster, injustice): match with quotes offering comfort, hope, perseverance, or divine sovereignty
-- For positive news (peace, breakthroughs, reconciliation): match with quotes celebrating peace, gratitude, God's faithfulness, or redemption
-
-Guidelines:
-- Acknowledge the reality of the news — never trivialize suffering, and genuinely celebrate good news
-- Select the quote that most meaningfully speaks to the themes in the headline
-- Explain the connection between the headline and the quote in 2-3 sentences
-- Identify 2-4 connecting themes (e.g., "hope in suffering", "peacemaking", "divine sovereignty", "gratitude")
-- Rate your confidence from 0.0 to 1.0 based on how strong the thematic connection is
-
-Respond ONLY with valid JSON in this exact format:
-{
-  "selectedQuoteId": <id of the best matching quote>,
-  "confidence": <0.0 to 1.0>,
-  "explanation": "<2-3 sentence explanation>",
-  "connectionThemes": ["theme1", "theme2"]
-}
-""".trimIndent()

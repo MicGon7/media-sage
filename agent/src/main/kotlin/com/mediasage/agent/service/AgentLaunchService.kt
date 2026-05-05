@@ -1,4 +1,4 @@
-package com.mediasage.server.service
+package com.mediasage.agent.service
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,10 +32,6 @@ class AgentLaunchService(
     private val log = Logger.getLogger(AgentLaunchService::class.java.name)
     private val activeKeys: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
-    /**
-     * Launches an autonomous agent for [ticketKey].
-     * Returns true if the agent was spawned, false if one is already running for this ticket.
-     */
     fun launch(ticketKey: String): Boolean =
         spawnAgent(ticketKey, BOOTSTRAP_PROMPT.format(ticketKey))
 
