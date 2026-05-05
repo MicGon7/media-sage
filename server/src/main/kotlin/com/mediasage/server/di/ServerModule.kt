@@ -2,12 +2,9 @@ package com.mediasage.server.di
 
 import com.mediasage.server.repository.FigureRepository
 import com.mediasage.server.repository.QuoteRepository
-import com.mediasage.server.service.DailyReflectionService
-import com.mediasage.server.service.AgentLaunchService
 import com.mediasage.server.service.ArticleScraperService
 import com.mediasage.server.service.ClaudeApiService
-import com.mediasage.server.service.JiraApiService
-import com.mediasage.server.service.JiraLabelChecker
+import com.mediasage.server.service.DailyReflectionService
 import com.mediasage.server.service.NewsApiService
 import com.mediasage.server.service.ScriptureApiService
 import io.ktor.client.*
@@ -15,7 +12,6 @@ import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
 
@@ -23,9 +19,6 @@ fun serverModule(
     claudeApiKey: String,
     newsApiKey: String,
     scriptureApiKey: String,
-    agentRepoPath: String,
-    jiraConfig: JiraConfig,
-    scope: CoroutineScope,
     baseUrl: String
 ) = module {
     single {
@@ -48,8 +41,6 @@ fun serverModule(
     single { NewsApiService(get(), newsApiKey) }
     single { ScriptureApiService(get(), scriptureApiKey) }
     single { ArticleScraperService() }
-    single { AgentLaunchService(agentRepoPath, scope) }
-    single<JiraLabelChecker> { JiraApiService(get(), jiraConfig.cloudId, jiraConfig.email, jiraConfig.apiToken) }
     single { FigureRepository(baseUrl) }
     single { QuoteRepository() }
     single { DailyReflectionService(get(), get()) }

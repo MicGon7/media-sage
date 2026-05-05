@@ -31,3 +31,5 @@ dependencyResolutionManagement {
 include(":composeApp")
 include(":shared")
 include(":server")
+include(":agent")
+include(":scripts")

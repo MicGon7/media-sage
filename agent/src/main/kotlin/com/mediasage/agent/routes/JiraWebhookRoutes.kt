@@ -1,6 +1,6 @@
-package com.mediasage.server.routes
+package com.mediasage.agent.routes
 
-import com.mediasage.server.service.AgentLaunchService
+import com.mediasage.agent.service.AgentLaunchService
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*

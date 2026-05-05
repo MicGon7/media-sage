@@ -1,9 +1,9 @@
-package com.mediasage.server.scripts
+package com.mediasage.scripts
 
-import com.mediasage.server.db.FigureRow
-import com.mediasage.server.db.ServerDatabase
-import com.mediasage.server.service.ImageGenerationException
-import com.mediasage.server.service.ImageGenerationService
+import com.mediasage.scripts.service.FigureRow
+import com.mediasage.scripts.service.ImageGenerationException
+import com.mediasage.scripts.service.ImageGenerationService
+import com.mediasage.scripts.service.ScriptsDatabase
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
@@ -38,8 +38,8 @@ fun main(args: Array<String>) {
     val apiKey = System.getenv("OPENAI_API_KEY") ?: error("OPENAI_API_KEY env var is not set.")
     val outputDir = File("generated-images").also { it.mkdirs() }
     val httpClient = buildHttpClient()
-    ServerDatabase.init(dbPath)
-    val figures = ServerDatabase.fetchAllFigures()
+    ScriptsDatabase.init(dbPath)
+    val figures = ScriptsDatabase.fetchAllFigures()
         .filter { it.id >= startFrom }
         .filter { force || it.portraitUrl == null }
         .take(limit)
@@ -131,7 +131,7 @@ private suspend fun generateOne(
 private fun saveImage(figure: FigureRow, imageBytes: ByteArray, outputDir: File) {
     val file = File(outputDir, "${figure.id}.webp")
     file.writeBytes(imageBytes)
-    ServerDatabase.updateFigurePortraitUrl(figure.id, "/images/figures/${figure.id}.webp")
+    ScriptsDatabase.updateFigurePortraitUrl(figure.id, "/images/figures/${figure.id}.webp")
     println("✓  (${file.length() / 1024}KB)")
 }
 

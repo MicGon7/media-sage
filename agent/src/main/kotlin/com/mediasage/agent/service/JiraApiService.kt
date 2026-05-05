@@ -1,4 +1,4 @@
-package com.mediasage.server.service
+package com.mediasage.agent.service
 
 import io.ktor.client.*
 import io.ktor.client.call.*

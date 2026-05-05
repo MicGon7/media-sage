@@ -6,19 +6,23 @@ Media Sage (public name: **The Media Sage**) is a Kotlin Multiplatform (KMP) app
 
 ## Architecture
 
-Three-module Gradle project (`settings.gradle.kts`):
+Five-module Gradle project (`settings.gradle.kts`):
 
 ```
 :composeApp   — Compose Multiplatform UI (Android + iOS)
 :shared       — KMP library (networking, database, domain models)
-:server       — Ktor backend (API orchestration, external service calls)
+:server       — Ktor app API, deployed to Railway (port 8080)
+:agent        — Ktor orchestration server, runs locally / future container (port 8081)
+:scripts      — One-off batch jobs, run manually (no server, no Koin wiring)
 ```
 
 ### Module Responsibilities
 
 - **composeApp**: UI layer only. Depends on `:shared`. Uses Compose Material3, Koin for DI, Lifecycle ViewModel, and Nav3 for navigation.
 - **shared**: Business logic, data layer, networking. Room for persistence, Ktor Client for HTTP, kotlinx-serialization for JSON. Platform engines: OkHttp (Android), Darwin (iOS).
-- **server**: JVM-only Ktor server (Netty). Calls external APIs (Claude, News, Scripture). Uses Koin for DI, CORS, StatusPages, ContentNegotiation, CallLogging.
+- **server**: JVM-only Ktor server (Netty). Calls external APIs (Claude, News, Scripture). Uses Koin for DI, CORS, StatusPages, ContentNegotiation, CallLogging. Deployed to Railway.
+- **agent**: JVM-only Ktor server (Netty, port 8081). Receives Jira and GitHub webhooks, spawns Claude Code worker processes. No database deps. Runs locally; future goal is a containerized deployment.
+- **scripts**: JVM-only standalone scripts. No Ktor server, no Koin. Uses Exposed + SQLite/Postgres for DB access. Run manually via Gradle tasks (e.g., `generateImages`).
 
 ### Data Flow
 
@@ -60,7 +64,8 @@ Key conventions:
 ### Dependency Injection
 
 Koin is used across all modules. Define modules per feature, not per layer.
-- **Server**: `serverModule(claudeApiKey, newsApiKey, scriptureApiKey)` — HttpClient, API services
+- **Server**: `serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl)` — HttpClient, API services
+- **Agent**: `agentModule(config, scope)` — HttpClient, AgentLaunchService, JiraApiService
 - **Shared**: `sharedModule(serverBaseUrl)` — HttpClient, MediaSageApi, repositories
 
 ## Tech Stack & Versions
@@ -113,9 +118,23 @@ shared/src/commonMain/kotlin/com/mediasage/
 server/src/main/kotlin/com/mediasage/server/
 ├── Application.kt       — Entry point, Koin setup
 ├── plugins/             — ContentNegotiation, CORS, CallLogging, StatusPages
-├── routes/              — Health, News, Analysis, Scripture
+├── routes/              — Health, News, Encourage, Scripture, Figures, DailyReflection
 ├── service/             — ClaudeApiService, NewsApiService, ScriptureApiService
 └── di/                  — ServerModule
+
+agent/src/main/kotlin/com/mediasage/agent/
+├── Application.kt       — Entry point, Koin setup (port 8081)
+├── di/                  — AgentConfig, AgentModule
+├── plugins/             — ContentNegotiation, CallLogging, StatusPages
+├── routes/              — JiraWebhookRoutes, GitHubWebhookRoutes
+├── service/             — AgentLaunchService, JiraApiService (JiraLabelChecker)
+└── tools/               — ToolDefinitions (Anthropic orchestrator-worker pattern)
+
+scripts/src/main/kotlin/com/mediasage/scripts/
+├── GenerateFigureImages.kt  — Portrait batch generation entry point
+└── service/
+    ├── ImageGenerationService.kt  — OpenAI gpt-image-2 client
+    └── ScriptsDatabase.kt         — Minimal Exposed DB access (figures table)
 ```
 
 ## Build & Run
@@ -127,8 +146,14 @@ server/src/main/kotlin/com/mediasage/server/
 # Run Detekt
 ./gradlew detekt
 
-# Run server (requires API keys in ~/.zshrc)
+# Run app API server (port 8080 — requires API keys in ~/.zshrc)
 source ~/.zshrc && ./gradlew :server:run
+
+# Run agent orchestration server (port 8081 — requires AGENT_REPO_PATH, Jira, GitHub env vars)
+source ~/.zshrc && ./gradlew :agent:run
+
+# Generate figure portraits (batch script — requires DB_PATH, OPENAI_API_KEY)
+./gradlew :scripts:generateImages -PscriptArgs="--batch-size=5 --quality=low --dry-run"
 
 # Build Android
 ./gradlew :composeApp:assembleDebug
@@ -246,15 +271,15 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 - **Level 3 — Autonomous (self-triggering)**: Human describes the intent to the assisted agent, which creates the Jira ticket. Human walks away — a Jira webhook fires the bootstrap automatically when the ticket enters To Do. Human only reviews the PR.
 - **Level 4 — Autonomous (self-responding to PR review)**: Human leaves a review comment on a PR for an `autonomous`-labeled ticket. A GitHub webhook fires the agent, which pushes a fix commit or replies with `🤖 **Agent:**`. Human's only touchpoint remains the PR review.
 
-_This project is at Level 4. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:server` module._
+_This project is at Level 4. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:agent` module._
 
 **Level 3 setup (laptop demo):**
 
 1. Add `export AGENT_REPO_PATH="/path/to/media-sage"` to `~/.zshrc` and `source ~/.zshrc`
-2. Start the server: `source ~/.zshrc && ./gradlew :server:run`
-3. Start ngrok: `ngrok http 8080` — copy the public HTTPS URL
+2. Start the agent server: `source ~/.zshrc && ./gradlew :agent:run`
+3. Start ngrok: `ngrok http 8081` — copy the public HTTPS URL
 4. Register the Jira webhook at **media-sage.atlassian.net → Settings → System → WebHooks**:
-   - URL: `https://<ngrok-url>/webhook/jira`
+   - URL: `https://<ngrok-8081-url>/webhook/jira`
    - Events: Issue **created** and **updated**
    - JQL filter: `project = MS AND labels = autonomous`
 5. Ask the assisted agent to create an `autonomous` ticket — the agent fires automatically
@@ -270,7 +295,7 @@ export JIRA_API_TOKEN="<Atlassian account → API tokens>"
 ```
 
 Register the GitHub webhook in repo **Settings → Webhooks**:
-- URL: `https://<ngrok-url>/webhook/github`
+- URL: `https://<ngrok-8081-url>/webhook/github`
 - Content type: `application/json`
 - Secret: same as `GITHUB_WEBHOOK_SECRET`
 - Events: `Pull request reviews`, `Pull request review comments`
