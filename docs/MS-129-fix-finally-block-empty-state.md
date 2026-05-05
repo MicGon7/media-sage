@@ -2,7 +2,7 @@
 
 ## What changed
 
-Removed the `finally` block from `HomeViewModel.fetchHeadlines()` and rerouted the `Empty` state transition through `collectHeadlines()`, making it the sole owner of both `Success` and `Empty` transitions.
+Removed the `finally` block from `HomeViewModel.fetchHeadlines()` and gave each function a single, clear responsibility for state transitions.
 
 ## The bug
 
@@ -23,56 +23,65 @@ The problem: `finally` fires as soon as `refreshHeadlines()` returns — before 
 
 ## The fix
 
-The fix has two parts:
+**1. Remove `finally` from `fetchHeadlines()`.**
 
-**1. Remove `finally` from `fetchHeadlines()`.**  
-The catch block handles errors; nothing else in `fetchHeadlines()` should touch state.
-
-**2. Replace the `Loading` guard in `collectHeadlines()` with a `_isFetchDone` signal.**  
-`collectHeadlines()` already guarded against `Loading → Empty` (to prevent flashing empty while the first fetch is in flight). But that guard left the ViewModel stuck in `Loading` forever when the network returned no headlines. The fix introduces a `MutableStateFlow<Boolean>` called `_isFetchDone` that is combined with the headlines Flow:
+**2. Move the `Empty` transition into `fetchHeadlines()` directly.** After `refreshHeadlines()` returns, if the state is still `Loading`, the fetch completed with no data — set `Empty` there:
 
 ```kotlin
-private val _isFetchDone = MutableStateFlow(false)
-
-// collectHeadlines: combine headlines + fetch-done signal
-headlineRepository.getHeadlines()
-    .combine(_isFetchDone) { headlines, fetchDone -> Pair(headlines, fetchDone) }
-    .collect { (headlines, fetchDone) ->
-        if (headlines.isNotEmpty()) {
-            _state.value = HomeContract.UiState.Success(...)
-        } else {
-            val current = _state.value
-            val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
-            if ((fetchDone || current !is HomeContract.UiState.Loading) && !isRefreshing) {
+private fun fetchHeadlines() {
+    viewModelScope.launch {
+        try {
+            headlineRepository.refreshHeadlines()
+            if (_state.value is HomeContract.UiState.Loading) {
                 _state.value = HomeContract.UiState.Empty
             }
+        } catch (e: Exception) {
+            if (_state.value is HomeContract.UiState.Loading) {
+                _state.value = HomeContract.UiState.Error(e.toErrorType())
+            }
         }
-    }
-
-// fetchHeadlines: set flag after successful refresh
-try {
-    headlineRepository.refreshHeadlines()
-    yield()                   // let Room's emission from insertAll propagate first
-    _isFetchDone.value = true // triggers collectHeadlines to resolve Empty if still Loading
-} catch (e: Exception) {
-    if (_state.value is HomeContract.UiState.Loading) {
-        _state.value = HomeContract.UiState.Error(e.toErrorType())
     }
 }
 ```
 
-The `yield()` gives Room's `insertAll` emission a chance to reach `collectHeadlines()` before `_isFetchDone` flips to true. This means the happy path (network returns headlines) resolves via Room's emission → `Success`, and the flag flip is a no-op. The empty path (network returns no headlines) resolves via the flag → `Empty`.
+If Room emits headlines before this point, `collectHeadlines()` will have already set `Success` and the check is a no-op. If Room stays empty, this is the correct place to resolve `Loading → Empty`.
 
-**3. Reset `_isFetchDone` in `retryLoad()`.** Without the reset, a second attempt after an empty result would find `_isFetchDone = true` and immediately transition to Empty before the new fetch had a chance to run.
+**3. Simplify `collectHeadlines()`.** No longer needs to combine with a fetch-done signal — it simply ignores empty emissions while `Loading`:
+
+```kotlin
+private fun collectHeadlines() {
+    viewModelScope.launch {
+        headlineRepository.getHeadlines()
+            .collect { headlines ->
+                val current = _state.value
+                val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
+                if (headlines.isNotEmpty()) {
+                    _state.value = HomeContract.UiState.Success(
+                        headlines = headlines.map { it.toItem() },
+                        briefingCard = lastBriefingCard
+                    )
+                } else if (current !is HomeContract.UiState.Loading && !isRefreshing) {
+                    _state.value = HomeContract.UiState.Empty
+                }
+            }
+    }
+}
+```
+
+The `else if` branch handles the post-success case where headlines are cleared from Room — a real edge case that should still resolve to `Empty`.
 
 ## State ownership after the fix
 
 | Function | State it may set |
 |---|---|
-| `collectHeadlines()` | `Success`, `Empty` |
-| `fetchHeadlines()` | `Error` (on exception only) |
+| `collectHeadlines()` | `Success`, `Empty` (post-success clear only) |
+| `fetchHeadlines()` | `Empty` (fetch returns no data), `Error` |
 | `retryLoad()` | `Loading` (UI reset before re-fetch) |
 | `refreshHeadlines()` | Copies `isRefreshing` flag on `Success` |
+
+## MVI note
+
+An earlier iteration introduced `private val _isFetchDone = MutableStateFlow(false)` to gate the `Empty` transition. While it fixed the flash, it violated MVI — state that drives UI behavior was living outside `UiState`. The final fix keeps all state transitions inside `UiState` and eliminates the side-channel flow, the `combine`, and the `yield()`.
 
 ## What was NOT changed
 
@@ -80,4 +89,4 @@ The pull-to-refresh `refreshHeadlines()` keeps its `finally` block — that one 
 
 ## Key pattern
 
-When a ViewModel combines a database Flow with a coroutine lifecycle event (fetch complete), use `combine` to merge both signals. This keeps the single collector as the state owner and avoids race-prone `finally` blocks driving UI state.
+`finally` is for resource cleanup, not UI state transitions. When a fetch completes and needs to resolve a loading state, do it explicitly at the end of the `try` block after the suspend call returns.
