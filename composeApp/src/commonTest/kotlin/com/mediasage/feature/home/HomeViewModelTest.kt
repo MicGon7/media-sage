@@ -39,11 +39,11 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun emitsEmptyWhenFetchSucceedsAndDbHasNoHeadlines() = runTest(testDispatcher) {
+    fun staysLoadingWhenFetchSucceedsAndDbHasNoHeadlines() = runTest(testDispatcher) {
         val fakeRepo = FakeHeadlineRepository(initialHeadlines = emptyList())
         val viewModel = HomeViewModel(fakeRepo, FakePinnedFigureRepository(), FakeDailyReflectionRepository(), FakeFigureRepository())
 
-        assertIs<HomeContract.UiState.Empty>(viewModel.state.value)
+        assertIs<HomeContract.UiState.Loading>(viewModel.state.value)
     }
 
     @Test
@@ -56,7 +56,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun emitsEmptyWhenDbBecomesEmptyAfterHavingContent() = runTest(testDispatcher) {
+    fun staysSuccessWhenDbBecomesEmptyAfterHavingContent() = runTest(testDispatcher) {
         val headline = Headline(1L, "Breaking News", "Reuters", "https://example.com", null, 0L, 0L)
         val headlinesFlow = MutableStateFlow(listOf(headline))
         val fakeRepo = FakeHeadlineRepository(headlinesFlow = headlinesFlow)
@@ -66,15 +66,15 @@ class HomeViewModelTest {
 
         headlinesFlow.value = emptyList()
 
-        assertIs<HomeContract.UiState.Empty>(viewModel.state.value)
+        assertIs<HomeContract.UiState.Success>(viewModel.state.value)
     }
 
     @Test
-    fun refreshFromEmptyStateTriggersRefreshOnRepository() = runTest(testDispatcher) {
+    fun refreshFromLoadingStateTriggersRefreshOnRepository() = runTest(testDispatcher) {
         val fakeRepo = FakeHeadlineRepository(initialHeadlines = emptyList())
         val viewModel = HomeViewModel(fakeRepo, FakePinnedFigureRepository(), FakeDailyReflectionRepository(), FakeFigureRepository())
 
-        assertIs<HomeContract.UiState.Empty>(viewModel.state.value)
+        assertIs<HomeContract.UiState.Loading>(viewModel.state.value)
         val callsAfterInit = fakeRepo.refreshCallCount
 
         viewModel.onIntent(HomeContract.Intent.RefreshHeadlines)

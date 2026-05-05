@@ -19,9 +19,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.List
-import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.Color
 import coil3.compose.AsyncImage
 import com.mediasage.ui.ErrorType
@@ -41,9 +38,6 @@ fun HomeScreen(
     Surface(modifier = Modifier.fillMaxSize()) {
         when (state) {
             is HomeContract.UiState.Loading -> LoadingState()
-            is HomeContract.UiState.Empty -> EmptyState(
-                onRefresh = { onIntent(HomeContract.Intent.RefreshHeadlines) }
-            )
             is HomeContract.UiState.Error -> ErrorState(
                 message = when (state.errorType) {
                     ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
@@ -328,34 +322,6 @@ private fun LoadingState() {
         contentAlignment = Alignment.Center
     ) {
         CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun EmptyState(onRefresh: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.List,
-            contentDescription = null,
-            modifier = Modifier.size(48.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = stringResource(Res.string.home_empty_message),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedButton(onClick = onRefresh) {
-            Text(stringResource(Res.string.home_empty_refresh))
-        }
     }
 }
 
