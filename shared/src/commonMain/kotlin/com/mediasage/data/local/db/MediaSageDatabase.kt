@@ -33,7 +33,7 @@ import com.mediasage.data.local.entity.SyncMetaEntity
         DailyReflectionEntity::class,
         PinnedFigureEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

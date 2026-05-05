@@ -125,7 +125,7 @@ class HomeViewModel(
                     val tone = currentTone()
                     val headlines = currentHeadlineTitles()
                     val reflection = dailyReflectionRepository.getOrFetch(
-                        figureId = figureId,
+                        figureId = figure.serverId.takeIf { it > 0 } ?: figureId,
                         figureName = figure.name,
                         headlines = headlines,
                         tone = tone

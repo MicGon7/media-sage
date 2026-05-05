@@ -9,7 +9,8 @@ data class Figure(
     val role: String = "",
     val lifespan: String = "",
     val themes: List<String> = emptyList(),
-    val portraitUrl: String? = null
+    val portraitUrl: String? = null,
+    val serverId: Long = 0
 )
 
 enum class FigureCategory(val displayName: String) {
