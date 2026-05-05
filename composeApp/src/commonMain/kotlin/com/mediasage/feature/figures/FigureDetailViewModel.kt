@@ -27,8 +27,11 @@ class FigureDetailViewModel(
 
     fun onIntent(intent: FigureDetailContract.Intent) {
         when (intent) {
-            is FigureDetailContract.Intent.PinToHome -> viewModelScope.launch {
-                pinnedFigureRepository.setPinnedFigureId(figureId)
+            is FigureDetailContract.Intent.PinToHome -> {
+                val current = _state.value as? FigureDetailContract.UiState.Success ?: return
+                viewModelScope.launch {
+                    pinnedFigureRepository.setPinnedFigureId(if (current.isPinned) null else figureId)
+                }
             }
         }
     }

@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
@@ -24,6 +25,9 @@ class HomeViewModel(
 
     private val _state = MutableStateFlow<HomeContract.UiState>(HomeContract.UiState.Loading)
     val state: StateFlow<HomeContract.UiState> = _state.asStateFlow()
+
+    // Preserved independently so the card survives headline refresh cycles
+    private var lastBriefingCard: HomeContract.BriefingCardState = HomeContract.BriefingCardState.Hidden
 
     private val _sideEffects = Channel<HomeContract.SideEffect>()
     val sideEffects = _sideEffects.receiveAsFlow()
@@ -51,15 +55,16 @@ class HomeViewModel(
         viewModelScope.launch {
             headlineRepository.getHeadlines().collect { headlines ->
                 if (headlines.isNotEmpty()) {
-                    val current = _state.value
-                    val card = if (current is HomeContract.UiState.Success) current.briefingCard
-                               else HomeContract.BriefingCardState.Hidden
                     _state.value = HomeContract.UiState.Success(
                         headlines = headlines.map { it.toItem() },
-                        briefingCard = card
+                        briefingCard = lastBriefingCard
                     )
-                } else if (_state.value !is HomeContract.UiState.Loading) {
-                    _state.value = HomeContract.UiState.Empty
+                } else {
+                    val current = _state.value
+                    val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
+                    if (current !is HomeContract.UiState.Loading && !isRefreshing) {
+                        _state.value = HomeContract.UiState.Empty
+                    }
                 }
             }
         }
@@ -106,7 +111,12 @@ class HomeViewModel(
         viewModelScope.launch {
             pinnedFigureRepository.observePinnedFigureId().collect { figureId ->
                 if (figureId == null) {
-                    updateBriefingCard(HomeContract.BriefingCardState.Hidden)
+                    val firstFigure = figureRepository.getAllFigures().first().firstOrNull()
+                    if (firstFigure != null) {
+                        pinnedFigureRepository.setPinnedFigureId(firstFigure.id)
+                    } else {
+                        updateBriefingCard(HomeContract.BriefingCardState.Hidden)
+                    }
                     return@collect
                 }
                 updateBriefingCard(HomeContract.BriefingCardState.Loading)
@@ -140,6 +150,7 @@ class HomeViewModel(
     }
 
     private fun updateBriefingCard(card: HomeContract.BriefingCardState) {
+        lastBriefingCard = card
         val current = _state.value
         if (current is HomeContract.UiState.Success) {
             _state.value = current.copy(briefingCard = card)
