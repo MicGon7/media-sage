@@ -67,8 +67,6 @@ class HomeViewModel(
                             headlines = headlines.map { it.toItem() },
                             briefingCard = lastBriefingCard
                         )
-                    } else if (current !is HomeContract.UiState.Loading && !isRefreshing) {
-                        _state.value = HomeContract.UiState.Empty
                     }
                 }
         }
@@ -78,9 +76,6 @@ class HomeViewModel(
         viewModelScope.launch {
             try {
                 headlineRepository.refreshHeadlines()
-                if (_state.value is HomeContract.UiState.Loading) {
-                    _state.value = HomeContract.UiState.Empty
-                }
             } catch (e: Exception) {
                 if (_state.value is HomeContract.UiState.Loading) {
                     _state.value = HomeContract.UiState.Error(e.toErrorType())
