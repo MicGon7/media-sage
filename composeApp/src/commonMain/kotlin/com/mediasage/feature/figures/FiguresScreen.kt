@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -23,11 +24,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -45,9 +49,12 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mediasage.ui.FigurePlaceholder
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.figure_detail_quotes_button
+import mediasage.composeapp.generated.resources.search_voices_hint
 import mediasage.composeapp.generated.resources.title_voices
 import mediasage.composeapp.generated.resources.voices_empty_state
 import mediasage.composeapp.generated.resources.voices_subtitle
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -62,6 +69,8 @@ fun FiguresScreen(
             figures = state.figures,
             isRefreshing = state.isRefreshing,
             onRefresh = { onIntent(FiguresContract.Intent.Refresh) },
+            searchQuery = state.searchQuery,
+            onSearchQueryChanged = { query -> onIntent(FiguresContract.Intent.SearchQueryChanged(query)) },
             onFigureClick = { id ->
                 onIntent(FiguresContract.Intent.FigureClicked(id))
                 onNavigateToFigureDetail(id)
@@ -75,7 +84,6 @@ private fun VoicesHeader() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Text(
             text = stringResource(Res.string.title_voices),
@@ -98,10 +106,33 @@ private fun VoicesHeader() {
 }
 
 @Composable
+private fun SearchBar(query: String, onQueryChanged: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChanged,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        label = { Text(stringResource(Res.string.search_voices_hint)) },
+        singleLine = true,
+        shape = MaterialTheme.shapes.medium,
+        trailingIcon = {
+            if (query.isNotBlank()) {
+                IconButton(onClick = { onQueryChanged("") }) {
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = null)
+                }
+            }
+        }
+    )
+}
+
+@Composable
 private fun VoicesList(
     figures: List<VoiceFigureItem>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
     onFigureClick: (Long) -> Unit
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
@@ -116,8 +147,12 @@ private fun VoicesList(
                     onRefresh = onRefresh
                 )
         ) {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp)
+            ) {
                 item { VoicesHeader() }
+                item { SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged) }
 
                 if (figures.isEmpty()) {
                     item { EmptyState() }
@@ -143,7 +178,7 @@ private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .padding(vertical = 6.dp)
                 .clickable(onClick = onClick),
             shape = MaterialTheme.shapes.medium,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -187,13 +222,13 @@ private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
 
         if (figure.quoteCount > 0) {
             Text(
-                text = "${figure.quoteCount} Qs",
+                text = pluralStringResource(Res.plurals.figure_detail_quotes_button, figure.quoteCount, figure.quoteCount),
                 color = MaterialTheme.colorScheme.onPrimary,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = (-20).dp, y = 2.dp)
+                    .offset(x = (-8).dp, y = 2.dp)
                     .background(
                         color = MaterialTheme.colorScheme.primary,
                         shape = RoundedCornerShape(8.dp)
@@ -208,9 +243,9 @@ private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = (-24).dp, y = (-8).dp)
-                    .size(16.dp)
+                    .align(Alignment.TopStart)
+                    .offset(x = 8.dp, y = 2.dp)
+                    .size(20.dp)
             )
         }
     }
@@ -254,8 +289,13 @@ private class FiguresStateProvider : PreviewParameterProvider<FiguresContract.Ui
                 VoiceFigureItem(id = 1L, name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3, isPinned = true),
                 VoiceFigureItem(id = 2L, name = "Dietrich Bonhoeffer", role = "Theologian & Martyr", imageUrl = null, quoteCount = 1),
                 VoiceFigureItem(id = 3L, name = "Martin Luther King Jr.", role = "Pastor & Civil Rights Leader", imageUrl = null, quoteCount = 0),
+            )
+        ),
+        FiguresContract.UiState.Success(
+            figures = listOf(
+                VoiceFigureItem(id = 1L, name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3, isPinned = true),
             ),
-            isRefreshing = false
+            searchQuery = "lewis"
         )
     )
 }
