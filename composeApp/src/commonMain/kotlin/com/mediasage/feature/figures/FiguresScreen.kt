@@ -23,11 +23,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mediasage.ui.FigurePlaceholder
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.search_voices_hint
 import mediasage.composeapp.generated.resources.title_voices
 import mediasage.composeapp.generated.resources.voices_empty_state
 import mediasage.composeapp.generated.resources.voices_subtitle
@@ -57,6 +61,8 @@ fun FiguresScreen(
         is FiguresContract.UiState.Loading -> LoadingState()
         is FiguresContract.UiState.Success -> VoicesList(
             figures = state.figures,
+            searchQuery = state.searchQuery,
+            onSearchQueryChanged = { query -> onIntent(FiguresContract.Intent.SearchQueryChanged(query)) },
             onFigureClick = { id ->
                 onIntent(FiguresContract.Intent.FigureClicked(id))
                 onNavigateToFigureDetail(id)
@@ -93,13 +99,37 @@ private fun VoicesHeader() {
 }
 
 @Composable
+private fun SearchBar(query: String, onQueryChanged: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChanged,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        label = { Text(stringResource(Res.string.search_voices_hint)) },
+        singleLine = true,
+        shape = MaterialTheme.shapes.medium,
+        trailingIcon = {
+            if (query.isNotBlank()) {
+                IconButton(onClick = { onQueryChanged("") }) {
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = null)
+                }
+            }
+        }
+    )
+}
+
+@Composable
 private fun VoicesList(
     figures: List<VoiceFigureItem>,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
     onFigureClick: (Long) -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item { VoicesHeader() }
+            item { SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged) }
 
             if (figures.isEmpty()) {
                 item { EmptyState() }
@@ -183,8 +213,8 @@ private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = (-24).dp, y = (-8).dp)
+                    .align(Alignment.TopStart)
+                    .offset(x = 20.dp, y = 2.dp)
                     .size(16.dp)
             )
         }
@@ -230,6 +260,12 @@ private class FiguresStateProvider : PreviewParameterProvider<FiguresContract.Ui
                 VoiceFigureItem(id = 2L, name = "Dietrich Bonhoeffer", role = "Theologian & Martyr", imageUrl = null, quoteCount = 1),
                 VoiceFigureItem(id = 3L, name = "Martin Luther King Jr.", role = "Pastor & Civil Rights Leader", imageUrl = null, quoteCount = 0),
             )
+        ),
+        FiguresContract.UiState.Success(
+            figures = listOf(
+                VoiceFigureItem(id = 1L, name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3, isPinned = true),
+            ),
+            searchQuery = "lewis"
         )
     )
 }

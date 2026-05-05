@@ -20,14 +20,17 @@ class FiguresViewModel(
     private val _state = MutableStateFlow<FiguresContract.UiState>(FiguresContract.UiState.Loading)
     val state: StateFlow<FiguresContract.UiState> = _state.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+
     init {
         viewModelScope.launch {
             combine(
                 figureRepository.observeAllFigures(),
                 encouragementRepository.observeCountByFigureName(),
-                pinnedFigureRepository.observePinnedFigureId()
-            ) { figures, counts, pinnedId ->
-                figures.map { figure ->
+                pinnedFigureRepository.observePinnedFigureId(),
+                _searchQuery
+            ) { figures, counts, pinnedId, query ->
+                val items = figures.map { figure ->
                     VoiceFigureItem(
                         id = figure.id,
                         name = figure.name,
@@ -37,8 +40,20 @@ class FiguresViewModel(
                         isPinned = figure.id == pinnedId
                     )
                 }
-            }.collect { items ->
-                _state.value = FiguresContract.UiState.Success(figures = items)
+                val filtered = if (query.isBlank()) {
+                    items
+                } else {
+                    items.filter { item ->
+                        item.name.contains(query, ignoreCase = true) ||
+                            item.role.contains(query, ignoreCase = true)
+                    }
+                }
+                val sorted = filtered.sortedWith(
+                    compareByDescending<VoiceFigureItem> { it.isPinned }.thenBy { it.name }
+                )
+                FiguresContract.UiState.Success(figures = sorted, searchQuery = query)
+            }.collect { state ->
+                _state.value = state
             }
         }
     }
@@ -47,6 +62,7 @@ class FiguresViewModel(
         when (intent) {
             is FiguresContract.Intent.LoadFigures -> { /* reactive — no manual reload needed */ }
             is FiguresContract.Intent.FigureClicked -> { /* handled via navigation callback */ }
+            is FiguresContract.Intent.SearchQueryChanged -> { _searchQuery.value = intent.query }
         }
     }
 }

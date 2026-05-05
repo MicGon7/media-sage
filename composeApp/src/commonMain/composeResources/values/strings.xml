@@ -37,6 +37,7 @@
     <string name="voices_coming_soon">Guide selection coming soon</string>
     <string name="voices_retry">Retry</string>
     <string name="voices_empty_state">Guides will appear as you read</string>
+    <string name="search_voices_hint">Search voices…</string>
 
     <!-- You screen -->
     <string name="you_greeting">Good morning</string>

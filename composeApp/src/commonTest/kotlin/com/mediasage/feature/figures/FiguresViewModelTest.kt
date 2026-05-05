@@ -103,6 +103,91 @@ class FiguresViewModelTest {
             assertEquals(2, it.figures[0].quoteCount)
         }
     }
+
+    @Test
+    fun filtersByNameCaseInsensitive() = runTest(testDispatcher) {
+        val figures = listOf(
+            buildFigure(id = 1L, name = "Augustine", role = "Bishop of Hippo"),
+            buildFigure(id = 2L, name = "C.S. Lewis", role = "Author & Apologist")
+        )
+        val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
+        val repo = FakeEncouragementRepository(MutableStateFlow(emptyMap()))
+        val vm = FiguresViewModel(figureRepo, repo, FakePinnedFigureRepository())
+
+        vm.onIntent(FiguresContract.Intent.SearchQueryChanged("aug"))
+
+        val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
+        assertEquals(1, state.figures.size)
+        assertEquals("Augustine", state.figures[0].name)
+        assertEquals("aug", state.searchQuery)
+    }
+
+    @Test
+    fun filtersByRoleCaseInsensitive() = runTest(testDispatcher) {
+        val figures = listOf(
+            buildFigure(id = 1L, name = "Augustine", role = "Bishop of Hippo"),
+            buildFigure(id = 2L, name = "C.S. Lewis", role = "Author & Apologist")
+        )
+        val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
+        val repo = FakeEncouragementRepository(MutableStateFlow(emptyMap()))
+        val vm = FiguresViewModel(figureRepo, repo, FakePinnedFigureRepository())
+
+        vm.onIntent(FiguresContract.Intent.SearchQueryChanged("APOLOGIST"))
+
+        val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
+        assertEquals(1, state.figures.size)
+        assertEquals("C.S. Lewis", state.figures[0].name)
+    }
+
+    @Test
+    fun clearingQueryRestoresFullList() = runTest(testDispatcher) {
+        val figures = listOf(
+            buildFigure(id = 1L, name = "Augustine", role = "Bishop of Hippo"),
+            buildFigure(id = 2L, name = "C.S. Lewis", role = "Author & Apologist")
+        )
+        val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
+        val repo = FakeEncouragementRepository(MutableStateFlow(emptyMap()))
+        val vm = FiguresViewModel(figureRepo, repo, FakePinnedFigureRepository())
+
+        vm.onIntent(FiguresContract.Intent.SearchQueryChanged("aug"))
+        assertEquals(1, assertIs<FiguresContract.UiState.Success>(vm.state.value).figures.size)
+
+        vm.onIntent(FiguresContract.Intent.SearchQueryChanged(""))
+        assertEquals(2, assertIs<FiguresContract.UiState.Success>(vm.state.value).figures.size)
+    }
+
+    @Test
+    fun pinnedFigureSortsBeforeAlphabeticallyEarlierFigure() = runTest(testDispatcher) {
+        val figures = listOf(
+            buildFigure(id = 1L, name = "Augustine", role = "Bishop of Hippo"),
+            buildFigure(id = 2L, name = "Zwingli", role = "Reformer")
+        )
+        val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
+        val repo = FakeEncouragementRepository(MutableStateFlow(emptyMap()))
+        val pinnedRepo = FakePinnedFigureRepository(pinnedId = 2L)
+        val vm = FiguresViewModel(figureRepo, repo, pinnedRepo)
+
+        val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
+        assertEquals("Zwingli", state.figures[0].name)
+        assertEquals("Augustine", state.figures[1].name)
+    }
+
+    @Test
+    fun unpinnedFiguresSortAlphabetically() = runTest(testDispatcher) {
+        val figures = listOf(
+            buildFigure(id = 1L, name = "Zwingli", role = "Reformer"),
+            buildFigure(id = 2L, name = "Augustine", role = "Bishop of Hippo"),
+            buildFigure(id = 3L, name = "Calvin", role = "Reformer")
+        )
+        val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
+        val repo = FakeEncouragementRepository(MutableStateFlow(emptyMap()))
+        val vm = FiguresViewModel(figureRepo, repo, FakePinnedFigureRepository())
+
+        val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
+        assertEquals("Augustine", state.figures[0].name)
+        assertEquals("Calvin", state.figures[1].name)
+        assertEquals("Zwingli", state.figures[2].name)
+    }
 }
 
 private fun buildFigure(name: String, role: String) = Figure(
@@ -113,8 +198,16 @@ private fun buildFigure(name: String, role: String) = Figure(
     role = role
 )
 
-private class FakePinnedFigureRepository : PinnedFigureRepository {
-    override fun observePinnedFigureId(): Flow<Long?> = flowOf(null)
+private fun buildFigure(id: Long, name: String, role: String) = Figure(
+    id = id,
+    name = name,
+    category = FigureCategory.THEOLOGIAN,
+    century = "4th",
+    role = role
+)
+
+private class FakePinnedFigureRepository(private val pinnedId: Long? = null) : PinnedFigureRepository {
+    override fun observePinnedFigureId(): Flow<Long?> = flowOf(pinnedId)
     override suspend fun setPinnedFigureId(figureId: Long?) = Unit
 }
 
