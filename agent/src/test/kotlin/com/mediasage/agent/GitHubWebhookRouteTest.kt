@@ -116,19 +116,24 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
-    fun reviewCommentCreatedReturns200() = testGitHubApp(jiraAutonomous = true) {
-        val body = reviewCommentPayload(commentBody = "Rename this variable for clarity.")
-        val response = client.post("/webhook/github") {
-            contentType(ContentType.Application.Json)
-            header("X-GitHub-Event", "pull_request_review_comment")
-            header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
-            setBody(body)
+    fun inlineCommentPostsQuickReplyNotAgent() {
+        val tracking = TrackingAgentLaunchService()
+        testGitHubApp(agentService = tracking) {
+            val body = reviewCommentPayload(commentBody = "Rename this variable for clarity.")
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request_review_comment")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(0, tracking.agentLaunches, "Full agent must NOT fire for inline comments")
+            assertEquals(1, tracking.inlineReplies, "Quick reply must fire for inline comments")
         }
-        assertEquals(HttpStatusCode.OK, response.status)
     }
 
     @Test
-    fun reviewCommentEditedReturns200() = testGitHubApp(jiraAutonomous = true) {
+    fun inlineCommentEditedIsIgnored() = testGitHubApp {
         val body = reviewCommentPayload(action = "edited", commentBody = "Updated: please rename this variable.")
         val response = client.post("/webhook/github") {
             contentType(ContentType.Application.Json)
@@ -209,12 +214,13 @@ private fun validSignature(secret: String, body: String): String {
 
 private fun testGitHubApp(
     jiraAutonomous: Boolean = true,
+    agentService: AgentLaunchService = AgentLaunchService(repoPath = "", scope = CoroutineScope(Dispatchers.IO)),
     block: suspend ApplicationTestBuilder.() -> Unit
 ) = testApplication {
     application {
         install(Koin) {
             modules(module {
-                single { AgentLaunchService(repoPath = "", scope = CoroutineScope(Dispatchers.IO)) }
+                single { agentService }
                 single<JiraLabelChecker> { FakeJiraLabelChecker(jiraAutonomous) }
             })
         }
@@ -227,4 +233,18 @@ private fun testGitHubApp(
 
 private class FakeJiraLabelChecker(private val autonomous: Boolean) : JiraLabelChecker {
     override suspend fun isAutonomous(ticketKey: String) = autonomous
+}
+
+private class TrackingAgentLaunchService : AgentLaunchService(repoPath = "", scope = CoroutineScope(Dispatchers.IO)) {
+    var agentLaunches = 0
+    var inlineReplies = 0
+
+    override fun launchForPrReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String): Boolean {
+        agentLaunches++
+        return true
+    }
+
+    override fun postInlineCommentReply(prNumber: Int) {
+        inlineReplies++
+    }
 }

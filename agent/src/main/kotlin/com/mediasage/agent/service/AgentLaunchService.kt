@@ -24,7 +24,7 @@ private const val PR_REVIEW_PROMPT =
  * Guards against double-firing: a second launch call for the same key is a no-op
  * until the first agent process exits.
  */
-class AgentLaunchService(
+open class AgentLaunchService(
     private val repoPath: String,
     private val scope: CoroutineScope
 ) {
@@ -41,7 +41,7 @@ class AgentLaunchService(
      * isolation and cannot switch branches in the developer's main checkout.
      * De-duplicates by PR number — a second call while one is running is a no-op.
      */
-    fun launchForPrReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String): Boolean {
+    open fun launchForPrReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String): Boolean {
         val key = "PR-$prNumber"
         val worktreePath = "/tmp/media-sage-pr-$prNumber"
         val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
@@ -71,6 +71,24 @@ class AgentLaunchService(
             .directory(File(repoPath))
             .start()
             .waitFor()
+    }
+
+    open fun postInlineCommentReply(prNumber: Int) {
+        val body = "🤖 **Agent:** I noticed your inline comment. Please submit a formal review " +
+            "with **Changes requested** and I'll address all your feedback in one pass."
+        scope.launch(Dispatchers.IO) {
+            try {
+                ProcessBuilder("gh", "pr", "comment", prNumber.toString(), "--body", body)
+                    .directory(File(repoPath))
+                    .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
+                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                    .redirectError(ProcessBuilder.Redirect.INHERIT)
+                    .start()
+                    .waitFor()
+            } catch (e: Exception) {
+                log.warning("Failed to post inline comment reply on PR#$prNumber: ${e.message}")
+            }
+        }
     }
 
     fun isActive(key: String): Boolean = key in activeKeys

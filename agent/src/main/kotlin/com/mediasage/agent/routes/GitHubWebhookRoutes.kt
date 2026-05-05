@@ -72,11 +72,6 @@ private data class WebhookContext(val ticketKey: String, val prNumber: Int, val 
 private val log = Logger.getLogger("GitHubWebhookRoutes")
 private val ticketKeyRegex = Regex("[A-Z]+-\\d+")
 private val webhookJson = Json { ignoreUnknownKeys = true }
-private val relevantEventActions = mapOf(
-    "pull_request_review" to setOf("submitted"),
-    "pull_request_review_comment" to setOf("created", "edited")
-)
-
 fun Route.githubWebhookRoutes(webhookSecret: String) {
     val agentService by inject<AgentLaunchService>()
     val jiraLabelChecker by inject<JiraLabelChecker>()
@@ -86,50 +81,61 @@ fun Route.githubWebhookRoutes(webhookSecret: String) {
             call.respond(HttpStatusCode.BadRequest)
             return@post
         }
-
         val rawBody = call.receive<ByteArray>()
-
         val signature = call.request.header("X-Hub-Signature-256") ?: run {
             call.respond(HttpStatusCode.Unauthorized)
             return@post
         }
-
         if (!validateSignature(webhookSecret, rawBody, signature)) {
             call.respond(HttpStatusCode.Unauthorized)
             return@post
         }
-
-        val context = parseWebhookContext(eventType, rawBody)
-        if (context != null) {
-            log.info("GitHub webhook matched: ticketKey=${context.ticketKey} PR#${context.prNumber}")
-            if (jiraLabelChecker.isAutonomous(context.ticketKey)) {
-                agentService.launchForPrReview(context.ticketKey, context.prNumber, context.branchRef, context.commentBody)
-            }
-        }
-
+        handleGitHubEvent(eventType, rawBody, agentService, jiraLabelChecker)
         call.respond(HttpStatusCode.OK)
     }
 }
 
-private fun parseWebhookContext(eventType: String, rawBody: ByteArray): WebhookContext? {
-    val allowedActions = relevantEventActions[eventType] ?: return null
+private suspend fun handleGitHubEvent(
+    eventType: String,
+    rawBody: ByteArray,
+    agentService: AgentLaunchService,
+    jiraLabelChecker: JiraLabelChecker
+) {
+    when (eventType) {
+        "pull_request_review" -> {
+            val context = parseReviewContext(rawBody) ?: return
+            log.info("GitHub review submitted: ticketKey=${context.ticketKey} PR#${context.prNumber}")
+            if (jiraLabelChecker.isAutonomous(context.ticketKey)) {
+                agentService.launchForPrReview(context.ticketKey, context.prNumber, context.branchRef, context.commentBody)
+            }
+        }
+        "pull_request_review_comment" -> {
+            val prNumber = parseInlineCommentPrNumber(rawBody) ?: return
+            log.info("GitHub inline comment on PR#$prNumber — posting quick reply")
+            agentService.postInlineCommentReply(prNumber)
+        }
+    }
+}
+
+private fun parseReviewContext(rawBody: ByteArray): WebhookContext? {
     val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
-    val commentBody = extractCommentBody(eventType, payload)
+    val reviewBody = payload.review?.body.orEmpty()
     val ticketKey = ticketKeyRegex.find(payload.pullRequest.head.ref)?.value
 
     return ticketKey
-        ?.takeIf { payload.action in allowedActions }
-        ?.takeIf { commentBody.isNotBlank() && !commentBody.startsWith("🤖 **Agent:**") }
-        ?.takeIf { eventType != "pull_request_review" || payload.review?.state != "approved" }
-        ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, commentBody) }
+        ?.takeIf { payload.action == "submitted" }
+        ?.takeIf { payload.review?.state == "changes_requested" }
+        ?.takeIf { !reviewBody.startsWith("🤖 **Agent:**") }
+        ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, reviewBody) }
 }
 
-private fun extractCommentBody(eventType: String, payload: GitHubWebhookPayload): String =
-    when (eventType) {
-        "pull_request_review" -> payload.review?.body.orEmpty()
-        "pull_request_review_comment" -> payload.comment?.body.orEmpty()
-        else -> ""
-    }
+private fun parseInlineCommentPrNumber(rawBody: ByteArray): Int? {
+    val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
+    val commentBody = payload.comment?.body.orEmpty()
+    return payload.pullRequest.number
+        .takeIf { payload.action == "created" }
+        ?.takeIf { !commentBody.startsWith("🤖 **Agent:**") }
+}
 
 private fun validateSignature(secret: String, body: ByteArray, signature: String): Boolean {
     val expected = "sha256=${computeHmacSha256(secret, body)}"
