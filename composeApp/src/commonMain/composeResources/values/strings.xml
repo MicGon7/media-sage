@@ -11,7 +11,7 @@
     <!-- Screen titles -->
     <string name="title_home">The Media Sage</string>
     <string name="title_headline_detail">Today's Word</string>
-    <string name="title_voices">The Sages</string>
+    <string name="title_voices">Sages</string>
 
     <!-- Home screen -->
     <string name="home_headlines_feed">Headlines Feed</string>
@@ -37,6 +37,7 @@
     <string name="voices_coming_soon">Guide selection coming soon</string>
     <string name="voices_retry">Retry</string>
     <string name="voices_empty_state">Guides will appear as you read</string>
+    <string name="search_voices_hint">Search sages…</string>
 
     <!-- You screen -->
     <string name="you_greeting">Good morning</string>

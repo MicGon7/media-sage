@@ -8,6 +8,7 @@ import com.mediasage.domain.repository.PinnedFigureRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class FigureDetailViewModel(
@@ -22,7 +23,6 @@ class FigureDetailViewModel(
 
     init {
         load()
-        observePinState()
     }
 
     fun onIntent(intent: FigureDetailContract.Intent) {
@@ -39,29 +39,19 @@ class FigureDetailViewModel(
     private fun load() {
         viewModelScope.launch {
             val figure = figureRepository.getFigureById(figureId) ?: return@launch
-            encouragementRepository.observeByFigureId(figure.id).collect { encouragements ->
-                val current = _state.value
-                val isPinned = if (current is FigureDetailContract.UiState.Success) current.isPinned else false
-                _state.value = FigureDetailContract.UiState.Success(
+            combine(
+                encouragementRepository.observeByFigureId(figure.id),
+                pinnedFigureRepository.observePinnedFigureId()
+            ) { encouragements, pinnedId ->
+                FigureDetailContract.UiState.Success(
                     figureName = figure.name,
                     figureRole = figure.role,
                     figureImageUrl = figure.portraitUrl,
                     bio = figure.bio,
                     quotes = encouragements.map { FigureQuoteItem(it.quoteText, it.headlineTitle) },
-                    isPinned = isPinned
+                    isPinned = pinnedId == figureId
                 )
-            }
-        }
-    }
-
-    private fun observePinState() {
-        viewModelScope.launch {
-            pinnedFigureRepository.observePinnedFigureId().collect { pinnedId ->
-                val current = _state.value
-                if (current is FigureDetailContract.UiState.Success) {
-                    _state.value = current.copy(isPinned = pinnedId == figureId)
-                }
-            }
+            }.collect { _state.value = it }
         }
     }
 }
