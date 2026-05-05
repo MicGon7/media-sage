@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
 
 class HomeViewModel(
     private val headlineRepository: HeadlineRepository,
@@ -31,8 +30,6 @@ class HomeViewModel(
 
     // Preserved independently so the card survives headline refresh cycles
     private var lastBriefingCard: HomeContract.BriefingCardState = HomeContract.BriefingCardState.Hidden
-
-    private val _isFetchDone = MutableStateFlow(false)
 
     private val _sideEffects = Channel<HomeContract.SideEffect>()
     val sideEffects = _sideEffects.receiveAsFlow()
@@ -52,7 +49,6 @@ class HomeViewModel(
     }
 
     private fun retryLoad() {
-        _isFetchDone.value = false
         _state.value = HomeContract.UiState.Loading
         fetchHeadlines()
     }
@@ -60,19 +56,16 @@ class HomeViewModel(
     private fun collectHeadlines() {
         viewModelScope.launch {
             headlineRepository.getHeadlines()
-                .combine(_isFetchDone) { headlines, fetchDone -> Pair(headlines, fetchDone) }
-                .collect { (headlines, fetchDone) ->
+                .collect { headlines ->
+                    val current = _state.value
+                    val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
                     if (headlines.isNotEmpty()) {
                         _state.value = HomeContract.UiState.Success(
                             headlines = headlines.map { it.toItem() },
                             briefingCard = lastBriefingCard
                         )
-                    } else {
-                        val current = _state.value
-                        val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
-                        if ((fetchDone || current !is HomeContract.UiState.Loading) && !isRefreshing) {
-                            _state.value = HomeContract.UiState.Empty
-                        }
+                    } else if (current !is HomeContract.UiState.Loading && !isRefreshing) {
+                        _state.value = HomeContract.UiState.Empty
                     }
                 }
         }
@@ -82,8 +75,9 @@ class HomeViewModel(
         viewModelScope.launch {
             try {
                 headlineRepository.refreshHeadlines()
-                yield()
-                _isFetchDone.value = true
+                if (_state.value is HomeContract.UiState.Loading) {
+                    _state.value = HomeContract.UiState.Empty
+                }
             } catch (e: Exception) {
                 if (_state.value is HomeContract.UiState.Loading) {
                     _state.value = HomeContract.UiState.Error(e.toErrorType())
