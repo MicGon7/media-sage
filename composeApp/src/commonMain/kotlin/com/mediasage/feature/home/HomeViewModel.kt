@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
@@ -109,7 +110,7 @@ class HomeViewModel(
 
     private fun loadBriefingCard() {
         viewModelScope.launch {
-            pinnedFigureRepository.observePinnedFigureId().collect { figureId ->
+            pinnedFigureRepository.observePinnedFigureId().distinctUntilChanged().collect { figureId ->
                 if (figureId == null) {
                     val firstFigure = figureRepository.getAllFigures().first().firstOrNull()
                     if (firstFigure != null) {
@@ -123,7 +124,8 @@ class HomeViewModel(
                 try {
                     val figure = figureRepository.getFigureById(figureId) ?: return@collect
                     val tone = currentTone()
-                    val headlines = currentHeadlineTitles()
+                    // Read from Room directly — available even before network refresh completes
+                    val headlines = headlineRepository.getHeadlines().first().map { it.title }
                     val reflection = dailyReflectionRepository.getOrFetch(
                         figureId = figure.serverId.takeIf { it > 0 } ?: figureId,
                         figureName = figure.name,
@@ -155,13 +157,6 @@ class HomeViewModel(
         if (current is HomeContract.UiState.Success) {
             _state.value = current.copy(briefingCard = card)
         }
-    }
-
-    private fun currentHeadlineTitles(): List<String> {
-        val current = _state.value
-        return if (current is HomeContract.UiState.Success) {
-            current.headlines.map { it.title }
-        } else emptyList()
     }
 
     private fun currentTone(): String {
