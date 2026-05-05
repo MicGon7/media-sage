@@ -48,15 +48,15 @@ import org.jetbrains.compose.resources.stringResource
 fun FiguresScreen(
     state: FiguresContract.UiState,
     onIntent: (FiguresContract.Intent) -> Unit,
-    onNavigateToFigureDetail: (figureName: String) -> Unit = {}
+    onNavigateToFigureDetail: (figureId: Long) -> Unit = {}
 ) {
     when (state) {
         is FiguresContract.UiState.Loading -> LoadingState()
         is FiguresContract.UiState.Success -> VoicesList(
             figures = state.figures,
-            onFigureClick = { name ->
-                onIntent(FiguresContract.Intent.FigureClicked(name))
-                onNavigateToFigureDetail(name)
+            onFigureClick = { id ->
+                onIntent(FiguresContract.Intent.FigureClicked(id))
+                onNavigateToFigureDetail(id)
             }
         )
     }
@@ -92,7 +92,7 @@ private fun VoicesHeader() {
 @Composable
 private fun VoicesList(
     figures: List<VoiceFigureItem>,
-    onFigureClick: (String) -> Unit
+    onFigureClick: (Long) -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -101,8 +101,8 @@ private fun VoicesList(
             if (figures.isEmpty()) {
                 item { EmptyState() }
             } else {
-                items(figures, key = { it.name }) { figure ->
-                    VoiceCard(figure = figure, onClick = { onFigureClick(figure.name) })
+                items(figures, key = { it.id }) { figure ->
+                    VoiceCard(figure = figure, onClick = { onFigureClick(figure.id) })
                 }
             }
         }
@@ -211,9 +211,9 @@ private class FiguresStateProvider : PreviewParameterProvider<FiguresContract.Ui
         FiguresContract.UiState.Success(figures = emptyList()),
         FiguresContract.UiState.Success(
             figures = listOf(
-                VoiceFigureItem(name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3),
-                VoiceFigureItem(name = "Dietrich Bonhoeffer", role = "Theologian & Martyr", imageUrl = null, quoteCount = 1),
-                VoiceFigureItem(name = "Martin Luther King Jr.", role = "Pastor & Civil Rights Leader", imageUrl = null, quoteCount = 0),
+                VoiceFigureItem(id = 1L, name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3),
+                VoiceFigureItem(id = 2L, name = "Dietrich Bonhoeffer", role = "Theologian & Martyr", imageUrl = null, quoteCount = 1),
+                VoiceFigureItem(id = 3L, name = "Martin Luther King Jr.", role = "Pastor & Civil Rights Leader", imageUrl = null, quoteCount = 0),
             )
         )
     )

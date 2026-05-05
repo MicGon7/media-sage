@@ -30,6 +30,9 @@ interface EncouragementDao {
     @Query("SELECT * FROM encouragements WHERE figureName = :figureName")
     fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>>
 
+    @Query("SELECT * FROM encouragements WHERE figureId = :figureId")
+    fun getByFigureId(figureId: Long): Flow<List<EncouragementEntity>>
+
     @MapInfo(keyColumn = "figureName", valueColumn = "count")
     @Query("SELECT figureName, COUNT(*) AS count FROM encouragements GROUP BY figureName")
     fun countByFigureName(): Flow<Map<String, Int>>

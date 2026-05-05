@@ -26,6 +26,7 @@ class FiguresViewModel(
             ) { figures, counts ->
                 figures.map { figure ->
                     VoiceFigureItem(
+                        id = figure.id,
                         name = figure.name,
                         role = figure.role,
                         imageUrl = figure.portraitUrl,

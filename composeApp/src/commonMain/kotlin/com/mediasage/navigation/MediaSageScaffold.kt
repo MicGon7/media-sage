@@ -78,13 +78,13 @@ fun MediaSageScaffold(
                     FiguresScreen(
                         state = state,
                         onIntent = vm::onIntent,
-                        onNavigateToFigureDetail = { name -> appState.navigateToFigureDetail(name) }
+                        onNavigateToFigureDetail = { id -> appState.navigateToFigureDetail(id) }
                     )
                 }
                 is Route.FigureDetail -> NavEntry(route) {
                     val vm = koinViewModel<FigureDetailViewModel>(
-                        key = "figure-${route.figureName}",
-                        parameters = { parametersOf(route.figureName) }
+                        key = "figure-${route.figureId}",
+                        parameters = { parametersOf(route.figureId) }
                     )
                     val state by vm.state.collectAsState()
                     FigureDetailScreen(

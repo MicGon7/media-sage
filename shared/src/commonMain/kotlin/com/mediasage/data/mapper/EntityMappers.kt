@@ -165,7 +165,8 @@ fun Encouragement.toEntity(
     headlineTitle: String = "",
     headlineSource: String = "",
     headlineImageUrl: String? = null,
-    cachedAt: Long = 0L
+    cachedAt: Long = 0L,
+    figureId: Long? = null
 ) = EncouragementEntity(
     articleUrl = articleUrl,
     summary = summary,
@@ -182,5 +183,6 @@ fun Encouragement.toEntity(
     headlineTitle = headlineTitle,
     headlineSource = headlineSource,
     headlineImageUrl = headlineImageUrl,
-    cachedAt = cachedAt
+    cachedAt = cachedAt,
+    figureId = figureId
 )

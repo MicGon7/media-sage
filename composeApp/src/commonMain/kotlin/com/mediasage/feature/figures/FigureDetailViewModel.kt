@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class FigureDetailViewModel(
-    private val figureName: String,
+    private val figureId: Long,
     private val figureRepository: FigureRepository,
     private val encouragementRepository: EncouragementRepository
 ) : ViewModel() {
@@ -24,19 +24,15 @@ class FigureDetailViewModel(
 
     private fun load() {
         viewModelScope.launch {
-            try {
-                val figure = figureRepository.getFigureByName(figureName)
-                encouragementRepository.getByFigureName(figureName).collect { encouragements ->
-                    _state.value = FigureDetailContract.UiState.Success(
-                        figureName = figure?.name ?: figureName,
-                        figureRole = figure?.role ?: encouragements.firstOrNull()?.figureRole.orEmpty(),
-                        figureImageUrl = figure?.portraitUrl ?: encouragements.firstOrNull()?.figureImageUrl,
-                        bio = figure?.bio,
-                        quotes = encouragements.map { FigureQuoteItem(it.quoteText, it.headlineTitle) }
-                    )
-                }
-            } catch (e: Exception) {
-                _state.value = FigureDetailContract.UiState.Error(e.message.orEmpty())
+            val figure = figureRepository.getFigureById(figureId) ?: return@launch
+            encouragementRepository.getByFigureId(figure.id).collect { encouragements ->
+                _state.value = FigureDetailContract.UiState.Success(
+                    figureName = figure.name,
+                    figureRole = figure.role,
+                    figureImageUrl = figure.portraitUrl,
+                    bio = figure.bio,
+                    quotes = encouragements.map { FigureQuoteItem(it.quoteText, it.headlineTitle) }
+                )
             }
         }
     }

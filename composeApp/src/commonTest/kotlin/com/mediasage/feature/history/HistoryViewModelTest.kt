@@ -147,6 +147,9 @@ private class FakeEncouragementDao(
     override fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>> =
         MutableStateFlow(_flow.value.filter { it.figureName == figureName })
 
+    override fun getByFigureId(figureId: Long): Flow<List<EncouragementEntity>> =
+        MutableStateFlow(_flow.value.filter { it.figureId == figureId })
+
     override fun countByFigureName(): Flow<Map<String, Int>> =
         MutableStateFlow(_flow.value.groupBy { it.figureName }.mapValues { (_, v) -> v.size })
 
