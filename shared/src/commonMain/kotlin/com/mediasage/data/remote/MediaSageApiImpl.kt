@@ -10,7 +10,7 @@ class MediaSageApiImpl(
     private val baseUrl: String
 ) : MediaSageApi {
 
-    override suspend fun getFigures(since: Long?): List<FigureDto> {
+    override suspend fun getFigures(since: Long?): FiguresResponse {
         return httpClient.get("$baseUrl/api/figures") {
             if (since != null) parameter("since", since)
         }.body()

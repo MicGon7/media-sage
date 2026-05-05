@@ -73,6 +73,12 @@ data class MatchResultDto(
 // ---- Figure endpoint DTOs ----
 
 @Serializable
+data class FiguresResponse(
+    val syncedAt: Long,
+    val figures: List<FigureDto>
+)
+
+@Serializable
 data class FigureDto(
     val id: Long,
     val name: String,
