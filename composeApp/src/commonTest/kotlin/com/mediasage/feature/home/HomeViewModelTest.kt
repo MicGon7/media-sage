@@ -94,8 +94,8 @@ private class FakeDailyReflectionRepository : DailyReflectionRepository {
 }
 
 private class FakeFigureRepository : FigureRepository {
-    override fun getAllFigures(): Flow<List<Figure>> = flowOf(emptyList())
-    override fun getFiguresByCategory(category: FigureCategory): Flow<List<Figure>> = flowOf(emptyList())
+    override fun observeAllFigures(): Flow<List<Figure>> = flowOf(emptyList())
+    override fun observeFiguresByCategory(category: FigureCategory): Flow<List<Figure>> = flowOf(emptyList())
     override suspend fun getFigureById(id: Long): Figure? = null
     override suspend fun getFigureByName(name: String): Figure? = null
     override suspend fun syncFigures() = Unit
@@ -109,7 +109,7 @@ private class FakeHeadlineRepository(
     private val _headlines = headlinesFlow ?: MutableStateFlow(initialHeadlines)
     var refreshCallCount = 0
 
-    override fun getHeadlines(): Flow<List<Headline>> = _headlines
+    override fun observeHeadlines(): Flow<List<Headline>> = _headlines
 
     override suspend fun getHeadlineById(id: Long): Headline? = _headlines.value.find { it.id == id }
 

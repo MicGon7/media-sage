@@ -23,8 +23,8 @@ class FiguresViewModel(
     init {
         viewModelScope.launch {
             combine(
-                figureRepository.getAllFigures(),
-                encouragementDao.countByFigureName(),
+                figureRepository.observeAllFigures(),
+                encouragementDao.observeCountByFigureName(),
                 pinnedFigureRepository.observePinnedFigureId()
             ) { figures, counts, pinnedId ->
                 figures.map { figure ->

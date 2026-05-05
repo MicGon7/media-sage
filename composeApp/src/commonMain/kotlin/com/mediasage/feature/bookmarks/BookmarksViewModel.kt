@@ -31,7 +31,7 @@ class BookmarksViewModel(
 
     private fun loadBookmarks() {
         viewModelScope.launch {
-            encouragementDao.getBookmarked().collect { entities ->
+            encouragementDao.observeBookmarked().collect { entities ->
                 if (entities.isEmpty()) {
                     _state.value = BookmarksContract.UiState.Empty
                 } else {

@@ -16,7 +16,7 @@ interface HeadlineDao {
     suspend fun insertAll(headlines: List<HeadlineEntity>)
 
     @Query("SELECT * FROM headlines ORDER BY publishedAt DESC")
-    fun getAll(): Flow<List<HeadlineEntity>>
+    fun observeAll(): Flow<List<HeadlineEntity>>
 
     @Query("SELECT * FROM headlines WHERE id = :id")
     suspend fun getById(id: Long): HeadlineEntity?

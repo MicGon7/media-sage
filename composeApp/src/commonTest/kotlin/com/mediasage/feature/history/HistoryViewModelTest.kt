@@ -134,28 +134,28 @@ private class FakeEncouragementDao(
 
     private val _flow = flow ?: MutableStateFlow(initialEntities)
 
-    override fun getAll(): Flow<List<EncouragementEntity>> = _flow
+    override fun observeAll(): Flow<List<EncouragementEntity>> = _flow
 
     override suspend fun insert(encouragement: EncouragementEntity) = Unit
 
     override suspend fun getByArticleUrl(articleUrl: String): EncouragementEntity? =
         _flow.value.find { it.articleUrl == articleUrl }
 
-    override fun getDistinctFigures(): Flow<List<VoiceFigureProjection>> =
+    override fun observeDistinctFigures(): Flow<List<VoiceFigureProjection>> =
         MutableStateFlow(emptyList())
 
-    override fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>> =
+    override fun observeByFigureName(figureName: String): Flow<List<EncouragementEntity>> =
         MutableStateFlow(_flow.value.filter { it.figureName == figureName })
 
-    override fun getByFigureId(figureId: Long): Flow<List<EncouragementEntity>> =
+    override fun observeByFigureId(figureId: Long): Flow<List<EncouragementEntity>> =
         MutableStateFlow(_flow.value.filter { it.figureId == figureId })
 
-    override fun countByFigureName(): Flow<Map<String, Int>> =
+    override fun observeCountByFigureName(): Flow<Map<String, Int>> =
         MutableStateFlow(_flow.value.groupBy { it.figureName }.mapValues { (_, v) -> v.size })
 
     override suspend fun getRecentFigureNames(limit: Int): List<String> = emptyList()
 
-    override fun getBookmarked(): Flow<List<EncouragementEntity>> =
+    override fun observeBookmarked(): Flow<List<EncouragementEntity>> =
         MutableStateFlow(_flow.value.filter { it.bookmarked })
 
     override fun observeBookmarkState(articleUrl: String): Flow<Boolean> =

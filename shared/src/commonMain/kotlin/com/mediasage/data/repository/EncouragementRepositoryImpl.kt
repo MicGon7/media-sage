@@ -45,8 +45,8 @@ class EncouragementRepositoryImpl(
         return encouragement
     }
 
-    override fun getByFigureId(figureId: Long): Flow<List<Encouragement>> =
-        encouragementDao.getByFigureId(figureId).map { entities -> entities.map { it.toDomain() } }
+    override fun observeByFigureId(figureId: Long): Flow<List<Encouragement>> =
+        encouragementDao.observeByFigureId(figureId).map { entities -> entities.map { it.toDomain() } }
 
     override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> =
         encouragementDao.observeBookmarkState(articleUrl)

@@ -122,8 +122,8 @@ private class FakePinnedFigureRepository : PinnedFigureRepository {
 private class FakeFigureRepository(
     private val flow: MutableStateFlow<List<Figure>>
 ) : FigureRepository {
-    override fun getAllFigures(): Flow<List<Figure>> = flow
-    override fun getFiguresByCategory(category: FigureCategory): Flow<List<Figure>> = flow
+    override fun observeAllFigures(): Flow<List<Figure>> = flow
+    override fun observeFiguresByCategory(category: FigureCategory): Flow<List<Figure>> = flow
     override suspend fun getFigureById(id: Long): Figure? = flow.value.firstOrNull { it.id == id }
     override suspend fun getFigureByName(name: String): Figure? = flow.value.firstOrNull { it.name == name }
     override suspend fun syncFigures() = Unit
@@ -132,15 +132,15 @@ private class FakeFigureRepository(
 private class FakeEncouragementDao(
     private val countsFlow: MutableStateFlow<Map<String, Int>>
 ) : EncouragementDao {
-    override fun countByFigureName(): Flow<Map<String, Int>> = countsFlow
+    override fun observeCountByFigureName(): Flow<Map<String, Int>> = countsFlow
     override suspend fun insert(encouragement: EncouragementEntity) = Unit
     override suspend fun getByArticleUrl(articleUrl: String): EncouragementEntity? = null
-    override fun getDistinctFigures(): Flow<List<VoiceFigureProjection>> = MutableStateFlow(emptyList())
-    override fun getByFigureName(figureName: String): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
-    override fun getByFigureId(figureId: Long): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
+    override fun observeDistinctFigures(): Flow<List<VoiceFigureProjection>> = MutableStateFlow(emptyList())
+    override fun observeByFigureName(figureName: String): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
+    override fun observeByFigureId(figureId: Long): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
     override suspend fun getRecentFigureNames(limit: Int): List<String> = emptyList()
-    override fun getAll(): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
-    override fun getBookmarked(): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
+    override fun observeAll(): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
+    override fun observeBookmarked(): Flow<List<EncouragementEntity>> = MutableStateFlow(emptyList())
     override fun observeBookmarkState(articleUrl: String): Flow<Boolean> = MutableStateFlow(false)
     override suspend fun toggleBookmark(articleUrl: String) = Unit
     override suspend fun deleteAll() = Unit

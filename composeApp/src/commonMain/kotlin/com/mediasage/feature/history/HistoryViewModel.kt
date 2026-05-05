@@ -31,7 +31,7 @@ class HistoryViewModel(
 
     private fun loadHistory() {
         viewModelScope.launch {
-            encouragementDao.getAll().collect { entities ->
+            encouragementDao.observeAll().collect { entities ->
                 if (entities.isEmpty()) {
                     _state.value = HistoryContract.UiState.Empty
                 } else {

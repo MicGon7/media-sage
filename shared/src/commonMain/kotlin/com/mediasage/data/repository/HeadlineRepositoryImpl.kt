@@ -14,8 +14,8 @@ class HeadlineRepositoryImpl(
     private val api: MediaSageApi
 ) : HeadlineRepository {
 
-    override fun getHeadlines(): Flow<List<Headline>> =
-        headlineDao.getAll().map { entities -> entities.map { it.toDomain() } }
+    override fun observeHeadlines(): Flow<List<Headline>> =
+        headlineDao.observeAll().map { entities -> entities.map { it.toDomain() } }
 
     override suspend fun getHeadlineById(id: Long): Headline? =
         headlineDao.getById(id)?.toDomain()
