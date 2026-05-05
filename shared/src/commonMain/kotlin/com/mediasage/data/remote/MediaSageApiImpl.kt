@@ -55,4 +55,11 @@ class MediaSageApiImpl(
     override suspend fun getPassage(passageId: String): ScripturePassageDto {
         return httpClient.get("$baseUrl/api/scripture/passage/$passageId").body()
     }
+
+    override suspend fun getDailyReflection(request: DailyReflectionRequestDto): DailyReflectionResponseDto {
+        return httpClient.post("$baseUrl/api/analysis/daily-reflection") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+    }
 }

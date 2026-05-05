@@ -13,5 +13,6 @@ data class FigureEntity(
     val role: String = "",
     val lifespan: String = "",
     val themes: String = "",
-    val portraitUrl: String? = null
+    val portraitUrl: String? = null,
+    val serverId: Long = 0
 )

@@ -2,11 +2,18 @@
 
 package com.mediasage.feature.home
 
+import com.mediasage.domain.model.DailyReflection
+import com.mediasage.domain.model.Figure
+import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.Headline
+import com.mediasage.domain.repository.DailyReflectionRepository
+import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
+import com.mediasage.domain.repository.PinnedFigureRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -34,7 +41,7 @@ class HomeViewModelTest {
     @Test
     fun emitsEmptyWhenFetchSucceedsAndDbHasNoHeadlines() = runTest(testDispatcher) {
         val fakeRepo = FakeHeadlineRepository(initialHeadlines = emptyList())
-        val viewModel = HomeViewModel(fakeRepo)
+        val viewModel = HomeViewModel(fakeRepo, FakePinnedFigureRepository(), FakeDailyReflectionRepository(), FakeFigureRepository())
 
         assertIs<HomeContract.UiState.Empty>(viewModel.state.value)
     }
@@ -43,7 +50,7 @@ class HomeViewModelTest {
     fun emitsSuccessWhenDbHasHeadlines() = runTest(testDispatcher) {
         val headline = Headline(1L, "Breaking News", "Reuters", "https://example.com", null, 0L, 0L)
         val fakeRepo = FakeHeadlineRepository(initialHeadlines = listOf(headline))
-        val viewModel = HomeViewModel(fakeRepo)
+        val viewModel = HomeViewModel(fakeRepo, FakePinnedFigureRepository(), FakeDailyReflectionRepository(), FakeFigureRepository())
 
         assertIs<HomeContract.UiState.Success>(viewModel.state.value)
     }
@@ -53,7 +60,7 @@ class HomeViewModelTest {
         val headline = Headline(1L, "Breaking News", "Reuters", "https://example.com", null, 0L, 0L)
         val headlinesFlow = MutableStateFlow(listOf(headline))
         val fakeRepo = FakeHeadlineRepository(headlinesFlow = headlinesFlow)
-        val viewModel = HomeViewModel(fakeRepo)
+        val viewModel = HomeViewModel(fakeRepo, FakePinnedFigureRepository(), FakeDailyReflectionRepository(), FakeFigureRepository())
 
         assertIs<HomeContract.UiState.Success>(viewModel.state.value)
 
@@ -65,7 +72,7 @@ class HomeViewModelTest {
     @Test
     fun refreshFromEmptyStateTriggersRefreshOnRepository() = runTest(testDispatcher) {
         val fakeRepo = FakeHeadlineRepository(initialHeadlines = emptyList())
-        val viewModel = HomeViewModel(fakeRepo)
+        val viewModel = HomeViewModel(fakeRepo, FakePinnedFigureRepository(), FakeDailyReflectionRepository(), FakeFigureRepository())
 
         assertIs<HomeContract.UiState.Empty>(viewModel.state.value)
         val callsAfterInit = fakeRepo.refreshCallCount
@@ -74,6 +81,24 @@ class HomeViewModelTest {
 
         assertEquals(callsAfterInit + 1, fakeRepo.refreshCallCount)
     }
+}
+
+private class FakePinnedFigureRepository : PinnedFigureRepository {
+    override fun observePinnedFigureId(): Flow<Long?> = flowOf(null)
+    override suspend fun setPinnedFigureId(figureId: Long?) = Unit
+}
+
+private class FakeDailyReflectionRepository : DailyReflectionRepository {
+    override suspend fun getOrFetch(figureId: Long, figureName: String, headlines: List<String>, tone: String) =
+        DailyReflection("Psalm 46:10", "Be still, and know that I am God.", "A reflection.", emptyList(), tone)
+}
+
+private class FakeFigureRepository : FigureRepository {
+    override fun getAllFigures(): Flow<List<Figure>> = flowOf(emptyList())
+    override fun getFiguresByCategory(category: FigureCategory): Flow<List<Figure>> = flowOf(emptyList())
+    override suspend fun getFigureById(id: Long): Figure? = null
+    override suspend fun getFigureByName(name: String): Figure? = null
+    override suspend fun syncFigures() = Unit
 }
 
 private class FakeHeadlineRepository(

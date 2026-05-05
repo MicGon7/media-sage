@@ -8,9 +8,11 @@ import com.mediasage.data.local.entity.VoiceFigureProjection
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.repository.FigureRepository
+import com.mediasage.domain.repository.PinnedFigureRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -39,7 +41,7 @@ class FiguresViewModelTest {
     fun emitsLoadingInitially() {
         val figureRepo = FakeFigureRepository(MutableStateFlow(emptyList()))
         val dao = FakeEncouragementDao(MutableStateFlow(emptyMap()))
-        val vm = FiguresViewModel(figureRepo, dao)
+        val vm = FiguresViewModel(figureRepo, dao, FakePinnedFigureRepository())
 
         assertIs<FiguresContract.UiState.Success>(vm.state.value)
     }
@@ -49,7 +51,7 @@ class FiguresViewModelTest {
         val figures = listOf(buildFigure("Augustine", "Bishop of Hippo"))
         val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
         val dao = FakeEncouragementDao(MutableStateFlow(emptyMap()))
-        val vm = FiguresViewModel(figureRepo, dao)
+        val vm = FiguresViewModel(figureRepo, dao, FakePinnedFigureRepository())
 
         val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
         assertEquals(1, state.figures.size)
@@ -62,7 +64,7 @@ class FiguresViewModelTest {
         val figures = listOf(buildFigure("Augustine", "Bishop of Hippo"))
         val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
         val dao = FakeEncouragementDao(MutableStateFlow(emptyMap()))
-        val vm = FiguresViewModel(figureRepo, dao)
+        val vm = FiguresViewModel(figureRepo, dao, FakePinnedFigureRepository())
 
         val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
         assertEquals(0, state.figures[0].quoteCount)
@@ -77,7 +79,7 @@ class FiguresViewModelTest {
         val counts = mapOf("Augustine" to 3, "C.S. Lewis" to 1)
         val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
         val dao = FakeEncouragementDao(MutableStateFlow(counts))
-        val vm = FiguresViewModel(figureRepo, dao)
+        val vm = FiguresViewModel(figureRepo, dao, FakePinnedFigureRepository())
 
         val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
         assertEquals(3, state.figures.first { it.name == "Augustine" }.quoteCount)
@@ -90,7 +92,7 @@ class FiguresViewModelTest {
         val countsFlow = MutableStateFlow(emptyMap<String, Int>())
         val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
         val dao = FakeEncouragementDao(countsFlow)
-        val vm = FiguresViewModel(figureRepo, dao)
+        val vm = FiguresViewModel(figureRepo, dao, FakePinnedFigureRepository())
 
         assertIs<FiguresContract.UiState.Success>(vm.state.value).let {
             assertEquals(0, it.figures[0].quoteCount)
@@ -111,6 +113,11 @@ private fun buildFigure(name: String, role: String) = Figure(
     century = "4th",
     role = role
 )
+
+private class FakePinnedFigureRepository : PinnedFigureRepository {
+    override fun observePinnedFigureId(): Flow<Long?> = flowOf(null)
+    override suspend fun setPinnedFigureId(figureId: Long?) = Unit
+}
 
 private class FakeFigureRepository(
     private val flow: MutableStateFlow<List<Figure>>

@@ -58,6 +58,7 @@ fun Application.configureRouting() {
         healthRoutes()
         newsRoutes()
         analysisRoutes()
+        dailyReflectionRoutes()
         scriptureRoutes()
         figureRoutes()
         webhookRoutes()

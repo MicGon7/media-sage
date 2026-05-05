@@ -72,4 +72,10 @@
         <item quantity="one">%1$d Quote</item>
         <item quantity="other">%1$d Quotes</item>
     </plurals>
+
+    <string name="figure_detail_pin_to_home">Pin to Home</string>
+    <string name="figure_detail_pinned_to_home">Pinned to Home</string>
+    <string name="briefing_card_based_on">Based on</string>
+    <string name="briefing_card_morning">Morning Reflection</string>
+    <string name="briefing_card_evening">Evening Reflection</string>
 </resources>

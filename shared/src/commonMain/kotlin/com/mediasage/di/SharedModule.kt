@@ -4,14 +4,18 @@ import com.mediasage.data.local.db.MediaSageDatabase
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.data.remote.MediaSageApiImpl
 import com.mediasage.data.remote.createHttpClient
+import com.mediasage.data.repository.DailyReflectionRepositoryImpl
 import com.mediasage.data.repository.EncouragementRepositoryImpl
 import com.mediasage.data.repository.FigureRepositoryImpl
+import com.mediasage.data.repository.PinnedFigureRepositoryImpl
 import com.mediasage.data.repository.WikipediaRepositoryImpl
 import com.mediasage.data.repository.HeadlineRepositoryImpl
 import com.mediasage.data.repository.MatchRepositoryImpl
 import com.mediasage.data.repository.QuoteRepositoryImpl
+import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
+import com.mediasage.domain.repository.PinnedFigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.MatchRepository
 import com.mediasage.domain.repository.QuoteRepository
@@ -32,6 +36,8 @@ fun sharedModule(serverBaseUrl: String = "http://10.0.2.2:8080") = module {
     single { get<MediaSageDatabase>().matchDao() }
     single { get<MediaSageDatabase>().encouragementDao() }
     single { get<MediaSageDatabase>().syncMetaDao() }
+    single { get<MediaSageDatabase>().dailyReflectionDao() }
+    single { get<MediaSageDatabase>().pinnedFigureDao() }
 
     // Repositories — interface bound to implementation
     single<FigureRepository> { FigureRepositoryImpl(get(), get(), get()) }
@@ -40,4 +46,6 @@ fun sharedModule(serverBaseUrl: String = "http://10.0.2.2:8080") = module {
     single<MatchRepository> { MatchRepositoryImpl(get()) }
     single<EncouragementRepository> { EncouragementRepositoryImpl(get(), get(), get()) }
     single<WikipediaRepository> { WikipediaRepositoryImpl(get()) }
+    single<DailyReflectionRepository> { DailyReflectionRepositoryImpl(get(), get()) }
+    single<PinnedFigureRepository> { PinnedFigureRepositoryImpl(get()) }
 }

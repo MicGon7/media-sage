@@ -10,6 +10,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -76,6 +77,22 @@ class ClaudeApiService(
         (if (quoteId != null) pool.find { it.quoteId == quoteId } else null)
             ?: pool.find { it.quoteId == retryId() }
             ?: throw ClaudeApiException(500, "Claude returned invalid quoteId after retry")
+
+    suspend fun generateDailyReflection(
+        systemPrompt: String,
+        userMessage: String,
+        tone: String
+    ): DailyReflectionResult {
+        val raw = callClaude(systemPrompt, userMessage, maxTokens = 512)
+        val parsed = responseJson.decodeFromString<DailyReflectionRaw>(extractJson(raw))
+        return DailyReflectionResult(
+            scriptureReference = parsed.scriptureReference,
+            scriptureText = parsed.scriptureText,
+            reflection = parsed.reflection,
+            sources = parsed.sources,
+            tone = tone
+        )
+    }
 
     @Deprecated("Use encourageHeadline instead — TODO MS-46")
     suspend fun matchQuoteToHeadline(
@@ -201,6 +218,14 @@ class ClaudeApiService(
 }
 
 // ---- Supporting types ----
+
+@Serializable
+data class DailyReflectionRaw(
+    @SerialName("scriptureReference") val scriptureReference: String,
+    @SerialName("scriptureText") val scriptureText: String,
+    val reflection: String,
+    val sources: List<String>
+)
 
 data class QuoteCandidate(
     val id: Long,

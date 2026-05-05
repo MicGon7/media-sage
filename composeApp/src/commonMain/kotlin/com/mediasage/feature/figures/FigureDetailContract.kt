@@ -9,9 +9,14 @@ object FigureDetailContract {
             val figureRole: String,
             val figureImageUrl: String?,
             val bio: String?,
-            val quotes: List<FigureQuoteItem>
+            val quotes: List<FigureQuoteItem>,
+            val isPinned: Boolean = false
         ) : UiState
         data class Error(val message: String) : UiState
+    }
+
+    sealed interface Intent {
+        data object PinToHome : Intent
     }
 }
 

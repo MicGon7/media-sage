@@ -10,9 +10,25 @@ object HomeContract {
         data object Empty : UiState
         data class Success(
             val headlines: List<HeadlineItem>,
-            val isRefreshing: Boolean = false
+            val isRefreshing: Boolean = false,
+            val briefingCard: BriefingCardState = BriefingCardState.Hidden
         ) : UiState
         data class Error(val errorType: ErrorType) : UiState
+    }
+
+    sealed interface BriefingCardState {
+        data object Hidden : BriefingCardState
+        data object Loading : BriefingCardState
+        data class Ready(
+            val figureId: Long,
+            val figureName: String,
+            val figureImageUrl: String?,
+            val scriptureReference: String,
+            val scriptureText: String,
+            val reflection: String,
+            val sources: List<String>,
+            val tone: String
+        ) : BriefingCardState
     }
 
     sealed interface Intent {

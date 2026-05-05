@@ -18,9 +18,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -43,6 +48,8 @@ import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.figure_detail_biography
+import mediasage.composeapp.generated.resources.figure_detail_pin_to_home
+import mediasage.composeapp.generated.resources.figure_detail_pinned_to_home
 import mediasage.composeapp.generated.resources.figure_detail_quotes_button
 import mediasage.composeapp.generated.resources.figure_detail_quotes_sheet_title
 import mediasage.composeapp.generated.resources.figure_detail_wikipedia_source
@@ -53,11 +60,14 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun FigureDetailScreen(
     state: FigureDetailContract.UiState,
+    onIntent: (FigureDetailContract.Intent) -> Unit = {},
     onNavigateBack: () -> Unit = {}
 ) {
     var showQuotesSheet by rememberSaveable { mutableStateOf(false) }
 
-    val figureName = (state as? FigureDetailContract.UiState.Success)?.figureName
+    val success = state as? FigureDetailContract.UiState.Success
+    val figureName = success?.figureName
+    val isPinned = success?.isPinned ?: false
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -67,6 +77,19 @@ fun FigureDetailScreen(
                         text = figureName.orEmpty(),
                         style = MaterialTheme.typography.titleLarge,
                     )
+                }
+                AnimatedVisibility(visible = success != null, enter = fadeIn()) {
+                    IconButton(onClick = { onIntent(FigureDetailContract.Intent.PinToHome) }) {
+                        Icon(
+                            imageVector = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                            contentDescription = stringResource(
+                                if (isPinned) Res.string.figure_detail_pinned_to_home
+                                else Res.string.figure_detail_pin_to_home
+                            ),
+                            tint = if (isPinned) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
