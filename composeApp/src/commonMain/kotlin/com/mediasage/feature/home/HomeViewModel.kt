@@ -3,6 +3,9 @@ package com.mediasage.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
@@ -166,8 +169,9 @@ class HomeViewModel(
     }
 
     private fun currentTone(): String {
-        val hourUtc = (epochMillis() % 86400000L / 3600000L).toInt()
-        return if (hourUtc < 12) "morning" else "evening"
+        val hour = Instant.fromEpochMilliseconds(epochMillis())
+            .toLocalDateTime(TimeZone.currentSystemDefault()).hour
+        return if (hour < 12) "morning" else "evening"
     }
 }
 
