@@ -171,7 +171,7 @@ class HomeViewModel(
     private fun currentTone(): String {
         val hour = Instant.fromEpochMilliseconds(epochMillis())
             .toLocalDateTime(TimeZone.currentSystemDefault()).hour
-        return if (hour < 12) "morning" else "evening"
+        return if (hour < 17) "morning" else "evening"
     }
 }
 
