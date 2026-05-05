@@ -4,6 +4,7 @@ import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.HeadlineEntity
 import com.mediasage.data.local.entity.MatchEntity
 import com.mediasage.data.local.entity.QuoteEntity
+import com.mediasage.data.remote.FigureDto
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.Headline
@@ -29,6 +30,17 @@ class EntityMappersTest {
         assertEquals("Bishop & Church Father", domain.role)
         assertEquals("354-430", domain.lifespan)
         assertEquals("Bishop of Hippo", domain.bio)
+    }
+
+    @Test
+    fun figureDtoToEntityUsesServerIdAsPrimaryKey() {
+        val dto = FigureDto(
+            id = 42L, name = "Augustine", category = "theologian",
+            century = "4th", role = "Bishop", lifespan = "354-430", bio = "Bishop of Hippo"
+        )
+        val entity = dto.toEntity()
+        assertEquals(42L, entity.id)
+        assertEquals(42L, entity.serverId)
     }
 
     @Test

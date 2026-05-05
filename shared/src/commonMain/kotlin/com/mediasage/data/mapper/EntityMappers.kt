@@ -43,6 +43,7 @@ fun Figure.toEntity() = FigureEntity(
 )
 
 fun FigureDto.toEntity() = FigureEntity(
+    id = id,
     name = name,
     category = category,
     century = century,
