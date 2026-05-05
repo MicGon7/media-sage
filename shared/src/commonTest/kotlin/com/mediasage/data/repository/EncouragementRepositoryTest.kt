@@ -10,6 +10,7 @@ import com.mediasage.data.remote.DailyReflectionResponseDto
 import com.mediasage.data.remote.EncourageRequestDto
 import com.mediasage.data.remote.EncourageResultDto
 import com.mediasage.data.remote.FigureDto
+import com.mediasage.data.remote.FiguresResponse
 import com.mediasage.data.remote.MatchCandidateDto
 import com.mediasage.data.remote.MatchRequestDto
 import com.mediasage.data.remote.MatchResultDto
@@ -273,7 +274,7 @@ private class FakeMediaSageApi(private val result: EncourageResultDto) : MediaSa
         return result
     }
 
-    override suspend fun getFigures(since: Long?): List<FigureDto> = emptyList()
+    override suspend fun getFigures(since: Long?): FiguresResponse = FiguresResponse(syncedAt = 0L, figures = emptyList())
     override suspend fun getHeadlines(locale: String, limit: Int): List<NewsArticleDto> = emptyList()
     override suspend fun searchNews(query: String, limit: Int): List<NewsArticleDto> = emptyList()
 

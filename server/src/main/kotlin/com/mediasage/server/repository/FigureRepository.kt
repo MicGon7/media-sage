@@ -9,6 +9,12 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 
 @Serializable
+data class FiguresResponse(
+    val syncedAt: Long,
+    val figures: List<FigureDto>
+)
+
+@Serializable
 data class FigureDto(
     val id: Long,
     val name: String,

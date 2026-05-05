@@ -34,16 +34,15 @@ class FigureRepositoryImpl(
 
     override suspend fun syncFigures() {
         val lastSyncAt = syncMetaDao.get()?.lastFigureSyncAt
-        val syncStartedAt = currentTimeMillis()
-        val isFullSync = lastSyncAt == null || syncStartedAt - lastSyncAt > FULL_SYNC_INTERVAL_MS
-        val figures = api.getFigures(since = if (isFullSync) null else lastSyncAt)
+        val isFullSync = lastSyncAt == null || currentTimeMillis() - lastSyncAt > FULL_SYNC_INTERVAL_MS
+        val response = api.getFigures(since = if (isFullSync) null else lastSyncAt)
         if (isFullSync) {
             figureDao.deleteAll()
-            figureDao.insertAll(figures.map { it.toEntity() })
-        } else if (figures.isNotEmpty()) {
-            figureDao.insertAll(figures.map { it.toEntity() })
+            figureDao.insertAll(response.figures.map { it.toEntity() })
+        } else if (response.figures.isNotEmpty()) {
+            figureDao.insertAll(response.figures.map { it.toEntity() })
         }
-        syncMetaDao.upsert(SyncMetaEntity(lastFigureSyncAt = syncStartedAt))
+        syncMetaDao.upsert(SyncMetaEntity(lastFigureSyncAt = response.syncedAt))
     }
 
     companion object {

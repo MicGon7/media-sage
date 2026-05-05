@@ -4,7 +4,7 @@ import com.mediasage.data.remote.DailyReflectionRequestDto
 import com.mediasage.data.remote.DailyReflectionResponseDto
 import com.mediasage.data.remote.EncourageRequestDto
 import com.mediasage.data.remote.EncourageResultDto
-import com.mediasage.data.remote.FigureDto
+import com.mediasage.data.remote.FiguresResponse
 import com.mediasage.data.remote.MatchRequestDto
 import com.mediasage.data.remote.MatchResultDto
 import com.mediasage.data.remote.MediaSageApi
@@ -15,7 +15,7 @@ import com.mediasage.data.remote.ScriptureVerseDto
 /** Temporary mock API for physical device demos without a server. */
 class MockMediaSageApi : MediaSageApi {
 
-    override suspend fun getFigures(since: Long?): List<FigureDto> = emptyList()
+    override suspend fun getFigures(since: Long?): FiguresResponse = FiguresResponse(syncedAt = 0L, figures = emptyList())
 
     override suspend fun getHeadlines(locale: String, limit: Int): List<NewsArticleDto> =
         MockData.headlines

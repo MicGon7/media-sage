@@ -2,8 +2,8 @@ package com.mediasage.server
 
 import com.mediasage.server.db.FigureTable
 import com.mediasage.server.db.ServerDatabase
-import com.mediasage.server.repository.FigureDto
 import com.mediasage.server.repository.FigureRepository
+import com.mediasage.server.repository.FiguresResponse
 import com.mediasage.server.routes.figureRoutes
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -69,8 +69,8 @@ class FigureSinceRouteTest {
         val client = createClient { install(ContentNegotiation) { json() } }
         val response = client.get("/api/figures")
         assertEquals(HttpStatusCode.OK, response.status)
-        val figures = response.body<List<FigureDto>>()
-        assertEquals(2, figures.size)
+        val body = response.body<FiguresResponse>()
+        assertEquals(2, body.figures.size)
     }
 
     @Test
@@ -82,9 +82,9 @@ class FigureSinceRouteTest {
         val client = createClient { install(ContentNegotiation) { json() } }
         val response = client.get("/api/figures?since=$oldTimestamp")
         assertEquals(HttpStatusCode.OK, response.status)
-        val figures = response.body<List<FigureDto>>()
-        assertEquals(1, figures.size)
-        assertEquals("C.S. Lewis", figures.first().name)
+        val body = response.body<FiguresResponse>()
+        assertEquals(1, body.figures.size)
+        assertEquals("C.S. Lewis", body.figures.first().name)
     }
 
     @Test
@@ -96,7 +96,7 @@ class FigureSinceRouteTest {
         val client = createClient { install(ContentNegotiation) { json() } }
         val response = client.get("/api/figures?since=9999999999999")
         assertEquals(HttpStatusCode.OK, response.status)
-        val figures = response.body<List<FigureDto>>()
-        assertEquals(0, figures.size)
+        val body = response.body<FiguresResponse>()
+        assertEquals(0, body.figures.size)
     }
 }
