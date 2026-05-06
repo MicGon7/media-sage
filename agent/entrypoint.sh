@@ -15,4 +15,4 @@ else
   git clone "$REPO_URL" "$REPO_DIR"
 fi
 
-exec java $JAVA_OPTS -jar app.jar
+exec java -jar app.jar
