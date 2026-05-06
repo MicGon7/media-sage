@@ -4,6 +4,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import io.ktor.http.isSuccess
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
@@ -36,7 +37,7 @@ private data class JiraLabelsFields(
 @Serializable
 private data class JiraIssueContentResponse(
     @SerialName("fields")
-    val fields: JiraContentFields
+    val fields: JiraContentFields? = null
 )
 
 @Serializable
@@ -80,9 +81,17 @@ class JiraApiService(
                 header(HttpHeaders.Authorization, authHeader)
                 accept(ContentType.Application.Json)
             }
+            if (!response.status.isSuccess()) {
+                log.warning("Jira API returned ${response.status} for $ticketKey content fetch")
+                return null
+            }
             val body = response.body<JiraIssueContentResponse>()
-            val description = body.fields.description?.let { extractText(it) }.orEmpty()
-            "**$ticketKey: ${body.fields.summary}**\n\n$description"
+            val fields = body.fields ?: run {
+                log.warning("Jira response for $ticketKey had no fields")
+                return null
+            }
+            val description = fields.description?.let { extractText(it) }.orEmpty()
+            "**$ticketKey: ${fields.summary}**\n\n$description"
         } catch (e: Exception) {
             log.warning("Failed to fetch ticket content for $ticketKey: ${e.message}")
             null
