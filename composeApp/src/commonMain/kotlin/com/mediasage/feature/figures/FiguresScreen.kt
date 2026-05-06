@@ -34,6 +34,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +67,8 @@ fun FiguresScreen(
         is FiguresContract.UiState.Loading -> LoadingState()
         is FiguresContract.UiState.Success -> VoicesList(
             figures = state.figures,
+            isRefreshing = state.isRefreshing,
+            onRefresh = { onIntent(FiguresContract.Intent.Refresh) },
             searchQuery = state.searchQuery,
             onSearchQueryChanged = { query -> onIntent(FiguresContract.Intent.SearchQueryChanged(query)) },
             onFigureClick = { id ->
@@ -124,25 +129,45 @@ private fun SearchBar(query: String, onQueryChanged: (String) -> Unit) {
 @Composable
 private fun VoicesList(
     figures: List<VoiceFigureItem>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
     onFigureClick: (Long) -> Unit
 ) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp)
-        ) {
-            item { VoicesHeader() }
-            item { SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged) }
+    val pullToRefreshState = rememberPullToRefreshState()
 
-            if (figures.isEmpty()) {
-                item { EmptyState() }
-            } else {
-                items(figures, key = { it.id }) { figure ->
-                    VoiceCard(figure = figure, onClick = { onFigureClick(figure.id) })
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pullToRefresh(
+                    isRefreshing = isRefreshing,
+                    state = pullToRefreshState,
+                    onRefresh = onRefresh
+                )
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp)
+            ) {
+                item { VoicesHeader() }
+                item { SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged) }
+
+                if (figures.isEmpty()) {
+                    item { EmptyState() }
+                } else {
+                    items(figures, key = { it.id }) { figure ->
+                        VoiceCard(figure = figure, onClick = { onFigureClick(figure.id) })
+                    }
                 }
             }
+
+            PullToRefreshDefaults.Indicator(
+                state = pullToRefreshState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         }
     }
 }

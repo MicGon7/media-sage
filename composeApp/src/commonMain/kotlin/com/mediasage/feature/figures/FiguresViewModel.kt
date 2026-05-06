@@ -61,8 +61,20 @@ class FiguresViewModel(
     fun onIntent(intent: FiguresContract.Intent) {
         when (intent) {
             is FiguresContract.Intent.LoadFigures -> { /* reactive — no manual reload needed */ }
+            is FiguresContract.Intent.Refresh -> refresh()
             is FiguresContract.Intent.FigureClicked -> { /* handled via navigation callback */ }
             is FiguresContract.Intent.SearchQueryChanged -> { _searchQuery.value = intent.query }
+        }
+    }
+
+    private fun refresh() {
+        val current = _state.value as? FiguresContract.UiState.Success ?: return
+        viewModelScope.launch {
+            _state.value = current.copy(isRefreshing = true)
+            runCatching { figureRepository.syncFigures() }
+            _state.value = (_state.value as? FiguresContract.UiState.Success)
+                ?.copy(isRefreshing = false)
+                ?: current.copy(isRefreshing = false)
         }
     }
 }

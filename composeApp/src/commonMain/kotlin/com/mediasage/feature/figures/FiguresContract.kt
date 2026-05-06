@@ -6,12 +6,14 @@ object FiguresContract {
         data object Loading : UiState
         data class Success(
             val figures: List<VoiceFigureItem>,
-            val searchQuery: String = ""
+            val searchQuery: String = "",
+            val isRefreshing: Boolean = false
         ) : UiState
     }
 
     sealed interface Intent {
         data object LoadFigures : Intent
+        data object Refresh : Intent
         data class FigureClicked(val figureId: Long) : Intent
         data class SearchQueryChanged(val query: String) : Intent
     }
