@@ -1,6 +1,7 @@
 package com.mediasage.agent.routes
 
 import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.JiraTicketFetcher
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -49,6 +50,7 @@ private val relevantEvents = setOf("jira:issue_created", "jira:issue_updated")
  */
 fun Route.webhookRoutes() {
     val agentService by inject<AgentLaunchService>()
+    val jiraFetcher by inject<JiraTicketFetcher>()
 
     post("/webhook/jira") {
         val payload = call.receive<JiraWebhookPayload>()
@@ -59,7 +61,8 @@ fun Route.webhookRoutes() {
             fields.status.name == "To Do"
 
         if (shouldFire) {
-            agentService.launch(payload.issue.key)
+            val ticketContent = jiraFetcher.getTicketContent(payload.issue.key)
+            agentService.launch(payload.issue.key, ticketContent)
         }
 
         call.respond(HttpStatusCode.OK)

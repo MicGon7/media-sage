@@ -6,11 +6,19 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.util.Base64
 import java.util.logging.Logger
 
 interface JiraLabelChecker {
     suspend fun isAutonomous(ticketKey: String): Boolean
+}
+
+interface JiraTicketFetcher {
+    suspend fun getTicketContent(ticketKey: String): String?
 }
 
 @Serializable
@@ -25,22 +33,36 @@ private data class JiraLabelsFields(
     val labels: List<String> = emptyList()
 )
 
+@Serializable
+private data class JiraIssueContentResponse(
+    @SerialName("fields")
+    val fields: JiraContentFields
+)
+
+@Serializable
+private data class JiraContentFields(
+    @SerialName("summary")
+    val summary: String = "",
+    @SerialName("description")
+    val description: JsonElement? = null
+)
+
 class JiraApiService(
     private val httpClient: HttpClient,
     private val cloudId: String,
     private val email: String,
     private val apiToken: String
-) : JiraLabelChecker {
+) : JiraLabelChecker, JiraTicketFetcher {
 
     private val log = Logger.getLogger(JiraApiService::class.java.name)
     private val authHeader = "Basic " + Base64.getEncoder()
         .encodeToString("$email:$apiToken".toByteArray(Charsets.UTF_8))
 
+    private val baseUrl = "https://api.atlassian.com/ex/jira/$cloudId/rest/api/3"
+
     override suspend fun isAutonomous(ticketKey: String): Boolean {
         return try {
-            val response = httpClient.get(
-                "https://api.atlassian.com/ex/jira/$cloudId/rest/api/3/issue/$ticketKey?fields=labels"
-            ) {
+            val response = httpClient.get("$baseUrl/issue/$ticketKey?fields=labels") {
                 header(HttpHeaders.Authorization, authHeader)
                 accept(ContentType.Application.Json)
             }
@@ -50,5 +72,34 @@ class JiraApiService(
             log.warning("Failed to check Jira labels for $ticketKey: ${e.message}")
             false
         }
+    }
+
+    override suspend fun getTicketContent(ticketKey: String): String? {
+        return try {
+            val response = httpClient.get("$baseUrl/issue/$ticketKey?fields=summary,description") {
+                header(HttpHeaders.Authorization, authHeader)
+                accept(ContentType.Application.Json)
+            }
+            val body = response.body<JiraIssueContentResponse>()
+            val description = body.fields.description?.let { extractText(it) }.orEmpty()
+            "**$ticketKey: ${body.fields.summary}**\n\n$description"
+        } catch (e: Exception) {
+            log.warning("Failed to fetch ticket content for $ticketKey: ${e.message}")
+            null
+        }
+    }
+
+    private fun extractText(element: JsonElement): String = when (element) {
+        is JsonObject -> {
+            val text = element["text"]?.jsonPrimitive?.content
+            val content = element["content"]
+            when {
+                text != null -> text
+                content is JsonArray -> content.joinToString("\n") { extractText(it) }
+                else -> ""
+            }
+        }
+        is JsonArray -> element.joinToString("\n") { extractText(it) }
+        else -> ""
     }
 }

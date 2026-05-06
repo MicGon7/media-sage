@@ -3,6 +3,7 @@ package com.mediasage.agent.di
 import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.JiraApiService
 import com.mediasage.agent.service.JiraLabelChecker
+import com.mediasage.agent.service.JiraTicketFetcher
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -30,7 +31,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     }
 
     single { AgentLaunchService(config.repoPath, scope) }
-    single<JiraLabelChecker> {
-        JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken)
-    }
+    single { JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken) }
+    single<JiraLabelChecker> { get<JiraApiService>() }
+    single<JiraTicketFetcher> { get<JiraApiService>() }
 }

@@ -7,7 +7,11 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Logger
 
-private const val BOOTSTRAP_PROMPT =
+private const val BOOTSTRAP_PROMPT_WITH_CONTENT =
+    "Your assigned ticket is %s.\n\n## Ticket\n%s\n\n" +
+    "Follow the Agent Guidelines in CLAUDE.md to execute the full autonomous workflow."
+
+private const val BOOTSTRAP_PROMPT_FALLBACK =
     "Your assigned ticket is %s. Retrieve it from Jira (cloudId: media-sage.atlassian.net), " +
     "read the description and acceptance criteria, then follow the Agent Guidelines in CLAUDE.md " +
     "to execute the full autonomous workflow."
@@ -32,8 +36,14 @@ open class AgentLaunchService(
     private val log = Logger.getLogger(AgentLaunchService::class.java.name)
     private val activeKeys: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
-    fun launch(ticketKey: String): Boolean =
-        spawnAgent(ticketKey, BOOTSTRAP_PROMPT.format(ticketKey))
+    fun launch(ticketKey: String, ticketContent: String? = null): Boolean {
+        val prompt = if (ticketContent != null) {
+            BOOTSTRAP_PROMPT_WITH_CONTENT.format(ticketKey, ticketContent)
+        } else {
+            BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
+        }
+        return spawnAgent(ticketKey, prompt)
+    }
 
     /**
      * Launches an agent to respond to a PR review comment for [ticketKey].
