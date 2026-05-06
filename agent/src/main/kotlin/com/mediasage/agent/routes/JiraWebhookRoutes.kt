@@ -9,6 +9,7 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.koin.ktor.ext.inject
+import java.util.logging.Logger
 
 // ---- Jira webhook payload DTOs ----
 
@@ -49,12 +50,18 @@ private val relevantEvents = setOf("jira:issue_created", "jira:issue_updated")
  * with the `autonomous` label enters the To Do status.
  */
 fun Route.webhookRoutes() {
+    val log = Logger.getLogger("JiraWebhookRoutes")
     val agentService by inject<AgentLaunchService>()
     val jiraFetcher by inject<JiraTicketFetcher>()
 
     post("/webhook/jira") {
         val payload = call.receive<JiraWebhookPayload>()
         val fields = payload.issue.fields
+
+        log.info(
+            "Jira webhook: event=${payload.webhookEvent} key=${payload.issue.key} " +
+            "status='${fields.status.name}' labels=${fields.labels}"
+        )
 
         val shouldFire = payload.webhookEvent in relevantEvents &&
             "autonomous" in fields.labels &&
