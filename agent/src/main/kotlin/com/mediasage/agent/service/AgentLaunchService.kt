@@ -3,7 +3,9 @@ package com.mediasage.agent.service
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.BufferedReader
 import java.io.File
+import java.io.InputStreamReader
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Logger
 
@@ -103,6 +105,15 @@ open class AgentLaunchService(
 
     fun isActive(key: String): Boolean = key in activeKeys
 
+    private fun pipeStream(key: String, process: Process) {
+        scope.launch(Dispatchers.IO) {
+            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { log.info("[$key] $it") }
+        }
+        scope.launch(Dispatchers.IO) {
+            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { log.warning("[$key] $it") }
+        }
+    }
+
     private fun spawnAgent(
         key: String,
         prompt: String,
@@ -110,19 +121,13 @@ open class AgentLaunchService(
         teardown: (() -> Unit)? = null
     ): Boolean {
         if (!activeKeys.add(key)) return false
-
-        val command = listOf("claude", "-p", prompt, "--dangerously-skip-permissions")
-
         try {
-            val process = ProcessBuilder(command)
+            val process = ProcessBuilder(listOf("claude", "-p", prompt, "--dangerously-skip-permissions"))
                 .directory(workDir)
                 .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
-                .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-                .redirectError(ProcessBuilder.Redirect.INHERIT)
                 .start()
-
             log.info("Agent launched for $key (pid ${process.pid()}) prompt: $prompt")
-
+            pipeStream(key, process)
             scope.launch(Dispatchers.IO) {
                 try {
                     val exitCode = process.waitFor()
@@ -136,7 +141,6 @@ open class AgentLaunchService(
             activeKeys.remove(key)
             log.warning("Failed to launch agent for $key: ${e.message}")
         }
-
         return true
     }
 }
