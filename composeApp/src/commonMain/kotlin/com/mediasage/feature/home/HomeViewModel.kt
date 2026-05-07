@@ -65,7 +65,8 @@ class HomeViewModel(
                     if (headlines.isNotEmpty()) {
                         _state.value = HomeContract.UiState.Success(
                             headlines = headlines.map { it.toItem() },
-                            briefingCard = lastBriefingCard
+                            briefingCard = lastBriefingCard,
+                            todayLabel = todayLabel()
                         )
                     }
                 }
@@ -165,6 +166,14 @@ class HomeViewModel(
         val hour = Instant.fromEpochMilliseconds(epochMillis())
             .toLocalDateTime(TimeZone.currentSystemDefault()).hour
         return if (hour < 17) "morning" else "evening"
+    }
+
+    private fun todayLabel(): String {
+        val date = Instant.fromEpochMilliseconds(epochMillis())
+            .toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val day = date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
+        val month = date.month.name.lowercase().replaceFirstChar { it.uppercase() }
+        return "$day, $month ${date.dayOfMonth}, ${date.year}"
     }
 }
 

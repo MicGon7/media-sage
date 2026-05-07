@@ -21,10 +21,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.mediasage.theme.MediaSageTheme
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import com.mediasage.data.repository.epochMillis
 import coil3.compose.AsyncImage
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
@@ -54,6 +50,7 @@ fun HomeScreen(
             is HomeContract.UiState.Success -> HeadlinesFeed(
                 headlines = state.headlines,
                 briefingCard = state.briefingCard,
+                todayLabel = state.todayLabel,
                 isRefreshing = state.isRefreshing,
                 onRefresh = { onIntent(HomeContract.Intent.RefreshHeadlines) },
                 onHeadlineClick = { onNavigateToDetail(it.articleUrl) },
@@ -86,12 +83,7 @@ private fun Masthead() {
 }
 
 @Composable
-private fun NewspaperDateRow() {
-    val today = Instant.fromEpochMilliseconds(epochMillis()).toLocalDateTime(TimeZone.currentSystemDefault()).date
-    val dayName = today.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
-    val monthName = today.month.name.lowercase().replaceFirstChar { it.uppercase() }
-    val dateText = "$dayName, $monthName ${today.dayOfMonth}, ${today.year}"
-
+private fun NewspaperDateRow(todayLabel: String) {
     Column(modifier = Modifier.fillMaxWidth()) {
         HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -104,7 +96,7 @@ private fun NewspaperDateRow() {
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             Text(
-                text = dateText,
+                text = todayLabel,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.align(Alignment.Center)
@@ -123,6 +115,7 @@ private fun NewspaperDateRow() {
 private fun HeadlinesFeed(
     headlines: List<HeadlineItem>,
     briefingCard: HomeContract.BriefingCardState,
+    todayLabel: String,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onHeadlineClick: (HeadlineItem) -> Unit,
@@ -141,7 +134,7 @@ private fun HeadlinesFeed(
     ) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item { Masthead() }
-            item { NewspaperDateRow() }
+            item { NewspaperDateRow(todayLabel = todayLabel) }
 
             when (briefingCard) {
                 is HomeContract.BriefingCardState.Loading -> item { BriefingCardShimmer() }
@@ -401,6 +394,7 @@ private fun HeadlinesFeedPreview() {
                 )
             ),
             briefingCard = HomeContract.BriefingCardState.Hidden,
+            todayLabel = "Wednesday, May 7, 2026",
             isRefreshing = false,
             onRefresh = {},
             onHeadlineClick = {},
