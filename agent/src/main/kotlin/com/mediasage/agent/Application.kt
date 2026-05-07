@@ -5,8 +5,11 @@ import com.mediasage.agent.di.agentModule
 import com.mediasage.agent.plugins.*
 import com.mediasage.agent.routes.githubWebhookRoutes
 import com.mediasage.agent.routes.webhookRoutes
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
 import io.ktor.server.netty.EngineMain
+import io.ktor.server.response.respond
+import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +37,7 @@ fun Application.module() {
     configureStatusPages()
 
     routing {
+        get("/health") { call.respond(HttpStatusCode.OK, "OK") }
         webhookRoutes()
         githubWebhookRoutes(config.githubWebhookSecret)
     }

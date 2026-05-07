@@ -12,7 +12,7 @@ Five-module Gradle project (`settings.gradle.kts`):
 :composeApp   — Compose Multiplatform UI (Android + iOS)
 :shared       — KMP library (networking, database, domain models)
 :server       — Ktor app API, deployed to Railway (port 8080)
-:agent        — Ktor orchestration server, runs locally / future container (port 8081)
+:agent        — Ktor orchestration server, deployed as Docker container on Railway (port 8081)
 :scripts      — One-off batch jobs, run manually (no server, no Koin wiring)
 ```
 
@@ -21,7 +21,7 @@ Five-module Gradle project (`settings.gradle.kts`):
 - **composeApp**: UI layer only. Depends on `:shared`. Uses Compose Material3, Koin for DI, Lifecycle ViewModel, and Nav3 for navigation.
 - **shared**: Business logic, data layer, networking. Room for persistence, Ktor Client for HTTP, kotlinx-serialization for JSON. Platform engines: OkHttp (Android), Darwin (iOS).
 - **server**: JVM-only Ktor server (Netty). Calls external APIs (Claude, News, Scripture). Uses Koin for DI, CORS, StatusPages, ContentNegotiation, CallLogging. Deployed to Railway.
-- **agent**: JVM-only Ktor server (Netty, port 8081). Receives Jira and GitHub webhooks, spawns Claude Code worker processes. No database deps. Runs locally; future goal is a containerized deployment.
+- **agent**: JVM-only Ktor server (Netty, port 8081). Receives Jira and GitHub webhooks, spawns Claude Code worker processes. No database deps. Deployed as a Docker container on Railway.
 - **scripts**: JVM-only standalone scripts. No Ktor server, no Koin. Uses Exposed + SQLite/Postgres for DB access. Run manually via Gradle tasks (e.g., `generateImages`).
 
 ### Data Flow
@@ -153,8 +153,23 @@ scripts/src/main/kotlin/com/mediasage/scripts/
 # Run app API server (port 8080 — requires API keys in ~/.zshrc)
 source ~/.zshrc && ./gradlew :server:run
 
-# Run agent orchestration server (port 8081 — requires AGENT_REPO_PATH, Jira, GitHub env vars)
+# Run agent orchestration server locally (port 8081 — requires AGENT_REPO_PATH, Jira, GitHub env vars)
 source ~/.zshrc && ./gradlew :agent:run
+
+# Build agent container image locally
+docker build -f agent/Dockerfile -t media-sage-agent .
+
+# Run agent container locally (replace values as needed)
+docker run -p 8081:8081 \
+  -e ANTHROPIC_API_KEY=... \
+  -e AGENT_REPO_PATH=/home/agent/media-sage \
+  -e GITHUB_BOT_TOKEN=... \
+  -e GITHUB_BOT_LOGIN=media-sage-bot \
+  -e GITHUB_BOT_EMAIL=... \
+  -e GITHUB_WEBHOOK_SECRET=... \
+  -e JIRA_EMAIL=... \
+  -e JIRA_API_TOKEN=... \
+  media-sage-agent
 
 # Generate figure portraits (batch script — requires DB_PATH, OPENAI_API_KEY)
 ./gradlew :scripts:generateImages -PscriptArgs="--batch-size=5 --quality=low --dry-run"
@@ -216,7 +231,7 @@ source ~/.zshrc && ./gradlew :agent:run
 11. Reply to any PR review comments with `🤖 **Agent:**` prefix
 
 ### Before submitting work
-- Run `./gradlew allTests` and ensure all pass
+- Run `./gradlew allTests` and ensure all pass. **Exception: when running inside the container (Linux, no Android/iOS SDK), run `./gradlew :agent:test :server:test :shared:jvmTest` instead — Android and iOS targets require their respective SDKs and cannot run on Linux.**
 - Run `./gradlew detekt` and ensure no violations
 - Smoke test any external API changes with real APIs before writing the learning doc or opening a PR — docs should describe verified behaviour, not assumed behaviour
 - No API keys or secrets in code — use environment variables
@@ -275,37 +290,50 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 - **Level 3 — Autonomous (self-triggering)**: Human describes the intent to the assisted agent, which creates the Jira ticket. Human walks away — a Jira webhook fires the bootstrap automatically when the ticket enters To Do. Human only reviews the PR.
 - **Level 4 — Autonomous (self-responding to PR review)**: Human leaves a review comment on a PR for an `autonomous`-labeled ticket. A GitHub webhook fires the agent, which pushes a fix commit or replies with `🤖 **Agent:**`. Human's only touchpoint remains the PR review.
 
-_This project is at Level 4. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:agent` module._
+_This project is at Level 4. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:agent` module, deployed as a Docker container on Railway._
 
-**Level 3 setup (laptop demo):**
+**Level 3 & 4 setup (container — production):**
 
+The `:agent` server runs as a Docker container on Railway. It clones the repo at startup using the bot account token, then starts the Ktor server.
+
+Railway `:agent` service environment variables:
+
+| Variable | Value |
+|---|---|
+| `AGENT_REPO_PATH` | `/home/agent/media-sage` |
+| `ANTHROPIC_API_KEY` | Anthropic account API key |
+| `GITHUB_BOT_TOKEN` | PAT for `media-sage-bot` (scopes: `repo`, `workflow`) |
+| `GITHUB_BOT_LOGIN` | `media-sage-bot` |
+| `GITHUB_BOT_EMAIL` | Bot account email |
+| `GITHUB_BOT_NAME` | `media-sage-bot` |
+| `GITHUB_WEBHOOK_SECRET` | Same secret registered in GitHub repo webhook settings |
+| `JIRA_EMAIL` | `micgon7@gmail.com` |
+| `JIRA_API_TOKEN` | Atlassian account API token |
+| `PORT` | `8081` |
+
+Webhook URLs (stable Railway URL — no ngrok required):
+- Jira: `https://<railway-agent-url>/webhook/jira`
+- GitHub: `https://<railway-agent-url>/webhook/github`
+
+Register the Jira webhook at **media-sage.atlassian.net → Settings → System → WebHooks**:
+- Events: Issue **created** and **updated**
+- JQL filter: `project = MS AND labels = autonomous`
+
+Register the GitHub webhook in repo **Settings → Webhooks**:
+- Content type: `application/json`
+- Events: `Pull request reviews`, `Pull request review comments`
+
+**Level 3 & 4 setup (laptop — local dev/demo):**
+
+For local development only (not needed when container is running):
 1. Add `export AGENT_REPO_PATH="/path/to/media-sage"` to `~/.zshrc` and `source ~/.zshrc`
 2. Start the agent server: `source ~/.zshrc && ./gradlew :agent:run`
 3. Start ngrok: `ngrok http 8081` — copy the public HTTPS URL
-4. Register the Jira webhook at **media-sage.atlassian.net → Settings → System → WebHooks**:
-   - URL: `https://<ngrok-8081-url>/webhook/jira`
-   - Events: Issue **created** and **updated**
-   - JQL filter: `project = MS AND labels = autonomous`
-5. Ask the assisted agent to create an `autonomous` ticket — the agent fires automatically
-
-**Level 4 setup (laptop demo):**
-
-In addition to Level 3 setup, add to `~/.zshrc`:
-```bash
-export GITHUB_WEBHOOK_SECRET="<openssl rand -hex 32>"
-export GITHUB_BOT_LOGIN="MicGon7"
-export JIRA_EMAIL="micgon7@gmail.com"
-export JIRA_API_TOKEN="<Atlassian account → API tokens>"
-```
-
-Register the GitHub webhook in repo **Settings → Webhooks**:
-- URL: `https://<ngrok-8081-url>/webhook/github`
-- Content type: `application/json`
-- Secret: same as `GITHUB_WEBHOOK_SECRET`
-- Events: `Pull request reviews`, `Pull request review comments`
+4. Temporarily update Jira and GitHub webhook URLs to the ngrok URL
 
 See `docs/MS-78-level-4-github-webhook.md` for full details and enterprise notes.
 See `docs/MS-69-level-3-autonomous-agent.md` for Level 3 setup details.
+See `docs/MS-84-containerized-agent-deployment.md` for container architecture and Railway setup.
 
 **Autonomous vs Assisted:**
 
