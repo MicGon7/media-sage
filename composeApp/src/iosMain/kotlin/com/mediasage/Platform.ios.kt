@@ -7,5 +7,3 @@ class IOSPlatform: Platform {
 }
 
 actual fun getPlatform(): Platform = IOSPlatform()
-
-actual val isDebugBuild: Boolean = Platform.isDebugBinary

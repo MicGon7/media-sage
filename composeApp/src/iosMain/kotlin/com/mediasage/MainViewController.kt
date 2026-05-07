@@ -4,6 +4,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import com.mediasage.di.appModule
 import com.mediasage.di.databaseModule
 import com.mediasage.di.sharedModule
+import com.mediasage.di.themeModule
 import org.koin.core.context.startKoin
 
 fun initKoin() {

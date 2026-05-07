@@ -18,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,7 +27,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.mediasage.isDebugBuild
+import com.mediasage.LocalIsDebugBuild
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.MediaSageButton
 import mediasage.composeapp.generated.resources.Res
@@ -47,6 +48,7 @@ fun YouScreen(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {}
 ) {
+    val isDebugBuild = LocalIsDebugBuild.current
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -124,7 +126,14 @@ fun YouScreen(
                     )
                     Switch(
                         checked = state.darkMode,
-                        onCheckedChange = { onIntent(YouContract.Intent.ToggleDarkMode(it)) }
+                        onCheckedChange = { onIntent(YouContract.Intent.ToggleDarkMode(it)) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            uncheckedBorderColor = MaterialTheme.colorScheme.outline,
+                        )
                     )
                 }
             }

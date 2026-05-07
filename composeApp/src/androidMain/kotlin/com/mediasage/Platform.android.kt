@@ -7,5 +7,3 @@ class AndroidPlatform : Platform {
 }
 
 actual fun getPlatform(): Platform = AndroidPlatform()
-
-actual val isDebugBuild: Boolean = BuildConfig.DEBUG
