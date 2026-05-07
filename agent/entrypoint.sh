@@ -3,6 +3,7 @@ set -e
 
 git config --global user.name "${GITHUB_BOT_NAME:-media-sage-bot}"
 git config --global user.email "${GITHUB_BOT_EMAIL}"
+export GH_TOKEN="${GITHUB_BOT_TOKEN}"
 
 REPO_DIR="${AGENT_REPO_PATH:-/home/agent/media-sage}"
 REPO_URL="https://${GITHUB_BOT_TOKEN}@github.com/MicGon7/media-sage.git"

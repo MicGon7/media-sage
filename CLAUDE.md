@@ -227,7 +227,7 @@ docker run -p 8081:8081 \
 11. Reply to any PR review comments with `🤖 **Agent:**` prefix
 
 ### Before submitting work
-- Run `./gradlew allTests` and ensure all pass
+- Run `./gradlew allTests` and ensure all pass. **Exception: when running inside the container (Linux, no Android/iOS SDK), run `./gradlew :agent:test :server:test :shared:jvmTest` instead — Android and iOS targets require their respective SDKs and cannot run on Linux.**
 - Run `./gradlew detekt` and ensure no violations
 - Smoke test any external API changes with real APIs before writing the learning doc or opening a PR — docs should describe verified behaviour, not assumed behaviour
 - No API keys or secrets in code — use environment variables
