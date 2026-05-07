@@ -122,7 +122,7 @@ open class AgentLaunchService(
     ): Boolean {
         if (!activeKeys.add(key)) return false
         try {
-            val process = ProcessBuilder(listOf("claude", "-p", prompt, "--dangerously-skip-permissions"))
+            val process = ProcessBuilder(listOf("claude", "-p", prompt, "--dangerously-skip-permissions", "--output-format", "stream-json"))
                 .directory(workDir)
                 .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
                 .start()
