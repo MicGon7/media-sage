@@ -32,7 +32,8 @@ private const val PR_REVIEW_PROMPT =
  */
 open class AgentLaunchService(
     private val repoPath: String,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val verboseLogging: Boolean = false
 ) {
 
     private val log = Logger.getLogger(AgentLaunchService::class.java.name)
@@ -112,12 +113,22 @@ open class AgentLaunchService(
         "--verbose"
     )
 
-    private fun pipeStream(key: String, process: Process) {
+    private fun pipeStreams(key: String, process: Process) {
         scope.launch(Dispatchers.IO) {
-            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { log.info("[$key] $it") }
+            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line ->
+                if (verboseLogging) {
+                    log.info("[$key] $line")
+                } else {
+                    parseStreamJsonMilestone(line)?.let { milestone ->
+                        milestone.lines().forEach { log.info("[$key] $it") }
+                    }
+                }
+            }
         }
         scope.launch(Dispatchers.IO) {
-            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { log.warning("[$key] $it") }
+            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line ->
+                log.warning("[$key] $line")
+            }
         }
     }
 
@@ -134,7 +145,7 @@ open class AgentLaunchService(
                 .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
                 .start()
             log.info("Agent launched for $key (pid ${process.pid()}) prompt: $prompt")
-            pipeStream(key, process)
+            pipeStreams(key, process)
             scope.launch(Dispatchers.IO) {
                 try {
                     val exitCode = process.waitFor()
