@@ -30,7 +30,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
         }
     }
 
-    single { AgentLaunchService(config.repoPath, scope) }
+    single { AgentLaunchService(config.repoPath, scope, config.verboseLogging) }
     single { JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken) }
     single<JiraLabelChecker> { get<JiraApiService>() }
     single<JiraTicketFetcher> { get<JiraApiService>() }

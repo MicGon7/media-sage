@@ -25,7 +25,9 @@ fun Application.module() {
         githubWebhookSecret = environment.config.propertyOrNull("app.github.webhookSecret")?.getString() ?: "",
         jiraEmail = environment.config.propertyOrNull("app.jira.email")?.getString() ?: "",
         jiraApiToken = environment.config.propertyOrNull("app.jira.apiToken")?.getString() ?: "",
-        jiraCloudId = environment.config.propertyOrNull("app.jira.cloudId")?.getString() ?: ""
+        jiraCloudId = environment.config.propertyOrNull("app.jira.cloudId")?.getString() ?: "",
+        verboseLogging = environment.config.propertyOrNull("app.agent.verboseLogging")
+            ?.getString()?.toBoolean() ?: false
     )
 
     install(Koin) {

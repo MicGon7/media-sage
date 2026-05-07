@@ -5,5 +5,6 @@ data class AgentConfig(
     val githubWebhookSecret: String,
     val jiraEmail: String,
     val jiraApiToken: String,
-    val jiraCloudId: String
+    val jiraCloudId: String,
+    val verboseLogging: Boolean = false
 )
