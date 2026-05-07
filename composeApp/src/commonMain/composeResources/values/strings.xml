@@ -50,6 +50,10 @@
     <string name="title_settings">Settings</string>
     <string name="settings_coming_soon">Settings coming soon</string>
 
+    <!-- Developer settings (DEBUG only) -->
+    <string name="dev_section_header">Developer</string>
+    <string name="dev_dark_mode_label">Dark mode</string>
+
     <!-- Bookmarks screen -->
     <string name="title_bookmarks">Saved</string>
     <string name="bookmarks_coming_soon">Bookmarks coming soon</string>
