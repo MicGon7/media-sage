@@ -10,7 +10,8 @@ object HomeContract {
         data class Success(
             val headlines: List<HeadlineItem>,
             val isRefreshing: Boolean = false,
-            val briefingCard: BriefingCardState = BriefingCardState.Hidden
+            val briefingCard: BriefingCardState = BriefingCardState.Hidden,
+            val todayLabel: String = ""
         ) : UiState
         data class Error(val errorType: ErrorType) : UiState
     }

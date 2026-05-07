@@ -19,11 +19,13 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
+import com.mediasage.theme.MediaSageTheme
 import coil3.compose.AsyncImage
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.HeadlineImage
+import com.mediasage.ui.MediaSageLoadingState
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -37,7 +39,7 @@ fun HomeScreen(
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         when (state) {
-            is HomeContract.UiState.Loading -> LoadingState()
+            is HomeContract.UiState.Loading -> MediaSageLoadingState()
             is HomeContract.UiState.Error -> ErrorState(
                 message = when (state.errorType) {
                     ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
@@ -48,6 +50,7 @@ fun HomeScreen(
             is HomeContract.UiState.Success -> HeadlinesFeed(
                 headlines = state.headlines,
                 briefingCard = state.briefingCard,
+                todayLabel = state.todayLabel,
                 isRefreshing = state.isRefreshing,
                 onRefresh = { onIntent(HomeContract.Intent.RefreshHeadlines) },
                 onHeadlineClick = { onNavigateToDetail(it.articleUrl) },
@@ -76,8 +79,31 @@ private fun Masthead() {
             fontStyle = FontStyle.Italic,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun NewspaperDateRow(todayLabel: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            color = MaterialTheme.colorScheme.primary,
+            thickness = 1.dp
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = todayLabel,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp),
             color = MaterialTheme.colorScheme.primary,
             thickness = 1.dp
         )
@@ -89,6 +115,7 @@ private fun Masthead() {
 private fun HeadlinesFeed(
     headlines: List<HeadlineItem>,
     briefingCard: HomeContract.BriefingCardState,
+    todayLabel: String,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onHeadlineClick: (HeadlineItem) -> Unit,
@@ -107,6 +134,7 @@ private fun HeadlinesFeed(
     ) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item { Masthead() }
+            item { NewspaperDateRow(todayLabel = todayLabel) }
 
             when (briefingCard) {
                 is HomeContract.BriefingCardState.Loading -> item { BriefingCardShimmer() }
@@ -316,16 +344,6 @@ private fun HeadlineRow(
 }
 
 @Composable
-private fun LoadingState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
 private fun ErrorState(
     message: String,
     onRetry: () -> Unit
@@ -346,5 +364,41 @@ private fun ErrorState(
         OutlinedButton(onClick = onRetry) {
             Text(stringResource(Res.string.home_retry))
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true)
+@Composable
+private fun HeadlinesFeedPreview() {
+    MediaSageTheme {
+        HeadlinesFeed(
+            headlines = listOf(
+                HeadlineItem(
+                    id = 1L,
+                    articleUrl = "https://example.com/article-1",
+                    title = "World Leaders Gather for Climate Summit in Geneva",
+                    source = "Reuters",
+                    category = "World",
+                    snippet = "Delegates from over 190 countries convene to discuss new emissions targets.",
+                    imageUrl = null
+                ),
+                HeadlineItem(
+                    id = 2L,
+                    articleUrl = "https://example.com/article-2",
+                    title = "Markets Rally on Positive Economic Data",
+                    source = "Financial Times",
+                    category = "Business",
+                    snippet = "Global indices rise sharply following better-than-expected jobs report.",
+                    imageUrl = null
+                )
+            ),
+            briefingCard = HomeContract.BriefingCardState.Hidden,
+            todayLabel = "Wednesday, May 7, 2026",
+            isRefreshing = false,
+            onRefresh = {},
+            onHeadlineClick = {},
+            onFigureTap = {}
+        )
     }
 }
