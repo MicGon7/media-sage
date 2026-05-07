@@ -231,7 +231,8 @@ docker run -p 8081:8081 \
 11. Reply to any PR review comments with `🤖 **Agent:**` prefix
 
 ### Before submitting work
-- Run `./gradlew allTests` and ensure all pass. **Exception: when running inside the container (Linux, no Android/iOS SDK), run `./gradlew :agent:test :server:test :shared:jvmTest` instead — Android and iOS targets require their respective SDKs and cannot run on Linux.**
+- Run `./gradlew allTests` and ensure all pass. **Exception: when running inside the container (Linux, no Android/iOS SDK), run `./gradlew :agent:test :server:test` instead — the `:shared` module has no JVM-only test target (its tests are Android unit tests requiring the Android SDK), and iOS targets require the iOS SDK. Both are unavailable on Linux.**
+- If a required tool, SDK, or Gradle task is missing and cannot be self-resolved without elevated access or SDK installation, **stop immediately** — do not attempt workarounds. Post a comment on the PR (or Jira ticket if no PR exists yet) describing the exact blocker, then exit. Looping on an unresolvable blocker wastes token budget.
 - Run `./gradlew detekt` and ensure no violations
 - Smoke test any external API changes with real APIs before writing the learning doc or opening a PR — docs should describe verified behaviour, not assumed behaviour
 - No API keys or secrets in code — use environment variables
