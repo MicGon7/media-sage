@@ -9,6 +9,7 @@ import com.mediasage.theme.MediaSageTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,7 +68,6 @@ fun FigureDetailScreen(
 
     val success = state as? FigureDetailContract.UiState.Success
     val figureName = success?.figureName
-    val isPinned = success?.isPinned ?: false
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -77,19 +77,6 @@ fun FigureDetailScreen(
                         text = figureName.orEmpty(),
                         style = MaterialTheme.typography.titleLarge,
                     )
-                }
-                AnimatedVisibility(visible = success != null, enter = fadeIn()) {
-                    IconButton(onClick = { onIntent(FigureDetailContract.Intent.PinToHome) }) {
-                        Icon(
-                            imageVector = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                            contentDescription = stringResource(
-                                if (isPinned) Res.string.figure_detail_pinned_to_home
-                                else Res.string.figure_detail_pin_to_home
-                            ),
-                            tint = if (isPinned) MaterialTheme.colorScheme.primary
-                                   else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
 
@@ -111,6 +98,7 @@ fun FigureDetailScreen(
                 is FigureDetailContract.UiState.Success -> {
                     FigureDetailContent(
                         state = state,
+                        onPinToggle = { onIntent(FigureDetailContract.Intent.PinToHome) },
                         onShowQuotes = { showQuotesSheet = true }
                     )
 
@@ -131,6 +119,7 @@ fun FigureDetailScreen(
 @Composable
 private fun FigureDetailContent(
     state: FigureDetailContract.UiState.Success,
+    onPinToggle: () -> Unit,
     onShowQuotes: () -> Unit
 ) {
     Column(
@@ -165,18 +154,36 @@ private fun FigureDetailContent(
         }
 
         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-            Text(
-                text = state.figureName,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            if (state.figureRole.isNotBlank()) {
-                Text(
-                    text = state.figureRole,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = state.figureName,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (state.figureRole.isNotBlank()) {
+                        Text(
+                            text = state.figureRole,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                IconButton(onClick = onPinToggle) {
+                    Icon(
+                        imageVector = if (state.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                        contentDescription = stringResource(
+                            if (state.isPinned) Res.string.figure_detail_pinned_to_home
+                            else Res.string.figure_detail_pin_to_home
+                        ),
+                        tint = if (state.isPinned) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
