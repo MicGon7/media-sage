@@ -105,6 +105,13 @@ open class AgentLaunchService(
 
     fun isActive(key: String): Boolean = key in activeKeys
 
+    private fun claudeCommand(prompt: String) = listOf(
+        "claude", "-p", prompt,
+        "--dangerously-skip-permissions",
+        "--output-format", "stream-json",
+        "--verbose"
+    )
+
     private fun pipeStream(key: String, process: Process) {
         scope.launch(Dispatchers.IO) {
             BufferedReader(InputStreamReader(process.inputStream)).forEachLine { log.info("[$key] $it") }
@@ -122,7 +129,7 @@ open class AgentLaunchService(
     ): Boolean {
         if (!activeKeys.add(key)) return false
         try {
-            val process = ProcessBuilder(listOf("claude", "-p", prompt, "--dangerously-skip-permissions", "--output-format", "stream-json"))
+            val process = ProcessBuilder(claudeCommand(prompt))
                 .directory(workDir)
                 .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
                 .start()
