@@ -21,9 +21,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.mediasage.theme.MediaSageTheme
-import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import com.mediasage.data.repository.epochMillis
 import coil3.compose.AsyncImage
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
@@ -86,7 +87,7 @@ private fun Masthead() {
 
 @Composable
 private fun NewspaperDateRow() {
-    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+    val today = Instant.fromEpochMilliseconds(epochMillis()).toLocalDateTime(TimeZone.currentSystemDefault()).date
     val dayName = today.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
     val monthName = today.month.name.lowercase().replaceFirstChar { it.uppercase() }
     val dateText = "$dayName, $monthName ${today.dayOfMonth}, ${today.year}"
