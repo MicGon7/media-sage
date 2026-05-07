@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,9 +26,12 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.mediasage.isDebugBuild
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.MediaSageButton
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.dev_dark_mode_label
+import mediasage.composeapp.generated.resources.dev_section_header
 import mediasage.composeapp.generated.resources.you_activity_subheader
 import mediasage.composeapp.generated.resources.you_greeting
 import mediasage.composeapp.generated.resources.you_nav_history
@@ -98,6 +102,32 @@ fun YouScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            if (isDebugBuild && state is YouContract.UiState.Ready) {
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = stringResource(Res.string.dev_section_header),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(Res.string.dev_dark_mode_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Switch(
+                        checked = state.darkMode,
+                        onCheckedChange = { onIntent(YouContract.Intent.ToggleDarkMode(it)) }
+                    )
+                }
+            }
         }
     }
 }
@@ -107,7 +137,7 @@ fun YouScreen(
 private fun YouScreenPreview() {
     MediaSageTheme {
         YouScreen(
-            state = YouContract.UiState.Ready,
+            state = YouContract.UiState.Ready(),
             onIntent = {}
         )
     }

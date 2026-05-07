@@ -6,6 +6,7 @@ import com.mediasage.di.appModule
 import com.mediasage.di.databaseModule
 import com.mediasage.di.mockApiModule
 import com.mediasage.di.sharedModule
+import com.mediasage.di.themeModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 
@@ -16,6 +17,7 @@ class MediaSageApplication : Application() {
 
         val modules = buildList {
             add(databaseModule)
+            add(themeModule)
             add(sharedModule(BuildConfig.SERVER_BASE_URL))
             add(appModule)
             if (BuildConfig.USE_MOCK_DATA) add(mockApiModule)

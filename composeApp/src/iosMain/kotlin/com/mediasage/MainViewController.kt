@@ -10,6 +10,7 @@ fun initKoin() {
     startKoin {
         modules(
             databaseModule,
+            themeModule,
             sharedModule("https://media-sage-production.up.railway.app"),
             appModule,
         )
