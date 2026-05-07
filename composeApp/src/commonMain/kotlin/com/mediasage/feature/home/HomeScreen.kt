@@ -17,9 +17,13 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import coil3.compose.AsyncImage
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
@@ -84,6 +88,42 @@ private fun Masthead() {
     }
 }
 
+@Composable
+private fun NewspaperDateRow() {
+    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+    val dayName = today.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
+    val monthName = today.month.name.lowercase().replaceFirstChar { it.uppercase() }
+    val dateText = "$dayName, $monthName ${today.dayOfMonth}, ${today.year}"
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Est. 2026",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = dateText,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(2f)
+        )
+        Text(
+            text = "Price J3:16",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HeadlinesFeed(
@@ -107,6 +147,13 @@ private fun HeadlinesFeed(
     ) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item { Masthead() }
+            item {
+                NewspaperDateRow()
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.primary,
+                    thickness = 1.dp
+                )
+            }
 
             when (briefingCard) {
                 is HomeContract.BriefingCardState.Loading -> item { BriefingCardShimmer() }
