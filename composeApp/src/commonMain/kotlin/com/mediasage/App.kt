@@ -15,7 +15,7 @@ fun App(isDebugBuild: Boolean = false) {
     val appViewModel = koinViewModel<AppViewModel>()
     val darkMode by appViewModel.darkMode.collectAsState()
     CompositionLocalProvider(LocalIsDebugBuild provides isDebugBuild) {
-        MediaSageTheme(darkTheme = darkMode) {
+        MediaSageTheme(darkTheme = darkMode ?: false) {
             MediaSageScaffold()
         }
     }
