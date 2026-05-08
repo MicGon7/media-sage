@@ -14,7 +14,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         setContent {
@@ -22,8 +21,9 @@ class MainActivity : ComponentActivity() {
             val darkMode by appViewModel.darkMode.collectAsState()
 
             SideEffect {
+                val isDark = darkMode ?: return@SideEffect
                 enableEdgeToEdge(
-                    statusBarStyle = if (darkMode) {
+                    statusBarStyle = if (isDark) {
                         SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
                     } else {
                         SystemBarStyle.light(

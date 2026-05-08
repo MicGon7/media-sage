@@ -14,8 +14,8 @@ class AppViewModel(
     themePreferencesRepository: ThemePreferencesRepository,
 ) : ViewModel() {
 
-    val darkMode: StateFlow<Boolean> = themePreferencesRepository.darkMode
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val darkMode: StateFlow<Boolean?> = themePreferencesRepository.darkMode
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     init {
         viewModelScope.launch {
