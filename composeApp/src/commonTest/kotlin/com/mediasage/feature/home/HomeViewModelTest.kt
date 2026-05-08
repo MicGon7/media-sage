@@ -11,6 +11,7 @@ import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.PinnedFigureRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -22,7 +23,9 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class HomeViewModelTest {
 
@@ -81,6 +84,31 @@ class HomeViewModelTest {
 
         assertEquals(callsAfterInit + 1, fakeRepo.refreshCallCount)
     }
+
+    @Test
+    fun fetchHeadlinesTimesOutAndSetsErrorState() = runTest(testDispatcher) {
+        val slowRepo = FakeHeadlineRepository(initialHeadlines = emptyList(), refreshDelayMs = 20_000L)
+        val viewModel = HomeViewModel(slowRepo, FakePinnedFigureRepository(), FakeDailyReflectionRepository(), FakeFigureRepository())
+
+        testScheduler.advanceTimeBy(16_000L)
+
+        assertIs<HomeContract.UiState.Error>(viewModel.state.value)
+    }
+
+    @Test
+    fun refreshHeadlinesTimesOutAndTransitionsToErrorState() = runTest(testDispatcher) {
+        val headline = Headline(1L, "Breaking News", "Reuters", "https://example.com", null, 0L, 0L)
+        val slowRepo = FakeHeadlineRepository(initialHeadlines = listOf(headline), refreshDelayMs = 20_000L)
+        val viewModel = HomeViewModel(slowRepo, FakePinnedFigureRepository(), FakeDailyReflectionRepository(), FakeFigureRepository())
+
+        assertIs<HomeContract.UiState.Success>(viewModel.state.value)
+        viewModel.onIntent(HomeContract.Intent.RefreshHeadlines)
+        assertTrue((viewModel.state.value as HomeContract.UiState.Success).isRefreshing)
+
+        testScheduler.advanceTimeBy(16_000L)
+
+        assertIs<HomeContract.UiState.Error>(viewModel.state.value)
+    }
 }
 
 private class FakePinnedFigureRepository : PinnedFigureRepository {
@@ -103,7 +131,8 @@ private class FakeFigureRepository : FigureRepository {
 
 private class FakeHeadlineRepository(
     initialHeadlines: List<Headline> = emptyList(),
-    headlinesFlow: MutableStateFlow<List<Headline>>? = null
+    headlinesFlow: MutableStateFlow<List<Headline>>? = null,
+    private val refreshDelayMs: Long = 0L
 ) : HeadlineRepository {
 
     private val _headlines = headlinesFlow ?: MutableStateFlow(initialHeadlines)
@@ -116,6 +145,7 @@ private class FakeHeadlineRepository(
     override suspend fun getHeadlineByUrl(url: String): Headline? = _headlines.value.find { it.url == url }
 
     override suspend fun refreshHeadlines() {
+        if (refreshDelayMs > 0L) delay(refreshDelayMs)
         refreshCallCount++
     }
 
