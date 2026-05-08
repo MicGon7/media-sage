@@ -61,7 +61,7 @@ open class AgentLaunchService(
      * isolation and cannot switch branches in the developer's main checkout.
      * De-duplicates by PR number — a second call while one is running is a no-op.
      */
-    open fun launchForPrReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String): Boolean {
+    open fun launchForPrReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String, reviewerLogin: String): Boolean {
         val key = "PR-$prNumber"
         val worktreePath = "/tmp/media-sage-pr-$prNumber"
         val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
@@ -69,8 +69,25 @@ open class AgentLaunchService(
         return spawnAgent(
             key, prompt,
             workDir = if (worktreeCreated) File(worktreePath) else File(repoPath),
-            teardown = if (worktreeCreated) ({ removeWorktree(worktreePath) }) else null
+            teardown = {
+                if (worktreeCreated) removeWorktree(worktreePath)
+                requestReview(prNumber, reviewerLogin)
+            }
         )
+    }
+
+    private fun requestReview(prNumber: Int, reviewerLogin: String) {
+        try {
+            ProcessBuilder("gh", "pr", "review-request", prNumber.toString(), "--reviewer", reviewerLogin)
+                .directory(File(repoPath))
+                .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
+                .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                .redirectError(ProcessBuilder.Redirect.INHERIT)
+                .start()
+                .waitFor()
+        } catch (e: Exception) {
+            log.warning("Failed to re-request review on PR#$prNumber: ${e.message}")
+        }
     }
 
     private fun createWorktree(path: String, branchRef: String): Boolean = try {
@@ -140,7 +157,12 @@ open class AgentLaunchService(
         }
         scope.launch(Dispatchers.IO) {
             BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line ->
-                log.warning("[$key] $line")
+                val milestone = parseStreamJsonMilestone(line)
+                if (milestone != null) {
+                    milestone.lines().forEach { log.info("[$key] $it") }
+                } else {
+                    log.warning("[$key] $line")
+                }
             }
         }
     }

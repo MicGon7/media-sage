@@ -72,7 +72,8 @@ private data class WebhookContext(
     val prNumber: Int,
     val branchRef: String,
     val commentBody: String,
-    val reviewState: String
+    val reviewState: String,
+    val reviewerLogin: String
 )
 
 private val log = Logger.getLogger("GitHubWebhookRoutes")
@@ -114,7 +115,7 @@ private suspend fun handleGitHubEvent(
             if (jiraLabelChecker.isAutonomous(context.ticketKey)) {
                 when (context.reviewState) {
                     "changes_requested" -> agentService.launchForPrReview(
-                        context.ticketKey, context.prNumber, context.branchRef, context.commentBody
+                        context.ticketKey, context.prNumber, context.branchRef, context.commentBody, context.reviewerLogin
                     )
                     "commented" -> agentService.launchForCommentReview(
                         context.ticketKey, context.prNumber, context.branchRef, context.commentBody
@@ -140,7 +141,7 @@ private fun parseReviewContext(rawBody: ByteArray): WebhookContext? {
         ?.takeIf { payload.action == "submitted" }
         ?.takeIf { state == "changes_requested" || state == "commented" }
         ?.takeIf { !reviewBody.startsWith("🤖 **Agent:**") }
-        ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, reviewBody, state) }
+        ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, reviewBody, state, payload.sender.login) }
 }
 
 private fun parseInlineCommentPrNumber(rawBody: ByteArray): Int? {

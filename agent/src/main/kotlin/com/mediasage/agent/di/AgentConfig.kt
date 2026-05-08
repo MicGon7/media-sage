@@ -6,5 +6,6 @@ data class AgentConfig(
     val jiraEmail: String,
     val jiraApiToken: String,
     val jiraCloudId: String,
+    val jiraBotAccountId: String = "",
     val verboseLogging: Boolean = false
 )

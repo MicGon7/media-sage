@@ -120,6 +120,22 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
+    fun changesRequestedPassesReviewerLogin() {
+        val tracking = TrackingAgentLaunchService()
+        testGitHubApp(jiraAutonomous = true, agentService = tracking) {
+            val body = prReviewPayload(state = "changes_requested", senderLogin = "jane-reviewer", reviewBody = "Please fix this.")
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request_review")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals("jane-reviewer", tracking.lastReviewerLogin, "reviewerLogin must be passed from sender.login")
+        }
+    }
+
+    @Test
     fun commentedReviewFiresCommentAgent() {
         val tracking = TrackingAgentLaunchService()
         testGitHubApp(jiraAutonomous = true, agentService = tracking) {
@@ -272,9 +288,13 @@ private class TrackingAgentLaunchService : AgentLaunchService(repoPath = "", sco
     var agentLaunches = 0
     var commentReviewLaunches = 0
     var inlineReplies = 0
+    var lastReviewerLogin: String? = null
 
-    override fun launchForPrReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String): Boolean {
+    override fun launchForPrReview(
+        ticketKey: String, prNumber: Int, branchRef: String, commentBody: String, reviewerLogin: String
+    ): Boolean {
         agentLaunches++
+        lastReviewerLogin = reviewerLogin
         return true
     }
 
