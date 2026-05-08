@@ -17,56 +17,68 @@ import org.koin.ktor.plugin.Koin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+private const val BOT_ACCOUNT_ID = "bot-account-id"
+
 class JiraWebhookRouteTest {
 
     @Test
-    fun autonomousToDoIssueReturns200() = testWebhookApp {
+    fun botAssigneeInProgressFires() = testWebhookApp {
         val response = client.post("/webhook/jira") {
             contentType(ContentType.Application.Json)
-            setBody(webhookPayload(event = "jira:issue_created", label = "autonomous", status = "To Do"))
+            setBody(webhookPayload(event = "jira:issue_created", assigneeAccountId = BOT_ACCOUNT_ID, status = "In Progress"))
         }
         assertEquals(HttpStatusCode.OK, response.status)
     }
 
     @Test
-    fun assistedIssueReturns200WithoutFiring() = testWebhookApp {
+    fun wrongAssigneeInProgressDoesNotFire() = testWebhookApp {
         val response = client.post("/webhook/jira") {
             contentType(ContentType.Application.Json)
-            setBody(webhookPayload(event = "jira:issue_created", label = "assisted", status = "To Do"))
+            setBody(webhookPayload(event = "jira:issue_created", assigneeAccountId = "other-account-id", status = "In Progress"))
         }
         assertEquals(HttpStatusCode.OK, response.status)
     }
 
     @Test
-    fun autonomousIssueNotInToDoReturns200WithoutFiring() = testWebhookApp {
+    fun noAssigneeInProgressDoesNotFire() = testWebhookApp {
         val response = client.post("/webhook/jira") {
             contentType(ContentType.Application.Json)
-            setBody(webhookPayload(event = "jira:issue_updated", label = "autonomous", status = "In Progress"))
+            setBody(webhookPayload(event = "jira:issue_created", assigneeAccountId = null, status = "In Progress"))
         }
         assertEquals(HttpStatusCode.OK, response.status)
     }
 
     @Test
-    fun issueUpdatedEventTriggersAgentForAutonomousToDo() = testWebhookApp {
+    fun botAssigneeToDoDoesNotFire() = testWebhookApp {
         val response = client.post("/webhook/jira") {
             contentType(ContentType.Application.Json)
-            setBody(webhookPayload(event = "jira:issue_updated", label = "autonomous", status = "To Do"))
+            setBody(webhookPayload(event = "jira:issue_created", assigneeAccountId = BOT_ACCOUNT_ID, status = "To Do"))
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    @Test
+    fun issueUpdatedEventFires() = testWebhookApp {
+        val response = client.post("/webhook/jira") {
+            contentType(ContentType.Application.Json)
+            setBody(webhookPayload(event = "jira:issue_updated", assigneeAccountId = BOT_ACCOUNT_ID, status = "In Progress"))
         }
         assertEquals(HttpStatusCode.OK, response.status)
     }
 }
 
-private fun webhookPayload(event: String, label: String, status: String) = """
-    {
-      "webhookEvent": "$event",
-      "issue": {
-        "key": "MS-99",
-        "fields": {
-          "status": { "name": "$status" },
-          "labels": ["$label"]
-        }
-      }
+private fun webhookPayload(event: String, assigneeAccountId: String?, status: String) = """
+{
+  "webhookEvent": "$event",
+  "issue": {
+    "key": "MS-99",
+    "fields": {
+      "status": { "name": "$status" },
+      "labels": [],
+      ${if (assigneeAccountId != null) "\"assignee\": { \"accountId\": \"$assigneeAccountId\" }" else "\"assignee\": null"}
     }
+  }
+}
 """.trimIndent()
 
 private fun testWebhookApp(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
@@ -81,7 +93,7 @@ private fun testWebhookApp(block: suspend ApplicationTestBuilder.() -> Unit) = t
         }
         configureContentNegotiation()
         configureStatusPages()
-        routing { webhookRoutes() }
+        routing { webhookRoutes(BOT_ACCOUNT_ID) }
     }
     block()
 }

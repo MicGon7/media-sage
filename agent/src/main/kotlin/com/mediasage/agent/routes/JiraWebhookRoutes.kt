@@ -34,7 +34,9 @@ data class JiraIssueFields(
     @SerialName("status")
     val status: JiraStatus,
     @SerialName("labels")
-    val labels: List<String> = emptyList()
+    val labels: List<String> = emptyList(),
+    @SerialName("assignee")
+    val assignee: JiraAssignee? = null
 )
 
 @Serializable
@@ -43,13 +45,19 @@ data class JiraStatus(
     val name: String
 )
 
+@Serializable
+data class JiraAssignee(
+    @SerialName("accountId")
+    val accountId: String
+)
+
 private val relevantEvents = setOf("jira:issue_created", "jira:issue_updated")
 
 /**
  * Jira webhook endpoint. Fires an autonomous Claude Code agent when a ticket
- * with the `autonomous` label enters the To Do status.
+ * assigned to the bot account transitions to In Progress.
  */
-fun Route.webhookRoutes() {
+fun Route.webhookRoutes(botAccountId: String) {
     val log = Logger.getLogger("JiraWebhookRoutes")
     val agentService by inject<AgentLaunchService>()
     val jiraFetcher by inject<JiraTicketFetcher>()
@@ -60,12 +68,12 @@ fun Route.webhookRoutes() {
 
         log.info(
             "Jira webhook: event=${payload.webhookEvent} key=${payload.issue.key} " +
-            "status='${fields.status.name}' labels=${fields.labels}"
+            "status='${fields.status.name}' assignee=${fields.assignee?.accountId}"
         )
 
         val shouldFire = payload.webhookEvent in relevantEvents &&
-            "autonomous" in fields.labels &&
-            fields.status.name == "To Do"
+            fields.assignee?.accountId == botAccountId &&
+            fields.status.name == "In Progress"
 
         if (shouldFire) {
             val ticketContent = jiraFetcher.getTicketContent(payload.issue.key)
