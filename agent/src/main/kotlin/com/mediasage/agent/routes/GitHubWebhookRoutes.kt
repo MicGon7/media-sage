@@ -67,7 +67,13 @@ data class GitHubComment(
     val body: String
 )
 
-private data class WebhookContext(val ticketKey: String, val prNumber: Int, val branchRef: String, val commentBody: String)
+private data class WebhookContext(
+    val ticketKey: String,
+    val prNumber: Int,
+    val branchRef: String,
+    val commentBody: String,
+    val reviewState: String
+)
 
 private val log = Logger.getLogger("GitHubWebhookRoutes")
 private val ticketKeyRegex = Regex("[A-Z]+-\\d+")
@@ -104,9 +110,16 @@ private suspend fun handleGitHubEvent(
     when (eventType) {
         "pull_request_review" -> {
             val context = parseReviewContext(rawBody) ?: return
-            log.info("GitHub review submitted: ticketKey=${context.ticketKey} PR#${context.prNumber}")
+            log.info("GitHub review submitted: ticketKey=${context.ticketKey} PR#${context.prNumber} state=${context.reviewState}")
             if (jiraLabelChecker.isAutonomous(context.ticketKey)) {
-                agentService.launchForPrReview(context.ticketKey, context.prNumber, context.branchRef, context.commentBody)
+                when (context.reviewState) {
+                    "changes_requested" -> agentService.launchForPrReview(
+                        context.ticketKey, context.prNumber, context.branchRef, context.commentBody
+                    )
+                    "commented" -> agentService.launchForCommentReview(
+                        context.ticketKey, context.prNumber, context.branchRef, context.commentBody
+                    )
+                }
             }
         }
         "pull_request_review_comment" -> {
@@ -121,12 +134,13 @@ private fun parseReviewContext(rawBody: ByteArray): WebhookContext? {
     val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
     val reviewBody = payload.review?.body.orEmpty()
     val ticketKey = ticketKeyRegex.find(payload.pullRequest.head.ref)?.value
+    val state = payload.review?.state?.lowercase() ?: return null
 
     return ticketKey
         ?.takeIf { payload.action == "submitted" }
-        ?.takeIf { payload.review?.state == "changes_requested" }
+        ?.takeIf { state == "changes_requested" || state == "commented" }
         ?.takeIf { !reviewBody.startsWith("🤖 **Agent:**") }
-        ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, reviewBody) }
+        ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, reviewBody, state) }
 }
 
 private fun parseInlineCommentPrNumber(rawBody: ByteArray): Int? {
