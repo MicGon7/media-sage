@@ -6,7 +6,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
@@ -20,10 +20,9 @@ class MainActivity : ComponentActivity() {
             val appViewModel = koinViewModel<AppViewModel>()
             val darkMode by appViewModel.darkMode.collectAsState()
 
-            SideEffect {
-                val isDark = darkMode ?: return@SideEffect
+            DisposableEffect(darkMode) {
                 enableEdgeToEdge(
-                    statusBarStyle = if (isDark) {
+                    statusBarStyle = if (darkMode == true) {
                         SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
                     } else {
                         SystemBarStyle.light(
@@ -32,6 +31,7 @@ class MainActivity : ComponentActivity() {
                         )
                     },
                 )
+                onDispose {}
             }
 
             App(isDebugBuild = BuildConfig.DEBUG)
