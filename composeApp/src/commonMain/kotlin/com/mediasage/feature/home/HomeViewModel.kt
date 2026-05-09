@@ -61,12 +61,13 @@ class HomeViewModel(
         viewModelScope.launch {
             headlineRepository.observeHeadlines()
                 .collect { headlines ->
-                    val current = _state.value
-                    val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
                     if (headlines.isNotEmpty()) {
+                        val current = _state.value
+                        val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
                         _state.value = HomeContract.UiState.Success(
                             headlines = headlines.map { it.toItem() },
                             briefingCard = lastBriefingCard,
+                            isRefreshing = isRefreshing,
                             todayLabel = todayLabel()
                         )
                     }
@@ -87,23 +88,17 @@ class HomeViewModel(
     }
 
     private fun refreshHeadlines() {
-        val current = _state.value
-        if (current is HomeContract.UiState.Success) {
-            _state.value = current.copy(isRefreshing = true)
-        }
         viewModelScope.launch {
-            try {
-                headlineRepository.refreshHeadlines()
-            } catch (e: Exception) {
-                _sideEffects.send(
-                    HomeContract.SideEffect.ShowError(e.message ?: "Failed to refresh headlines")
-                )
-            } finally {
-                val updated = _state.value
-                if (updated is HomeContract.UiState.Success) {
-                    _state.value = updated.copy(isRefreshing = false)
-                }
+            val current = _state.value
+            if (current is HomeContract.UiState.Success) {
+                _state.value = current.copy(isRefreshing = true)
             }
+            runCatching { headlineRepository.refreshHeadlines() }
+                .onFailure { e ->
+                    _sideEffects.send(HomeContract.SideEffect.ShowError(e.message ?: "Failed to refresh headlines"))
+                }
+            val updated = _state.value as? HomeContract.UiState.Success ?: return@launch
+            _state.value = updated.copy(isRefreshing = false)
         }
     }
 

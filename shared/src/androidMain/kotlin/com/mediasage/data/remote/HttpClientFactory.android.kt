@@ -8,9 +8,6 @@ import java.util.concurrent.TimeUnit
 actual fun createPlatformHttpClient(): HttpClient = HttpClient(OkHttp) {
     engine {
         config {
-            // Native OkHttp socket timeouts — interrupt the IO thread directly when the
-            // network is physically gone (coroutine-level HttpTimeout alone cannot unblock
-            // a native socket read).
             connectTimeout(10, TimeUnit.SECONDS)
             readTimeout(20, TimeUnit.SECONDS)
             writeTimeout(20, TimeUnit.SECONDS)

@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.PinnedFigureRepository
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 class FiguresViewModel(
@@ -19,6 +21,9 @@ class FiguresViewModel(
 
     private val _state = MutableStateFlow<FiguresContract.UiState>(FiguresContract.UiState.Loading)
     val state: StateFlow<FiguresContract.UiState> = _state.asStateFlow()
+
+    private val _sideEffects = Channel<FiguresContract.SideEffect>(Channel.BUFFERED)
+    val sideEffects = _sideEffects.receiveAsFlow()
 
     private val _searchQuery = MutableStateFlow("")
 
@@ -69,17 +74,14 @@ class FiguresViewModel(
 
     private fun refresh() {
         val current = _state.value as? FiguresContract.UiState.Success ?: return
+        _state.value = current.copy(isRefreshing = true)
         viewModelScope.launch {
-            _state.value = current.copy(isRefreshing = true)
-            try {
-                figureRepository.syncFigures()
-            } catch (_: Exception) {
-                // network error — dismiss spinner silently, figures list stays intact
-            } finally {
-                _state.value = (_state.value as? FiguresContract.UiState.Success)
-                    ?.copy(isRefreshing = false)
-                    ?: current.copy(isRefreshing = false)
-            }
+            runCatching { figureRepository.syncFigures() }
+                .onFailure { e ->
+                    _sideEffects.send(FiguresContract.SideEffect.ShowError(e.message ?: "Failed to sync voices"))
+                }
+            val updated = _state.value as? FiguresContract.UiState.Success ?: return@launch
+            _state.value = updated.copy(isRefreshing = false)
         }
     }
 }
