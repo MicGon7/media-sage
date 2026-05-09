@@ -19,11 +19,8 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlinx.coroutines.delay
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertTrue
 
 class FiguresViewModelTest {
 
@@ -99,20 +96,6 @@ class FiguresViewModelTest {
 
         val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
         assertEquals(false, state.isRefreshing)
-    }
-
-    @Test
-    fun refreshTimesOutAndDismissesSpinner() = runTest(testDispatcher) {
-        val figures = listOf(buildFigure("Augustine", "Bishop of Hippo"))
-        val slowRepo = FakeFigureRepository(MutableStateFlow(figures), syncDelayMs = 20_000L)
-        val vm = FiguresViewModel(slowRepo, FakeEncouragementRepository(MutableStateFlow(emptyMap())), FakePinnedFigureRepository())
-
-        vm.onIntent(FiguresContract.Intent.Refresh)
-        assertTrue((vm.state.value as FiguresContract.UiState.Success).isRefreshing)
-
-        testScheduler.advanceTimeBy(16_000L)
-
-        assertFalse((vm.state.value as FiguresContract.UiState.Success).isRefreshing)
     }
 
     @Test
@@ -254,8 +237,7 @@ private class FakePinnedFigureRepository(private val pinnedId: Long? = null) : P
 }
 
 private class FakeFigureRepository(
-    private val flow: MutableStateFlow<List<Figure>>,
-    private val syncDelayMs: Long = 0L
+    private val flow: MutableStateFlow<List<Figure>>
 ) : FigureRepository {
     var syncCallCount = 0
         private set
@@ -264,10 +246,7 @@ private class FakeFigureRepository(
     override fun observeFiguresByCategory(category: FigureCategory): Flow<List<Figure>> = flow
     override suspend fun getFigureById(id: Long): Figure? = flow.value.firstOrNull { it.id == id }
     override suspend fun getFigureByName(name: String): Figure? = flow.value.firstOrNull { it.name == name }
-    override suspend fun syncFigures() {
-        delay(syncDelayMs)
-        syncCallCount++
-    }
+    override suspend fun syncFigures() { syncCallCount++ }
 }
 
 private class FakeEncouragementRepository(

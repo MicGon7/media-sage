@@ -12,7 +12,6 @@ import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.PinnedFigureRepository
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.toErrorType
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +21,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 
 class HomeViewModel(
     private val headlineRepository: HeadlineRepository,
@@ -79,13 +77,7 @@ class HomeViewModel(
     private fun fetchHeadlines() {
         viewModelScope.launch {
             try {
-                withTimeout(REFRESH_TIMEOUT_MS) {
-                    headlineRepository.refreshHeadlines()
-                }
-            } catch (e: TimeoutCancellationException) {
-                if (_state.value is HomeContract.UiState.Loading) {
-                    _state.value = HomeContract.UiState.Error(ErrorType.GENERIC)
-                }
+                headlineRepository.refreshHeadlines()
             } catch (e: Exception) {
                 if (_state.value is HomeContract.UiState.Loading) {
                     _state.value = HomeContract.UiState.Error(e.toErrorType())
@@ -101,11 +93,7 @@ class HomeViewModel(
         }
         viewModelScope.launch {
             try {
-                withTimeout(REFRESH_TIMEOUT_MS) {
-                    headlineRepository.refreshHeadlines()
-                }
-            } catch (e: TimeoutCancellationException) {
-                _state.value = HomeContract.UiState.Error(ErrorType.GENERIC)
+                headlineRepository.refreshHeadlines()
             } catch (e: Exception) {
                 _sideEffects.send(
                     HomeContract.SideEffect.ShowError(e.message ?: "Failed to refresh headlines")
@@ -190,7 +178,6 @@ class HomeViewModel(
     }
 }
 
-private const val REFRESH_TIMEOUT_MS = 15_000L
 
 private fun com.mediasage.domain.model.Headline.toItem() = HeadlineItem(
     id = id,

@@ -85,30 +85,6 @@ class HomeViewModelTest {
         assertEquals(callsAfterInit + 1, fakeRepo.refreshCallCount)
     }
 
-    @Test
-    fun fetchHeadlinesTimesOutAndSetsErrorState() = runTest(testDispatcher) {
-        val slowRepo = FakeHeadlineRepository(initialHeadlines = emptyList(), refreshDelayMs = 20_000L)
-        val viewModel = HomeViewModel(slowRepo, FakePinnedFigureRepository(), FakeDailyReflectionRepository(), FakeFigureRepository())
-
-        testScheduler.advanceTimeBy(16_000L)
-
-        assertIs<HomeContract.UiState.Error>(viewModel.state.value)
-    }
-
-    @Test
-    fun refreshHeadlinesTimesOutAndTransitionsToErrorState() = runTest(testDispatcher) {
-        val headline = Headline(1L, "Breaking News", "Reuters", "https://example.com", null, 0L, 0L)
-        val slowRepo = FakeHeadlineRepository(initialHeadlines = listOf(headline), refreshDelayMs = 20_000L)
-        val viewModel = HomeViewModel(slowRepo, FakePinnedFigureRepository(), FakeDailyReflectionRepository(), FakeFigureRepository())
-
-        assertIs<HomeContract.UiState.Success>(viewModel.state.value)
-        viewModel.onIntent(HomeContract.Intent.RefreshHeadlines)
-        assertTrue((viewModel.state.value as HomeContract.UiState.Success).isRefreshing)
-
-        testScheduler.advanceTimeBy(16_000L)
-
-        assertIs<HomeContract.UiState.Error>(viewModel.state.value)
-    }
 }
 
 private class FakePinnedFigureRepository : PinnedFigureRepository {
