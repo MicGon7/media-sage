@@ -49,7 +49,7 @@ Each feature has 3 files under `composeApp/src/commonMain/kotlin/com/mediasage/f
 
 Key conventions:
 - **Sealed interfaces for UiState**: Loading, Success, Error — mutually exclusive, no invalid combinations
-- **Channels for side effects**: One-off events (navigation, snackbar) via `Channel` → `receiveAsFlow()`
+- **Channels for side effects**: One-off events (navigation, snackbar) via `Channel(Channel.BUFFERED)` → `receiveAsFlow()`. Always use `Channel.BUFFERED` — the default `RENDEZVOUS` capacity causes `send()` to suspend if no collector is active, which blocks `finally` blocks and leaves the UI in a stuck state.
 - **`state` not `uiState`**: The type name already says UiState
 - **Screens are stateless**: Receive state + callbacks, no ViewModel dependency. Previewable and testable.
 - **No base ViewModel class**: Convention over abstraction

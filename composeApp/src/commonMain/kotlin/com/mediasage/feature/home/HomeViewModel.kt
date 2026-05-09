@@ -35,7 +35,7 @@ class HomeViewModel(
     // Preserved independently so the card survives headline refresh cycles
     private var lastBriefingCard: HomeContract.BriefingCardState = HomeContract.BriefingCardState.Hidden
 
-    private val _sideEffects = Channel<HomeContract.SideEffect>()
+    private val _sideEffects = Channel<HomeContract.SideEffect>(Channel.BUFFERED)
     val sideEffects = _sideEffects.receiveAsFlow()
 
     init {
