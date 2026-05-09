@@ -6,9 +6,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.mediasage.feature.figures.FiguresContract
+import com.mediasage.feature.home.HomeContract
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import com.mediasage.feature.bookmarks.BookmarksScreen
@@ -34,8 +38,11 @@ import org.koin.core.parameter.parametersOf
 fun MediaSageScaffold(
     appState: MediaSageAppState = rememberMediaSageAppState()
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (appState.showBottomBar) {
                 MediaSageBottomBar(
@@ -54,6 +61,16 @@ fun MediaSageScaffold(
                 is Route.Home -> NavEntry(route) {
                     val vm = koinViewModel<HomeViewModel>()
                     val state by vm.state.collectAsState()
+                    LaunchedEffect(vm) {
+                        vm.sideEffects.collect { effect ->
+                            when (effect) {
+                                is HomeContract.SideEffect.ShowError ->
+                                    snackbarHostState.showSnackbar(effect.message)
+                                is HomeContract.SideEffect.NavigateToDetail ->
+                                    appState.navigateToHeadlineDetail(effect.articleUrl)
+                            }
+                        }
+                    }
                     HomeScreen(
                         state = state,
                         onIntent = vm::onIntent,
@@ -76,6 +93,14 @@ fun MediaSageScaffold(
                 is Route.Figures -> NavEntry(route) {
                     val vm = koinViewModel<FiguresViewModel>()
                     val state by vm.state.collectAsState()
+                    LaunchedEffect(vm) {
+                        vm.sideEffects.collect { effect ->
+                            when (effect) {
+                                is FiguresContract.SideEffect.ShowError ->
+                                    snackbarHostState.showSnackbar(effect.message)
+                            }
+                        }
+                    }
                     FiguresScreen(
                         state = state,
                         onIntent = vm::onIntent,

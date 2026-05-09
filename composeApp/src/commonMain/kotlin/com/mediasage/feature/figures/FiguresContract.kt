@@ -17,6 +17,10 @@ object FiguresContract {
         data class FigureClicked(val figureId: Long) : Intent
         data class SearchQueryChanged(val query: String) : Intent
     }
+
+    sealed interface SideEffect {
+        data class ShowError(val message: String) : SideEffect
+    }
 }
 
 data class VoiceFigureItem(

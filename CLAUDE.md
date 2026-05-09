@@ -49,7 +49,7 @@ Each feature has 3 files under `composeApp/src/commonMain/kotlin/com/mediasage/f
 
 Key conventions:
 - **Sealed interfaces for UiState**: Loading, Success, Error — mutually exclusive, no invalid combinations
-- **Channels for side effects**: One-off events (navigation, snackbar) via `Channel` → `receiveAsFlow()`
+- **Channels for side effects**: One-off events (navigation, snackbar) via `Channel(Channel.BUFFERED)` → `receiveAsFlow()`. Always use `Channel.BUFFERED` — the default `RENDEZVOUS` capacity causes `send()` to suspend if no collector is active, which blocks `finally` blocks and leaves the UI in a stuck state.
 - **`state` not `uiState`**: The type name already says UiState
 - **Screens are stateless**: Receive state + callbacks, no ViewModel dependency. Previewable and testable.
 - **No base ViewModel class**: Convention over abstraction
@@ -201,6 +201,7 @@ docker run -p 8081:8081 \
 - `@SerialName` annotations on their own line above the property
 - String resources in `composeResources/values/strings.xml` — no hardcoded strings in UI
 - API keys stored as env vars in `~/.zshrc`, read via `application.conf`
+- **Solve problems at the right layer.** Before adding logic to any layer, identify where that concern idiomatically belongs in Android/Kotlin development. Network timeouts belong in the HTTP client (OkHttp `readTimeout`, Ktor `HttpTimeout`), not the ViewModel. Data validation belongs at the repository boundary, not the UI. If you find yourself adding network or I/O mechanics to a ViewModel, stop and check the idiomatic pattern first.
 - Before implementing any Compose effect or Android platform API, verify the approach against NowInAndroid or the official Compose docs. If you find yourself adding a null guard inside a `SideEffect`, you've chosen the wrong effect type.
 
 ### Testing

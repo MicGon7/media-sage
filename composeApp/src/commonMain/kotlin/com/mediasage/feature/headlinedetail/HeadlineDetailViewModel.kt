@@ -21,7 +21,7 @@ class HeadlineDetailViewModel(
     private val _state = MutableStateFlow<HeadlineDetailContract.UiState>(HeadlineDetailContract.UiState.Loading)
     val state: StateFlow<HeadlineDetailContract.UiState> = _state.asStateFlow()
 
-    private val _sideEffects = Channel<HeadlineDetailContract.SideEffect>()
+    private val _sideEffects = Channel<HeadlineDetailContract.SideEffect>(Channel.BUFFERED)
     val sideEffects = _sideEffects.receiveAsFlow()
 
     init {

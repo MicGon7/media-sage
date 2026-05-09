@@ -10,6 +10,7 @@ import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.PinnedFigureRepository
+import com.mediasage.ui.ErrorType
 import com.mediasage.ui.toErrorType
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +35,7 @@ class HomeViewModel(
     // Preserved independently so the card survives headline refresh cycles
     private var lastBriefingCard: HomeContract.BriefingCardState = HomeContract.BriefingCardState.Hidden
 
-    private val _sideEffects = Channel<HomeContract.SideEffect>()
+    private val _sideEffects = Channel<HomeContract.SideEffect>(Channel.BUFFERED)
     val sideEffects = _sideEffects.receiveAsFlow()
 
     init {
@@ -60,12 +61,13 @@ class HomeViewModel(
         viewModelScope.launch {
             headlineRepository.observeHeadlines()
                 .collect { headlines ->
-                    val current = _state.value
-                    val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
                     if (headlines.isNotEmpty()) {
+                        val current = _state.value
+                        val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
                         _state.value = HomeContract.UiState.Success(
                             headlines = headlines.map { it.toItem() },
                             briefingCard = lastBriefingCard,
+                            isRefreshing = isRefreshing,
                             todayLabel = todayLabel()
                         )
                     }
@@ -86,23 +88,17 @@ class HomeViewModel(
     }
 
     private fun refreshHeadlines() {
-        val current = _state.value
-        if (current is HomeContract.UiState.Success) {
-            _state.value = current.copy(isRefreshing = true)
-        }
         viewModelScope.launch {
-            try {
-                headlineRepository.refreshHeadlines()
-            } catch (e: Exception) {
-                _sideEffects.send(
-                    HomeContract.SideEffect.ShowError(e.message ?: "Failed to refresh headlines")
-                )
-            } finally {
-                val updated = _state.value
-                if (updated is HomeContract.UiState.Success) {
-                    _state.value = updated.copy(isRefreshing = false)
-                }
+            val current = _state.value
+            if (current is HomeContract.UiState.Success) {
+                _state.value = current.copy(isRefreshing = true)
             }
+            runCatching { headlineRepository.refreshHeadlines() }
+                .onFailure { e ->
+                    _sideEffects.send(HomeContract.SideEffect.ShowError(e.message ?: "Failed to refresh headlines"))
+                }
+            val updated = _state.value as? HomeContract.UiState.Success ?: return@launch
+            _state.value = updated.copy(isRefreshing = false)
         }
     }
 
@@ -176,6 +172,7 @@ class HomeViewModel(
         return "$day, $month ${date.dayOfMonth}, ${date.year}"
     }
 }
+
 
 private fun com.mediasage.domain.model.Headline.toItem() = HeadlineItem(
     id = id,

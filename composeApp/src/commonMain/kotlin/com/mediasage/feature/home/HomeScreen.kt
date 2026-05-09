@@ -25,6 +25,7 @@ import coil3.compose.AsyncImage
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.HeadlineImage
+import com.mediasage.ui.MediaSageErrorState
 import com.mediasage.ui.MediaSageLoadingState
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.*
@@ -40,11 +41,12 @@ fun HomeScreen(
     Surface(modifier = Modifier.fillMaxSize()) {
         when (state) {
             is HomeContract.UiState.Loading -> MediaSageLoadingState()
-            is HomeContract.UiState.Error -> ErrorState(
+            is HomeContract.UiState.Error -> MediaSageErrorState(
                 message = when (state.errorType) {
                     ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
                     ErrorType.GENERIC -> stringResource(Res.string.home_error_generic)
                 },
+                retryLabel = stringResource(Res.string.home_retry),
                 onRetry = { onIntent(HomeContract.Intent.LoadHeadlines) }
             )
             is HomeContract.UiState.Success -> HeadlinesFeed(
@@ -343,29 +345,6 @@ private fun HeadlineRow(
     }
 }
 
-@Composable
-private fun ErrorState(
-    message: String,
-    onRetry: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.error,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedButton(onClick = onRetry) {
-            Text(stringResource(Res.string.home_retry))
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
