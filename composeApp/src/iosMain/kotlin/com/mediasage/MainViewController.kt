@@ -18,4 +18,4 @@ fun initKoin() {
     }
 }
 
-fun MainViewController() = ComposeUIViewController { App() }
+fun MainViewController(isDebugBuild: Boolean = false) = ComposeUIViewController { App(isDebugBuild = isDebugBuild) }

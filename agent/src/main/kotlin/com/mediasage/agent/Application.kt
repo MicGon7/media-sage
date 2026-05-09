@@ -26,6 +26,7 @@ fun Application.module() {
         jiraEmail = environment.config.propertyOrNull("app.jira.email")?.getString() ?: "",
         jiraApiToken = environment.config.propertyOrNull("app.jira.apiToken")?.getString() ?: "",
         jiraCloudId = environment.config.propertyOrNull("app.jira.cloudId")?.getString() ?: "",
+        jiraBotAccountId = environment.config.propertyOrNull("app.jira.botAccountId")?.getString() ?: "",
         verboseLogging = environment.config.propertyOrNull("app.agent.verboseLogging")
             ?.getString()?.toBoolean() ?: false
     )
@@ -40,7 +41,7 @@ fun Application.module() {
 
     routing {
         get("/health") { call.respond(HttpStatusCode.OK, "OK") }
-        webhookRoutes()
+        webhookRoutes(config.jiraBotAccountId)
         githubWebhookRoutes(config.githubWebhookSecret)
     }
 }

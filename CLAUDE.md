@@ -267,6 +267,8 @@ An **autonomous agent** runs the full workflow — Jira, branch, code, tests, do
 
 `assisted` is always the starting point. Promote to `autonomous` only after the pattern has been built and validated in `assisted` mode. When in doubt, stay `assisted`.
 
+**Trigger model (Level 3 & 4):** The Jira webhook fires when a ticket is **assigned to the bot account** and its status transitions to **In Progress**. The `autonomous` label is a documentation tag for filtering and reporting — it is NOT what fires the agent. The GitHub webhook fires when a `pull_request_review` or `pull_request_review_comment` event arrives for a branch whose ticket key maps to an `autonomous`-labeled issue in Jira.
+
 **Invocation:**
 ```bash
 # Assisted — human approves tool calls (interactive Claude Code session)
@@ -290,8 +292,8 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 
 - **Level 1 — Assisted**: Human writes the prompt and approves every tool call. Run via an interactive `claude` session.
 - **Level 2 — Autonomous (manual trigger)**: Human describes the intent to the assisted agent, which creates the Jira ticket with AC and the `autonomous` label. Human fires the bootstrap command once, then only reviews the PR. Run via `claude -p "..." --dangerously-skip-permissions`.
-- **Level 3 — Autonomous (self-triggering)**: Human describes the intent to the assisted agent, which creates the Jira ticket. Human walks away — a Jira webhook fires the bootstrap automatically when the ticket enters To Do. Human only reviews the PR.
-- **Level 4 — Autonomous (self-responding to PR review)**: Human leaves a review comment on a PR for an `autonomous`-labeled ticket. A GitHub webhook fires the agent, which pushes a fix commit or replies with `🤖 **Agent:**`. Human's only touchpoint remains the PR review.
+- **Level 3 — Autonomous (self-triggering)**: Human describes the intent to the assisted agent, which creates the Jira ticket. Human assigns the ticket to the bot account and moves it to In Progress — the Jira webhook fires the bootstrap automatically. Human only reviews the PR.
+- **Level 4 — Autonomous (self-responding to PR review)**: Human leaves a review comment on a PR for an `autonomous`-labeled ticket. A GitHub webhook fires the agent, which pushes a fix commit or replies with `🤖 **Agent:**`, then automatically re-requests review from the original reviewer. Human's only touchpoint remains the PR review.
 
 _This project is at Level 4. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:agent` module, deployed as a Docker container on Railway._
 
@@ -312,6 +314,7 @@ Railway `:agent` service environment variables:
 | `GITHUB_WEBHOOK_SECRET` | Same secret registered in GitHub repo webhook settings |
 | `JIRA_EMAIL` | `micgon7@gmail.com` |
 | `JIRA_API_TOKEN` | Atlassian account API token |
+| `JIRA_BOT_ACCOUNT_ID` | Jira account ID of `media-sage-bot` (triggers the agent when ticket is assigned to this account + In Progress) |
 | `PORT` | `8081` |
 
 Webhook URLs (stable Railway URL — no ngrok required):
@@ -320,7 +323,7 @@ Webhook URLs (stable Railway URL — no ngrok required):
 
 Register the Jira webhook at **media-sage.atlassian.net → Settings → System → WebHooks**:
 - Events: Issue **created** and **updated**
-- JQL filter: `project = MS AND labels = autonomous`
+- JQL filter: `project = MS` (assignee + status filtering is done in the route, not here)
 
 Register the GitHub webhook in repo **Settings → Webhooks**:
 - Content type: `application/json`
