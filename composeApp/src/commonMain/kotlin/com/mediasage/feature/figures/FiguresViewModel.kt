@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 class FiguresViewModel(
     private val figureRepository: FigureRepository,
@@ -71,10 +73,21 @@ class FiguresViewModel(
         val current = _state.value as? FiguresContract.UiState.Success ?: return
         viewModelScope.launch {
             _state.value = current.copy(isRefreshing = true)
-            runCatching { figureRepository.syncFigures() }
-            _state.value = (_state.value as? FiguresContract.UiState.Success)
-                ?.copy(isRefreshing = false)
-                ?: current.copy(isRefreshing = false)
+            try {
+                withTimeout(REFRESH_TIMEOUT_MS) { figureRepository.syncFigures() }
+            } catch (_: TimeoutCancellationException) {
+                // timeout — dismiss spinner silently, figures list stays intact
+            } catch (_: Exception) {
+                // network error — dismiss spinner silently
+            } finally {
+                _state.value = (_state.value as? FiguresContract.UiState.Success)
+                    ?.copy(isRefreshing = false)
+                    ?: current.copy(isRefreshing = false)
+            }
         }
+    }
+
+    companion object {
+        private const val REFRESH_TIMEOUT_MS = 15_000L
     }
 }
