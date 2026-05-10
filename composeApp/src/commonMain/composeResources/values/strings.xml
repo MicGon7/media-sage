@@ -4,14 +4,14 @@
 
     <!-- Navigation -->
     <string name="nav_headlines">Headlines</string>
-    <string name="nav_voices">Sages</string>
+    <string name="nav_voices">Reporters</string>
     <string name="nav_you">You</string>
     <string name="nav_back">Back</string>
 
     <!-- Screen titles -->
     <string name="title_home">The Courage Post</string>
     <string name="title_headline_detail">Today's Word</string>
-    <string name="title_voices">Sages</string>
+    <string name="title_voices">Reporters</string>
 
     <!-- Home screen -->
     <string name="home_headlines_feed">Headlines Feed</string>
@@ -37,7 +37,7 @@
     <string name="voices_coming_soon">Guide selection coming soon</string>
     <string name="voices_retry">Retry</string>
     <string name="voices_empty_state">Guides will appear as you read</string>
-    <string name="search_voices_hint">Search sages…</string>
+    <string name="search_voices_hint">Search reporters…</string>
 
     <!-- You screen -->
     <string name="you_greeting">Good morning</string>
