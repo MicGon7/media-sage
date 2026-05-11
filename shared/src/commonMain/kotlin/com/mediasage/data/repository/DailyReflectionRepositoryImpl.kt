@@ -6,6 +6,9 @@ import com.mediasage.data.remote.DailyReflectionRequestDto
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.repository.DailyReflectionRepository
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 class DailyReflectionRepositoryImpl(
     private val dao: DailyReflectionDao,
@@ -22,12 +25,25 @@ class DailyReflectionRepositoryImpl(
         val cached = dao.get(figureId, epochDay, tone)
         if (cached != null) return cached.toDomain()
 
+        val todaysEntries = dao.getAllForDay(figureId, epochDay)
+        val previousReflections = todaysEntries.map { it.reflection }
+        val previousScriptures = (
+            dao.getAllScripturesForDay(epochDay) +
+            dao.getRecentScripturesForFigure(figureId, fromDay = epochDay - 7, today = epochDay)
+        ).distinct()
+        val dayOfWeek = Instant.fromEpochMilliseconds(currentTimeMillis())
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+            .date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
+
         val response = api.getDailyReflection(
             DailyReflectionRequestDto(
                 figureId = figureId,
                 figureName = figureName,
                 headlines = headlines,
-                tone = tone
+                tone = tone,
+                dayOfWeek = dayOfWeek,
+                previousScriptures = previousScriptures,
+                previousReflections = previousReflections
             )
         )
         val entity = DailyReflectionEntity(

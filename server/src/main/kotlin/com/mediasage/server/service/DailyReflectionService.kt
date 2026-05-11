@@ -11,14 +11,17 @@ class DailyReflectionService(
         figureId: Long,
         figureName: String,
         headlines: List<String>,
-        tone: String
+        tone: String,
+        dayOfWeek: String = "",
+        previousScriptures: List<String> = emptyList(),
+        previousReflections: List<String> = emptyList()
     ): DailyReflectionResult {
         val allQuotes = quoteRepository.getVerifiedByFigureId(figureId)
         val scored = scoreByTheme(allQuotes, headlines)
         val top = scored.take(MAX_QUOTES)
 
         val systemPrompt = buildSystemPrompt(figureName)
-        val userMessage = buildUserMessage(figureName, top, headlines, tone)
+        val userMessage = buildUserMessage(figureName, top, headlines, tone, dayOfWeek, previousScriptures, previousReflections)
 
         return claudeApiService.generateDailyReflection(systemPrompt, userMessage, tone)
     }
@@ -38,8 +41,8 @@ class DailyReflectionService(
 
     private fun buildSystemPrompt(figureName: String) = """
         You are generating a devotional reflection in the voice of $figureName.
-        You MUST draw only from the verified quotes provided below — do not invent quotes, paraphrase beyond their meaning, or introduce theological ideas not present in the source material.
-        The sources listed are the only texts you may draw from.
+        The verified quotes below anchor the theological voice and grounding — draw from your knowledge of these specific source works, letting the quotes shape the direction and register of the reflection.
+        Do not invent quotes or attribute specific words to $figureName that are not in the verified set.
         Respond ONLY with valid JSON — no markdown, no explanation outside the JSON.
     """.trimIndent()
 
@@ -47,10 +50,13 @@ class DailyReflectionService(
         figureName: String,
         quotes: List<QuoteData>,
         headlines: List<String>,
-        tone: String
+        tone: String,
+        dayOfWeek: String = "",
+        previousScriptures: List<String> = emptyList(),
+        previousReflections: List<String> = emptyList()
     ) = buildString {
         appendLine("## Verified Quotes from $figureName")
-        appendLine("Draw ONLY from these quotes. Do not invent.")
+        appendLine("Draw from your knowledge of these source works, letting these quotes anchor the theological voice and direction.")
         appendLine()
         quotes.forEach { q ->
             appendLine("Source: ${q.source}")
@@ -62,17 +68,41 @@ class DailyReflectionService(
             headlines.forEach { appendLine("- $it") }
             appendLine()
         }
+        append(buildContextBlock(tone, dayOfWeek, previousScriptures, previousReflections))
         appendLine("## Instructions")
         appendLine("Write a $tone devotional reflection in the voice of $figureName.")
         appendLine("- Include a scripture reference and the full verse text")
-        appendLine("- Write 2-3 sentences of reflection grounded only in the quotes above")
+        appendLine("- Write 2-3 sentences of reflection grounded in the source works above")
         appendLine("- List the source titles you drew from")
         appendLine()
         appendLine(RESPONSE_FORMAT)
     }
 
+    private fun buildContextBlock(
+        tone: String,
+        dayOfWeek: String,
+        previousScriptures: List<String>,
+        previousReflections: List<String>
+    ) = buildString {
+        val dayContext = if (dayOfWeek.isNotBlank()) "$dayOfWeek, " else ""
+        appendLine("## Context")
+        appendLine("Today is $dayContext$tone.")
+        if (previousScriptures.isNotEmpty()) {
+            appendLine()
+            appendLine(PREVIOUS_REFLECTION_INSTRUCTION)
+            previousScriptures.zip(previousReflections).forEach { (scripture, reflection) ->
+                appendLine("- Scripture: $scripture | Reflection: $reflection")
+            }
+        }
+        appendLine()
+    }
+
     companion object {
         private const val MAX_QUOTES = 5
+        private const val PREVIOUS_REFLECTION_INSTRUCTION =
+            "An earlier reflection was shared today. Do NOT reuse the same verse. " +
+            "You may revisit a theme if the headlines call for it, but bring a fresh angle, " +
+            "a different application, or a deeper dimension — avoid repeating the same argument:"
         private val RESPONSE_FORMAT = """
             Respond ONLY with JSON in this exact format:
             {

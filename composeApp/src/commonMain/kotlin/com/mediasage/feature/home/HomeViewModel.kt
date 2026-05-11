@@ -94,11 +94,45 @@ class HomeViewModel(
                 _state.value = current.copy(isRefreshing = true)
             }
             runCatching { headlineRepository.refreshHeadlines() }
+                .onSuccess {
+                    val pinnedId = pinnedFigureRepository.observePinnedFigureId().first()
+                    if (pinnedId != null) fetchAndUpdateBriefingCard(pinnedId)
+                }
                 .onFailure { e ->
                     _sideEffects.send(HomeContract.SideEffect.ShowError(e.message ?: "Failed to refresh headlines"))
                 }
             val updated = _state.value as? HomeContract.UiState.Success ?: return@launch
             _state.value = updated.copy(isRefreshing = false)
+        }
+    }
+
+    private suspend fun fetchAndUpdateBriefingCard(figureId: Long) {
+        val figure = figureRepository.getFigureById(figureId) ?: return
+        val tone = currentTone()
+        val headlines = headlineRepository.observeHeadlines().first().map { it.title }
+        updateBriefingCard(HomeContract.BriefingCardState.Loading)
+        runCatching {
+            dailyReflectionRepository.getOrFetch(
+                figureId = figure.serverId.takeIf { it > 0 } ?: figureId,
+                figureName = figure.name,
+                headlines = headlines,
+                tone = tone
+            )
+        }.onSuccess { reflection ->
+            updateBriefingCard(
+                HomeContract.BriefingCardState.Ready(
+                    figureId = figureId,
+                    figureName = figure.name,
+                    figureImageUrl = figure.portraitUrl,
+                    scriptureReference = reflection.scriptureReference,
+                    scriptureText = reflection.scriptureText,
+                    reflection = reflection.reflection,
+                    sources = reflection.sources,
+                    tone = reflection.tone
+                )
+            )
+        }.onFailure {
+            updateBriefingCard(HomeContract.BriefingCardState.Hidden)
         }
     }
 
@@ -119,33 +153,7 @@ class HomeViewModel(
                     }
                     return@collect
                 }
-                updateBriefingCard(HomeContract.BriefingCardState.Loading)
-                try {
-                    val figure = figureRepository.getFigureById(figureId) ?: return@collect
-                    val tone = currentTone()
-                    // Read from Room directly — available even before network refresh completes
-                    val headlines = headlineRepository.observeHeadlines().first().map { it.title }
-                    val reflection = dailyReflectionRepository.getOrFetch(
-                        figureId = figure.serverId.takeIf { it > 0 } ?: figureId,
-                        figureName = figure.name,
-                        headlines = headlines,
-                        tone = tone
-                    )
-                    updateBriefingCard(
-                        HomeContract.BriefingCardState.Ready(
-                            figureId = figureId,
-                            figureName = figure.name,
-                            figureImageUrl = figure.portraitUrl,
-                            scriptureReference = reflection.scriptureReference,
-                            scriptureText = reflection.scriptureText,
-                            reflection = reflection.reflection,
-                            sources = reflection.sources,
-                            tone = reflection.tone
-                        )
-                    )
-                } catch (e: Exception) {
-                    updateBriefingCard(HomeContract.BriefingCardState.Hidden)
-                }
+                fetchAndUpdateBriefingCard(figureId)
             }
         }
     }
