@@ -2,13 +2,17 @@ package com.mediasage.di
 
 import com.mediasage.AppViewModel
 import com.mediasage.data.ThemePreferencesRepository
+import com.mediasage.data.UserPreferencesRepository
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.EncouragementRepository
+import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.PinnedFigureRepository
 import com.mediasage.feature.bookmarks.BookmarksViewModel
+import com.mediasage.feature.login.LoginViewModel
+import com.mediasage.feature.settings.SettingsViewModel
 import com.mediasage.feature.figures.FigureDetailViewModel
 import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.history.HistoryViewModel
@@ -19,11 +23,13 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val appModule = module {
-    viewModel { AppViewModel(get<FigureRepository>(), get<ThemePreferencesRepository>()) }
+    viewModel { AppViewModel(get<FigureRepository>(), get<ThemePreferencesRepository>(), get<AuthRepository>()) }
     viewModel { HomeViewModel(get<HeadlineRepository>(), get<PinnedFigureRepository>(), get<DailyReflectionRepository>(), get<FigureRepository>()) }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get()) }
     viewModel { FiguresViewModel(get<FigureRepository>(), get<EncouragementRepository>(), get<PinnedFigureRepository>()) }
     viewModel { (figureId: Long) -> FigureDetailViewModel(figureId, get<FigureRepository>(), get<EncouragementRepository>(), get<PinnedFigureRepository>()) }
+    viewModel { LoginViewModel(get<AuthRepository>(), get<UserPreferencesRepository>()) }
+    viewModel { SettingsViewModel(get<AuthRepository>()) }
     viewModel { YouViewModel(get<ThemePreferencesRepository>()) }
     viewModel { HistoryViewModel(get<EncouragementRepository>()) }
     viewModel { BookmarksViewModel(get<EncouragementRepository>()) }

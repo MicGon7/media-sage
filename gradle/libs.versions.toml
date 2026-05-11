@@ -33,6 +33,8 @@ sqlite-jdbc = "3.47.1.0"
 postgresql-jdbc = "42.7.3"
 okhttp-logging = "4.12.0"
 datastore = "1.1.2"
+supabase = "3.6.0"
+android-desugar-jdk = "2.1.4"
 
 [libraries]
 # Coil (KMP image loading)
@@ -107,6 +109,12 @@ exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "e
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
 postgresql-jdbc = { module = "org.postgresql:postgresql", version.ref = "postgresql-jdbc" }
+
+# Supabase (KMP client)
+supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt", version.ref = "supabase" }
+
+# Android desugaring (Java 8+ API support on API < 26)
+android-desugar-jdk = { module = "com.android.tools:desugar_jdk_libs", version.ref = "android-desugar-jdk" }
 
 # Compottie (Lottie for Compose Multiplatform)
 compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }

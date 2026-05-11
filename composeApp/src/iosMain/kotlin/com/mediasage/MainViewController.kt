@@ -12,7 +12,12 @@ fun initKoin() {
         modules(
             databaseModule,
             themeModule,
-            sharedModule("https://media-sage-production.up.railway.app"),
+            userModule,
+            sharedModule(
+                serverBaseUrl = "https://media-sage-production.up.railway.app",
+                supabaseUrl = "",
+                supabaseAnonKey = ""
+            ),
             appModule,
         )
     }
