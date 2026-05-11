@@ -1,5 +1,13 @@
 package com.mediasage.feature.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,6 +57,7 @@ fun HomeScreen(
                 retryLabel = stringResource(Res.string.home_retry),
                 onRetry = { onIntent(HomeContract.Intent.LoadHeadlines) }
             )
+
             is HomeContract.UiState.Success -> HeadlinesFeed(
                 headlines = state.headlines,
                 briefingCard = state.briefingCard,
@@ -67,7 +76,7 @@ private fun Masthead() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -128,6 +137,7 @@ private fun HeadlinesFeed(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
             .pullToRefresh(
                 isRefreshing = isRefreshing,
                 state = pullToRefreshState,
@@ -138,12 +148,19 @@ private fun HeadlinesFeed(
             item { Masthead() }
             item { NewspaperDateRow(todayLabel = todayLabel) }
 
-            when (briefingCard) {
-                is HomeContract.BriefingCardState.Loading -> item { BriefingCardShimmer() }
-                is HomeContract.BriefingCardState.Ready -> item {
-                    BriefingCard(card = briefingCard, onFigureTap = onFigureTap)
+            item {
+                AnimatedContent(
+                    targetState = briefingCard,
+                    transitionSpec = { fadeIn(tween(400)) togetherWith fadeOut(tween(200)) },
+                    label = "briefingCard",
+                    modifier = Modifier.animateContentSize(tween(300, easing = LinearEasing))
+                ) { state ->
+                    when (state) {
+                        is HomeContract.BriefingCardState.Loading -> BriefingCardLoading()
+                        is HomeContract.BriefingCardState.Ready -> BriefingCard(state, onFigureTap)
+                        is HomeContract.BriefingCardState.Hidden -> Box(Modifier.fillMaxWidth())
+                    }
                 }
-                is HomeContract.BriefingCardState.Hidden -> Unit
             }
 
             items(headlines, key = { it.id }) { headline ->
@@ -226,7 +243,11 @@ private fun BriefingCard(
         // Attribution
         if (card.sources.isNotEmpty()) {
             Text(
-                text = "${stringResource(Res.string.briefing_card_based_on)} ${card.sources.joinToString(", ")}",
+                text = "${stringResource(Res.string.briefing_card_based_on)} ${
+                    card.sources.joinToString(
+                        ", "
+                    )
+                }",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontStyle = FontStyle.Italic
@@ -266,22 +287,24 @@ private fun BriefingCard(
 }
 
 @Composable
-private fun BriefingCardShimmer() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().height(220.dp).clip(MaterialTheme.shapes.small),
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {}
-        Spacer(modifier = Modifier.height(10.dp))
-        Surface(modifier = Modifier.fillMaxWidth(0.6f).height(12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {}
+private fun BriefingCardLoading() {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(Res.string.briefing_card_loading).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing * 1.5f,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        Surface(modifier = Modifier.fillMaxWidth().height(60.dp), color = MaterialTheme.colorScheme.surfaceVariant) {}
-        Spacer(modifier = Modifier.height(12.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+        LinearProgressIndicator(
+            modifier = Modifier.fillMaxWidth().height(2.dp),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
