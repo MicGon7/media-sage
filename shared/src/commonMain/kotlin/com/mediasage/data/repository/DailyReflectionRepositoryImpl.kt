@@ -26,8 +26,11 @@ class DailyReflectionRepositoryImpl(
         if (cached != null) return cached.toDomain()
 
         val todaysEntries = dao.getAllForDay(figureId, epochDay)
-        val previousScriptures = todaysEntries.map { it.scriptureReference }
         val previousReflections = todaysEntries.map { it.reflection }
+        val previousScriptures = (
+            dao.getAllScripturesForDay(epochDay) +
+            dao.getRecentScripturesForFigure(figureId, fromDay = epochDay - 7, today = epochDay)
+        ).distinct()
         val dayOfWeek = Instant.fromEpochMilliseconds(currentTimeMillis())
             .toLocalDateTime(TimeZone.currentSystemDefault())
             .date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
