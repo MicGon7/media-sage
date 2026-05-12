@@ -5,6 +5,7 @@ import com.mediasage.di.appModule
 import com.mediasage.di.databaseModule
 import com.mediasage.di.sharedModule
 import com.mediasage.di.themeModule
+import com.mediasage.di.userModule
 import org.koin.core.context.startKoin
 
 fun initKoin() {

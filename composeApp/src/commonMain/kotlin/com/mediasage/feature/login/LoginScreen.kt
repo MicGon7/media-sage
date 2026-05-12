@@ -13,9 +13,10 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -77,7 +78,7 @@ fun LoginScreen(
 private fun LoginScreenContent(
     state: LoginContract.UiState,
     onIntent: (LoginContract.Intent) -> Unit,
-    backgroundColors: List<Color> = listOf(Navy, DarkBackground)
+    backgroundColors: List<Color> = listOf(NavyLight, Navy)
 ) {
     // Login screen is intentionally always dark - the masthead is a brand moment
     MediaSageTheme(darkTheme = true) {
@@ -128,7 +129,6 @@ private fun LoginScreenContent(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = stringResource(Res.string.login_masthead_line2),
                     style = MaterialTheme.typography.displayMedium.copy(
@@ -231,7 +231,7 @@ private fun LoginScreenContent(
                         enabled = !isLoading,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Navy,
-                            checkedTrackColor = OnGradient,
+                            checkedTrackColor = OnGradientMuted,
                             uncheckedThumbColor = OnGradientMuted,
                             uncheckedTrackColor = Color.Transparent,
                             uncheckedBorderColor = FieldBorder,
@@ -239,22 +239,21 @@ private fun LoginScreenContent(
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
+                OutlinedButton(
                     onClick = {
                         focusManager.clearFocus()
                         submitSignIn(email, password, onIntent) { localError = it }
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     enabled = !isLoading,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = OnGradient,
-                        contentColor = Navy,
-                        disabledContainerColor = FieldBorder,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = OnGradient,
                         disabledContentColor = OnGradientMuted
-                    )
+                    ),
+                    border = BorderStroke(1.dp, if (isLoading) FieldBorder else OnGradient)
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(strokeWidth = 2.dp, color = Navy)
+                        CircularProgressIndicator(strokeWidth = 2.dp, color = OnGradientMuted)
                     } else {
                         Text(
                             text = stringResource(Res.string.login_sign_in_button),
@@ -327,8 +326,8 @@ private fun LoginScreenErrorPreview() {
     )
 }
 
-// Theme comparisons - reference only, Theme A is the active default
-@Preview(showBackground = true, name = "Theme A - Navy → Dark (active)")
+// Theme comparisons - reference only, Theme C is the active default
+@Preview(showBackground = true, name = "Theme A - Navy → Dark")
 @Composable
 private fun LoginThemeAPreview() {
     LoginScreenContent(
@@ -348,7 +347,7 @@ private fun LoginThemeBPreview() {
     )
 }
 
-@Preview(showBackground = true, name = "Theme C - NavyLight → Navy (reversed)")
+@Preview(showBackground = true, name = "Theme C - NavyLight → Navy (active)")
 @Composable
 private fun LoginThemeCPreview() {
     LoginScreenContent(
