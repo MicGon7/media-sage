@@ -3,7 +3,7 @@ WORKDIR /workspace
 COPY . .
 RUN ./gradlew :agent:shadowJar --no-daemon
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:21-jdk-jammy
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl git python3 python3-pip && \
