@@ -24,6 +24,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: agent/Dockerfile
+          config: .hadolint.yaml
 
       - name: Build agent image
         run: docker build -f agent/Dockerfile -t media-sage-agent-test .
