@@ -78,7 +78,7 @@ fun LoginScreen(
 private fun LoginScreenContent(
     state: LoginContract.UiState,
     onIntent: (LoginContract.Intent) -> Unit,
-    backgroundColors: List<Color> = listOf(NavyLight, Navy)
+    backgroundColors: List<Color> = listOf(Navy, DarkBackground)
 ) {
     // Login screen is intentionally always dark - the masthead is a brand moment
     MediaSageTheme(darkTheme = true) {
@@ -326,8 +326,8 @@ private fun LoginScreenErrorPreview() {
     )
 }
 
-// Theme comparisons - reference only, Theme C is the active default
-@Preview(showBackground = true, name = "Theme A - Navy → Dark")
+// Theme comparisons - reference only, Theme A is the active default
+@Preview(showBackground = true, name = "Theme A - Navy → Dark (active)")
 @Composable
 private fun LoginThemeAPreview() {
     LoginScreenContent(
@@ -347,7 +347,7 @@ private fun LoginThemeBPreview() {
     )
 }
 
-@Preview(showBackground = true, name = "Theme C - NavyLight → Navy (active)")
+@Preview(showBackground = true, name = "Theme C - NavyLight → Navy (reversed)")
 @Composable
 private fun LoginThemeCPreview() {
     LoginScreenContent(
