@@ -84,4 +84,17 @@
     <string name="briefing_card_based_on">Based on</string>
     <string name="briefing_card_morning">Morning Reflection</string>
     <string name="briefing_card_evening">Evening Reflection</string>
+
+    <string name="login_masthead_line1">THE COURAGE</string>
+    <string name="login_masthead_line2">POST</string>
+    <string name="login_member_edition">MEMBER EDITION</string>
+    <string name="login_subtitle">Sign in to continue reading</string>
+    <string name="login_email_label">Email</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_sign_in_button">Sign In</string>
+    <string name="login_error_empty_fields">Please enter your email and password</string>
+    <string name="login_remember_email">Remember email</string>
+    <string name="login_bypass">Continue without signing in</string>
+
+    <string name="settings_sign_out">Sign Out</string>
 </resources>

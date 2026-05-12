@@ -5,6 +5,7 @@ import com.mediasage.di.appModule
 import com.mediasage.di.databaseModule
 import com.mediasage.di.sharedModule
 import com.mediasage.di.themeModule
+import com.mediasage.di.userModule
 import org.koin.core.context.startKoin
 
 fun initKoin() {
@@ -12,7 +13,12 @@ fun initKoin() {
         modules(
             databaseModule,
             themeModule,
-            sharedModule("https://media-sage-production.up.railway.app"),
+            userModule,
+            sharedModule(
+                serverBaseUrl = "https://media-sage-production.up.railway.app",
+                supabaseUrl = "",
+                supabaseAnonKey = ""
+            ),
             appModule,
         )
     }

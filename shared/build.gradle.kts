@@ -40,6 +40,9 @@ kotlin {
 
             // Koin
             implementation(libs.koin.core)
+
+            // Supabase
+            implementation(libs.supabase.auth)
         }
 
         commonTest.dependencies {

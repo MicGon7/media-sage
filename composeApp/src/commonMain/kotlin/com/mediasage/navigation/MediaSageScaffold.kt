@@ -27,7 +27,9 @@ import com.mediasage.feature.home.HomeScreen
 import com.mediasage.feature.home.HomeViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailScreen
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
+import com.mediasage.feature.settings.SettingsContract
 import com.mediasage.feature.settings.SettingsScreen
+import com.mediasage.feature.settings.SettingsViewModel
 import com.mediasage.feature.you.YouScreen
 import com.mediasage.feature.you.YouViewModel
 import org.jetbrains.compose.resources.stringResource
@@ -36,6 +38,7 @@ import org.koin.core.parameter.parametersOf
 
 @Composable
 fun MediaSageScaffold(
+    onSignedOut: () -> Unit = {},
     appState: MediaSageAppState = rememberMediaSageAppState()
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -151,7 +154,20 @@ fun MediaSageScaffold(
                     )
                 }
                 is Route.Settings -> NavEntry(route) {
-                    SettingsScreen(onNavigateBack = { appState.navigateBack() })
+                    val vm = koinViewModel<SettingsViewModel>()
+                    val state by vm.state.collectAsState()
+                    LaunchedEffect(vm) {
+                        vm.sideEffects.collect { effect ->
+                            when (effect) {
+                                is SettingsContract.SideEffect.SignedOut -> onSignedOut()
+                            }
+                        }
+                    }
+                    SettingsScreen(
+                        state = state,
+                        onIntent = vm::onIntent,
+                        onNavigateBack = { appState.navigateBack() }
+                    )
                 }
                 else -> NavEntry(route) {}
             }

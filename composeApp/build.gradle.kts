@@ -71,6 +71,8 @@ val serverBaseUrl: String = localProperties.getProperty(
     "server.base.url",
     "http://10.0.2.2:8080"
 )
+val supabaseUrl: String = localProperties.getProperty("supabase.url", "")
+val supabaseAnonKey: String = localProperties.getProperty("supabase.anon.key", "")
 
 android {
     namespace = "com.mediasage"
@@ -83,6 +85,8 @@ android {
         versionCode = 1
         versionName = "1.0"
         buildConfigField("String", "SERVER_BASE_URL", "\"$serverBaseUrl\"")
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
         buildConfigField("boolean", "USE_MOCK_DATA", localProperties.getProperty("use.mock.data", "false"))
     }
     packaging {
@@ -101,10 +105,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 }
 
 dependencies {
     debugImplementation(libs.compose.uiTooling)
+    coreLibraryDesugaring(libs.android.desugar.jdk)
 }
 
