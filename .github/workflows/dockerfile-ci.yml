@@ -1,0 +1,35 @@
+name: Dockerfile CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'agent/Dockerfile'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'agent/Dockerfile'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-dockerfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: agent/Dockerfile
+
+      - name: Build agent image
+        run: docker build -f agent/Dockerfile -t media-sage-agent-test .
+
+      - name: Smoke test runtime dependencies
+        run: |
+          docker run --rm --entrypoint which media-sage-agent-test javac
+          docker run --rm --entrypoint which media-sage-agent-test java
+          docker run --rm --entrypoint which media-sage-agent-test git
