@@ -103,7 +103,10 @@ data class DailyReflectionRequestDto(
     @SerialName("figureName")
     val figureName: String,
     val headlines: List<String> = emptyList(),
-    val tone: String = "morning"
+    val tone: String = "morning",
+    val dayOfWeek: String = "",
+    val previousScriptures: List<String> = emptyList(),
+    val previousReflections: List<String> = emptyList()
 )
 
 @Serializable
