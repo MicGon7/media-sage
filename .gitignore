@@ -46,3 +46,4 @@ DerivedData/
 *.xcworkspace/xcuserdata/
 fastlane/api_key.json
 fastlane/*.p8
+fastlane/.env.default
