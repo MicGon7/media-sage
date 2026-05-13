@@ -26,7 +26,7 @@ platform :ios do
       scheme: "iosApp",
       project: "iosApp/iosApp.xcodeproj",
       export_method: "app-store",
-      xcargs: "CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER='match AppStore com.thecouragepost.app'"
+      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} PROVISIONING_PROFILE_SPECIFIER='match AppStore com.thecouragepost.app'"
     )
 
     upload_to_testflight(
