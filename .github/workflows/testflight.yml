@@ -27,6 +27,9 @@ jobs:
           ruby-version: '3.3'
           bundler-cache: true
 
+      - name: Pre-build iOS framework
+        run: ./gradlew :composeApp:linkReleaseFrameworkIosArm64
+
       - name: Write App Store Connect API key
         env:
           APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
