@@ -40,7 +40,7 @@ server/generated-images/*.webp
 server/generated-images/*.png
 
 # Xcode
-*.xcodeproj/
-*.xcworkspace/
 xcuserdata/
 DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
