@@ -5,15 +5,10 @@ platform :ios do
   lane :beta do
     setup_ci if ENV['CI']
 
-    key_params = if ENV['APP_STORE_CONNECT_KEY_CONTENT']
-      { key_content: ENV['APP_STORE_CONNECT_KEY_CONTENT'] }
-    else
-      { key_filepath: "fastlane/AuthKey_8WVFL729XV.p8" }
-    end
     api_key = app_store_connect_api_key(
-      key_id: ENV['APP_STORE_CONNECT_KEY_ID'] || "8WVFL729XV",
-      issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'] || "4b15de7b-0249-4d99-b657-e2d2dda326f2",
-      **key_params
+      key_id: ENV['APP_STORE_CONNECT_KEY_ID'],
+      issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
+      key_filepath: ENV['APP_STORE_CONNECT_KEY_FILEPATH']
     )
 
     match(
