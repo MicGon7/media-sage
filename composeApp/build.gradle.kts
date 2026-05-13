@@ -81,7 +81,9 @@ val serverBaseUrl: String = localProperties.getProperty(
     "http://10.0.2.2:8080"
 )
 val supabaseUrl: String = localProperties.getProperty("supabase.url", "")
+    .ifEmpty { System.getenv("SUPABASE_URL") ?: "" }
 val supabaseAnonKey: String = localProperties.getProperty("supabase.anon.key", "")
+    .ifEmpty { System.getenv("SUPABASE_ANON_KEY") ?: "" }
 
 android {
     namespace = "com.mediasage"
