@@ -21,6 +21,16 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Cache Kotlin Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: ${{ runner.os }}-konan-
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
