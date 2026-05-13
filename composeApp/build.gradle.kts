@@ -58,9 +58,10 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.navigation3.ui)
-            implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.compottie)
             implementation(libs.compottie.dot)
+            implementation(libs.kotlinx.datetime)
             implementation(libs.datastore.preferences)
         }
         commonTest.dependencies {
