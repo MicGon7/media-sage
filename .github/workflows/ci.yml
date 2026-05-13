@@ -27,6 +27,13 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+      - name: Cache Kotlin Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: ${{ runner.os }}-konan-
+
       - name: Run Detekt static analysis
         run: ./gradlew detekt
 

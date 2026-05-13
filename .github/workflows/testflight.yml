@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
 
@@ -21,14 +21,21 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Cache Kotlin Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: ${{ runner.os }}-konan-
+
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
           bundler-cache: true
-
-      - name: Pre-build iOS framework
-        run: ./gradlew :composeApp:linkReleaseFrameworkIosArm64
 
       - name: Write App Store Connect API key
         env:
@@ -43,4 +50,6 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: bundle exec fastlane ios beta
