@@ -12,6 +12,12 @@ platform :ios do
     )
 
     match(
+      type: "development",
+      api_key: api_key,
+      readonly: true
+    )
+
+    match(
       type: "appstore",
       api_key: api_key,
       readonly: true
@@ -26,6 +32,7 @@ platform :ios do
       scheme: "iosApp",
       project: "iosApp/iosApp.xcodeproj",
       export_method: "app-store",
+      configuration: "Release",
       xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} PROVISIONING_PROFILE_SPECIFIER='match AppStore com.thecouragepost.app'"
     )
 
