@@ -6,7 +6,7 @@ import com.mediasage.data.remote.DailyReflectionRequestDto
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.repository.DailyReflectionRepository
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 

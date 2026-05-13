@@ -21,6 +21,13 @@ kotlin {
             baseName = "Shared"
             isStatic = true
         }
+        iosTarget.compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions {
+                    freeCompilerArgs.add("-Xexpect-actual-classes")
+                }
+            }
+        }
     }
 
     sourceSets {

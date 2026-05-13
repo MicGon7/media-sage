@@ -25,6 +25,14 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            binaryOption("bundleId", "com.thecouragepost.app")
+        }
+        iosTarget.compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions {
+                    freeCompilerArgs.add("-Xexpect-actual-classes")
+                }
+            }
         }
     }
     
@@ -50,9 +58,10 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.navigation3.ui)
-            implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.compottie)
             implementation(libs.compottie.dot)
+            implementation(libs.kotlinx.datetime)
             implementation(libs.datastore.preferences)
         }
         commonTest.dependencies {

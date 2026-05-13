@@ -1,38 +1,38 @@
-# This file contains the fastlane.tools configuration
-# You can find the documentation at https://docs.fastlane.tools
-#
-# For a list of all available actions, check out
-#
-#     https://docs.fastlane.tools/actions
-#
-# For a list of all available plugins, check out
-#
-#     https://docs.fastlane.tools/plugins/available-plugins
-#
+default_platform(:ios)
 
-# Uncomment the line if you want fastlane to automatically update itself
-# update_fastlane
-
-default_platform(:android)
-
-platform :android do
-  desc "Runs all the tests"
-  lane :test do
-    gradle(task: "test")
-  end
-
-  desc "Submit a new Beta Build to Crashlytics Beta"
+platform :ios do
+  desc "Build and upload to TestFlight"
   lane :beta do
-    gradle(task: "clean assembleRelease")
-    crashlytics
-  
-    # sh "your_script.sh"
-    # You can also use other beta testing services here
-  end
+    setup_ci if ENV['CI']
 
-  desc "Deploy a new version to the Google Play"
-  lane :deploy do
-    gradle(task: "clean assembleRelease")
-    upload_to_play_store
+    api_key = app_store_connect_api_key(
+      key_id: ENV['APP_STORE_CONNECT_KEY_ID'],
+      issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
+      key_filepath: ENV['APP_STORE_CONNECT_KEY_FILEPATH']
+    )
+
+    match(
+      type: "appstore",
+      api_key: api_key,
+      readonly: true
+    )
+
+    increment_build_number(
+      build_number: ENV['BUILD_NUMBER'] || Time.now.to_i.to_s,
+      xcodeproj: "iosApp/iosApp.xcodeproj"
+    )
+
+    build_app(
+      scheme: "iosApp",
+      project: "iosApp/iosApp.xcodeproj",
+      export_method: "app-store",
+      configuration: "Release",
+      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} PROVISIONING_PROFILE_SPECIFIER='match AppStore com.thecouragepost.app' CODE_SIGN_IDENTITY='Apple Distribution'"
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true
+    )
   end
 end

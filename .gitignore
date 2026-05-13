@@ -40,7 +40,10 @@ server/generated-images/*.webp
 server/generated-images/*.png
 
 # Xcode
-*.xcodeproj/
-*.xcworkspace/
 xcuserdata/
 DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+fastlane/api_key.json
+fastlane/*.p8
+fastlane/.env.default
