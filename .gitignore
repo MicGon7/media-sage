@@ -44,3 +44,5 @@ xcuserdata/
 DerivedData/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
+fastlane/api_key.json
+fastlane/*.p8

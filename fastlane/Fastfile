@@ -13,6 +13,31 @@
 # Uncomment the line if you want fastlane to automatically update itself
 # update_fastlane
 
+default_platform(:ios)
+
+platform :ios do
+  desc "Push a new beta build to TestFlight"
+  lane :beta do
+    setup_ci if ENV["CI"]
+    api_key = app_store_connect_api_key(
+      key_id: "8WVFL729XV",
+      issuer_id: "4b15de7b-0249-4d99-b657-e2d2dda326f2",
+      key_filepath: "fastlane/AuthKey_8WVFL729XV.p8"
+    )
+    match(
+      type: "appstore",
+      api_key: api_key,
+      readonly: is_ci
+    )
+    build_ios_app(
+      scheme: "iosApp",
+      project: "iosApp/iosApp.xcodeproj",
+      export_method: "app-store"
+    )
+    upload_to_testflight(api_key: api_key)
+  end
+end
+
 default_platform(:android)
 
 platform :android do
