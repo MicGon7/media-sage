@@ -5,7 +5,7 @@
     <!-- Navigation -->
     <string name="nav_headlines">Headlines</string>
     <string name="nav_voices">Reporters</string>
-    <string name="nav_you">You</string>
+    <string name="nav_you">Reader</string>
     <string name="nav_back">Back</string>
 
     <!-- Screen titles -->
@@ -40,19 +40,26 @@
     <string name="search_voices_hint">Search reporters…</string>
 
     <!-- You screen -->
-    <string name="you_greeting">Good morning</string>
-    <string name="you_activity_subheader">Review your recent activity</string>
+    <string name="you_screen_title">Reader</string>
+    <string name="you_greeting_morning">Good morning</string>
+    <string name="you_greeting_afternoon">Good afternoon</string>
+    <string name="you_greeting_evening">Good evening</string>
     <string name="you_nav_saved">Saved</string>
     <string name="you_nav_history">History</string>
     <string name="you_settings_icon_description">Settings</string>
 
     <!-- Settings screen -->
     <string name="title_settings">Settings</string>
-    <string name="settings_coming_soon">Settings coming soon</string>
-
-    <!-- Developer settings (DEBUG only) -->
-    <string name="dev_section_header">Developer</string>
-    <string name="dev_dark_mode_label">Dark mode</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_theme_label">Theme</string>
+    <string name="settings_dark_mode_label">Dark Mode</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_edit_profile">Edit Profile</string>
+    <string name="settings_version_label">Version</string>
+    <string name="settings_section_support">Support</string>
+    <string name="settings_privacy_policy">Privacy Policy</string>
+    <string name="settings_terms_of_service">Terms of Service</string>
+    <string name="settings_send_feedback">Send Feedback</string>
 
     <!-- Bookmarks screen -->
     <string name="title_bookmarks">Saved</string>

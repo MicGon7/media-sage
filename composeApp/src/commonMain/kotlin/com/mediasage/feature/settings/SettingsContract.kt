@@ -1,12 +1,20 @@
 package com.mediasage.feature.settings
 
+import com.mediasage.theme.AppTheme
+
 object SettingsContract {
 
     sealed interface UiState {
-        data object Ready : UiState
+        data class Ready(
+            val appTheme: AppTheme = AppTheme.CLASSIC,
+            val darkMode: Boolean = false,
+            val appVersion: String = "1.0",
+        ) : UiState
     }
 
     sealed interface Intent {
+        data class SetAppTheme(val theme: AppTheme) : Intent
+        data class ToggleDarkMode(val enabled: Boolean) : Intent
         data object SignOut : Intent
     }
 

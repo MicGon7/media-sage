@@ -29,8 +29,8 @@ val appModule = module {
     viewModel { FiguresViewModel(get<FigureRepository>(), get<EncouragementRepository>(), get<PinnedFigureRepository>()) }
     viewModel { (figureId: Long) -> FigureDetailViewModel(figureId, get<FigureRepository>(), get<EncouragementRepository>(), get<PinnedFigureRepository>()) }
     viewModel { LoginViewModel(get<AuthRepository>(), get<UserPreferencesRepository>()) }
-    viewModel { SettingsViewModel(get<AuthRepository>()) }
-    viewModel { YouViewModel(get<ThemePreferencesRepository>()) }
+    viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
+    viewModel { YouViewModel(get<AuthRepository>()) }
     viewModel { HistoryViewModel(get<EncouragementRepository>()) }
     viewModel { BookmarksViewModel(get<EncouragementRepository>()) }
 }

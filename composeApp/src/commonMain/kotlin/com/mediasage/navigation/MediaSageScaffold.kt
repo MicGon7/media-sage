@@ -1,6 +1,11 @@
 package com.mediasage.navigation
 
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
@@ -11,6 +16,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.mediasage.theme.MediaSageTheme
 import com.mediasage.feature.figures.FiguresContract
 import com.mediasage.feature.home.HomeContract
 import androidx.navigation3.runtime.NavEntry
@@ -42,9 +48,18 @@ fun MediaSageScaffold(
     appState: MediaSageAppState = rememberMediaSageAppState()
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val backgroundBrush = MediaSageTheme.colors.backgroundBrush
 
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(
+                if (backgroundBrush != null) Modifier.background(backgroundBrush)
+                else Modifier
+            )
+    ) {
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = if (backgroundBrush != null) Color.Transparent else MaterialTheme.colorScheme.surface,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (appState.showBottomBar) {
@@ -173,6 +188,7 @@ fun MediaSageScaffold(
             }
         }
     }
+    } // Box
 }
 
 @Composable
@@ -181,9 +197,16 @@ private fun MediaSageBottomBar(
     currentDestination: Any?,
     onNavigate: (TopLevelDestination) -> Unit
 ) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-    ) {
+    Column {
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant,
+            thickness = 1.dp,
+        )
+        NavigationBar(
+            modifier = Modifier.navigationBarsPadding(),
+            windowInsets = WindowInsets(0),
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
         destinations.forEach { destination ->
             val selected = currentDestination == destination.route
             NavigationBarItem(
@@ -204,6 +227,7 @@ private fun MediaSageBottomBar(
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             )
+        }
         }
     }
 }

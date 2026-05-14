@@ -35,8 +35,10 @@ val LoraFamily: FontFamily
     )
 
 @Composable
-fun mediaSageTypography(headlineFont: FontFamily = PlayfairDisplayFamily): Typography {
-    val bodyFont = LoraFamily
+fun mediaSageTypography(
+    headlineFont: FontFamily = PlayfairDisplayFamily,
+    bodyFont: FontFamily = LoraFamily,
+): Typography {
     return Typography(
         displayLarge = TextStyle(
             fontFamily = headlineFont,

@@ -10,6 +10,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
+import com.mediasage.theme.AppTheme
 import org.koin.compose.viewmodel.koinViewModel
 
 class MainActivity : ComponentActivity() {
@@ -19,17 +20,22 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appViewModel = koinViewModel<AppViewModel>()
             val darkMode by appViewModel.darkMode.collectAsState()
+            val appTheme by appViewModel.appTheme.collectAsState()
 
-            DisposableEffect(darkMode) {
+            DisposableEffect(darkMode, appTheme) {
+                // Modern is always dark navy; all bars are transparent so the app background shows through
+                val useDarkBars = darkMode == true || appTheme == AppTheme.MODERN
+                val barStyle = if (useDarkBars) {
+                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                } else {
+                    SystemBarStyle.light(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT,
+                    )
+                }
                 enableEdgeToEdge(
-                    statusBarStyle = if (darkMode == true) {
-                        SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-                    } else {
-                        SystemBarStyle.light(
-                            android.graphics.Color.TRANSPARENT,
-                            android.graphics.Color.TRANSPARENT,
-                        )
-                    },
+                    statusBarStyle = barStyle,
+                    navigationBarStyle = barStyle,
                 )
                 onDispose {}
             }
