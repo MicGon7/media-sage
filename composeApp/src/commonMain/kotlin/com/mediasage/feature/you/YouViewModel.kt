@@ -1,33 +1,38 @@
 package com.mediasage.feature.you
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.mediasage.data.ThemePreferencesRepository
+import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 class YouViewModel(
-    private val themePreferencesRepository: ThemePreferencesRepository
+    authRepository: AuthRepository,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<YouContract.UiState>(YouContract.UiState.Ready())
+    private val _state = MutableStateFlow<YouContract.UiState>(
+        YouContract.UiState.Ready(
+            displayName = authRepository.currentSession()?.let { session ->
+                session.displayName?.substringBefore(" ") ?: session.email ?: ""
+            } ?: "",
+            greeting = currentGreeting(),
+        )
+    )
+
+    private fun currentGreeting(): YouContract.Greeting {
+        val hour = Instant.fromEpochMilliseconds(epochMillis())
+            .toLocalDateTime(TimeZone.currentSystemDefault()).hour
+        return when {
+            hour < 12 -> YouContract.Greeting.MORNING
+            hour < 17 -> YouContract.Greeting.AFTERNOON
+            else -> YouContract.Greeting.EVENING
+        }
+    }
     val state: StateFlow<YouContract.UiState> = _state.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            themePreferencesRepository.darkMode.collect { dark ->
-                _state.value = YouContract.UiState.Ready(darkMode = dark)
-            }
-        }
-    }
-
-    fun onIntent(intent: YouContract.Intent) {
-        when (intent) {
-            is YouContract.Intent.ToggleDarkMode -> {
-                viewModelScope.launch { themePreferencesRepository.setDarkMode(intent.enabled) }
-            }
-        }
-    }
+    fun onIntent(intent: YouContract.Intent) {}
 }

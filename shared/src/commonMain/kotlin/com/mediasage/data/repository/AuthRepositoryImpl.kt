@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 class AuthRepositoryImpl(
     private val supabaseClient: SupabaseClient?
@@ -23,7 +25,8 @@ class AuthRepositoryImpl(
                 when (status) {
                     is SessionStatus.Authenticated -> UserSession(
                         userId = status.session.user?.id ?: "",
-                        email = status.session.user?.email
+                        email = status.session.user?.email,
+                        displayName = status.session.user?.userMetadata?.get("full_name")?.jsonPrimitive?.contentOrNull,
                     )
                     else -> null // NotAuthenticated or RefreshFailure
                 }
@@ -35,7 +38,8 @@ class AuthRepositoryImpl(
         return (status as? SessionStatus.Authenticated)?.let {
             UserSession(
                 userId = it.session.user?.id ?: "",
-                email = it.session.user?.email
+                email = it.session.user?.email,
+                displayName = it.session.user?.userMetadata?.get("full_name")?.jsonPrimitive?.contentOrNull,
             )
         }
     }

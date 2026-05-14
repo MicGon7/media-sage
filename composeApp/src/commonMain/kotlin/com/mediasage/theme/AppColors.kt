@@ -3,6 +3,7 @@ package com.mediasage.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 @Immutable
@@ -10,6 +11,7 @@ data class AppColors(
     val accent: Color,
     val ruleLine: Color,
     val cardBorder: Color,
+    val backgroundBrush: Brush? = null,
 )
 
 val LocalAppColors = staticCompositionLocalOf {

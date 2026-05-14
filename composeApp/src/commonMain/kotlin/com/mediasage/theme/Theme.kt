@@ -68,24 +68,84 @@ internal fun classicDarkAppColors() = AppColors(
     cardBorder = RuleLineDark,
 )
 
-// ── Modern (editorial magazine) ───────────────────────────────────────────────
+// ── Modern (brand navy — dark navy in both modes, deeper in dark) ─────────────
 
-internal fun modernLightColors(): ColorScheme = lightColorScheme(
-    primary = NavyLight,
-    onPrimary = White,
+internal fun modernLightColors(): ColorScheme = darkColorScheme(
+    primary = White,
+    onPrimary = Navy,
+    primaryContainer = NavyLight,
+    onPrimaryContainer = InkLight,
+    secondary = InkLight,
+    onSecondary = Navy,
+    secondaryContainer = Navy,
+    onSecondaryContainer = InkLight,
+    tertiary = ModernBorderMuted,
+    onTertiary = Navy,
+    background = Navy,
+    onBackground = InkLight,
+    surface = ModernLightCard,
+    onSurface = InkLight,
+    surfaceVariant = ModernLightCard,
+    onSurfaceVariant = CharcoalLight,
+    outline = ModernBorder,
+    outlineVariant = ModernBorderMuted,
+    error = ErrorDark,
+    onError = Navy,
+)
+
+internal fun modernDarkColors(): ColorScheme = darkColorScheme(
+    primary = White,
+    onPrimary = NavyDeep,
     primaryContainer = Navy,
-    onPrimaryContainer = White,
-    secondary = Accent,
+    onPrimaryContainer = InkLight,
+    secondary = InkLight,
+    onSecondary = NavyDeep,
+    secondaryContainer = NavyDeep,
+    onSecondaryContainer = InkLight,
+    tertiary = ModernBorderMuted,
+    onTertiary = NavyDeep,
+    background = NavyDeep,
+    onBackground = InkLight,
+    surface = ModernDarkCard,
+    onSurface = InkLight,
+    surfaceVariant = ModernDarkCard,
+    onSurfaceVariant = CharcoalLight,
+    outline = ModernBorder,
+    outlineVariant = ModernBorderMuted,
+    error = ErrorDark,
+    onError = NavyDeep,
+)
+
+internal fun modernLightAppColors() = AppColors(
+    accent = White,
+    ruleLine = ModernBorderMuted,
+    cardBorder = ModernBorder,
+)
+
+internal fun modernDarkAppColors() = AppColors(
+    accent = InkLight,
+    ruleLine = ModernBorderMuted,
+    cardBorder = ModernDarkCard,
+)
+
+// ── Future (Kindle e-reader — warm sepia light, warm dark night mode) ─────────
+
+internal fun futureLightColors(): ColorScheme = lightColorScheme(
+    primary = ReaderPrimary,
+    onPrimary = White,
+    primaryContainer = ReaderSurface,
+    onPrimaryContainer = Ink,
+    secondary = ReaderPrimary,
     onSecondary = White,
-    secondaryContainer = OffWhite,
-    onSecondaryContainer = Navy,
+    secondaryContainer = ReaderSurface,
+    onSecondaryContainer = Ink,
     tertiary = Slate,
     onTertiary = White,
-    background = White,
+    background = ReaderSurface,
     onBackground = Ink,
-    surface = OffWhite,
+    surface = ReaderSurface,
     onSurface = Ink,
-    surfaceVariant = OffWhite,
+    surfaceVariant = ReaderSurface,
     onSurfaceVariant = Charcoal,
     outline = CardBorder,
     outlineVariant = RuleLine,
@@ -93,99 +153,39 @@ internal fun modernLightColors(): ColorScheme = lightColorScheme(
     onError = White,
 )
 
-internal fun modernDarkColors(): ColorScheme = darkColorScheme(
-    primary = NavyLight,
-    onPrimary = ModernDark,
-    primaryContainer = Navy,
+internal fun futureDarkColors(): ColorScheme = darkColorScheme(
+    primary = ReaderAmber,
+    onPrimary = DarkBackground,
+    primaryContainer = DarkSurface,
     onPrimaryContainer = InkLight,
-    secondary = AccentDark,
-    onSecondary = ModernDark,
-    secondaryContainer = Navy,
+    secondary = ReaderAmber,
+    onSecondary = DarkBackground,
+    secondaryContainer = DarkSurface,
     onSecondaryContainer = InkLight,
     tertiary = SlateLight,
-    onTertiary = ModernDark,
-    background = ModernDark,
+    onTertiary = DarkBackground,
+    background = DarkSurface,
     onBackground = InkLight,
-    surface = ModernSurface,
+    surface = DarkSurface,
     onSurface = InkLight,
-    surfaceVariant = Ink,
+    surfaceVariant = DarkSurface,
     onSurfaceVariant = CharcoalLight,
     outline = RuleLineDark,
-    outlineVariant = Slate,
+    outlineVariant = RuleLineDark,
     error = ErrorDark,
-    onError = ModernDark,
-)
-
-internal fun modernLightAppColors() = AppColors(
-    accent = Accent,
-    ruleLine = RuleLine,
-    cardBorder = CardBorder,
-)
-
-internal fun modernDarkAppColors() = AppColors(
-    accent = AccentDark,
-    ruleLine = RuleLineDark,
-    cardBorder = ModernSurface,
-)
-
-// ── Future (clean digital) ────────────────────────────────────────────────────
-
-internal fun futureLightColors(): ColorScheme = lightColorScheme(
-    primary = ElectricBlue,
-    onPrimary = White,
-    primaryContainer = FutureSurface,
-    onPrimaryContainer = Ink,
-    secondary = ElectricBlue,
-    onSecondary = White,
-    secondaryContainer = FutureSurface,
-    onSecondaryContainer = Ink,
-    tertiary = Slate,
-    onTertiary = White,
-    background = FutureBackground,
-    onBackground = Ink,
-    surface = FutureSurface,
-    onSurface = Ink,
-    surfaceVariant = FutureSurface,
-    onSurfaceVariant = Charcoal,
-    outline = FutureSurface,
-    outlineVariant = FutureSurface,
-    error = Error,
-    onError = White,
-)
-
-internal fun futureDarkColors(): ColorScheme = darkColorScheme(
-    primary = ElectricBlue,
-    onPrimary = FutureDark,
-    primaryContainer = FutureDarkSurface,
-    onPrimaryContainer = White,
-    secondary = ElectricBlue,
-    onSecondary = FutureDark,
-    secondaryContainer = FutureDarkSurface,
-    onSecondaryContainer = White,
-    tertiary = SlateLight,
-    onTertiary = FutureDark,
-    background = FutureDark,
-    onBackground = White,
-    surface = FutureDarkSurface,
-    onSurface = White,
-    surfaceVariant = FutureDarkSurface,
-    onSurfaceVariant = CharcoalLight,
-    outline = FutureDarkSurface,
-    outlineVariant = FutureDarkSurface,
-    error = ErrorDark,
-    onError = FutureDark,
+    onError = DarkSurface,
 )
 
 internal fun futureLightAppColors() = AppColors(
-    accent = ElectricBlue,
-    ruleLine = FutureSurface,
-    cardBorder = FutureSurface,
+    accent = ReaderPrimary,
+    ruleLine = ReaderSurface,
+    cardBorder = ReaderSurface,
 )
 
 internal fun futureDarkAppColors() = AppColors(
-    accent = ElectricBlue,
-    ruleLine = FutureDarkSurface,
-    cardBorder = FutureDarkSurface,
+    accent = ReaderAmber,
+    ruleLine = RuleLineDark,
+    cardBorder = DarkSurface,
 )
 
 // ── Composable ────────────────────────────────────────────────────────────────
@@ -206,7 +206,6 @@ fun MediaSageTheme(
         AppTheme.MODERN -> if (darkTheme) modernDarkAppColors() else modernLightAppColors()
         AppTheme.FUTURE -> if (darkTheme) futureDarkAppColors() else futureLightAppColors()
     }
-
     CompositionLocalProvider(LocalAppColors provides appColors) {
         MaterialTheme(
             colorScheme = colorScheme,

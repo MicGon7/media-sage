@@ -19,9 +19,8 @@ import org.koin.compose.viewmodel.koinViewModel
 fun App(isDebugBuild: Boolean = false) {
     val appViewModel = koinViewModel<AppViewModel>()
     val darkMode by appViewModel.darkMode.collectAsState()
+    val appTheme by appViewModel.appTheme.collectAsState()
     val authState by appViewModel.authState.collectAsState()
-
-    val appTheme = AppTheme.CLASSIC // change this to switch themes until Settings wires it up
 
     CompositionLocalProvider(LocalIsDebugBuild provides isDebugBuild) {
         MediaSageTheme(theme = appTheme, darkTheme = darkMode ?: false) {

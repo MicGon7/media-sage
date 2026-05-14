@@ -3,10 +3,13 @@ package com.mediasage.feature.you
 object YouContract {
 
     sealed interface UiState {
-        data class Ready(val darkMode: Boolean = false) : UiState
+        data class Ready(
+            val displayName: String = "",
+            val greeting: Greeting = Greeting.MORNING,
+        ) : UiState
     }
 
-    sealed interface Intent {
-        data class ToggleDarkMode(val enabled: Boolean) : Intent
-    }
+    enum class Greeting { MORNING, AFTERNOON, EVENING }
+
+    sealed interface Intent
 }

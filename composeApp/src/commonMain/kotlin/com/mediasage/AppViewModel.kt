@@ -6,6 +6,7 @@ import com.mediasage.data.ThemePreferencesRepository
 import com.mediasage.domain.model.UserSession
 import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.FigureRepository
+import com.mediasage.theme.AppTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,9 @@ class AppViewModel(
 
     val darkMode: StateFlow<Boolean?> = themePreferencesRepository.darkMode
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    val appTheme: StateFlow<AppTheme> = themePreferencesRepository.appTheme
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AppTheme.CLASSIC)
 
     private val _authBypass = MutableStateFlow(false)
 
