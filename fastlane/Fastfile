@@ -2,7 +2,10 @@ default_platform(:ios)
 
 platform :ios do
   desc "Build and upload to TestFlight"
-  lane :beta do
+  lane :beta do |options|
+    supabase_host = (options[:supabase_url] || ENV['SUPABASE_URL'] || "").gsub(/https?:\/\//, "")
+    supabase_anon_key = options[:supabase_anon_key] || ENV['SUPABASE_ANON_KEY'] || ""
+
     setup_ci if ENV['CI']
 
     api_key = app_store_connect_api_key(
@@ -27,7 +30,7 @@ platform :ios do
       project: "iosApp/iosApp.xcodeproj",
       export_method: "app-store",
       configuration: "Release",
-      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} PROVISIONING_PROFILE_SPECIFIER='match AppStore com.thecouragepost.app' CODE_SIGN_IDENTITY='Apple Distribution'"
+      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} PROVISIONING_PROFILE_SPECIFIER='match AppStore com.thecouragepost.app' CODE_SIGN_IDENTITY='Apple Distribution' SUPABASE_HOST='#{supabase_host}' SUPABASE_ANON_KEY='#{supabase_anon_key}'"
     )
 
     upload_to_testflight(
