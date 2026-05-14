@@ -30,7 +30,7 @@ platform :ios do
       project: "iosApp/iosApp.xcodeproj",
       export_method: "app-store",
       configuration: "Release",
-      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} PROVISIONING_PROFILE_SPECIFIER='match AppStore com.thecouragepost.app' CODE_SIGN_IDENTITY='Apple Distribution' SUPABASE_HOST='#{supabase_host}' SUPABASE_ANON_KEY='#{supabase_anon_key}'"
+      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} PROVISIONING_PROFILE_SPECIFIER='match AppStore com.thecouragepost.app' CODE_SIGN_IDENTITY='Apple Distribution' SUPABASE_HOST='#{supabase_host}' SUPABASE_ANON_KEY='#{supabase_anon_key}' CURRENT_PROJECT_VERSION='#{ENV['BUILD_NUMBER'] || Time.now.to_i.to_s}'"
     )
 
     upload_to_testflight(
