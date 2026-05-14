@@ -29,3 +29,16 @@ val DarkSurface = Color(0xFF25221A)     // slightly lighter warm dark for card s
 
 val Error = Color(0xFFB00020)
 val ErrorDark = Color(0xFFCF6679)
+
+// Modern palette
+val Accent = Color(0xFFD4A853)
+val AccentDark = Color(0xFFB8943F)
+val ModernDark = Color(0xFF1A1E2E)
+val ModernSurface = Color(0xFF222640)
+
+// Future palette
+val ElectricBlue = Color(0xFF4A9EFF)
+val FutureBackground = Color(0xFFF8F9FF)
+val FutureSurface = Color(0xFFEEF0F8)
+val FutureDark = Color(0xFF0D0D0F)
+val FutureDarkSurface = Color(0xFF141416)
