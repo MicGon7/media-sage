@@ -1,0 +1,26 @@
+package com.mediasage.theme
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
+
+@Immutable
+data class AppColors(
+    val accent: Color,
+    val ruleLine: Color,
+    val cardBorder: Color,
+)
+
+val LocalAppColors = staticCompositionLocalOf {
+    AppColors(
+        accent = Color.Unspecified,
+        ruleLine = Color.Unspecified,
+        cardBorder = Color.Unspecified,
+    )
+}
+
+object MediaSageTheme {
+    val colors: AppColors
+        @Composable get() = LocalAppColors.current
+}

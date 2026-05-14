@@ -10,6 +10,7 @@ import com.mediasage.feature.login.LoginContract
 import com.mediasage.feature.login.LoginScreen
 import com.mediasage.feature.login.LoginViewModel
 import com.mediasage.navigation.MediaSageScaffold
+import com.mediasage.theme.AppTheme
 import com.mediasage.theme.MediaSageTheme
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -20,8 +21,10 @@ fun App(isDebugBuild: Boolean = false) {
     val darkMode by appViewModel.darkMode.collectAsState()
     val authState by appViewModel.authState.collectAsState()
 
+    val appTheme = AppTheme.CLASSIC // change this to switch themes until Settings wires it up
+
     CompositionLocalProvider(LocalIsDebugBuild provides isDebugBuild) {
-        MediaSageTheme(darkTheme = darkMode ?: false) {
+        MediaSageTheme(theme = appTheme, darkTheme = darkMode ?: false) {
             when (authState) {
                 is AuthUiState.Loading -> Unit
                 is AuthUiState.Unauthenticated -> {
