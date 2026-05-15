@@ -3,6 +3,10 @@ name: TestFlight
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'composeApp/**'
+      - 'shared/**'
+      - 'iosApp/**'
   workflow_dispatch:
 
 concurrency:
