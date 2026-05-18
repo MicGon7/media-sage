@@ -1,5 +1,7 @@
 package com.mediasage.agent
 
 // Smoke test target for autonomous agent end-to-end validation.
-// Update the version number below and open a PR — no other changes needed.
-// smoke-test-version: 1
+// Each worker bumps its assigned version line and opens a PR — no other changes needed.
+// smoke-test-version-a: 1
+// smoke-test-version-b: 1
+// smoke-test-version-c: 1
