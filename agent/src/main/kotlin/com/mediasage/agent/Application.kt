@@ -20,28 +20,37 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    val config = AgentConfig(
-        repoPath = environment.config.propertyOrNull("app.agent.repoPath")?.getString() ?: "",
-        githubWebhookSecret = environment.config.propertyOrNull("app.github.webhookSecret")?.getString() ?: "",
-        jiraEmail = environment.config.propertyOrNull("app.jira.email")?.getString() ?: "",
-        jiraApiToken = environment.config.propertyOrNull("app.jira.apiToken")?.getString() ?: "",
-        jiraCloudId = environment.config.propertyOrNull("app.jira.cloudId")?.getString() ?: "",
-        jiraBotAccountId = environment.config.propertyOrNull("app.jira.botAccountId")?.getString() ?: "",
-        verboseLogging = environment.config.propertyOrNull("app.agent.verboseLogging")
-            ?.getString()?.toBoolean() ?: false
-    )
-
-    install(Koin) {
-        modules(agentModule(config, CoroutineScope(Dispatchers.IO)))
-    }
-
+    val config = buildAgentConfig(environment.config)
+    install(Koin) { modules(agentModule(config, CoroutineScope(Dispatchers.IO))) }
     configureContentNegotiation()
     configureCallLogging()
     configureStatusPages()
-
     routing {
         get("/health") { call.respond(HttpStatusCode.OK, "OK") }
         webhookRoutes(config.jiraBotAccountId)
         githubWebhookRoutes(config.githubWebhookSecret)
     }
+}
+
+private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): AgentConfig {
+    fun str(key: String) = config.propertyOrNull(key)?.getString() ?: ""
+    fun bool(key: String) = config.propertyOrNull(key)?.getString()?.toBoolean() ?: false
+    val credentialsBase64 = str("app.cloudRun.credentialsBase64")
+    val credentialsJson = if (credentialsBase64.isNotBlank()) {
+        String(java.util.Base64.getDecoder().decode(credentialsBase64))
+    } else ""
+    return AgentConfig(
+        repoPath = str("app.agent.repoPath"),
+        githubWebhookSecret = str("app.github.webhookSecret"),
+        jiraEmail = str("app.jira.email"),
+        jiraApiToken = str("app.jira.apiToken"),
+        jiraCloudId = str("app.jira.cloudId"),
+        jiraBotAccountId = str("app.jira.botAccountId"),
+        verboseLogging = bool("app.agent.verboseLogging"),
+        useCloudRunWorkers = bool("app.cloudRun.useWorkers"),
+        gcpProjectId = str("app.cloudRun.projectId"),
+        gcpRegion = config.propertyOrNull("app.cloudRun.region")?.getString() ?: "us-central1",
+        gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",
+        googleCredentialsJson = credentialsJson
+    )
 }

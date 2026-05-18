@@ -41,7 +41,8 @@ private const val PR_COMMENT_REVIEW_PROMPT =
 open class AgentLaunchService(
     private val repoPath: String,
     private val scope: CoroutineScope,
-    private val verboseLogging: Boolean = false
+    private val verboseLogging: Boolean = false,
+    private val dispatcher: JobDispatcher? = null
 ) {
 
     private val log = Logger.getLogger(AgentLaunchService::class.java.name)
@@ -60,6 +61,30 @@ open class AgentLaunchService(
         } else {
             BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
         }
+        return if (dispatcher != null) {
+            dispatchToCloudRun(ticketKey, prompt)
+        } else {
+            dispatchToLocalProcess(ticketKey, prompt)
+        }
+    }
+
+    private fun dispatchToCloudRun(ticketKey: String, prompt: String): Boolean {
+        if (!activeKeys.add(ticketKey)) {
+            log.info("[$ticketKey] already in flight — ignoring duplicate webhook")
+            return false
+        }
+        scope.launch(Dispatchers.IO) {
+            try {
+                dispatcher!!.executeJob(ticketKey, prompt)
+            } finally {
+                activeKeys.remove(ticketKey)
+                activeRuns.remove(ticketKey)
+            }
+        }.also { activeRuns[ticketKey] = it }
+        return true
+    }
+
+    private fun dispatchToLocalProcess(ticketKey: String, prompt: String): Boolean {
         // Each Jira ticket gets an isolated worktree so concurrent agents can't corrupt
         // each other's git state. We use --no-checkout because the agent creates its own
         // branch as its first action — there is no existing branch to check out yet.

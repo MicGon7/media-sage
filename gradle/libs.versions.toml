@@ -35,6 +35,7 @@ okhttp-logging = "4.12.0"
 datastore = "1.1.2"
 supabase = "3.6.0"
 android-desugar-jdk = "2.1.4"
+google-auth = "1.23.0"
 
 [libraries]
 # Coil (KMP image loading)
@@ -112,6 +113,9 @@ postgresql-jdbc = { module = "org.postgresql:postgresql", version.ref = "postgre
 
 # Supabase (KMP client)
 supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt", version.ref = "supabase" }
+
+# Google Auth (Cloud Run Jobs — agent module only)
+google-auth-oauth2 = { module = "com.google.auth:google-auth-library-oauth2-http", version.ref = "google-auth" }
 
 # Android desugaring (Java 8+ API support on API < 26)
 android-desugar-jdk = { module = "com.android.tools:desugar_jdk_libs", version.ref = "android-desugar-jdk" }
