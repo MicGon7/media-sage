@@ -7,5 +7,11 @@ data class AgentConfig(
     val jiraApiToken: String,
     val jiraCloudId: String,
     val jiraBotAccountId: String = "",
-    val verboseLogging: Boolean = false
+    val verboseLogging: Boolean = false,
+    // Cloud Run worker feature flag — false keeps existing local process behaviour
+    val useCloudRunWorkers: Boolean = false,
+    val gcpProjectId: String = "",
+    val gcpRegion: String = "us-central1",
+    val gcpJobName: String = "media-sage-agent-worker",
+    val googleCredentialsJson: String = ""
 )

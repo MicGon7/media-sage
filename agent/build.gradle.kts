@@ -31,6 +31,9 @@ dependencies {
     // Serialization
     implementation(libs.kotlinx.serialization.json)
 
+    // Google Auth (Cloud Run Jobs API)
+    implementation(libs.google.auth.oauth2)
+
     // Testing
     testImplementation(libs.kotlin.test)
     testImplementation(libs.ktor.server.tests)
