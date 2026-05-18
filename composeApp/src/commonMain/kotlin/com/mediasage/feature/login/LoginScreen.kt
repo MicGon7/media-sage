@@ -14,8 +14,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -53,11 +59,13 @@ import com.mediasage.theme.NavyLight
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.login_bypass
 import mediasage.composeapp.generated.resources.login_email_label
+import mediasage.composeapp.generated.resources.login_hide_password
 import mediasage.composeapp.generated.resources.login_masthead_line1
 import mediasage.composeapp.generated.resources.login_masthead_line2
 import mediasage.composeapp.generated.resources.login_member_edition
 import mediasage.composeapp.generated.resources.login_password_label
 import mediasage.composeapp.generated.resources.login_remember_email
+import mediasage.composeapp.generated.resources.login_show_password
 import mediasage.composeapp.generated.resources.login_sign_in_button
 import mediasage.composeapp.generated.resources.login_subtitle
 import org.jetbrains.compose.resources.stringResource
@@ -85,6 +93,7 @@ private fun LoginScreenContent(
         val focusManager = LocalFocusManager.current
         var email by rememberSaveable(state.rememberedEmail) { mutableStateOf(state.rememberedEmail) }
         var password by rememberSaveable { mutableStateOf("") }
+        var passwordVisible by rememberSaveable { mutableStateOf(false) }
         var localError by rememberSaveable { mutableStateOf("") }
 
         val isLoading = state.isLoading
@@ -190,7 +199,18 @@ private fun LoginScreenContent(
                     onValueChange = { password = it; localError = "" },
                     label = { Text(stringResource(Res.string.login_password_label)) },
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = stringResource(
+                                    if (passwordVisible) Res.string.login_hide_password else Res.string.login_show_password
+                                ),
+                                tint = OnGradientMuted
+                            )
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
