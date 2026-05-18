@@ -47,6 +47,7 @@ private fun Application.initDatabase() {
 fun Application.configureRouting() {
     routing {
         healthRoutes()
+        pingRoutes()
         newsRoutes()
         analysisRoutes()
         dailyReflectionRoutes()
