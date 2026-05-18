@@ -2,6 +2,7 @@ package com.mediasage.agent.service
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.File
@@ -44,7 +45,14 @@ open class AgentLaunchService(
 ) {
 
     private val log = Logger.getLogger(AgentLaunchService::class.java.name)
+
+    // Atomic dedup gate — Set.add() returns false if key already present, in one operation.
+    // This prevents the TOCTOU race condition that ConcurrentHashMap.containsKey() + put() would have.
     private val activeKeys: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    // Job registry — safe to write after activeKeys.add() succeeds (only one thread reaches this).
+    // Stored for future cancellation support.
+    private val activeRuns = ConcurrentHashMap<String, Job>()
 
     fun launch(ticketKey: String, ticketContent: String? = null): Boolean {
         val prompt = if (ticketContent != null) {
@@ -52,7 +60,17 @@ open class AgentLaunchService(
         } else {
             BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
         }
-        return spawnAgent(ticketKey, prompt)
+        // Each Jira ticket gets an isolated worktree so concurrent agents can't corrupt
+        // each other's git state. We use --no-checkout because the agent creates its own
+        // branch as its first action — there is no existing branch to check out yet.
+        val worktreePath = "${repoPath}-worktrees/$ticketKey"
+        val worktreeCreated = createWorktree(worktreePath)
+        return spawnAgent(
+            key = ticketKey,
+            prompt = prompt,
+            workDir = if (worktreeCreated) File(worktreePath) else File(repoPath),
+            teardown = { if (worktreeCreated) removeWorktree(worktreePath) }
+        )
     }
 
     /**
@@ -90,25 +108,53 @@ open class AgentLaunchService(
         }
     }
 
-    private fun createWorktree(path: String, branchRef: String): Boolean = try {
-        val exitCode = ProcessBuilder("git", "worktree", "add", path, branchRef)
+    /**
+     * Creates a git worktree at [path].
+     *
+     * When [branchRef] is provided (PR review flow), the worktree checks out that existing branch.
+     * When [branchRef] is null (Jira ticket flow), --no-checkout is used — the agent creates
+     * its own branch as its first action, so there is nothing to check out yet.
+     *
+     * Returns true if the worktree was created successfully, false otherwise.
+     * On failure the caller falls back to running the agent in repoPath.
+     */
+    protected open fun createWorktree(path: String, branchRef: String? = null): Boolean = try {
+        val args = if (branchRef != null) {
+            listOf("git", "worktree", "add", path, branchRef)
+        } else {
+            listOf("git", "worktree", "add", "--no-checkout", path)
+        }
+        val exitCode = ProcessBuilder(args)
             .directory(File(repoPath))
             .redirectError(ProcessBuilder.Redirect.INHERIT)
             .start()
             .waitFor()
-        if (exitCode != 0) log.warning("Worktree creation failed for $branchRef — running agent in repoPath.")
+        if (exitCode != 0) log.warning("Worktree creation failed at $path — running agent in repoPath.")
         exitCode == 0
     } catch (e: Exception) {
-        log.warning("Worktree creation failed for $branchRef: ${e.message}. Running agent in repoPath.")
+        log.warning("Worktree creation failed at $path: ${e.message}. Running agent in repoPath.")
         false
     }
 
-    private fun removeWorktree(path: String) {
+    protected open fun removeWorktree(path: String) {
         ProcessBuilder("git", "worktree", "remove", "--force", path)
             .directory(File(repoPath))
             .start()
             .waitFor()
     }
+
+    /**
+     * Builds and starts the agent process. Protected open so tests can substitute a
+     * controllable fake process without needing a real `claude` binary on the PATH.
+     *
+     * This follows the Template Method pattern: the algorithm lives in [spawnAgent],
+     * the specific command is the overridable implementation detail.
+     */
+    protected open fun buildAgentProcess(prompt: String, workDir: File): Process =
+        ProcessBuilder(claudeCommand(prompt))
+            .directory(workDir)
+            .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
+            .start()
 
     open fun launchForCommentReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String): Boolean {
         val key = "PR-$prNumber"
@@ -173,25 +219,32 @@ open class AgentLaunchService(
         workDir: File = File(repoPath),
         teardown: (() -> Unit)? = null
     ): Boolean {
-        if (!activeKeys.add(key)) return false
+        // activeKeys.add() is the atomic gate. If it returns false, the key was already
+        // present — another agent is running for this ticket. Ignore the duplicate.
+        if (!activeKeys.add(key)) {
+            log.info("[$key] already in flight — ignoring duplicate webhook")
+            return false
+        }
         try {
-            val process = ProcessBuilder(claudeCommand(prompt))
-                .directory(workDir)
-                .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
-                .start()
-            log.info("Agent launched for $key (pid ${process.pid()}) prompt: $prompt")
+            val process = buildAgentProcess(prompt, workDir)
+            log.info("Agent launched for $key (pid ${process.pid()}) in ${workDir.path}")
             pipeStreams(key, process)
-            scope.launch(Dispatchers.IO) {
+            // activeKeys.add() succeeded above, so only this thread reaches here.
+            // It is safe to write to activeRuns without a race condition.
+            val job = scope.launch(Dispatchers.IO) {
                 try {
                     val exitCode = process.waitFor()
                     log.info("Agent for $key exited with code $exitCode")
                 } finally {
                     teardown?.invoke()
                     activeKeys.remove(key)
+                    activeRuns.remove(key)
                 }
             }
+            activeRuns[key] = job
         } catch (e: Exception) {
             activeKeys.remove(key)
+            activeRuns.remove(key)
             log.warning("Failed to launch agent for $key: ${e.message}")
         }
         return true
