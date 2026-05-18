@@ -101,6 +101,8 @@
     <string name="login_sign_in_button">Sign In</string>
     <string name="login_error_empty_fields">Please enter your email and password</string>
     <string name="login_remember_email">Remember email</string>
+    <string name="login_show_password">Show password</string>
+    <string name="login_hide_password">Hide password</string>
     <string name="login_bypass">Continue without signing in</string>
 
     <string name="settings_sign_out">Sign Out</string>
