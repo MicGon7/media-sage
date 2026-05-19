@@ -1,9 +1,12 @@
 package com.mediasage.agent.di
 
+import com.mediasage.agent.db.AgentDatabase
+import com.mediasage.agent.db.JobRepository
 import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.CloudRunJobsClient
-import com.mediasage.agent.service.JobDispatcher
 import com.mediasage.agent.service.JiraApiService
+import com.mediasage.agent.service.JiraCommentPoster
 import com.mediasage.agent.service.JiraLabelChecker
 import com.mediasage.agent.service.JiraTicketFetcher
 import io.ktor.client.*
@@ -17,11 +20,12 @@ import org.koin.dsl.module
 
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single { buildHttpClient() }
-    single<JobDispatcher?> { buildCloudRunClient(config, get()) }
-    single { AgentLaunchService(config.repoPath, scope, config.verboseLogging, getOrNull<JobDispatcher>()) }
+    single<CloudRunDispatch?> { buildCloudRunDispatch(config, get()) }
     single { JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken) }
     single<JiraLabelChecker> { get<JiraApiService>() }
     single<JiraTicketFetcher> { get<JiraApiService>() }
+    single<JiraCommentPoster> { get<JiraApiService>() }
+    single { AgentLaunchService(config.repoPath, scope, config.verboseLogging, getOrNull(), get()) }
 }
 
 private fun buildHttpClient() = HttpClient(OkHttp) {
@@ -35,9 +39,12 @@ private fun buildHttpClient() = HttpClient(OkHttp) {
     }
 }
 
-private fun buildCloudRunClient(config: AgentConfig, httpClient: HttpClient): CloudRunJobsClient? {
+private fun buildCloudRunDispatch(config: AgentConfig, httpClient: HttpClient): CloudRunDispatch? {
     if (!config.useCloudRunWorkers || config.googleCredentialsJson.isBlank()) return null
-    return CloudRunJobsClient(
+    if (config.supabaseDbUrl.isBlank()) return null
+    AgentDatabase.init(config.supabaseDbUrl)
+    val jobRepository = JobRepository()
+    val client = CloudRunJobsClient(
         httpClient = httpClient,
         projectId = config.gcpProjectId,
         region = config.gcpRegion,
@@ -54,6 +61,8 @@ private fun buildCloudRunClient(config: AgentConfig, httpClient: HttpClient): Cl
             "GITHUB_BOT_EMAIL" to (System.getenv("GITHUB_BOT_EMAIL") ?: ""),
             "JIRA_EMAIL" to config.jiraEmail,
             "JIRA_API_TOKEN" to config.jiraApiToken
-        )
+        ),
+        jobRepository = jobRepository
     )
+    return CloudRunDispatch(client, jobRepository)
 }

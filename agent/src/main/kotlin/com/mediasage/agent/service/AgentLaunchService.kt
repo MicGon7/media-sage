@@ -42,7 +42,8 @@ open class AgentLaunchService(
     private val repoPath: String,
     private val scope: CoroutineScope,
     private val verboseLogging: Boolean = false,
-    private val dispatcher: JobDispatcher? = null
+    private val cloudRun: CloudRunDispatch? = null,
+    private val jiraCommentPoster: JiraCommentPoster? = null
 ) {
 
     private val log = Logger.getLogger(AgentLaunchService::class.java.name)
@@ -61,27 +62,49 @@ open class AgentLaunchService(
         } else {
             BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
         }
-        return if (dispatcher != null) {
-            dispatchToCloudRun(ticketKey, prompt)
+        return if (cloudRun != null) {
+            dispatchToCloudRun(ticketKey, prompt, cloudRun)
         } else {
             dispatchToLocalProcess(ticketKey, prompt)
         }
     }
 
-    private fun dispatchToCloudRun(ticketKey: String, prompt: String): Boolean {
-        if (!activeKeys.add(ticketKey)) {
-            log.info("[$ticketKey] already in flight — ignoring duplicate webhook")
-            return false
-        }
-        scope.launch(Dispatchers.IO) {
-            try {
-                dispatcher!!.executeJob(ticketKey, prompt)
-            } finally {
-                activeKeys.remove(ticketKey)
-                activeRuns.remove(ticketKey)
+    private fun dispatchToCloudRun(ticketKey: String, prompt: String, cloudRun: CloudRunDispatch): Boolean {
+        scope.launch {
+            if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
+                log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
+                return@launch
             }
-        }.also { activeRuns[ticketKey] = it }
+            val jobId = cloudRun.jobs.insert(ticketKey, prompt)
+            log.info("[$ticketKey] job $jobId inserted — dispatching to Cloud Run")
+            try {
+                cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt)
+            } catch (e: Exception) {
+                cloudRun.jobs.markFailed(jobId)
+                log.warning("[$ticketKey] dispatch error: ${e.message}")
+            }
+        }
         return true
+    }
+
+    suspend fun recoverInterruptedJobs() {
+        val cloudRun = cloudRun ?: return
+        val runningJobs = cloudRun.jobs.findRunningJobs()
+        if (runningJobs.isEmpty()) return
+        log.info("Found ${runningJobs.size} interrupted job(s) on startup — recovering")
+        runningJobs.forEach { job ->
+            val executionName = job.executionName
+            if (executionName == null) {
+                log.warning("[${job.ticketKey}] RUNNING job ${job.jobId} has no execution name — marking INTERRUPTED")
+                cloudRun.jobs.markInterrupted(job.jobId)
+                postInterruptedComment(job.ticketKey, jiraCommentPoster)
+                return@forEach
+            }
+            scope.launch {
+                val recovered = cloudRun.dispatcher.recoverJob(job.jobId, job.ticketKey, executionName)
+                if (!recovered) postInterruptedComment(job.ticketKey, jiraCommentPoster)
+            }
+        }
     }
 
     private fun dispatchToLocalProcess(ticketKey: String, prompt: String): Boolean {
@@ -207,13 +230,6 @@ open class AgentLaunchService(
 
     fun isActive(key: String): Boolean = key in activeKeys
 
-    private fun claudeCommand(prompt: String) = listOf(
-        "claude", "-p", prompt,
-        "--dangerously-skip-permissions",
-        "--output-format", "stream-json",
-        "--verbose"
-    )
-
     private fun pipeStreams(key: String, process: Process) {
         scope.launch(Dispatchers.IO) {
             BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line ->
@@ -275,3 +291,18 @@ open class AgentLaunchService(
         return true
     }
 }
+
+private suspend fun postInterruptedComment(ticketKey: String, poster: JiraCommentPoster?) {
+    poster?.addComment(
+        ticketKey,
+        "⚠️ The agent job for this ticket was interrupted during an orchestrator restart. " +
+            "To re-trigger, move the ticket back to **In Progress**."
+    )
+}
+
+private fun claudeCommand(prompt: String) = listOf(
+    "claude", "-p", prompt,
+    "--dangerously-skip-permissions",
+    "--output-format", "stream-json",
+    "--verbose"
+)
