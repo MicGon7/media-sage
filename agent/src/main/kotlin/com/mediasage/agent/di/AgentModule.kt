@@ -17,15 +17,26 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
+import java.util.logging.Logger
 
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single { buildHttpClient() }
-    single<CloudRunDispatch?> { buildCloudRunDispatch(config, get()) }
     single { JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken) }
     single<JiraLabelChecker> { get<JiraApiService>() }
     single<JiraTicketFetcher> { get<JiraApiService>() }
     single<JiraCommentPoster> { get<JiraApiService>() }
-    single { AgentLaunchService(config.repoPath, scope, config.verboseLogging, getOrNull(), get()) }
+    single {
+        // CloudRunDispatch is resolved eagerly here so a startup failure (bad DB URL,
+        // missing credentials) degrades gracefully to null rather than poisoning a
+        // Koin nullable singleton — Koin 4 cannot store null as a singleton value.
+        val cloudRun = try {
+            buildCloudRunDispatch(config, get())
+        } catch (e: Exception) {
+            Logger.getLogger("AgentModule").warning("Cloud Run dispatch disabled: ${e.message}")
+            null
+        }
+        AgentLaunchService(config.repoPath, scope, config.verboseLogging, cloudRun, get())
+    }
 }
 
 private fun buildHttpClient() = HttpClient(OkHttp) {
