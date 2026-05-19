@@ -21,7 +21,7 @@ Five-module Gradle project (`settings.gradle.kts`):
 - **composeApp**: UI layer only. Depends on `:shared`. Uses Compose Material3, Koin for DI, Lifecycle ViewModel, and Nav3 for navigation.
 - **shared**: Business logic, data layer, networking. Room for persistence, Ktor Client for HTTP, kotlinx-serialization for JSON. Platform engines: OkHttp (Android), Darwin (iOS).
 - **server**: JVM-only Ktor server (Netty). Calls external APIs (Claude, News, Scripture). Uses Koin for DI, CORS, StatusPages, ContentNegotiation, CallLogging. Deployed to Railway.
-- **agent**: JVM-only Ktor server (Netty, port 8081). Receives Jira and GitHub webhooks, spawns Claude Code worker processes. No database deps. Deployed as a Docker container on Railway.
+- **agent**: JVM-only Ktor server (Netty, port 8081). Receives Jira and GitHub webhooks, spawns Claude Code worker processes. Uses Exposed + PostgreSQL (Supabase) for persistent job state when Cloud Run workers are enabled. Deployed as a Docker container on Railway.
 - **scripts**: JVM-only standalone scripts. No Ktor server, no Koin. Uses Exposed + SQLite/Postgres for DB access. Run manually via Gradle tasks (e.g., `generateImages`).
 
 ### Data Flow
@@ -129,9 +129,10 @@ server/src/main/kotlin/com/mediasage/server/
 agent/src/main/kotlin/com/mediasage/agent/
 ├── Application.kt       — Entry point, Koin setup (port 8081)
 ├── di/                  — AgentConfig, AgentModule
+├── db/                  — AgentDatabase, JobsTable, JobRepository (Supabase Postgres)
 ├── plugins/             — ContentNegotiation, CallLogging, StatusPages
 ├── routes/              — JiraWebhookRoutes, GitHubWebhookRoutes
-├── service/             — AgentLaunchService, JiraApiService (JiraLabelChecker)
+├── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiService
 └── tools/               — ToolDefinitions (Anthropic orchestrator-worker pattern)
 
 scripts/src/main/kotlin/com/mediasage/scripts/
@@ -140,6 +141,35 @@ scripts/src/main/kotlin/com/mediasage/scripts/
     ├── ImageGenerationService.kt  — OpenAI gpt-image-2 client
     └── ScriptsDatabase.kt         — Minimal Exposed DB access (figures table)
 ```
+
+### Agent Job Registry (Supabase Postgres)
+
+When `USE_CLOUD_RUN_WORKERS=true`, the orchestrator maintains a persistent `jobs` table in Supabase Postgres. This replaces the in-memory dedup gate and survives restarts.
+
+**Schema:**
+```sql
+CREATE TABLE jobs (
+  job_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ticket_key     TEXT NOT NULL,
+  prompt         TEXT NOT NULL,
+  status         TEXT NOT NULL DEFAULT 'PENDING',
+  execution_name TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  started_at     TIMESTAMPTZ,
+  completed_at   TIMESTAMPTZ
+);
+CREATE INDEX ON jobs (ticket_key, created_at DESC);
+```
+
+**Job status state machine:** `PENDING → RUNNING → COMPLETED | FAILED | INTERRUPTED`
+
+**Dedup logic:** Before dispatching, query the latest row for `ticket_key`:
+- `RUNNING` → skip (concurrent duplicate)
+- `COMPLETED` → skip (already done, permanent dedup)
+- `FAILED` / `INTERRUPTED` → re-dispatch (retry eligible)
+- No row → dispatch fresh
+
+**Recovery on startup:** `AgentLaunchService.recoverInterruptedJobs()` queries all RUNNING rows. For each, `CloudRunJobsClient.recoverJob()` checks the saved LRO URL — resumes polling if still running, marks INTERRUPTED if the execution is gone.
 
 ## Build & Run
 
@@ -317,6 +347,12 @@ Railway `:agent` service environment variables:
 | `JIRA_API_TOKEN` | Atlassian account API token |
 | `JIRA_BOT_ACCOUNT_ID` | Jira account ID of `media-sage-bot` (triggers the agent when ticket is assigned to this account + In Progress) |
 | `PORT` | `8081` |
+| `USE_CLOUD_RUN_WORKERS` | `true` to dispatch workers via Cloud Run Jobs (requires GCP + Supabase vars) |
+| `SUPABASE_DB_URL` | `postgresql://postgres.<ref>:<password>@<host>:5432/postgres` — persistent job registry |
+| `GCP_PROJECT_ID` | GCP project ID |
+| `GCP_REGION` | `us-central1` (default) |
+| `GCP_JOB_NAME` | `media-sage-agent-worker` (default) |
+| `GOOGLE_CREDENTIALS_BASE64` | Base64-encoded GCP service account JSON key |
 
 Webhook URLs (stable Railway URL — no ngrok required):
 - Jira: `https://<railway-agent-url>/webhook/jira`

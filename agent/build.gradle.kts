@@ -34,6 +34,12 @@ dependencies {
     // Google Auth (Cloud Run Jobs API)
     implementation(libs.google.auth.oauth2)
 
+    // Exposed + PostgreSQL (Supabase jobs table)
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.java.time)
+    implementation(libs.postgresql.jdbc)
+
     // Testing
     testImplementation(libs.kotlin.test)
     testImplementation(libs.ktor.server.tests)

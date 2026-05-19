@@ -13,5 +13,6 @@ data class AgentConfig(
     val gcpProjectId: String = "",
     val gcpRegion: String = "us-central1",
     val gcpJobName: String = "media-sage-agent-worker",
-    val googleCredentialsJson: String = ""
+    val googleCredentialsJson: String = "",
+    val supabaseDbUrl: String = ""
 )
