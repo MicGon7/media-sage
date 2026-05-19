@@ -66,7 +66,6 @@ class CloudRunJobsClient(
     private val region: String,
     private val jobName: String,
     private val credentialsJson: String,
-    private val agentEnvVars: Map<String, String>,
     private val jobRepository: JobRepository
 ) : JobDispatcher {
 
@@ -82,9 +81,10 @@ class CloudRunJobsClient(
     override suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String): Boolean {
         val url = "https://run.googleapis.com/v2/projects/$projectId/locations/$region/jobs/$jobName:run"
 
-        val envVars = agentEnvVars.map { (k, v) -> EnvVar(k, v) } +
-            EnvVar("PROMPT", prompt) +
+        val envVars = listOf(
+            EnvVar("PROMPT", prompt),
             EnvVar("TICKET_KEY", ticketKey)
+        )
 
         val body = json.encodeToString(
             RunJobRequest.serializer(),

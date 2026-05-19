@@ -61,18 +61,6 @@ private fun buildCloudRunDispatch(config: AgentConfig, httpClient: HttpClient): 
         region = config.gcpRegion,
         jobName = config.gcpJobName,
         credentialsJson = config.googleCredentialsJson,
-        agentEnvVars = mapOf(
-            "ANTHROPIC_API_KEY" to (System.getenv("ANTHROPIC_API_KEY") ?: ""),
-            "ANTHROPIC_AUTH_TOKEN" to (System.getenv("ANTHROPIC_AUTH_TOKEN") ?: ""),
-            "ANTHROPIC_BASE_URL" to (System.getenv("ANTHROPIC_BASE_URL") ?: ""),
-            "ANTHROPIC_MODEL" to (System.getenv("ANTHROPIC_MODEL") ?: ""),
-            "GITHUB_BOT_TOKEN" to (System.getenv("GITHUB_BOT_TOKEN") ?: ""),
-            "GITHUB_BOT_LOGIN" to (System.getenv("GITHUB_BOT_LOGIN") ?: ""),
-            "GITHUB_BOT_NAME" to (System.getenv("GITHUB_BOT_NAME") ?: ""),
-            "GITHUB_BOT_EMAIL" to (System.getenv("GITHUB_BOT_EMAIL") ?: ""),
-            "JIRA_EMAIL" to config.jiraEmail,
-            "JIRA_API_TOKEN" to config.jiraApiToken
-        ),
         jobRepository = jobRepository
     )
     return CloudRunDispatch(client, jobRepository)
