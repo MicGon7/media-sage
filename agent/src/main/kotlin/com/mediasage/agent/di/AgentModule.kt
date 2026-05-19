@@ -6,6 +6,7 @@ import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.CloudRunJobsClient
 import com.mediasage.agent.service.JiraApiService
+import com.mediasage.agent.service.JiraCommentPoster
 import com.mediasage.agent.service.JiraLabelChecker
 import com.mediasage.agent.service.JiraTicketFetcher
 import io.ktor.client.*
@@ -20,10 +21,11 @@ import org.koin.dsl.module
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single { buildHttpClient() }
     single<CloudRunDispatch?> { buildCloudRunDispatch(config, get()) }
-    single { AgentLaunchService(config.repoPath, scope, config.verboseLogging, getOrNull()) }
     single { JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken) }
     single<JiraLabelChecker> { get<JiraApiService>() }
     single<JiraTicketFetcher> { get<JiraApiService>() }
+    single<JiraCommentPoster> { get<JiraApiService>() }
+    single { AgentLaunchService(config.repoPath, scope, config.verboseLogging, getOrNull(), get()) }
 }
 
 private fun buildHttpClient() = HttpClient(OkHttp) {

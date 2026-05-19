@@ -19,9 +19,9 @@ data class JobRow(
     val executionName: String?
 )
 
-class JobRepository {
+class JobRepository : JobRegistry {
 
-    suspend fun shouldDispatch(ticketKey: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun shouldDispatch(ticketKey: String): Boolean = withContext(Dispatchers.IO) {
         val latest = transaction {
             JobsTable.selectAll()
                 .where { JobsTable.ticketKey eq ticketKey }
@@ -34,7 +34,7 @@ class JobRepository {
         latest != JobStatus.RUNNING.name && latest != JobStatus.COMPLETED.name
     }
 
-    suspend fun insert(ticketKey: String, prompt: String): UUID = withContext(Dispatchers.IO) {
+    override suspend fun insert(ticketKey: String, prompt: String): UUID = withContext(Dispatchers.IO) {
         val id = UUID.randomUUID()
         transaction {
             JobsTable.insert {
@@ -48,7 +48,7 @@ class JobRepository {
         id
     }
 
-    suspend fun markRunning(jobId: UUID, executionName: String) = withContext(Dispatchers.IO) {
+    override suspend fun markRunning(jobId: UUID, executionName: String) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
                 it[JobsTable.status] = JobStatus.RUNNING.name
@@ -56,36 +56,40 @@ class JobRepository {
                 it[JobsTable.startedAt] = Instant.now()
             }
         }
+        Unit
     }
 
-    suspend fun markCompleted(jobId: UUID) = withContext(Dispatchers.IO) {
+    override suspend fun markCompleted(jobId: UUID) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
                 it[JobsTable.status] = JobStatus.COMPLETED.name
                 it[JobsTable.completedAt] = Instant.now()
             }
         }
+        Unit
     }
 
-    suspend fun markFailed(jobId: UUID) = withContext(Dispatchers.IO) {
+    override suspend fun markFailed(jobId: UUID) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
                 it[JobsTable.status] = JobStatus.FAILED.name
                 it[JobsTable.completedAt] = Instant.now()
             }
         }
+        Unit
     }
 
-    suspend fun markInterrupted(jobId: UUID) = withContext(Dispatchers.IO) {
+    override suspend fun markInterrupted(jobId: UUID) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
                 it[JobsTable.status] = JobStatus.INTERRUPTED.name
                 it[JobsTable.completedAt] = Instant.now()
             }
         }
+        Unit
     }
 
-    suspend fun findRunningJobs(): List<JobRow> = withContext(Dispatchers.IO) {
+    override suspend fun findRunningJobs(): List<JobRow> = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.selectAll()
                 .where { JobsTable.status eq JobStatus.RUNNING.name }

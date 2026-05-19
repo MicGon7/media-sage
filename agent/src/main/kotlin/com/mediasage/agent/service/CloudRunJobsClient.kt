@@ -108,7 +108,7 @@ class CloudRunJobsClient(
         return pollUntilDone(jobId, ticketKey, operation.name)
     }
 
-    override suspend fun recoverJob(jobId: UUID, ticketKey: String, executionName: String) {
+    override suspend fun recoverJob(jobId: UUID, ticketKey: String, executionName: String): Boolean {
         val url = "https://run.googleapis.com/v2/$executionName"
         val response = httpClient.get(url) {
             header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
@@ -116,10 +116,10 @@ class CloudRunJobsClient(
         if (!response.status.isSuccess()) {
             log.warning("[$ticketKey] Recovery: execution not found (${response.status}) — marking INTERRUPTED")
             jobRepository.markInterrupted(jobId)
-            return
+            return false
         }
         val operation = json.decodeFromString(OperationResponse.serializer(), response.bodyAsText())
-        if (operation.done) {
+        return if (operation.done) {
             handleDone(jobId, ticketKey, operation)
         } else {
             log.info("[$ticketKey] Recovery: execution still running — resuming poll")

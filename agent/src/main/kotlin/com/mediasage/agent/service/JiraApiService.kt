@@ -3,6 +3,7 @@ package com.mediasage.agent.service
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.isSuccess
 import kotlinx.serialization.SerialName
@@ -20,6 +21,10 @@ interface JiraLabelChecker {
 
 interface JiraTicketFetcher {
     suspend fun getTicketContent(ticketKey: String): String?
+}
+
+interface JiraCommentPoster {
+    suspend fun addComment(ticketKey: String, body: String)
 }
 
 @Serializable
@@ -53,7 +58,7 @@ class JiraApiService(
     private val cloudId: String,
     private val email: String,
     private val apiToken: String
-) : JiraLabelChecker, JiraTicketFetcher {
+) : JiraLabelChecker, JiraTicketFetcher, JiraCommentPoster {
 
     private val log = Logger.getLogger(JiraApiService::class.java.name)
     private val authHeader = "Basic " + Base64.getEncoder()
@@ -98,6 +103,25 @@ class JiraApiService(
         }
     }
 
+    override suspend fun addComment(ticketKey: String, body: String) {
+        try {
+            val escapedBody = kotlinx.serialization.json.Json.encodeToString(
+                kotlinx.serialization.json.JsonPrimitive(body)
+            )
+            val payload = buildJiraCommentPayload(escapedBody)
+            val response = httpClient.post("$baseUrl/issue/$ticketKey/comment") {
+                header(HttpHeaders.Authorization, authHeader)
+                contentType(ContentType.Application.Json)
+                setBody(payload)
+            }
+            if (!response.status.isSuccess()) {
+                log.warning("[$ticketKey] Failed to post Jira comment: ${response.status} — ${response.bodyAsText()}")
+            }
+        } catch (e: Exception) {
+            log.warning("[$ticketKey] Failed to post Jira comment: ${e.message}")
+        }
+    }
+
     private fun extractText(element: JsonElement): String = when (element) {
         is JsonObject -> {
             val text = element["text"]?.jsonPrimitive?.content
@@ -112,3 +136,7 @@ class JiraApiService(
         else -> ""
     }
 }
+
+private fun buildJiraCommentPayload(escapedBody: String) =
+    """{"body":{"version":1,"type":"doc","content":""" +
+        """[{"type":"paragraph","content":[{"type":"text","text":$escapedBody}]}]}}"""

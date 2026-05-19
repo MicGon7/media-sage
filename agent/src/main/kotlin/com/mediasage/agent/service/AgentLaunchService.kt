@@ -42,7 +42,8 @@ open class AgentLaunchService(
     private val repoPath: String,
     private val scope: CoroutineScope,
     private val verboseLogging: Boolean = false,
-    private val cloudRun: CloudRunDispatch? = null
+    private val cloudRun: CloudRunDispatch? = null,
+    private val jiraCommentPoster: JiraCommentPoster? = null
 ) {
 
     private val log = Logger.getLogger(AgentLaunchService::class.java.name)
@@ -69,7 +70,7 @@ open class AgentLaunchService(
     }
 
     private fun dispatchToCloudRun(ticketKey: String, prompt: String, cloudRun: CloudRunDispatch): Boolean {
-        scope.launch(Dispatchers.IO) {
+        scope.launch {
             if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
                 log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
                 return@launch
@@ -96,10 +97,12 @@ open class AgentLaunchService(
             if (executionName == null) {
                 log.warning("[${job.ticketKey}] RUNNING job ${job.jobId} has no execution name — marking INTERRUPTED")
                 cloudRun.jobs.markInterrupted(job.jobId)
+                postInterruptedComment(job.ticketKey, jiraCommentPoster)
                 return@forEach
             }
-            scope.launch(Dispatchers.IO) {
-                cloudRun.dispatcher.recoverJob(job.jobId, job.ticketKey, executionName)
+            scope.launch {
+                val recovered = cloudRun.dispatcher.recoverJob(job.jobId, job.ticketKey, executionName)
+                if (!recovered) postInterruptedComment(job.ticketKey, jiraCommentPoster)
             }
         }
     }
@@ -287,6 +290,14 @@ open class AgentLaunchService(
         }
         return true
     }
+}
+
+private suspend fun postInterruptedComment(ticketKey: String, poster: JiraCommentPoster?) {
+    poster?.addComment(
+        ticketKey,
+        "⚠️ The agent job for this ticket was interrupted during an orchestrator restart. " +
+            "To re-trigger, move the ticket back to **In Progress**."
+    )
 }
 
 private fun claudeCommand(prompt: String) = listOf(

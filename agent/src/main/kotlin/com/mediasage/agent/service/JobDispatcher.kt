@@ -7,7 +7,8 @@ interface JobDispatcher {
 
     /**
      * Called on orchestrator startup for each RUNNING job whose LRO poll was lost.
-     * Default is a no-op; Cloud Run implementation resumes polling the saved execution.
+     * Returns false if the execution was gone and the job was marked INTERRUPTED.
+     * Default is a no-op that returns true; Cloud Run implementation overrides.
      */
-    suspend fun recoverJob(jobId: UUID, ticketKey: String, executionName: String) {}
+    suspend fun recoverJob(jobId: UUID, ticketKey: String, executionName: String): Boolean = true
 }
