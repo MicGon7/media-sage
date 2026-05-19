@@ -7,6 +7,7 @@ import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.CloudRunJobsClient
 import com.mediasage.agent.service.JiraApiService
 import com.mediasage.agent.service.JiraCommentPoster
+import com.mediasage.agent.service.JiraDeduplicator
 import com.mediasage.agent.service.JiraLabelChecker
 import com.mediasage.agent.service.JiraTicketFetcher
 import io.ktor.client.*
@@ -25,6 +26,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single<JiraLabelChecker> { get<JiraApiService>() }
     single<JiraTicketFetcher> { get<JiraApiService>() }
     single<JiraCommentPoster> { get<JiraApiService>() }
+    single<JiraDeduplicator> { get<JiraApiService>() }
     single {
         // CloudRunDispatch is resolved eagerly here so a startup failure (bad DB URL,
         // missing credentials) degrades gracefully to null rather than poisoning a
@@ -35,7 +37,14 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
             Logger.getLogger("AgentModule").warning("Cloud Run dispatch disabled: ${e.message}")
             null
         }
-        AgentLaunchService(config.repoPath, scope, config.verboseLogging, cloudRun, get())
+        AgentLaunchService(
+            repoPath = config.repoPath,
+            scope = scope,
+            verboseLogging = config.verboseLogging,
+            cloudRun = cloudRun,
+            jiraCommentPoster = get(),
+            jiraDeduplicator = get()
+        )
     }
 }
 

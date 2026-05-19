@@ -27,6 +27,11 @@ interface JiraCommentPoster {
     suspend fun addComment(ticketKey: String, body: String)
 }
 
+interface JiraDeduplicator {
+    suspend fun addAgentActiveLabel(ticketKey: String)
+    suspend fun removeAgentActiveLabel(ticketKey: String)
+}
+
 @Serializable
 private data class JiraIssueLabelsResponse(
     @SerialName("fields")
@@ -58,7 +63,7 @@ class JiraApiService(
     private val cloudId: String,
     private val email: String,
     private val apiToken: String
-) : JiraLabelChecker, JiraTicketFetcher, JiraCommentPoster {
+) : JiraLabelChecker, JiraTicketFetcher, JiraCommentPoster, JiraDeduplicator {
 
     private val log = Logger.getLogger(JiraApiService::class.java.name)
     private val authHeader = "Basic " + Base64.getEncoder()
@@ -119,6 +124,26 @@ class JiraApiService(
             }
         } catch (e: Exception) {
             log.warning("[$ticketKey] Failed to post Jira comment: ${e.message}")
+        }
+    }
+
+    override suspend fun addAgentActiveLabel(ticketKey: String) = patchLabel(ticketKey, "add")
+
+    override suspend fun removeAgentActiveLabel(ticketKey: String) = patchLabel(ticketKey, "remove")
+
+    private suspend fun patchLabel(ticketKey: String, operation: String) {
+        try {
+            val payload = """{"update":{"labels":[{"$operation":"agent-active"}]}}"""
+            val response = httpClient.put("$baseUrl/issue/$ticketKey") {
+                header(HttpHeaders.Authorization, authHeader)
+                contentType(ContentType.Application.Json)
+                setBody(payload)
+            }
+            if (!response.status.isSuccess()) {
+                log.warning("[$ticketKey] Failed to $operation agent-active label: ${response.status}")
+            }
+        } catch (e: Exception) {
+            log.warning("[$ticketKey] Failed to $operation agent-active label: ${e.message}")
         }
     }
 

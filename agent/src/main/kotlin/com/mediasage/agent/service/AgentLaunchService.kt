@@ -3,7 +3,9 @@ package com.mediasage.agent.service
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -43,7 +45,8 @@ open class AgentLaunchService(
     private val scope: CoroutineScope,
     private val verboseLogging: Boolean = false,
     private val cloudRun: CloudRunDispatch? = null,
-    private val jiraCommentPoster: JiraCommentPoster? = null
+    private val jiraCommentPoster: JiraCommentPoster? = null,
+    private val jiraDeduplicator: JiraDeduplicator? = null
 ) {
 
     private val log = Logger.getLogger(AgentLaunchService::class.java.name)
@@ -117,7 +120,8 @@ open class AgentLaunchService(
             key = ticketKey,
             prompt = prompt,
             workDir = if (worktreeCreated) File(worktreePath) else File(repoPath),
-            teardown = { if (worktreeCreated) removeWorktree(worktreePath) }
+            teardown = { if (worktreeCreated) removeWorktree(worktreePath) },
+            labelTicketKey = ticketKey
         )
     }
 
@@ -258,10 +262,9 @@ open class AgentLaunchService(
         key: String,
         prompt: String,
         workDir: File = File(repoPath),
-        teardown: (() -> Unit)? = null
+        teardown: (() -> Unit)? = null,
+        labelTicketKey: String? = null
     ): Boolean {
-        // activeKeys.add() is the atomic gate. If it returns false, the key was already
-        // present — another agent is running for this ticket. Ignore the duplicate.
         if (!activeKeys.add(key)) {
             log.info("[$key] already in flight — ignoring duplicate webhook")
             return false
@@ -270,16 +273,16 @@ open class AgentLaunchService(
             val process = buildAgentProcess(prompt, workDir)
             log.info("Agent launched for $key (pid ${process.pid()}) in ${workDir.path}")
             pipeStreams(key, process)
-            // activeKeys.add() succeeded above, so only this thread reaches here.
-            // It is safe to write to activeRuns without a race condition.
+            labelTicketKey?.let { k -> scope.launch(Dispatchers.IO) { jiraDeduplicator?.addAgentActiveLabel(k) } }
             val job = scope.launch(Dispatchers.IO) {
                 try {
                     val exitCode = process.waitFor()
                     log.info("Agent for $key exited with code $exitCode")
                 } finally {
-                    teardown?.invoke()
+                    withContext(NonCancellable) { labelTicketKey?.let { jiraDeduplicator?.removeAgentActiveLabel(it) } }
                     activeKeys.remove(key)
                     activeRuns.remove(key)
+                    teardown?.invoke()
                 }
             }
             activeRuns[key] = job

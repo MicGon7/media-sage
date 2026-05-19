@@ -68,6 +68,24 @@ class JiraWebhookRouteTest {
         assertEquals(HttpStatusCode.OK, response.status)
     }
 
+    @Test
+    fun agentActiveLabelPreventsSpawn() = testWebhookApp {
+        // When the webhook payload already carries "agent-active", the route must
+        // skip the spawn — another agent instance is already handling this ticket.
+        val response = client.post("/webhook/jira") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                webhookPayload(
+                    event = "jira:issue_updated",
+                    assigneeAccountId = BOT_ACCOUNT_ID,
+                    status = "In Progress",
+                    labels = listOf("agent-active")
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
     // Regression test for MS-187: when Cloud Run setup fails on startup (bad DB URL,
     // missing credentials, etc.), the Koin singleton must not poison subsequent resolutions.
     // Before the fix, getOrNull<CloudRunDispatch?>() threw instead of returning null,
@@ -103,14 +121,19 @@ class JiraWebhookRouteTest {
     }
 }
 
-private fun webhookPayload(event: String, assigneeAccountId: String?, status: String) = """
+private fun webhookPayload(
+    event: String,
+    assigneeAccountId: String?,
+    status: String,
+    labels: List<String> = emptyList()
+) = """
 {
   "webhookEvent": "$event",
   "issue": {
     "key": "MS-99",
     "fields": {
       "status": { "name": "$status" },
-      "labels": [],
+      "labels": [${labels.joinToString(",") { "\"$it\"" }}],
       ${if (assigneeAccountId != null) "\"assignee\": { \"accountId\": \"$assigneeAccountId\" }" else "\"assignee\": null"}
     }
   }

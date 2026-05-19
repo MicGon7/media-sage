@@ -53,6 +53,11 @@ data class JiraAssignee(
 
 private val relevantEvents = setOf("jira:issue_created", "jira:issue_updated")
 
+// Label written to the Jira ticket before spawning an agent. Acts as a distributed
+// dedup signal that survives container restarts: a retry webhook still carries this
+// label, preventing a second agent from spawning while the first is in flight.
+private const val AGENT_ACTIVE_LABEL = "agent-active"
+
 /**
  * Jira webhook endpoint. Fires an autonomous Claude Code agent when a ticket
  * assigned to the bot account transitions to In Progress.
@@ -73,7 +78,8 @@ fun Route.webhookRoutes(botAccountId: String) {
 
         val shouldFire = payload.webhookEvent in relevantEvents &&
             fields.assignee?.accountId == botAccountId &&
-            fields.status.name == "In Progress"
+            fields.status.name == "In Progress" &&
+            AGENT_ACTIVE_LABEL !in fields.labels
 
         if (shouldFire) {
             val ticketContent = jiraFetcher.getTicketContent(payload.issue.key)

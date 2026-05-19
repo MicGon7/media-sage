@@ -1,6 +1,7 @@
 package com.mediasage.agent
 
 import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.JiraDeduplicator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import java.io.File
@@ -45,6 +46,16 @@ class AgentLaunchServiceTest {
         activeProcesses.clear()
     }
 
+    // ── Fakes ────────────────────────────────────────────────────────────────
+
+    private class FakeJiraDeduplicator : JiraDeduplicator {
+        val added = mutableListOf<String>()
+        val removed = mutableListOf<String>()
+
+        override suspend fun addAgentActiveLabel(ticketKey: String) { added.add(ticketKey) }
+        override suspend fun removeAgentActiveLabel(ticketKey: String) { removed.add(ticketKey) }
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
@@ -55,7 +66,8 @@ class AgentLaunchServiceTest {
         repoPath: String = "/repo",
         createdWorktrees: MutableList<String> = mutableListOf(),
         removedWorktrees: MutableList<String> = mutableListOf(),
-    ): AgentLaunchService = object : AgentLaunchService(repoPath, scope) {
+        deduplicator: JiraDeduplicator? = null,
+    ): AgentLaunchService = object : AgentLaunchService(repoPath, scope, jiraDeduplicator = deduplicator) {
         override fun createWorktree(path: String, branchRef: String?): Boolean {
             createdWorktrees.add(path)
             return true
@@ -73,8 +85,9 @@ class AgentLaunchServiceTest {
      */
     private fun exitingService(
         repoPath: String = "/repo",
+        deduplicator: JiraDeduplicator? = null,
         onRemoveWorktree: (String) -> Unit = {},
-    ): AgentLaunchService = object : AgentLaunchService(repoPath, scope) {
+    ): AgentLaunchService = object : AgentLaunchService(repoPath, scope, jiraDeduplicator = deduplicator) {
         override fun createWorktree(path: String, branchRef: String?) = true
         override fun removeWorktree(path: String) { onRemoveWorktree(path) }
         override fun buildAgentProcess(prompt: String, workDir: File): Process =
@@ -181,5 +194,67 @@ class AgentLaunchServiceTest {
         assertTrue(service.launch("MS-99"), "Key was not released after agent exited")
         // Clean up the second agent's process
         activeProcesses.forEach { it.destroyForcibly() }
+    }
+
+    // ── Label deduplication ───────────────────────────────────────────────────
+
+    @Test
+    fun `agent-active label is added after successful spawn`() {
+        val dedup = FakeJiraDeduplicator()
+        val latch = CountDownLatch(1)
+        val service = object : AgentLaunchService("/repo", scope, jiraDeduplicator = dedup) {
+            override fun createWorktree(path: String, branchRef: String?) = true
+            override fun removeWorktree(path: String) = Unit
+            override fun buildAgentProcess(prompt: String, workDir: File): Process =
+                // Block long enough for the label-add coroutine to fire, then exit.
+                ProcessBuilder("cat").start().also { p ->
+                    activeProcesses.add(p)
+                    // Signal after a short delay so the test can assert label was added.
+                    Thread {
+                        Thread.sleep(200)
+                        latch.countDown()
+                        p.destroyForcibly()
+                    }.start()
+                }
+        }
+        service.launch("MS-99")
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Process did not start within 5 s")
+        // Give the label-add coroutine time to run.
+        Thread.sleep(500)
+        assertEquals(listOf("MS-99"), dedup.added, "addAgentActiveLabel must be called after spawn")
+    }
+
+    @Test
+    fun `agent-active label is removed after agent exits`() {
+        val dedup = FakeJiraDeduplicator()
+        val removeLatch = CountDownLatch(1)
+        val service = object : AgentLaunchService("/repo", scope, jiraDeduplicator = dedup) {
+            override fun createWorktree(path: String, branchRef: String?) = true
+            override fun removeWorktree(path: String) { removeLatch.countDown() }
+            override fun buildAgentProcess(prompt: String, workDir: File): Process =
+                ProcessBuilder("sh", "-c", "exit 0").start()
+        }
+        service.launch("MS-99")
+        assertTrue(removeLatch.await(5, TimeUnit.SECONDS), "Agent did not exit within 5 s")
+        // Allow teardown coroutines to complete.
+        Thread.sleep(500)
+        assertEquals(listOf("MS-99"), dedup.removed, "removeAgentActiveLabel must be called after agent exits")
+    }
+
+    @Test
+    fun `label not managed for PR review spawns`() {
+        val dedup = FakeJiraDeduplicator()
+        val latch = CountDownLatch(1)
+        val service = object : AgentLaunchService("/repo", scope, jiraDeduplicator = dedup) {
+            override fun createWorktree(path: String, branchRef: String?) = true
+            override fun removeWorktree(path: String) { latch.countDown() }
+            override fun buildAgentProcess(prompt: String, workDir: File): Process =
+                ProcessBuilder("sh", "-c", "exit 0").start()
+        }
+        service.launchForPrReview("MS-99", 42, "feature/MS-99-foo", "Fix this", "reviewer")
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Agent did not exit within 5 s")
+        Thread.sleep(300)
+        assertTrue(dedup.added.isEmpty(), "addAgentActiveLabel must not be called for PR reviews")
+        assertTrue(dedup.removed.isEmpty(), "removeAgentActiveLabel must not be called for PR reviews")
     }
 }
