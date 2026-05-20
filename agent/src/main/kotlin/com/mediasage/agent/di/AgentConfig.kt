@@ -14,5 +14,8 @@ data class AgentConfig(
     val gcpRegion: String = "us-central1",
     val gcpJobName: String = "media-sage-agent-worker",
     val googleCredentialsJson: String = "",
-    val supabaseDbUrl: String = ""
+    val supabaseDbUrl: String = "",
+    // AgentBriefing feature flag — off by default until latency issues are resolved.
+    // Set AGENT_BRIEFING_ENABLED=true to enable for demos.
+    val agentBriefingEnabled: Boolean = false
 )
