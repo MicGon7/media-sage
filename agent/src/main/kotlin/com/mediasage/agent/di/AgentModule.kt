@@ -2,6 +2,7 @@ package com.mediasage.agent.di
 
 import com.mediasage.agent.db.AgentDatabase
 import com.mediasage.agent.db.JobRepository
+import com.mediasage.agent.service.AgentBriefing
 import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.CloudRunJobsClient
@@ -35,7 +36,8 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
             Logger.getLogger("AgentModule").warning("Cloud Run dispatch disabled: ${e.message}")
             null
         }
-        AgentLaunchService(config.repoPath, scope, config.verboseLogging, cloudRun, get())
+        val briefing = if (config.useCloudRunWorkers) AgentBriefing(config.repoPath) else null
+        AgentLaunchService(config.repoPath, scope, config.verboseLogging, cloudRun, get(), briefing)
     }
 }
 

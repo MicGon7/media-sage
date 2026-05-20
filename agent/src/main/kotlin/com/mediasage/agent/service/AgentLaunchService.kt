@@ -43,7 +43,8 @@ open class AgentLaunchService(
     private val scope: CoroutineScope,
     private val verboseLogging: Boolean = false,
     private val cloudRun: CloudRunDispatch? = null,
-    private val jiraCommentPoster: JiraCommentPoster? = null
+    private val jiraCommentPoster: JiraCommentPoster? = null,
+    private val agentBriefing: AgentBriefing? = null
 ) {
 
     private val log = Logger.getLogger(AgentLaunchService::class.java.name)
@@ -57,10 +58,20 @@ open class AgentLaunchService(
     private val activeRuns = ConcurrentHashMap<String, Job>()
 
     fun launch(ticketKey: String, ticketContent: String? = null, dryRun: Boolean = false): Boolean {
-        val prompt = if (ticketContent != null) {
+        val basePrompt = if (ticketContent != null) {
             BOOTSTRAP_PROMPT_WITH_CONTENT.format(ticketKey, ticketContent)
         } else {
             BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
+        }
+        val briefing = if (agentBriefing != null && ticketContent != null) {
+            agentBriefing.prepare(ticketKey, ticketContent)
+        } else {
+            ""
+        }
+        val prompt = if (briefing.isNotBlank()) {
+            "$basePrompt\n\n## Agent Briefing\n$briefing"
+        } else {
+            basePrompt
         }
         return if (cloudRun != null) {
             dispatchToCloudRun(ticketKey, prompt, cloudRun, dryRun)
