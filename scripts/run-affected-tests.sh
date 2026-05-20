@@ -52,4 +52,4 @@ if [ ${#TASKS[@]} -eq 0 ]; then
 fi
 
 echo "Changed modules requiring tests: ${TASKS[*]}"
-./gradlew "${TASKS[@]}"
+./gradlew --no-daemon "${TASKS[@]}"
