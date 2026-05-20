@@ -40,7 +40,10 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            App(isDebugBuild = BuildConfig.DEBUG)
+            App(
+                isDebugBuild = BuildConfig.DEBUG,
+                appVersion = "v${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
+            )
         }
     }
 }

@@ -16,13 +16,16 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 @Preview
-fun App(isDebugBuild: Boolean = false) {
+fun App(isDebugBuild: Boolean = false, appVersion: String = "") {
     val appViewModel = koinViewModel<AppViewModel>()
     val darkMode by appViewModel.darkMode.collectAsState()
     val appTheme by appViewModel.appTheme.collectAsState()
     val authState by appViewModel.authState.collectAsState()
 
-    CompositionLocalProvider(LocalIsDebugBuild provides isDebugBuild) {
+    CompositionLocalProvider(
+        LocalIsDebugBuild provides isDebugBuild,
+        LocalAppVersion provides appVersion,
+    ) {
         MediaSageTheme(theme = appTheme, darkTheme = darkMode ?: false) {
             when (authState) {
                 is AuthUiState.Loading -> Unit

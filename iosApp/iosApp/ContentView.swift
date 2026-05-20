@@ -4,10 +4,14 @@ import ComposeApp
 
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? ""
+        let build = info?["CFBundleVersion"] as? String ?? ""
+        let appVersion = "v\(version) (build \(build))"
         #if DEBUG
-        MainViewControllerKt.MainViewController(isDebugBuild: true)
+        return MainViewControllerKt.MainViewController(isDebugBuild: true, appVersion: appVersion)
         #else
-        MainViewControllerKt.MainViewController(isDebugBuild: false)
+        return MainViewControllerKt.MainViewController(isDebugBuild: false, appVersion: appVersion)
         #endif
     }
 
