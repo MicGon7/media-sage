@@ -63,26 +63,23 @@ open class AgentLaunchService(
         } else {
             BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
         }
-        val briefing = if (agentBriefing != null && ticketContent != null) {
-            agentBriefing.prepare(ticketKey, ticketContent)
-        } else {
-            ""
-        }
-        val prompt = if (briefing.isNotBlank()) {
-            "$basePrompt\n\n## Agent Briefing\n$briefing"
-        } else {
-            basePrompt
-        }
         return if (cloudRun != null) {
-            dispatchToCloudRun(ticketKey, prompt, cloudRun, dryRun)
+            dispatchToCloudRun(ticketKey, basePrompt, ticketContent, cloudRun, dryRun)
         } else {
+            val briefing = if (agentBriefing != null && ticketContent != null) {
+                agentBriefing.prepare(ticketKey, ticketContent)
+            } else {
+                ""
+            }
+            val prompt = if (briefing.isNotBlank()) "$basePrompt\n\n## Agent Briefing\n$briefing" else basePrompt
             dispatchToLocalProcess(ticketKey, prompt)
         }
     }
 
     private fun dispatchToCloudRun(
         ticketKey: String,
-        prompt: String,
+        basePrompt: String,
+        ticketContent: String?,
         cloudRun: CloudRunDispatch,
         dryRun: Boolean = false
     ): Boolean {
@@ -91,6 +88,13 @@ open class AgentLaunchService(
                 log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
                 return@launch
             }
+            // Dedup passed — safe to run AgentBriefing now (costs tokens, must not run on duplicates).
+            val briefing = if (agentBriefing != null && ticketContent != null) {
+                agentBriefing.prepare(ticketKey, ticketContent)
+            } else {
+                ""
+            }
+            val prompt = if (briefing.isNotBlank()) "$basePrompt\n\n## Agent Briefing\n$briefing" else basePrompt
             val jobId = cloudRun.jobs.insert(ticketKey, prompt)
             if (dryRun) {
                 log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
