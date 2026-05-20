@@ -128,9 +128,9 @@ internal fun modernDarkAppColors() = AppColors(
     cardBorder = ModernDarkCard,
 )
 
-// ── Future (Kindle e-reader — warm sepia light, warm dark night mode) ─────────
+// ── Warm (Kindle e-reader — warm sepia light, warm dark night mode) ──────────
 
-internal fun futureLightColors(): ColorScheme = lightColorScheme(
+internal fun warmLightColors(): ColorScheme = lightColorScheme(
     primary = ReaderPrimary,
     onPrimary = White,
     primaryContainer = ReaderSurface,
@@ -153,7 +153,7 @@ internal fun futureLightColors(): ColorScheme = lightColorScheme(
     onError = White,
 )
 
-internal fun futureDarkColors(): ColorScheme = darkColorScheme(
+internal fun warmDarkColors(): ColorScheme = darkColorScheme(
     primary = ReaderAmber,
     onPrimary = DarkBackground,
     primaryContainer = DarkSurface,
@@ -176,13 +176,13 @@ internal fun futureDarkColors(): ColorScheme = darkColorScheme(
     onError = DarkSurface,
 )
 
-internal fun futureLightAppColors() = AppColors(
+internal fun warmLightAppColors() = AppColors(
     accent = ReaderPrimary,
     ruleLine = ReaderSurface,
     cardBorder = ReaderSurface,
 )
 
-internal fun futureDarkAppColors() = AppColors(
+internal fun warmDarkAppColors() = AppColors(
     accent = ReaderAmber,
     ruleLine = RuleLineDark,
     cardBorder = DarkSurface,
@@ -199,12 +199,12 @@ fun MediaSageTheme(
     val colorScheme = when (theme) {
         AppTheme.CLASSIC -> if (darkTheme) classicDarkColors() else classicLightColors()
         AppTheme.MODERN -> if (darkTheme) modernDarkColors() else modernLightColors()
-        AppTheme.FUTURE -> if (darkTheme) futureDarkColors() else futureLightColors()
+        AppTheme.WARM -> if (darkTheme) warmDarkColors() else warmLightColors()
     }
     val appColors = when (theme) {
         AppTheme.CLASSIC -> if (darkTheme) classicDarkAppColors() else classicLightAppColors()
         AppTheme.MODERN -> if (darkTheme) modernDarkAppColors() else modernLightAppColors()
-        AppTheme.FUTURE -> if (darkTheme) futureDarkAppColors() else futureLightAppColors()
+        AppTheme.WARM -> if (darkTheme) warmDarkAppColors() else warmLightAppColors()
     }
     CompositionLocalProvider(LocalAppColors provides appColors) {
         MaterialTheme(
