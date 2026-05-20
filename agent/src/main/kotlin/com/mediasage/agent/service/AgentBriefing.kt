@@ -31,7 +31,7 @@ Ticket: %s
  */
 class AgentBriefing(
     private val repoPath: String,
-    private val timeoutSeconds: Long = 180L
+    private val timeoutSeconds: Long = 60L
 ) {
 
     private val log = Logger.getLogger(AgentBriefing::class.java.name)
@@ -51,7 +51,12 @@ class AgentBriefing(
 
     private fun buildProcess(ticketKey: String, ticketContent: String): Process {
         val prompt = BRIEFING_PROMPT.format(ticketKey, ticketContent)
-        val pb = ProcessBuilder("claude", "-p", prompt, "--max-turns", "3", "--output-format", "text")
+        val pb = ProcessBuilder(
+                "claude", "-p", prompt,
+                "--max-turns", "3",
+                "--output-format", "text",
+                "--dangerously-skip-permissions"
+            )
             .directory(File(repoPath))
             .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
             .redirectErrorStream(true)
