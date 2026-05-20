@@ -1,34 +1,45 @@
 #!/usr/bin/env bash
-# Runs Gradle tests only for modules touched by changes since main.
+# Runs targeted Gradle tests for Kotlin files changed since main.
 #
-# Use this inside the Cloud Run worker container instead of the static
-# `./gradlew :agent:test :server:test` command. It avoids unnecessary
-# cross-module test runs and reduces memory pressure on the 4GiB container.
+# Detects committed, staged, and unstaged changes so it works correctly
+# before or after committing. Skips Gradle entirely for non-Kotlin changes
+# (SQL, docs, config) — CI handles the full suite.
 #
-# Always uses --no-daemon to avoid Gradle daemon overhead in memory-constrained
-# environments. CI (GitHub Actions) runs the full suite — this script is the
-# worker's targeted pre-commit gate only.
+# Always uses --no-daemon to avoid Gradle daemon memory pressure in the
+# 4GiB Cloud Run container.
 #
-# Module → test task mapping (JVM-only, container-safe):
-#   agent/      → :agent:test --tests "<MatchingTestClass>"
-#   server/     → :server:test --tests "<MatchingTestClass>"
-#   shared/     → skipped (Android unit tests, requires Android SDK)
-#   composeApp/ → skipped (requires Android/iOS SDK)
-#   scripts/    → skipped (no tests)
+# Decision table:
+#   No .kt files changed            → skip entirely, delegate to CI
+#   .kt changed, test class found   → ./gradlew :module:test --tests "X" --no-daemon
+#   .kt changed, no test mapping    → skip, delegate to CI
+#   shared/composeApp/scripts       → always skipped (requires SDK or has no tests)
 #
 # Usage:
 #   ./scripts/run-affected-tests.sh
 #
 # Exit codes:
-#   0 — all tests passed (or no testable modules changed)
+#   0 — all tests passed (or skipped — CI is the authoritative gate)
 #   1 — one or more tests failed
 
 set -euo pipefail
 
-CHANGED=$(git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only main...HEAD 2>/dev/null || echo "")
+# Collect all changed files: committed, staged, and unstaged.
+# This ensures the script works before committing (workers run tests pre-commit).
+COMMITTED=$(git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only main...HEAD 2>/dev/null || echo "")
+STAGED=$(git diff --name-only --cached 2>/dev/null || echo "")
+UNSTAGED=$(git diff --name-only HEAD 2>/dev/null || echo "")
+CHANGED=$(printf '%s\n%s\n%s' "$COMMITTED" "$STAGED" "$UNSTAGED" | sort -u | grep -v '^$' || echo "")
 
 if [ -z "$CHANGED" ]; then
-    echo "No changes detected against main — skipping tests."
+    echo "No changes detected — skipping tests, delegating to CI."
+    exit 0
+fi
+
+# Kotlin gate: only run Gradle if .kt source files changed.
+# SQL, docs, config, and script changes don't need a Gradle test run.
+KOTLIN_CHANGED=$(echo "$CHANGED" | grep '\.kt$' | grep '/src/main/' || echo "")
+if [ -z "$KOTLIN_CHANGED" ]; then
+    echo "No Kotlin source files changed — skipping tests, delegating to CI."
     exit 0
 fi
 
@@ -37,8 +48,8 @@ RUN_SERVER=false
 AGENT_TEST_CLASSES=()
 SERVER_TEST_CLASSES=()
 
-# Map changed source files to their corresponding test class names.
-# Convention: Foo.kt → FooTest.kt (if it exists in the test source set).
+# Map a changed source file to its corresponding test class name.
+# Convention: Foo.kt → FooTest.kt (standard Kotlin/Java naming).
 find_test_class() {
     local module="$1"   # e.g. "agent"
     local src_file="$2" # e.g. "agent/src/main/kotlin/com/mediasage/agent/service/AgentLaunchService.kt"
@@ -47,7 +58,6 @@ find_test_class() {
     local test_file
     test_file=$(find "${module}/src/test" -name "${base}Test.kt" 2>/dev/null | head -1)
     if [ -n "$test_file" ]; then
-        # Extract fully-qualified class name from the package declaration
         local pkg
         pkg=$(grep -m1 "^package " "$test_file" 2>/dev/null | awk '{print $2}')
         if [ -n "$pkg" ]; then
@@ -58,28 +68,22 @@ find_test_class() {
 
 while IFS= read -r file; do
     case "$file" in
-        agent/src/main/*)
+        agent/src/main/*.kt)
             RUN_AGENT=true
             cls=$(find_test_class "agent" "$file")
             if [ -n "$cls" ]; then
                 AGENT_TEST_CLASSES+=("$cls")
             fi
             ;;
-        agent/*)
-            RUN_AGENT=true
-            ;;
-        server/src/main/*)
+        server/src/main/*.kt)
             RUN_SERVER=true
             cls=$(find_test_class "server" "$file")
             if [ -n "$cls" ]; then
                 SERVER_TEST_CLASSES+=("$cls")
             fi
             ;;
-        server/*)
-            RUN_SERVER=true
-            ;;
     esac
-done <<< "$CHANGED"
+done <<< "$KOTLIN_CHANGED"
 
 run_tests() {
     local task="$1"
@@ -93,7 +97,7 @@ run_tests() {
         echo "Running targeted tests for ${task}: ${classes[*]}"
         ./gradlew --no-daemon "$task" "${filter_args[@]}"
     else
-        echo "No direct test mapping found for ${task} — delegating to CI."
+        echo "No test class mapping found for ${task} — delegating to CI."
     fi
 }
 
@@ -110,5 +114,5 @@ if [ "$RUN_SERVER" = "true" ]; then
 fi
 
 if [ "$RAN_ANY" = "false" ]; then
-    echo "No testable modules changed (shared/composeApp/scripts require SDK or have no tests) — skipping."
+    echo "No testable Kotlin changes found — delegating to CI."
 fi
