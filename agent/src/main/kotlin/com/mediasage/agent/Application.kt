@@ -57,6 +57,7 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         gcpRegion = config.propertyOrNull("app.cloudRun.region")?.getString() ?: "us-central1",
         gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",
         googleCredentialsJson = credentialsJson,
-        supabaseDbUrl = str("app.supabase.dbUrl")
+        supabaseDbUrl = str("app.supabase.dbUrl"),
+        agentBriefingEnabled = bool("app.agent.briefingEnabled")
     )
 }

@@ -36,7 +36,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
             Logger.getLogger("AgentModule").warning("Cloud Run dispatch disabled: ${e.message}")
             null
         }
-        val briefing = if (config.useCloudRunWorkers) AgentBriefing(config.repoPath) else null
+        val briefing = if (config.useCloudRunWorkers && config.agentBriefingEnabled) AgentBriefing(config.repoPath) else null
         AgentLaunchService(config.repoPath, scope, config.verboseLogging, cloudRun, get(), briefing)
     }
 }

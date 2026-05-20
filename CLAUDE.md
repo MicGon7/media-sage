@@ -316,6 +316,7 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 - Title: concise task description (agent uses this as the task summary)
 - Description: what needs to change and why
 - Acceptance criteria: explicit checkboxes the agent checks off as it works
+- Relevant files: list the 3–5 files the agent should read first, with a one-line note on why each matters — this replaces codebase exploration and is the primary way context is passed to the worker
 - Label: `autonomous`
 - No ambiguous requirements — if it needs clarification, use `assisted` instead
 
