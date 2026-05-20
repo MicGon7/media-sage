@@ -25,6 +25,27 @@ CHANGED=$(git diff --name-only origin/main...HEAD)
 | `composeApp/` | skipped | Requires Android/iOS SDK |
 | `scripts/` | skipped | No tests |
 
+## Additional Container Optimizations
+
+Three more changes folded into this ticket to reduce memory pressure and startup time in the Cloud Run worker:
+
+**1. Shallow clone (`--depth=1`)**
+`worker-entrypoint.sh` now uses `git clone --depth=1` instead of a full clone. For a repo this size, this saves several seconds and avoids pulling all git history into a container that only needs the latest state.
+
+**2. `--no-daemon` for Gradle**
+`run-affected-tests.sh` passes `--no-daemon` to every Gradle invocation. In a container that exits after one job, the daemon provides zero benefit — it just competes with Claude Code for the 4GiB memory budget.
+
+**3. Pre-baked Gradle wrapper in `Dockerfile.worker`**
+The worker image now downloads and extracts the Gradle distribution at image build time:
+```dockerfile
+COPY --chown=agent:agent gradlew gradlew
+COPY --chown=agent:agent gradle/wrapper gradle/wrapper
+RUN chmod +x gradlew && ./gradlew --version --no-daemon && rm -f gradlew && rm -rf gradle
+```
+This uses the wrapper's own download mechanism (preserving the correct hash-based directory structure) then cleans up the wrapper files. Workers no longer download Gradle at runtime, eliminating both the latency and the failure mode where a network hiccup causes the job to fail.
+
+**Note:** These changes target `Dockerfile.worker` (the Cloud Run worker image), not `agent/Dockerfile` (the Railway orchestrator image). They are separate images built from separate Dockerfiles.
+
 ## Key Learnings
 
 - **Test only what changed.** Running the full test suite on every module is expensive in a memory-constrained container. Scoped tests are faster, cheaper, and avoid OOM failures for single-module changes.
