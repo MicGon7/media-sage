@@ -7,6 +7,7 @@ import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.JobDispatcher
 import com.mediasage.agent.service.JiraCommentPoster
+import com.mediasage.agent.service.JiraTicketStatusChecker
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -32,21 +33,28 @@ class JobDispatchTest {
 
     private class FakeJobRegistry(shouldDispatchResult: Boolean = true) : JobRegistry {
         var shouldDispatchResult = shouldDispatchResult
+        var latestJob: JobRow? = null
         val inserted = mutableListOf<String>()          // ticket keys inserted
+        val completed = mutableListOf<UUID>()
         val interrupted = mutableListOf<UUID>()
         val failed = mutableListOf<UUID>()
         var runningJobs: List<JobRow> = emptyList()
 
         override suspend fun shouldDispatch(ticketKey: String) = shouldDispatchResult
+        override suspend fun findLatestJob(ticketKey: String) = latestJob
         override suspend fun insert(ticketKey: String, prompt: String): UUID {
             inserted.add(ticketKey)
             return UUID.randomUUID()
         }
         override suspend fun markRunning(jobId: UUID, executionName: String) = Unit
-        override suspend fun markCompleted(jobId: UUID) = Unit
+        override suspend fun markCompleted(jobId: UUID) { completed.add(jobId) }
         override suspend fun markFailed(jobId: UUID) { failed.add(jobId) }
         override suspend fun markInterrupted(jobId: UUID) { interrupted.add(jobId) }
         override suspend fun findRunningJobs() = runningJobs
+    }
+
+    private class FakeJiraStatusChecker(private val status: String?) : JiraTicketStatusChecker {
+        override suspend fun getTicketStatus(ticketKey: String) = status
     }
 
     private class FakeJobDispatcher(private val recoverResult: Boolean = true) : JobDispatcher {
@@ -77,12 +85,14 @@ class JobDispatchTest {
         registry: FakeJobRegistry,
         dispatcher: FakeJobDispatcher,
         poster: FakeJiraCommentPoster = FakeJiraCommentPoster(),
+        jiraStatusChecker: JiraTicketStatusChecker? = null,
         scope: TestScope,
     ) = AgentLaunchService(
         repoPath = "/repo",
         scope = scope,
         cloudRun = CloudRunDispatch(dispatcher, registry),
-        jiraCommentPoster = poster
+        jiraCommentPoster = poster,
+        jiraStatusChecker = jiraStatusChecker
     )
 
     // ── Dedup: RUNNING ────────────────────────────────────────────────────────
@@ -141,6 +151,75 @@ class JobDispatchTest {
         advanceUntilIdle()
 
         assertEquals(listOf("MS-99"), dispatcher.executions)
+    }
+
+    // ── INTERRUPTED + Jira status check ──────────────────────────────────────
+
+    @Test
+    fun `INTERRUPTED job with Jira In Review is marked COMPLETED and skipped`() = runTest {
+        val jobId = UUID.randomUUID()
+        val registry = FakeJobRegistry(shouldDispatchResult = true).apply {
+            latestJob = JobRow(jobId, "MS-99", JobStatus.INTERRUPTED, null)
+        }
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, jiraStatusChecker = FakeJiraStatusChecker("In Review"), scope = this)
+
+        service.launch("MS-99")
+        advanceUntilIdle()
+
+        assertTrue(dispatcher.executions.isEmpty(), "Must not dispatch when Jira is In Review")
+        assertEquals(listOf(jobId), registry.completed)
+        assertTrue(registry.inserted.isEmpty())
+    }
+
+    @Test
+    fun `INTERRUPTED job with Jira Done is marked COMPLETED and skipped`() = runTest {
+        val jobId = UUID.randomUUID()
+        val registry = FakeJobRegistry(shouldDispatchResult = true).apply {
+            latestJob = JobRow(jobId, "MS-99", JobStatus.INTERRUPTED, null)
+        }
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, jiraStatusChecker = FakeJiraStatusChecker("Done"), scope = this)
+
+        service.launch("MS-99")
+        advanceUntilIdle()
+
+        assertTrue(dispatcher.executions.isEmpty(), "Must not dispatch when Jira is Done")
+        assertEquals(listOf(jobId), registry.completed)
+        assertTrue(registry.inserted.isEmpty())
+    }
+
+    @Test
+    fun `INTERRUPTED job with Jira In Progress triggers re-dispatch`() = runTest {
+        val jobId = UUID.randomUUID()
+        val registry = FakeJobRegistry(shouldDispatchResult = true).apply {
+            latestJob = JobRow(jobId, "MS-99", JobStatus.INTERRUPTED, null)
+        }
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, jiraStatusChecker = FakeJiraStatusChecker("In Progress"), scope = this)
+
+        service.launch("MS-99")
+        advanceUntilIdle()
+
+        assertEquals(listOf("MS-99"), dispatcher.executions)
+        assertTrue(registry.completed.isEmpty())
+    }
+
+    @Test
+    fun `INTERRUPTED job with Jira To Do is skipped without DB change`() = runTest {
+        val jobId = UUID.randomUUID()
+        val registry = FakeJobRegistry(shouldDispatchResult = true).apply {
+            latestJob = JobRow(jobId, "MS-99", JobStatus.INTERRUPTED, null)
+        }
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, jiraStatusChecker = FakeJiraStatusChecker("To Do"), scope = this)
+
+        service.launch("MS-99")
+        advanceUntilIdle()
+
+        assertTrue(dispatcher.executions.isEmpty(), "Must not dispatch when Jira is To Do")
+        assertTrue(registry.completed.isEmpty(), "Must not mark COMPLETED when Jira is To Do")
+        assertTrue(registry.inserted.isEmpty())
     }
 
     // ── Dedup: no prior row ───────────────────────────────────────────────────

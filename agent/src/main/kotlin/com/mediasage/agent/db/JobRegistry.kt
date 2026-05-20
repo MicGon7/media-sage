@@ -4,6 +4,7 @@ import java.util.UUID
 
 interface JobRegistry {
     suspend fun shouldDispatch(ticketKey: String): Boolean
+    suspend fun findLatestJob(ticketKey: String): JobRow?
     suspend fun insert(ticketKey: String, prompt: String): UUID
     suspend fun markRunning(jobId: UUID, executionName: String)
     suspend fun markCompleted(jobId: UUID)

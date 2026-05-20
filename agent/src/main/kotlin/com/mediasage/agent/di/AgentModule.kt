@@ -10,6 +10,7 @@ import com.mediasage.agent.service.JiraApiService
 import com.mediasage.agent.service.JiraCommentPoster
 import com.mediasage.agent.service.JiraLabelChecker
 import com.mediasage.agent.service.JiraTicketFetcher
+import com.mediasage.agent.service.JiraTicketStatusChecker
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -26,6 +27,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single<JiraLabelChecker> { get<JiraApiService>() }
     single<JiraTicketFetcher> { get<JiraApiService>() }
     single<JiraCommentPoster> { get<JiraApiService>() }
+    single<JiraTicketStatusChecker> { get<JiraApiService>() }
     single {
         // CloudRunDispatch is resolved eagerly here so a startup failure (bad DB URL,
         // missing credentials) degrades gracefully to null rather than poisoning a
@@ -37,7 +39,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
             null
         }
         val briefing = if (config.useCloudRunWorkers && config.agentBriefingEnabled) AgentBriefing(config.repoPath) else null
-        AgentLaunchService(config.repoPath, scope, config.verboseLogging, cloudRun, get(), briefing)
+        AgentLaunchService(config.repoPath, scope, config.verboseLogging, cloudRun, get(), briefing, get<JiraTicketStatusChecker>())
     }
 }
 
