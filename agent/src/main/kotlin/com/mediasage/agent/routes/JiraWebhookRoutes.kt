@@ -9,7 +9,7 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.koin.ktor.ext.inject
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 
 // ---- Jira webhook payload DTOs ----
 
@@ -58,7 +58,7 @@ private val relevantEvents = setOf("jira:issue_created", "jira:issue_updated")
  * assigned to the bot account transitions to In Progress.
  */
 fun Route.webhookRoutes(botAccountId: String) {
-    val log = Logger.getLogger("JiraWebhookRoutes")
+    val log = LoggerFactory.getLogger("JiraWebhookRoutes")
     val agentService by inject<AgentLaunchService>()
     val jiraFetcher by inject<JiraTicketFetcher>()
 

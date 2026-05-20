@@ -3,7 +3,7 @@ package com.mediasage.agent.service
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 
 private const val BRIEFING_PROMPT = """You are preparing a concise briefing for an autonomous agent about to implement a Jira ticket.
 
@@ -34,7 +34,7 @@ class AgentBriefing(
     private val timeoutSeconds: Long = 60L
 ) {
 
-    private val log = Logger.getLogger(AgentBriefing::class.java.name)
+    private val log = LoggerFactory.getLogger(AgentBriefing::class.java)
 
     fun prepare(ticketKey: String, ticketContent: String): String {
         log.info("[$ticketKey] AgentBriefing starting (timeout ${timeoutSeconds}s)...")
@@ -44,7 +44,7 @@ class AgentBriefing(
             log.info("[$ticketKey] AgentBriefing prepared (${output.length} chars)")
             output
         } catch (e: Exception) {
-            log.warning("[$ticketKey] AgentBriefing failed: ${e.message} — proceeding without briefing")
+            log.warn("[$ticketKey] AgentBriefing failed: ${e.message} — proceeding without briefing")
             ""
         }
     }
@@ -78,12 +78,12 @@ class AgentBriefing(
         val completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
         if (!completed) {
             process.destroyForcibly()
-            log.warning("[$ticketKey] AgentBriefing timed out after ${timeoutSeconds}s — proceeding without briefing")
+            log.warn("[$ticketKey] AgentBriefing timed out after ${timeoutSeconds}s — proceeding without briefing")
             return null
         }
         val output = outputFuture.get().trim()
         if (process.exitValue() != 0 || output.isBlank()) {
-            log.warning("[$ticketKey] AgentBriefing exited with code ${process.exitValue()} — " +
+            log.warn("[$ticketKey] AgentBriefing exited with code ${process.exitValue()} — " +
                 "proceeding without briefing. Output: ${output.take(500)}")
             return null
         }

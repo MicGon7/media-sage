@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayInputStream
 import java.util.UUID
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 
 @Serializable
 private data class EnvVar(
@@ -69,7 +69,7 @@ class CloudRunJobsClient(
     private val jobRepository: JobRepository
 ) : JobDispatcher {
 
-    private val log = Logger.getLogger(CloudRunJobsClient::class.java.name)
+    private val log = LoggerFactory.getLogger(CloudRunJobsClient::class.java)
     private val json = Json { ignoreUnknownKeys = true }
 
     private val credentials: GoogleCredentials by lazy {
@@ -98,7 +98,7 @@ class CloudRunJobsClient(
         }
 
         if (!response.status.isSuccess()) {
-            log.warning("[$ticketKey] Cloud Run job dispatch failed: ${response.status} — ${response.bodyAsText()}")
+            log.warn("[$ticketKey] Cloud Run job dispatch failed: ${response.status} — ${response.bodyAsText()}")
             return false
         }
 
@@ -114,7 +114,7 @@ class CloudRunJobsClient(
             header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
         }
         if (!response.status.isSuccess()) {
-            log.warning("[$ticketKey] Recovery: execution not found (${response.status}) — marking INTERRUPTED")
+            log.warn("[$ticketKey] Recovery: execution not found (${response.status}) — marking INTERRUPTED")
             jobRepository.markInterrupted(jobId)
             return false
         }
@@ -136,21 +136,21 @@ class CloudRunJobsClient(
                 header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
             }
             if (!response.status.isSuccess()) {
-                log.warning("[$ticketKey] Failed to poll operation: ${response.status}")
+                log.warn("[$ticketKey] Failed to poll operation: ${response.status}")
                 continue
             }
             val operation = json.decodeFromString(OperationResponse.serializer(), response.bodyAsText())
             if (operation.done) return handleDone(jobId, ticketKey, operation)
             log.info("[$ticketKey] Cloud Run job still running...")
         }
-        log.warning("[$ticketKey] Cloud Run job timed out after 30 minutes")
+        log.warn("[$ticketKey] Cloud Run job timed out after 30 minutes")
         jobRepository.markFailed(jobId)
         return false
     }
 
     private suspend fun handleDone(jobId: UUID, ticketKey: String, operation: OperationResponse): Boolean {
         return if (operation.error != null) {
-            log.warning("[$ticketKey] Cloud Run job failed: ${operation.error.message}")
+            log.warn("[$ticketKey] Cloud Run job failed: ${operation.error.message}")
             jobRepository.markFailed(jobId)
             false
         } else {

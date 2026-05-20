@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.ktor.server.call.logging)
     implementation(libs.ktor.serialization.json)
     implementation(libs.logback)
+    implementation(libs.logstash.logback.encoder)
 
     // Ktor Client (for calling Jira API)
     implementation(libs.ktor.client.core)
