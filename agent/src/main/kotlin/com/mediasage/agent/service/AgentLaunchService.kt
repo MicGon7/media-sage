@@ -83,7 +83,15 @@ open class AgentLaunchService(
         cloudRun: CloudRunDispatch,
         dryRun: Boolean = false
     ): Boolean {
+        // activeKeys is the synchronous in-process gate. It prevents the TOCTOU race where
+        // two concurrent webhooks both pass shouldDispatch() before either inserts a DB row.
+        // shouldDispatch() remains the persistent cross-restart gate.
+        if (!activeKeys.add(ticketKey)) {
+            log.info("[$ticketKey] already in flight — ignoring duplicate webhook")
+            return false
+        }
         scope.launch {
+            try {
             if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
                 log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
                 return@launch
@@ -107,6 +115,9 @@ open class AgentLaunchService(
             } catch (e: Exception) {
                 cloudRun.jobs.markFailed(jobId)
                 log.warning("[$ticketKey] dispatch error: ${e.message}")
+            }
+            } finally {
+                activeKeys.remove(ticketKey)
             }
         }
         return true
