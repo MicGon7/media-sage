@@ -9,7 +9,7 @@ REPO_DIR="/home/agent/media-sage"
 REPO_URL="https://${GITHUB_BOT_TOKEN}@github.com/MicGon7/media-sage.git"
 
 echo "Cloning repo..."
-git clone "$REPO_URL" "$REPO_DIR"
+git clone --depth=1 "$REPO_URL" "$REPO_DIR"
 cd "$REPO_DIR"
 
 cat > "$REPO_DIR/.mcp.json" << EOF

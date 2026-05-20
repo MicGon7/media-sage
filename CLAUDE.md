@@ -263,7 +263,7 @@ docker run -p 8081:8081 \
 11. Reply to any PR review comments with `🤖 **Agent:**` prefix
 
 ### Before submitting work
-- Run `./gradlew allTests` and ensure all pass. **Exception: when running inside the container (Linux, no Android/iOS SDK), run `./gradlew :agent:test :server:test` instead — the `:shared` module has no JVM-only test target (its tests are Android unit tests requiring the Android SDK), and iOS targets require the iOS SDK. Both are unavailable on Linux.**
+- Run `./gradlew allTests` and ensure all pass. **Exception: when running inside the container (Linux, no Android/iOS SDK), run `./scripts/run-affected-tests.sh` instead — it diffs changed files against `main` and only runs `:agent:test` or `:server:test` for modules that were actually touched. This avoids unnecessary cross-module test runs and reduces memory pressure in the 4GiB container. Modules that require the Android or iOS SDK (`:shared`, `:composeApp`) are automatically skipped.**
 - If a required tool, SDK, or Gradle task is missing and cannot be self-resolved without elevated access or SDK installation, **stop immediately** — do not attempt workarounds. Post a comment on the PR (or Jira ticket if no PR exists yet) describing the exact blocker, then exit. Looping on an unresolvable blocker wastes token budget.
 - **OOM stop rule:** If any Gradle command exits with an out-of-memory error, Gradle daemon startup failure, or cgroup memory limit error — **stop immediately**. Do not investigate daemon logs. Do not run `./gradlew help`, `ulimit`, or cgroup diagnostics. Do not retry with alternative JVM flags. The environment is the problem, not the code. Post a comment on the PR or Jira ticket stating that Gradle quality gates are blocked by an environment memory constraint and that CI is the authoritative quality gate, then exit.
 - Run `./gradlew detekt` and ensure no violations
@@ -406,6 +406,46 @@ See `docs/MS-84-containerized-agent-deployment.md` for container architecture an
 - Requires pre-approved tool permissions (trust boundary is the whole session)
 - Context window limits: very large tasks may need to be broken into smaller tickets
 - No mid-run judgment — if the task turns out to be more complex, the agent may produce incomplete work rather than stopping to ask
+
+## MCP Servers
+
+These MCP servers are pre-configured for this project and available in every assisted session. Use them instead of making raw API calls or running CLI commands manually.
+
+### Project-local (`.claude.json`)
+
+| Server | Transport | Purpose |
+|--------|-----------|---------|
+| `atlassian` | SSE → `https://mcp.atlassian.com/v1/sse` | Jira (tickets, transitions, comments) + Confluence (impact page updates) |
+| `railway` | HTTP → `https://mcp.railway.com` | Deployment history, service logs, restart counts, environment variables |
+| `gcloud-mcp` | stdio `npx -y @google-cloud/gcloud-mcp` | Cloud Run job management, GCP resource queries |
+| `observability-mcp` | stdio `npx -y @google-cloud/observability-mcp` | Cloud Run execution logs, job duration metrics, cost data |
+
+**Setup commands** (run once per machine from the project root):
+```bash
+claude mcp add railway --transport http https://mcp.railway.com
+claude mcp add gcloud-mcp -- npx -y @google-cloud/gcloud-mcp
+claude mcp add observability-mcp -- npx -y @google-cloud/observability-mcp
+```
+
+Railway authenticates via OAuth on first use (browser prompt). GCP MCPs inherit the active `gcloud auth` session — run `gcloud auth login` first if needed.
+
+### Account-level (claude.ai MCP marketplace)
+
+These are connected at the account level and available across all projects:
+
+| Server | Purpose |
+|--------|---------|
+| Atlassian (claude.ai) | Redundant Jira/Confluence access via claude.ai OAuth |
+| Mermaid Chart | Generate architecture diagrams |
+| Excalidraw | Whiteboard-style diagrams |
+| Figma | Design file access (currently failing — known auth issue) |
+
+### Intended uses
+
+- **Jira workflow**: use `atlassian` MCP tools instead of `gh` CLI or manual curl
+- **Railway deploys**: use `railway` MCP to check service status and logs after a PR merges
+- **Cost reporting**: use `gcloud-mcp` + `observability-mcp` to pull Cloud Run job execution times and build cost documents for the orchestrator/worker pattern
+- **Confluence updates**: use `atlassian` MCP to update the Agentic Development Impact page (ID: `163844`)
 
 ## Project Tracking
 
