@@ -56,26 +56,36 @@ open class AgentLaunchService(
     // Stored for future cancellation support.
     private val activeRuns = ConcurrentHashMap<String, Job>()
 
-    fun launch(ticketKey: String, ticketContent: String? = null): Boolean {
+    fun launch(ticketKey: String, ticketContent: String? = null, dryRun: Boolean = false): Boolean {
         val prompt = if (ticketContent != null) {
             BOOTSTRAP_PROMPT_WITH_CONTENT.format(ticketKey, ticketContent)
         } else {
             BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
         }
         return if (cloudRun != null) {
-            dispatchToCloudRun(ticketKey, prompt, cloudRun)
+            dispatchToCloudRun(ticketKey, prompt, cloudRun, dryRun)
         } else {
             dispatchToLocalProcess(ticketKey, prompt)
         }
     }
 
-    private fun dispatchToCloudRun(ticketKey: String, prompt: String, cloudRun: CloudRunDispatch): Boolean {
+    private fun dispatchToCloudRun(
+        ticketKey: String,
+        prompt: String,
+        cloudRun: CloudRunDispatch,
+        dryRun: Boolean = false
+    ): Boolean {
         scope.launch {
             if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
                 log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
                 return@launch
             }
             val jobId = cloudRun.jobs.insert(ticketKey, prompt)
+            if (dryRun) {
+                log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
+                cloudRun.jobs.markFailed(jobId)
+                return@launch
+            }
             log.info("[$ticketKey] job $jobId inserted — dispatching to Cloud Run")
             try {
                 cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt)

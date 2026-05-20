@@ -15,12 +15,24 @@
 #   export SUPABASE_DB_URL="postgresql://postgres.<ref>:<password>@<host>:5432/postgres"
 #   export AGENT_URL="https://<railway-agent-url>"
 #   export JIRA_BOT_ACCOUNT_ID="<bot-account-id>"
-#   ./scripts/smoke-test-dedup.sh
+#   ./scripts/smoke-test-dedup.sh [--dry-run]
+#
+# --dry-run  Cases 3 and 4 verify PENDING row insertion without triggering a real
+#            Cloud Run dispatch. Use this for local testing to avoid token waste and
+#            30-minute polling loops in the orchestrator.
 #
 # For local dev (ngrok):
 #   export AGENT_URL="https://<ngrok-url>"
 
 set -euo pipefail
+
+DRY_RUN=false
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run) DRY_RUN=true ;;
+        *) echo "Unknown argument: $arg"; exit 1 ;;
+    esac
+done
 
 : "${SUPABASE_DB_URL:?Set SUPABASE_DB_URL to the Supabase Postgres connection string}"
 : "${AGENT_URL:?Set AGENT_URL to the agent base URL (no trailing slash)}"
@@ -48,10 +60,17 @@ insert_job() {
               VALUES ('$TICKET_KEY', 'smoke test', '$status', now());" > /dev/null
 }
 
+# shellcheck disable=SC2120
 fire_webhook() {
+    local use_dry_run="${1:-false}"
+    local dry_run_header=""
+    if [ "$use_dry_run" = "true" ]; then
+        dry_run_header="-H \"X-Dry-Run: true\""
+    fi
     local status_code
-    status_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$WEBHOOK_URL" \
+    status_code=$(eval curl -s -o /dev/null -w "%{http_code}" -X POST "$WEBHOOK_URL" \
         -H "Content-Type: application/json" \
+        $dry_run_header \
         -d "{
               \"webhookEvent\": \"jira:issue_updated\",
               \"issue\": {
@@ -76,6 +95,9 @@ cleanup() {
 echo ""
 echo "═══════════════════════════════════════════════"
 echo " MS-179 Dedup Smoke Test  —  ticket: $TICKET_KEY"
+if [ "$DRY_RUN" = "true" ]; then
+    echo " Mode: DRY-RUN (no Cloud Run dispatch)"
+fi
 echo "═══════════════════════════════════════════════"
 echo ""
 
@@ -119,7 +141,7 @@ echo "Case 3: FAILED job → webhook should create new PENDING row"
 cleanup
 insert_job "FAILED"
 before=$(row_count)
-http_code=$(fire_webhook)
+http_code=$(fire_webhook "$DRY_RUN")
 [ "$http_code" = "200" ] || fail "Webhook returned $http_code (expected 200)"
 sleep 2
 after=$(row_count)
@@ -135,7 +157,7 @@ echo "Case 4: INTERRUPTED job → webhook should create new PENDING row"
 cleanup
 insert_job "INTERRUPTED"
 before=$(row_count)
-http_code=$(fire_webhook)
+http_code=$(fire_webhook "$DRY_RUN")
 [ "$http_code" = "200" ] || fail "Webhook returned $http_code (expected 200)"
 sleep 2
 after=$(row_count)
@@ -148,7 +170,12 @@ echo "════════════════════════�
 echo " All 4 dedup cases passed ✅"
 echo "═══════════════════════════════════════════════"
 echo ""
-echo "Note: Cases 3 and 4 insert a PENDING row and attempt Cloud Run dispatch."
-echo "The dispatch will fail (no real ticket) but the dedup behavior is verified."
+if [ "$DRY_RUN" = "true" ]; then
+    echo "Dry-run mode: Cases 3 and 4 verified PENDING row insertion."
+    echo "Cloud Run dispatch was skipped — no polling, no token usage."
+else
+    echo "Note: Cases 3 and 4 insert a PENDING row and attempt Cloud Run dispatch."
+    echo "Use --dry-run for local testing to avoid token waste and long polling loops."
+fi
 echo "Check the jobs table to see the final status:"
 echo "  psql \"\$SUPABASE_DB_URL\" -c \"SELECT ticket_key, status, created_at FROM jobs ORDER BY created_at DESC LIMIT 10;\""

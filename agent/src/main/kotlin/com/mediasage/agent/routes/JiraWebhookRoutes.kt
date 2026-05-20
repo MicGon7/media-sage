@@ -76,8 +76,10 @@ fun Route.webhookRoutes(botAccountId: String) {
             fields.status.name == "In Progress"
 
         if (shouldFire) {
+            val dryRun = call.request.headers["X-Dry-Run"]?.lowercase() == "true"
+            if (dryRun) log.info("Dry-run mode — dedup check and row insert only, Cloud Run dispatch skipped")
             val ticketContent = jiraFetcher.getTicketContent(payload.issue.key)
-            agentService.launch(payload.issue.key, ticketContent)
+            agentService.launch(payload.issue.key, ticketContent, dryRun)
         }
 
         call.respond(HttpStatusCode.OK)
