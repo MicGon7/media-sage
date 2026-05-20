@@ -183,8 +183,8 @@ private fun YouScreenModernPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun YouScreenFuturePreview() {
-    MediaSageTheme(theme = AppTheme.FUTURE) {
+private fun YouScreenWarmPreview() {
+    MediaSageTheme(theme = AppTheme.WARM) {
         YouScreen(
             state = YouContract.UiState.Ready(displayName = "reader@example.com"),
             onIntent = {},

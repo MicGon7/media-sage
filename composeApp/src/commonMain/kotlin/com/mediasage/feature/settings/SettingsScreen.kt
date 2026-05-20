@@ -262,10 +262,10 @@ private fun SettingsScreenModernPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun SettingsScreenFuturePreview() {
-    MediaSageTheme(theme = AppTheme.FUTURE) {
+private fun SettingsScreenWarmPreview() {
+    MediaSageTheme(theme = AppTheme.WARM) {
         SettingsScreen(
-            state = SettingsContract.UiState.Ready(appTheme = AppTheme.FUTURE),
+            state = SettingsContract.UiState.Ready(appTheme = AppTheme.WARM),
             onIntent = {},
         )
     }

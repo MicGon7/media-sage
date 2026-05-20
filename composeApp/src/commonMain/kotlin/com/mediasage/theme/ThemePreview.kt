@@ -77,18 +77,18 @@ private fun ModernDarkPreview() {
     }
 }
 
-@Preview(name = "Future Light", showBackground = true, backgroundColor = 0xFFF8F9FF)
+@Preview(name = "Warm Light", showBackground = true, backgroundColor = 0xFFF8F9FF)
 @Composable
-private fun FutureLightPreview() {
-    MediaSageTheme(theme = AppTheme.FUTURE, darkTheme = false) {
+private fun WarmLightPreview() {
+    MediaSageTheme(theme = AppTheme.WARM, darkTheme = false) {
         ThemePreviewCard()
     }
 }
 
-@Preview(name = "Future Dark", showBackground = true, backgroundColor = 0xFF0D0D0F)
+@Preview(name = "Warm Dark", showBackground = true, backgroundColor = 0xFF0D0D0F)
 @Composable
-private fun FutureDarkPreview() {
-    MediaSageTheme(theme = AppTheme.FUTURE, darkTheme = true) {
+private fun WarmDarkPreview() {
+    MediaSageTheme(theme = AppTheme.WARM, darkTheme = true) {
         ThemePreviewCard()
     }
 }

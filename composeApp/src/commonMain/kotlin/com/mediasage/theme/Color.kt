@@ -39,7 +39,7 @@ val NavyDeep = Color(0xFF0F1A30)          // very deep navy for modern dark back
 val ModernBorder = Color(0xFF6B7A8D)       // steel blue-gray outline (matches login FieldBorder)
 val ModernBorderMuted = Color(0xFFB0A898)  // muted warm gray (matches login divider tint)
 
-// Future palette (Kindle e-reader — warm sepia light, warm dark night mode)
+// Warm palette (Kindle e-reader — warm sepia light, warm dark night mode)
 val ReaderSurface = Color(0xFFECE6D8)      // warm cream card surface (light mode)
 val ReaderPrimary = Color(0xFF5C3D2E)      // warm brown primary (light mode)
 val ReaderAmber = Color(0xFFD4A050)        // warm amber primary / accent (dark mode)
