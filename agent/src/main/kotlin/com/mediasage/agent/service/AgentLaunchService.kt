@@ -1,5 +1,6 @@
 package com.mediasage.agent.service
 
+import com.mediasage.agent.db.JobStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -44,7 +45,8 @@ open class AgentLaunchService(
     private val verboseLogging: Boolean = false,
     private val cloudRun: CloudRunDispatch? = null,
     private val jiraCommentPoster: JiraCommentPoster? = null,
-    private val agentBriefing: AgentBriefing? = null
+    private val agentBriefing: AgentBriefing? = null,
+    private val jiraStatusChecker: JiraTicketStatusChecker? = null
 ) {
 
     private val log = Logger.getLogger(AgentLaunchService::class.java.name)
@@ -110,6 +112,26 @@ open class AgentLaunchService(
         if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
             log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
             return
+        }
+        // For INTERRUPTED jobs, check Jira before re-dispatching — the worker may have
+        // finished its work before the orchestrator restarted.
+        if (jiraStatusChecker != null) {
+            val latestJob = cloudRun.jobs.findLatestJob(ticketKey)
+            if (latestJob?.status == JobStatus.INTERRUPTED) {
+                val jiraStatus = jiraStatusChecker.getTicketStatus(ticketKey)
+                when (jiraStatus) {
+                    "In Review", "Done" -> {
+                        log.info("[$ticketKey] INTERRUPTED job, Jira='$jiraStatus' — marking COMPLETED, skipping dispatch")
+                        cloudRun.jobs.markCompleted(latestJob.jobId)
+                        return
+                    }
+                    "To Do" -> {
+                        log.info("[$ticketKey] INTERRUPTED job, Jira='To Do' — ticket reset manually, skipping dispatch")
+                        return
+                    }
+                    else -> log.info("[$ticketKey] INTERRUPTED job, Jira='$jiraStatus' — re-dispatching")
+                }
+            }
         }
         // Dedup passed — safe to run AgentBriefing now (costs tokens, must not run on duplicates).
         val briefing = if (agentBriefing != null && ticketContent != null) {

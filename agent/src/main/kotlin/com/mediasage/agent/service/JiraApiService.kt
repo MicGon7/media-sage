@@ -27,6 +27,10 @@ interface JiraCommentPoster {
     suspend fun addComment(ticketKey: String, body: String)
 }
 
+interface JiraTicketStatusChecker {
+    suspend fun getTicketStatus(ticketKey: String): String?
+}
+
 @Serializable
 private data class JiraIssueLabelsResponse(
     @SerialName("fields")
@@ -37,6 +41,24 @@ private data class JiraIssueLabelsResponse(
 private data class JiraLabelsFields(
     @SerialName("labels")
     val labels: List<String> = emptyList()
+)
+
+@Serializable
+private data class JiraIssueStatusResponse(
+    @SerialName("fields")
+    val fields: JiraStatusFields? = null
+)
+
+@Serializable
+private data class JiraStatusFields(
+    @SerialName("status")
+    val status: JiraStatusName? = null
+)
+
+@Serializable
+private data class JiraStatusName(
+    @SerialName("name")
+    val name: String = ""
 )
 
 @Serializable
@@ -58,7 +80,7 @@ class JiraApiService(
     private val cloudId: String,
     private val email: String,
     private val apiToken: String
-) : JiraLabelChecker, JiraTicketFetcher, JiraCommentPoster {
+) : JiraLabelChecker, JiraTicketFetcher, JiraCommentPoster, JiraTicketStatusChecker {
 
     private val log = Logger.getLogger(JiraApiService::class.java.name)
     private val authHeader = "Basic " + Base64.getEncoder()
@@ -99,6 +121,24 @@ class JiraApiService(
             "**$ticketKey: ${fields.summary}**\n\n$description"
         } catch (e: Exception) {
             log.warning("Failed to fetch ticket content for $ticketKey: ${e.message}")
+            null
+        }
+    }
+
+    override suspend fun getTicketStatus(ticketKey: String): String? {
+        return try {
+            val response = httpClient.get("$baseUrl/issue/$ticketKey?fields=status") {
+                header(HttpHeaders.Authorization, authHeader)
+                accept(ContentType.Application.Json)
+            }
+            if (!response.status.isSuccess()) {
+                log.warning("Jira API returned ${response.status} for $ticketKey status fetch")
+                return null
+            }
+            val body = response.body<JiraIssueStatusResponse>()
+            body.fields?.status?.name
+        } catch (e: Exception) {
+            log.warning("Failed to fetch ticket status for $ticketKey: ${e.message}")
             null
         }
     }

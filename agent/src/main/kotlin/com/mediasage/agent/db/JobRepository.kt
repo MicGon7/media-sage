@@ -34,6 +34,24 @@ class JobRepository : JobRegistry {
         latest != JobStatus.RUNNING.name && latest != JobStatus.COMPLETED.name
     }
 
+    override suspend fun findLatestJob(ticketKey: String): JobRow? = withContext(Dispatchers.IO) {
+        transaction {
+            JobsTable.selectAll()
+                .where { JobsTable.ticketKey eq ticketKey }
+                .orderBy(JobsTable.createdAt, SortOrder.DESC)
+                .limit(1)
+                .map {
+                    JobRow(
+                        jobId = it[JobsTable.jobId],
+                        ticketKey = ticketKey,
+                        status = JobStatus.valueOf(it[JobsTable.status]),
+                        executionName = it[JobsTable.executionName]
+                    )
+                }
+                .firstOrNull()
+        }
+    }
+
     override suspend fun insert(ticketKey: String, prompt: String): UUID = withContext(Dispatchers.IO) {
         val id = UUID.randomUUID()
         transaction {
