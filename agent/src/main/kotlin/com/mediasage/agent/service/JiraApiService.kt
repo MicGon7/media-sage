@@ -13,7 +13,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.Base64
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 
 interface JiraLabelChecker {
     suspend fun isAutonomous(ticketKey: String): Boolean
@@ -82,7 +82,7 @@ class JiraApiService(
     private val apiToken: String
 ) : JiraLabelChecker, JiraTicketFetcher, JiraCommentPoster, JiraTicketStatusChecker {
 
-    private val log = Logger.getLogger(JiraApiService::class.java.name)
+    private val log = LoggerFactory.getLogger(JiraApiService::class.java)
     private val authHeader = "Basic " + Base64.getEncoder()
         .encodeToString("$email:$apiToken".toByteArray(Charsets.UTF_8))
 
@@ -97,7 +97,7 @@ class JiraApiService(
             val body = response.body<JiraIssueLabelsResponse>()
             "autonomous" in body.fields.labels
         } catch (e: Exception) {
-            log.warning("Failed to check Jira labels for $ticketKey: ${e.message}")
+            log.warn("Failed to check Jira labels for $ticketKey: ${e.message}")
             false
         }
     }
@@ -109,18 +109,18 @@ class JiraApiService(
                 accept(ContentType.Application.Json)
             }
             if (!response.status.isSuccess()) {
-                log.warning("Jira API returned ${response.status} for $ticketKey content fetch")
+                log.warn("Jira API returned ${response.status} for $ticketKey content fetch")
                 return null
             }
             val body = response.body<JiraIssueContentResponse>()
             val fields = body.fields ?: run {
-                log.warning("Jira response for $ticketKey had no fields")
+                log.warn("Jira response for $ticketKey had no fields")
                 return null
             }
             val description = fields.description?.let { extractText(it) }.orEmpty()
             "**$ticketKey: ${fields.summary}**\n\n$description"
         } catch (e: Exception) {
-            log.warning("Failed to fetch ticket content for $ticketKey: ${e.message}")
+            log.warn("Failed to fetch ticket content for $ticketKey: ${e.message}")
             null
         }
     }
@@ -132,13 +132,13 @@ class JiraApiService(
                 accept(ContentType.Application.Json)
             }
             if (!response.status.isSuccess()) {
-                log.warning("Jira API returned ${response.status} for $ticketKey status fetch")
+                log.warn("Jira API returned ${response.status} for $ticketKey status fetch")
                 return null
             }
             val body = response.body<JiraIssueStatusResponse>()
             body.fields?.status?.name
         } catch (e: Exception) {
-            log.warning("Failed to fetch ticket status for $ticketKey: ${e.message}")
+            log.warn("Failed to fetch ticket status for $ticketKey: ${e.message}")
             null
         }
     }
@@ -155,10 +155,10 @@ class JiraApiService(
                 setBody(payload)
             }
             if (!response.status.isSuccess()) {
-                log.warning("[$ticketKey] Failed to post Jira comment: ${response.status} — ${response.bodyAsText()}")
+                log.warn("[$ticketKey] Failed to post Jira comment: ${response.status} — ${response.bodyAsText()}")
             }
         } catch (e: Exception) {
-            log.warning("[$ticketKey] Failed to post Jira comment: ${e.message}")
+            log.warn("[$ticketKey] Failed to post Jira comment: ${e.message}")
         }
     }
 

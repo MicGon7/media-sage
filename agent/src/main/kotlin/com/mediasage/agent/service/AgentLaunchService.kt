@@ -9,7 +9,8 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import java.util.concurrent.ConcurrentHashMap
-import java.util.logging.Logger
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 private const val BOOTSTRAP_PROMPT_WITH_CONTENT =
     "Your assigned ticket is %s.\n\n## Ticket\n%s\n\n" +
@@ -49,7 +50,7 @@ open class AgentLaunchService(
     private val jiraStatusChecker: JiraTicketStatusChecker? = null
 ) {
 
-    private val log = Logger.getLogger(AgentLaunchService::class.java.name)
+    private val log = LoggerFactory.getLogger(AgentLaunchService::class.java)
 
     // Atomic dedup gate — Set.add() returns false if key already present, in one operation.
     // This prevents the TOCTOU race condition that ConcurrentHashMap.containsKey() + put() would have.
@@ -130,7 +131,7 @@ open class AgentLaunchService(
             cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt)
         } catch (e: Exception) {
             cloudRun.jobs.markFailed(jobId)
-            log.warning("[$ticketKey] dispatch error: ${e.message}")
+            log.warn("[$ticketKey] dispatch error: ${e.message}")
         }
     }
 
@@ -144,7 +145,7 @@ open class AgentLaunchService(
         runningJobs.forEach { job ->
             val executionName = job.executionName
             if (executionName == null) {
-                log.warning("[${job.ticketKey}] RUNNING job ${job.jobId} has no execution name — marking INTERRUPTED")
+                log.warn("[${job.ticketKey}] RUNNING job ${job.jobId} has no execution name — marking INTERRUPTED")
                 cloudRun.jobs.markInterrupted(job.jobId)
                 postInterruptedComment(job.ticketKey, jiraCommentPoster)
                 return@forEach
@@ -212,10 +213,10 @@ open class AgentLaunchService(
             .redirectError(ProcessBuilder.Redirect.INHERIT)
             .start()
             .waitFor()
-        if (exitCode != 0) log.warning("Worktree creation failed at $path — running agent in repoPath.")
+        if (exitCode != 0) log.warn("Worktree creation failed at $path — running agent in repoPath.")
         exitCode == 0
     } catch (e: Exception) {
-        log.warning("Worktree creation failed at $path: ${e.message}. Running agent in repoPath.")
+        log.warn("Worktree creation failed at $path: ${e.message}. Running agent in repoPath.")
         false
     }
 
@@ -258,7 +259,7 @@ open class AgentLaunchService(
                     .start()
                     .waitFor()
             } catch (e: Exception) {
-                log.warning("Failed to post inline comment reply on PR#$prNumber: ${e.message}")
+                log.warn("Failed to post inline comment reply on PR#$prNumber: ${e.message}")
             }
         }
     }
@@ -283,7 +284,7 @@ open class AgentLaunchService(
                 if (milestone != null) {
                     milestone.lines().forEach { log.info("[$key] $it") }
                 } else {
-                    log.warning("[$key] $line")
+                    log.warn("[$key] $line")
                 }
             }
         }
@@ -321,7 +322,7 @@ open class AgentLaunchService(
         } catch (e: Exception) {
             activeKeys.remove(key)
             activeRuns.remove(key)
-            log.warning("Failed to launch agent for $key: ${e.message}")
+            log.warn("Failed to launch agent for $key: ${e.message}")
         }
         return true
     }
@@ -337,7 +338,7 @@ private suspend fun shouldSkipInterrupted(
     ticketKey: String,
     cloudRun: CloudRunDispatch,
     checker: JiraTicketStatusChecker?,
-    log: java.util.logging.Logger
+    log: Logger
 ): Boolean {
     if (checker == null) return false
     val latestJob = cloudRun.jobs.findLatestJob(ticketKey) ?: return false
@@ -368,7 +369,7 @@ private suspend fun postInterruptedComment(ticketKey: String, poster: JiraCommen
     )
 }
 
-private fun requestReview(prNumber: Int, reviewerLogin: String, repoPath: String, log: java.util.logging.Logger) {
+private fun requestReview(prNumber: Int, reviewerLogin: String, repoPath: String, log: Logger) {
     try {
         ProcessBuilder("gh", "pr", "review-request", prNumber.toString(), "--reviewer", reviewerLogin)
             .directory(java.io.File(repoPath))
@@ -378,7 +379,7 @@ private fun requestReview(prNumber: Int, reviewerLogin: String, repoPath: String
             .start()
             .waitFor()
     } catch (e: Exception) {
-        log.warning("Failed to re-request review on PR#$prNumber: ${e.message}")
+        log.warn("Failed to re-request review on PR#$prNumber: ${e.message}")
     }
 }
 

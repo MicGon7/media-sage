@@ -19,7 +19,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single { buildHttpClient() }
@@ -35,7 +35,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
         val cloudRun = try {
             buildCloudRunDispatch(config, get())
         } catch (e: Exception) {
-            Logger.getLogger("AgentModule").warning("Cloud Run dispatch disabled: ${e.message}")
+            LoggerFactory.getLogger("AgentModule").warn("Cloud Run dispatch disabled: ${e.message}")
             null
         }
         val briefing = if (config.useCloudRunWorkers && config.agentBriefingEnabled) AgentBriefing(config.repoPath) else null

@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.koin.ktor.ext.inject
 import java.security.MessageDigest
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -76,7 +76,7 @@ private data class WebhookContext(
     val reviewerLogin: String
 )
 
-private val log = Logger.getLogger("GitHubWebhookRoutes")
+private val log = LoggerFactory.getLogger("GitHubWebhookRoutes")
 private val ticketKeyRegex = Regex("[A-Z]+-\\d+")
 private val webhookJson = Json { ignoreUnknownKeys = true }
 fun Route.githubWebhookRoutes(webhookSecret: String) {
