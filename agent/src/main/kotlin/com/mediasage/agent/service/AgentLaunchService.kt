@@ -63,50 +63,74 @@ open class AgentLaunchService(
         } else {
             BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
         }
-        val briefing = if (agentBriefing != null && ticketContent != null) {
-            agentBriefing.prepare(ticketKey, ticketContent)
-        } else {
-            ""
-        }
-        val prompt = if (briefing.isNotBlank()) {
-            "$basePrompt\n\n## Agent Briefing\n$briefing"
-        } else {
-            basePrompt
-        }
         return if (cloudRun != null) {
-            dispatchToCloudRun(ticketKey, prompt, cloudRun, dryRun)
+            dispatchToCloudRun(ticketKey, basePrompt, ticketContent, cloudRun, dryRun)
         } else {
+            val briefing = if (agentBriefing != null && ticketContent != null) {
+                agentBriefing.prepare(ticketKey, ticketContent)
+            } else {
+                ""
+            }
+            val prompt = if (briefing.isNotBlank()) "$basePrompt\n\n## Agent Briefing\n$briefing" else basePrompt
             dispatchToLocalProcess(ticketKey, prompt)
         }
     }
 
     private fun dispatchToCloudRun(
         ticketKey: String,
-        prompt: String,
+        basePrompt: String,
+        ticketContent: String?,
         cloudRun: CloudRunDispatch,
         dryRun: Boolean = false
     ): Boolean {
+        // activeKeys is the synchronous in-process gate. It prevents the TOCTOU race where
+        // two concurrent webhooks both pass shouldDispatch() before either inserts a DB row.
+        // shouldDispatch() remains the persistent cross-restart gate.
+        if (!activeKeys.add(ticketKey)) {
+            log.info("[$ticketKey] already in flight — ignoring duplicate webhook")
+            return false
+        }
         scope.launch {
-            if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
-                log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
-                return@launch
-            }
-            val jobId = cloudRun.jobs.insert(ticketKey, prompt)
-            if (dryRun) {
-                log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
-                cloudRun.jobs.markFailed(jobId)
-                return@launch
-            }
-            log.info("[$ticketKey] job $jobId inserted — dispatching to Cloud Run")
             try {
-                cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt)
-            } catch (e: Exception) {
-                cloudRun.jobs.markFailed(jobId)
-                log.warning("[$ticketKey] dispatch error: ${e.message}")
+                doDispatch(ticketKey, basePrompt, ticketContent, cloudRun, dryRun)
+            } finally {
+                activeKeys.remove(ticketKey)
             }
         }
         return true
     }
+
+    private suspend fun doDispatch(
+        ticketKey: String,
+        basePrompt: String,
+        ticketContent: String?,
+        cloudRun: CloudRunDispatch,
+        dryRun: Boolean
+    ) {
+        if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
+            log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
+            return
+        }
+        // Dedup passed — safe to run AgentBriefing now (costs tokens, must not run on duplicates).
+        val briefing = if (agentBriefing != null && ticketContent != null) {
+            agentBriefing.prepare(ticketKey, ticketContent)
+        } else { "" }
+        val prompt = if (briefing.isNotBlank()) "$basePrompt\n\n## Agent Briefing\n$briefing" else basePrompt
+        val jobId = cloudRun.jobs.insert(ticketKey, prompt)
+        if (dryRun) {
+            log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
+            cloudRun.jobs.markFailed(jobId)
+            return
+        }
+        log.info("[$ticketKey] job $jobId inserted — dispatching to Cloud Run")
+        try {
+            cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt)
+        } catch (e: Exception) {
+            cloudRun.jobs.markFailed(jobId)
+            log.warning("[$ticketKey] dispatch error: ${e.message}")
+        }
+    }
+
 
     suspend fun recoverInterruptedJobs() {
         val cloudRun = cloudRun ?: return
@@ -158,23 +182,9 @@ open class AgentLaunchService(
             workDir = if (worktreeCreated) File(worktreePath) else File(repoPath),
             teardown = {
                 if (worktreeCreated) removeWorktree(worktreePath)
-                requestReview(prNumber, reviewerLogin)
+                requestReview(prNumber, reviewerLogin, repoPath, log)
             }
         )
-    }
-
-    private fun requestReview(prNumber: Int, reviewerLogin: String) {
-        try {
-            ProcessBuilder("gh", "pr", "review-request", prNumber.toString(), "--reviewer", reviewerLogin)
-                .directory(File(repoPath))
-                .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
-                .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-                .redirectError(ProcessBuilder.Redirect.INHERIT)
-                .start()
-                .waitFor()
-        } catch (e: Exception) {
-            log.warning("Failed to re-request review on PR#$prNumber: ${e.message}")
-        }
     }
 
     /**
@@ -319,6 +329,20 @@ private suspend fun postInterruptedComment(ticketKey: String, poster: JiraCommen
         "⚠️ The agent job for this ticket was interrupted during an orchestrator restart. " +
             "To re-trigger, move the ticket back to **In Progress**."
     )
+}
+
+private fun requestReview(prNumber: Int, reviewerLogin: String, repoPath: String, log: java.util.logging.Logger) {
+    try {
+        ProcessBuilder("gh", "pr", "review-request", prNumber.toString(), "--reviewer", reviewerLogin)
+            .directory(java.io.File(repoPath))
+            .redirectInput(ProcessBuilder.Redirect.from(java.io.File("/dev/null")))
+            .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+            .redirectError(ProcessBuilder.Redirect.INHERIT)
+            .start()
+            .waitFor()
+    } catch (e: Exception) {
+        log.warning("Failed to re-request review on PR#$prNumber: ${e.message}")
+    }
 }
 
 private fun claudeCommand(prompt: String) = listOf(

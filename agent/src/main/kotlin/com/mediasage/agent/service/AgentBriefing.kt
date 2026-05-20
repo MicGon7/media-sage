@@ -1,5 +1,7 @@
 package com.mediasage.agent.service
 
+import java.io.File
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
@@ -35,40 +37,51 @@ class AgentBriefing(
     private val log = Logger.getLogger(AgentBriefing::class.java.name)
 
     fun prepare(ticketKey: String, ticketContent: String): String {
-        val prompt = BRIEFING_PROMPT.format(ticketKey, ticketContent)
+        log.info("[$ticketKey] AgentBriefing starting (timeout ${timeoutSeconds}s)...")
         return try {
-            val pb = ProcessBuilder("claude", "-p", prompt, "--max-turns", "3", "--output-format", "text")
-                .directory(java.io.File(repoPath))
-                .redirectErrorStream(true)
-
-            // Inherit auth env vars so the subprocess can authenticate.
-            // In the Cloud Run worker these come from the container environment.
-            // Locally they may not be in the shell env if stored only in settings.json.
-            val env = pb.environment()
-            System.getenv("ANTHROPIC_AUTH_TOKEN")?.let { env["ANTHROPIC_AUTH_TOKEN"] = it }
-            System.getenv("ANTHROPIC_BASE_URL")?.let { env["ANTHROPIC_BASE_URL"] = it }
-            System.getenv("ANTHROPIC_API_KEY")?.let { env["ANTHROPIC_API_KEY"] = it }
-
-            val process = pb.start()
-
-            val completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
-            if (!completed) {
-                process.destroyForcibly()
-                log.warning("[$ticketKey] AgentBriefing timed out after ${timeoutSeconds}s — proceeding without briefing")
-                return ""
-            }
-
-            val output = process.inputStream.bufferedReader().readText().trim()
-            if (process.exitValue() != 0 || output.isBlank()) {
-                log.warning("[$ticketKey] AgentBriefing exited with code ${process.exitValue()} — proceeding without briefing")
-                return ""
-            }
-
+            val process = buildProcess(ticketKey, ticketContent)
+            val output = readOutput(ticketKey, process) ?: return ""
             log.info("[$ticketKey] AgentBriefing prepared (${output.length} chars)")
             output
         } catch (e: Exception) {
             log.warning("[$ticketKey] AgentBriefing failed: ${e.message} — proceeding without briefing")
             ""
         }
+    }
+
+    private fun buildProcess(ticketKey: String, ticketContent: String): Process {
+        val prompt = BRIEFING_PROMPT.format(ticketKey, ticketContent)
+        val pb = ProcessBuilder("claude", "-p", prompt, "--max-turns", "3", "--output-format", "text")
+            .directory(File(repoPath))
+            .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
+            .redirectErrorStream(true)
+        // Inherit auth env vars so the subprocess can authenticate.
+        val env = pb.environment()
+        System.getenv("ANTHROPIC_AUTH_TOKEN")?.let { env["ANTHROPIC_AUTH_TOKEN"] = it }
+        System.getenv("ANTHROPIC_BASE_URL")?.let { env["ANTHROPIC_BASE_URL"] = it }
+        System.getenv("ANTHROPIC_API_KEY")?.let { env["ANTHROPIC_API_KEY"] = it }
+        return pb.start()
+    }
+
+    private fun readOutput(ticketKey: String, process: Process): String? {
+        // Read output on a separate thread — avoids pipe buffer deadlock if output is large,
+        // and lets waitFor() enforce the timeout independently.
+        val executor = Executors.newSingleThreadExecutor()
+        val outputFuture = executor.submit<String> { process.inputStream.bufferedReader().readText() }
+        executor.shutdown()
+
+        val completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
+        if (!completed) {
+            process.destroyForcibly()
+            log.warning("[$ticketKey] AgentBriefing timed out after ${timeoutSeconds}s — proceeding without briefing")
+            return null
+        }
+        val output = outputFuture.get().trim()
+        if (process.exitValue() != 0 || output.isBlank()) {
+            log.warning("[$ticketKey] AgentBriefing exited with code ${process.exitValue()} — " +
+                "proceeding without briefing. Output: ${output.take(500)}")
+            return null
+        }
+        return output
     }
 }
