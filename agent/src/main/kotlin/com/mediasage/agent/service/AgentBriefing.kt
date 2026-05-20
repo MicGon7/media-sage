@@ -29,7 +29,7 @@ Ticket: %s
  */
 class AgentBriefing(
     private val repoPath: String,
-    private val timeoutSeconds: Long = 60L
+    private val timeoutSeconds: Long = 120L
 ) {
 
     private val log = Logger.getLogger(AgentBriefing::class.java.name)
@@ -37,10 +37,19 @@ class AgentBriefing(
     fun prepare(ticketKey: String, ticketContent: String): String {
         val prompt = BRIEFING_PROMPT.format(ticketKey, ticketContent)
         return try {
-            val process = ProcessBuilder("claude", "-p", prompt, "--max-turns", "3", "--output-format", "text")
+            val pb = ProcessBuilder("claude", "-p", prompt, "--max-turns", "3", "--output-format", "text")
                 .directory(java.io.File(repoPath))
                 .redirectErrorStream(true)
-                .start()
+
+            // Inherit auth env vars so the subprocess can authenticate.
+            // In the Cloud Run worker these come from the container environment.
+            // Locally they may not be in the shell env if stored only in settings.json.
+            val env = pb.environment()
+            System.getenv("ANTHROPIC_AUTH_TOKEN")?.let { env["ANTHROPIC_AUTH_TOKEN"] = it }
+            System.getenv("ANTHROPIC_BASE_URL")?.let { env["ANTHROPIC_BASE_URL"] = it }
+            System.getenv("ANTHROPIC_API_KEY")?.let { env["ANTHROPIC_API_KEY"] = it }
+
+            val process = pb.start()
 
             val completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
             if (!completed) {
