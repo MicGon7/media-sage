@@ -37,6 +37,7 @@ class AgentBriefing(
 
     fun prepare(ticketKey: String, ticketContent: String): String {
         val prompt = BRIEFING_PROMPT.format(ticketKey, ticketContent)
+        log.info("[$ticketKey] AgentBriefing starting (timeout ${timeoutSeconds}s)...")
         return try {
             val pb = ProcessBuilder("claude", "-p", prompt, "--max-turns", "3", "--output-format", "text")
                 .directory(java.io.File(repoPath))
