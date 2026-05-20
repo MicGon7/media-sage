@@ -19,6 +19,15 @@ data class JobRow(
     val executionName: String?
 )
 
+data class JobDurationRow(
+    val jobId: UUID,
+    val ticketKey: String,
+    val status: JobStatus,
+    val durationSeconds: Int?,
+    val startedAt: Instant?,
+    val completedAt: Instant?
+)
+
 class JobRepository : JobRegistry {
 
     override suspend fun shouldDispatch(ticketKey: String): Boolean = withContext(Dispatchers.IO) {
@@ -119,6 +128,30 @@ class JobRepository : JobRegistry {
                         executionName = it[JobsTable.executionName]
                     )
                 }
+        }
+    }
+
+    suspend fun getJobDurations(): List<JobDurationRow> = withContext(Dispatchers.IO) {
+        transaction {
+            exec(
+                "SELECT job_id, ticket_key, status, duration_seconds, started_at, completed_at FROM job_durations ORDER BY started_at DESC"
+            ) { rs ->
+                val results = mutableListOf<JobDurationRow>()
+                while (rs.next()) {
+                    val durationSeconds = rs.getInt("duration_seconds").takeIf { !rs.wasNull() }
+                    results.add(
+                        JobDurationRow(
+                            jobId = rs.getObject("job_id", UUID::class.java),
+                            ticketKey = rs.getString("ticket_key"),
+                            status = JobStatus.valueOf(rs.getString("status")),
+                            durationSeconds = durationSeconds,
+                            startedAt = rs.getTimestamp("started_at")?.toInstant(),
+                            completedAt = rs.getTimestamp("completed_at")?.toInstant()
+                        )
+                    )
+                }
+                results
+            } ?: emptyList()
         }
     }
 }
