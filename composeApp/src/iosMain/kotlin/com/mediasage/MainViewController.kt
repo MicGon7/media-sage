@@ -24,4 +24,5 @@ fun initKoin(supabaseUrl: String, supabaseAnonKey: String) {
     }
 }
 
-fun MainViewController(isDebugBuild: Boolean = false) = ComposeUIViewController { App(isDebugBuild = isDebugBuild) }
+fun MainViewController(isDebugBuild: Boolean = false, appVersion: String = "") =
+    ComposeUIViewController { App(isDebugBuild = isDebugBuild, appVersion = appVersion) }
