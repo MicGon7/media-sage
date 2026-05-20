@@ -113,26 +113,7 @@ open class AgentLaunchService(
             log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
             return
         }
-        // For INTERRUPTED jobs, check Jira before re-dispatching — the worker may have
-        // finished its work before the orchestrator restarted.
-        if (jiraStatusChecker != null) {
-            val latestJob = cloudRun.jobs.findLatestJob(ticketKey)
-            if (latestJob?.status == JobStatus.INTERRUPTED) {
-                val jiraStatus = jiraStatusChecker.getTicketStatus(ticketKey)
-                when (jiraStatus) {
-                    "In Review", "Done" -> {
-                        log.info("[$ticketKey] INTERRUPTED job, Jira='$jiraStatus' — marking COMPLETED, skipping dispatch")
-                        cloudRun.jobs.markCompleted(latestJob.jobId)
-                        return
-                    }
-                    "To Do" -> {
-                        log.info("[$ticketKey] INTERRUPTED job, Jira='To Do' — ticket reset manually, skipping dispatch")
-                        return
-                    }
-                    else -> log.info("[$ticketKey] INTERRUPTED job, Jira='$jiraStatus' — re-dispatching")
-                }
-            }
-        }
+        if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
         // Dedup passed — safe to run AgentBriefing now (costs tokens, must not run on duplicates).
         val briefing = if (agentBriefing != null && ticketContent != null) {
             agentBriefing.prepare(ticketKey, ticketContent)
@@ -152,6 +133,7 @@ open class AgentLaunchService(
             log.warning("[$ticketKey] dispatch error: ${e.message}")
         }
     }
+
 
 
     suspend fun recoverInterruptedJobs() {
@@ -342,6 +324,39 @@ open class AgentLaunchService(
             log.warning("Failed to launch agent for $key: ${e.message}")
         }
         return true
+    }
+}
+
+/**
+ * Returns true if an INTERRUPTED job should be skipped rather than re-dispatched.
+ * Checks Jira ticket status — if the worker finished (In Review/Done) before the
+ * orchestrator restarted, we mark the row COMPLETED and skip. If the ticket was
+ * manually reset to To Do, we also skip (human must explicitly re-trigger).
+ */
+private suspend fun shouldSkipInterrupted(
+    ticketKey: String,
+    cloudRun: CloudRunDispatch,
+    checker: JiraTicketStatusChecker?,
+    log: java.util.logging.Logger
+): Boolean {
+    if (checker == null) return false
+    val latestJob = cloudRun.jobs.findLatestJob(ticketKey) ?: return false
+    if (latestJob.status != JobStatus.INTERRUPTED) return false
+    val jiraStatus = checker.getTicketStatus(ticketKey)
+    return when (jiraStatus) {
+        "In Review", "Done" -> {
+            log.info("[$ticketKey] INTERRUPTED job, Jira='$jiraStatus' — marking COMPLETED, skipping dispatch")
+            cloudRun.jobs.markCompleted(latestJob.jobId)
+            true
+        }
+        "To Do" -> {
+            log.info("[$ticketKey] INTERRUPTED job, Jira='To Do' — ticket reset manually, skipping dispatch")
+            true
+        }
+        else -> {
+            log.info("[$ticketKey] INTERRUPTED job, Jira='$jiraStatus' — re-dispatching")
+            false
+        }
     }
 }
 
