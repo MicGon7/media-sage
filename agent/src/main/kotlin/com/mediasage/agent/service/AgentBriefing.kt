@@ -40,6 +40,7 @@ class AgentBriefing(
         return try {
             val pb = ProcessBuilder("claude", "-p", prompt, "--max-turns", "3", "--output-format", "text")
                 .directory(java.io.File(repoPath))
+                .redirectInput(ProcessBuilder.Redirect.from(java.io.File("/dev/null")))
                 .redirectErrorStream(true)
 
             // Inherit auth env vars so the subprocess can authenticate.
