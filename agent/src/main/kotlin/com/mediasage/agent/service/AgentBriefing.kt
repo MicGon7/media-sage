@@ -29,7 +29,7 @@ Ticket: %s
  */
 class AgentBriefing(
     private val repoPath: String,
-    private val timeoutSeconds: Long = 120L
+    private val timeoutSeconds: Long = 180L
 ) {
 
     private val log = Logger.getLogger(AgentBriefing::class.java.name)
