@@ -93,8 +93,7 @@ run_tests() {
         echo "Running targeted tests for ${task}: ${classes[*]}"
         ./gradlew --no-daemon "$task" "${filter_args[@]}"
     else
-        echo "Running full test suite for ${task} (no direct test mapping found)"
-        ./gradlew --no-daemon "$task"
+        echo "No direct test mapping found for ${task} — delegating to CI."
     fi
 }
 
