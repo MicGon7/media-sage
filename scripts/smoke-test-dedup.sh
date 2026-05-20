@@ -60,18 +60,15 @@ insert_job() {
               VALUES ('$TICKET_KEY', 'smoke test', '$status', now());" > /dev/null
 }
 
-# shellcheck disable=SC2120
 fire_webhook() {
     local use_dry_run="${1:-false}"
-    local dry_run_header=""
+    local curl_args=(-s -o /dev/null -w "%{http_code}" -X POST "$WEBHOOK_URL" \
+        -H "Content-Type: application/json")
     if [ "$use_dry_run" = "true" ]; then
-        dry_run_header="-H \"X-Dry-Run: true\""
+        curl_args+=(-H "X-Dry-Run: true")
     fi
     local status_code
-    status_code=$(eval curl -s -o /dev/null -w "%{http_code}" -X POST "$WEBHOOK_URL" \
-        -H "Content-Type: application/json" \
-        $dry_run_header \
-        -d "{
+    status_code=$(curl "${curl_args[@]}" -d "{
               \"webhookEvent\": \"jira:issue_updated\",
               \"issue\": {
                 \"key\": \"$TICKET_KEY\",

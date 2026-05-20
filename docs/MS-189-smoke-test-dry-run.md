@@ -41,6 +41,26 @@ This means dry-run mode fully exercises the dedup logic (including the DB state 
 ./scripts/smoke-test-dedup.sh
 ```
 
+## Gotcha: Don't use `eval` to conditionally add curl flags
+
+The initial implementation used `eval` to conditionally inject the `X-Dry-Run` header:
+
+```bash
+status_code=$(eval curl ... $dry_run_header -d "{...}")
+```
+
+`eval` caused the JSON body to be interpreted as shell commands, producing errors like `webhookEvent:: command not found`. The fix was to use a bash array instead:
+
+```bash
+local curl_args=(-s -o /dev/null ...)
+if [ "$use_dry_run" = "true" ]; then
+    curl_args+=(-H "X-Dry-Run: true")
+fi
+curl "${curl_args[@]}" -d "{...}"
+```
+
+Arrays are the idiomatic bash pattern for building dynamic argument lists safely.
+
 ## Key Learnings
 
 - **Always add a dry-run mode to tests that trigger external side effects.** The smoke test was designed to verify dedup logic, not to dispatch real jobs — but it did so implicitly.
