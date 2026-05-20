@@ -1,5 +1,6 @@
 package com.mediasage.agent.service
 
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
@@ -51,6 +52,14 @@ class AgentBriefing(
 
             val process = pb.start()
 
+            // Read output on a separate thread — avoids pipe buffer deadlock if output is large,
+            // and lets waitFor() enforce the timeout independently.
+            val executor = Executors.newSingleThreadExecutor()
+            val outputFuture = executor.submit<String> {
+                process.inputStream.bufferedReader().readText()
+            }
+            executor.shutdown()
+
             val completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
             if (!completed) {
                 process.destroyForcibly()
@@ -58,9 +67,9 @@ class AgentBriefing(
                 return ""
             }
 
-            val output = process.inputStream.bufferedReader().readText().trim()
+            val output = outputFuture.get().trim()
             if (process.exitValue() != 0 || output.isBlank()) {
-                log.warning("[$ticketKey] AgentBriefing exited with code ${process.exitValue()} — proceeding without briefing")
+                log.warning("[$ticketKey] AgentBriefing exited with code ${process.exitValue()} — proceeding without briefing. Output: ${output.take(500)}")
                 return ""
             }
 
