@@ -189,6 +189,11 @@ source ~/.zshrc && ./gradlew :agent:run
 # Build agent container image locally
 docker build -f agent/Dockerfile -t media-sage-agent .
 
+# Build worker image for Cloud Run (must target linux/amd64 — Cloud Run rejects multi-arch manifests)
+docker build --platform linux/amd64 -f Dockerfile.worker \
+  -t us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:latest .
+docker push us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:latest
+
 # Run agent container locally (replace values as needed)
 docker run -p 8081:8081 \
   -e ANTHROPIC_API_KEY=... \
