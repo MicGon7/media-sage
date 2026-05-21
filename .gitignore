@@ -25,6 +25,7 @@ Thumbs.db
 .env
 *.local
 local.properties
+.mcp.json
 
 # KMP
 /composeApp/build/

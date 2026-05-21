@@ -21,21 +21,32 @@ RUN useradd -m -s /bin/bash agent
 USER agent
 WORKDIR /home/agent
 
-# Pre-bake the Gradle distribution, internal API jars, and all :agent + :server
-# runtime/test dependencies into the image layer at build time.
-# --configure-on-demand ensures Android/iOS modules are never evaluated here —
-# there is no Android SDK in this image and it is not needed by the worker.
+# Pre-bake the Gradle distribution, internal API jars, and all module dependencies
+# into the image layer at build time. Covers :agent, :server, :composeApp, and :shared.
+#
+# Why single-stage (no Android SDK or Kotlin/Native toolchain needed):
+#   - AGP resolves :composeApp dependencies without the Android SDK at config time
+#   - :shared has iosArm64/iosSimulatorArm64 targets but the dependencies task only
+#     downloads the kotlin-native-prebuilt Maven artifact (~245 MB) to .gradle/caches;
+#     it does NOT extract the 3 GB .konan toolchain directory
+#   - At runtime, if Gradle needs to configure native targets it extracts from the
+#     cached artifact (fast local I/O) rather than downloading over the network
+#
 # At runtime the worker makes zero Gradle downloads; everything resolves from
 # the image layer on the local container filesystem.
 COPY --chown=agent:agent gradlew gradlew
 COPY --chown=agent:agent gradle/ gradle/
+COPY --chown=agent:agent gradle.properties gradle.properties
 COPY --chown=agent:agent settings.gradle.kts settings.gradle.kts
 COPY --chown=agent:agent build.gradle.kts build.gradle.kts
 COPY --chown=agent:agent agent/build.gradle.kts agent/build.gradle.kts
 COPY --chown=agent:agent server/build.gradle.kts server/build.gradle.kts
+COPY --chown=agent:agent composeApp/build.gradle.kts composeApp/build.gradle.kts
+COPY --chown=agent:agent shared/build.gradle.kts shared/build.gradle.kts
 RUN chmod +x gradlew && \
     ./gradlew help --no-daemon && \
-    ./gradlew :agent:dependencies :server:dependencies --no-daemon --configure-on-demand && \
+    ./gradlew :agent:dependencies :server:dependencies :composeApp:dependencies :shared:dependencies \
+        --no-daemon --configure-on-demand && \
     rm -f gradlew && rm -rf gradle
 
 COPY --chown=agent:agent agent/worker-entrypoint.sh entrypoint.sh
