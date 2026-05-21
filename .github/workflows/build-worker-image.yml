@@ -13,6 +13,9 @@ on:
       - 'build.gradle.kts'
       - 'agent/build.gradle.kts'
       - 'server/build.gradle.kts'
+      - 'composeApp/build.gradle.kts'
+      - 'shared/build.gradle.kts'
+      - 'gradle.properties'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
