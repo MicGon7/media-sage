@@ -257,7 +257,7 @@ docker run -p 8081:8081 \
 ### Workflow
 1. Query Jira for assigned tickets: `project = MS AND labels in (assisted, autonomous) AND status = "To Do"`
 2. Create Jira ticket if new work (with acceptance criteria)
-3. Transition ticket to In Progress
+3. Transition ticket to In Progress — **skip in autonomous mode**: the human's In Progress transition fires the webhook; the ticket is already In Progress when the agent starts
 4. Create feature branch (`feature/MS-{ticket}-description`)
 5. Do the work
 6. Update Jira AC checkboxes
