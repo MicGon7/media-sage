@@ -7,7 +7,7 @@ interface JobRegistry {
     suspend fun findLatestJob(ticketKey: String): JobRow?
     suspend fun insert(ticketKey: String, prompt: String): UUID
     suspend fun markRunning(jobId: UUID, executionName: String)
-    suspend fun markCompleted(jobId: UUID)
+    suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics? = null)
     suspend fun markFailed(jobId: UUID)
     suspend fun markInterrupted(jobId: UUID)
     suspend fun findRunningJobs(): List<JobRow>

@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
@@ -86,11 +87,20 @@ class JobRepository : JobRegistry {
         Unit
     }
 
-    override suspend fun markCompleted(jobId: UUID) = withContext(Dispatchers.IO) {
+    override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
                 it[JobsTable.status] = JobStatus.COMPLETED.name
                 it[JobsTable.completedAt] = Instant.now()
+                if (metrics != null) {
+                    it[JobsTable.inputTokens] = metrics.inputTokens
+                    it[JobsTable.outputTokens] = metrics.outputTokens
+                    it[JobsTable.cacheReadTokens] = metrics.cacheReadTokens
+                    it[JobsTable.cacheCreationTokens] = metrics.cacheCreationTokens
+                    it[JobsTable.totalCostUsd] = BigDecimal.valueOf(metrics.totalCostUsd)
+                    it[JobsTable.claudeDurationMs] = metrics.durationMs
+                    it[JobsTable.numTurns] = metrics.numTurns
+                }
             }
         }
         Unit

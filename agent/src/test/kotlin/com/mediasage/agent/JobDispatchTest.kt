@@ -3,6 +3,7 @@ package com.mediasage.agent
 import com.mediasage.agent.db.JobRegistry
 import com.mediasage.agent.db.JobRow
 import com.mediasage.agent.db.JobStatus
+import com.mediasage.agent.db.WorkerMetrics
 import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.JobDispatcher
@@ -47,7 +48,7 @@ class JobDispatchTest {
             return UUID.randomUUID()
         }
         override suspend fun markRunning(jobId: UUID, executionName: String) = Unit
-        override suspend fun markCompleted(jobId: UUID) { completed.add(jobId) }
+        override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?) { completed.add(jobId) }
         override suspend fun markFailed(jobId: UUID) { failed.add(jobId) }
         override suspend fun markInterrupted(jobId: UUID) { interrupted.add(jobId) }
         override suspend fun findRunningJobs() = runningJobs

@@ -4,6 +4,7 @@ import com.mediasage.agent.db.AgentDatabase
 import com.mediasage.agent.db.JobRepository
 import com.mediasage.agent.service.AgentBriefing
 import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.CloudLoggingClient
 import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.CloudRunJobsClient
 import com.mediasage.agent.service.JiraApiService
@@ -59,13 +60,19 @@ private fun buildCloudRunDispatch(config: AgentConfig, httpClient: HttpClient): 
     if (config.supabaseDbUrl.isBlank()) return null
     AgentDatabase.init(config.supabaseDbUrl)
     val jobRepository = JobRepository()
+    val loggingClient = CloudLoggingClient(
+        httpClient = httpClient,
+        projectId = config.gcpProjectId,
+        credentialsJson = config.googleCredentialsJson
+    )
     val client = CloudRunJobsClient(
         httpClient = httpClient,
         projectId = config.gcpProjectId,
         region = config.gcpRegion,
         jobName = config.gcpJobName,
         credentialsJson = config.googleCredentialsJson,
-        jobRepository = jobRepository
+        jobRepository = jobRepository,
+        cloudLoggingClient = loggingClient
     )
     return CloudRunDispatch(client, jobRepository)
 }

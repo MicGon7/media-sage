@@ -66,7 +66,8 @@ class CloudRunJobsClient(
     private val region: String,
     private val jobName: String,
     private val credentialsJson: String,
-    private val jobRepository: JobRepository
+    private val jobRepository: JobRepository,
+    private val cloudLoggingClient: CloudLoggingClient
 ) : JobDispatcher {
 
     private val log = LoggerFactory.getLogger(CloudRunJobsClient::class.java)
@@ -154,8 +155,25 @@ class CloudRunJobsClient(
             jobRepository.markFailed(jobId)
             false
         } else {
-            log.info("[$ticketKey] Cloud Run job completed successfully")
-            jobRepository.markCompleted(jobId)
+            log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
+            val executionName = jobRepository.findLatestJob(ticketKey)?.executionName
+            val metrics = if (executionName != null) {
+                cloudLoggingClient.fetchMetrics(executionName).also { m ->
+                    if (m != null) {
+                        log.info(
+                            "[$ticketKey] Metrics: ${m.numTurns} turns, " +
+                                "${m.inputTokens + m.outputTokens} tokens, " +
+                                "\$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}"
+                        )
+                    } else {
+                        log.warn("[$ticketKey] Worker metrics unavailable — job marked complete without cost data")
+                    }
+                }
+            } else {
+                log.warn("[$ticketKey] No execution name found — skipping metrics fetch")
+                null
+            }
+            jobRepository.markCompleted(jobId, metrics)
             true
         }
     }
