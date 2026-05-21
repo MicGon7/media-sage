@@ -1,6 +1,6 @@
 package com.mediasage.agent.routes
 
-import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.AgentLauncher
 import com.mediasage.agent.service.JiraTicketFetcher
 import io.ktor.http.*
 import io.ktor.server.request.*
@@ -59,7 +59,7 @@ private val relevantEvents = setOf("jira:issue_created", "jira:issue_updated")
  */
 fun Route.webhookRoutes(botAccountId: String) {
     val log = LoggerFactory.getLogger("JiraWebhookRoutes")
-    val agentService by inject<AgentLaunchService>()
+    val agentService by inject<AgentLauncher>()
     val jiraFetcher by inject<JiraTicketFetcher>()
 
     post("/webhook/jira") {

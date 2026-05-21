@@ -3,15 +3,13 @@ package com.mediasage.agent
 import com.mediasage.agent.plugins.configureContentNegotiation
 import com.mediasage.agent.plugins.configureStatusPages
 import com.mediasage.agent.routes.githubWebhookRoutes
-import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.AgentLauncher
 import com.mediasage.agent.service.JiraLabelChecker
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import javax.crypto.Mac
@@ -105,7 +103,7 @@ class GitHubWebhookRouteTest {
 
     @Test
     fun uppercaseChangesRequestedFiresAgent() {
-        val tracking = TrackingAgentLaunchService()
+        val tracking = FakeAgentLauncher()
         testGitHubApp(jiraAutonomous = true, agentService = tracking) {
             val body = prReviewPayload(state = "CHANGES_REQUESTED", reviewBody = "Please fix this.")
             val response = client.post("/webhook/github") {
@@ -121,7 +119,7 @@ class GitHubWebhookRouteTest {
 
     @Test
     fun changesRequestedPassesReviewerLogin() {
-        val tracking = TrackingAgentLaunchService()
+        val tracking = FakeAgentLauncher()
         testGitHubApp(jiraAutonomous = true, agentService = tracking) {
             val body = prReviewPayload(state = "changes_requested", senderLogin = "jane-reviewer", reviewBody = "Please fix this.")
             val response = client.post("/webhook/github") {
@@ -137,7 +135,7 @@ class GitHubWebhookRouteTest {
 
     @Test
     fun commentedReviewFiresCommentAgent() {
-        val tracking = TrackingAgentLaunchService()
+        val tracking = FakeAgentLauncher()
         testGitHubApp(jiraAutonomous = true, agentService = tracking) {
             val body = prReviewPayload(state = "commented", reviewBody = "What does this function do?")
             val response = client.post("/webhook/github") {
@@ -166,7 +164,7 @@ class GitHubWebhookRouteTest {
 
     @Test
     fun inlineCommentPostsQuickReplyNotAgent() {
-        val tracking = TrackingAgentLaunchService()
+        val tracking = FakeAgentLauncher()
         testGitHubApp(agentService = tracking) {
             val body = reviewCommentPayload(commentBody = "Rename this variable for clarity.")
             val response = client.post("/webhook/github") {
@@ -263,13 +261,13 @@ private fun validSignature(secret: String, body: String): String {
 
 private fun testGitHubApp(
     jiraAutonomous: Boolean = true,
-    agentService: AgentLaunchService = AgentLaunchService(repoPath = "", scope = CoroutineScope(Dispatchers.IO)),
+    agentService: AgentLauncher = FakeAgentLauncher(),
     block: suspend ApplicationTestBuilder.() -> Unit
 ) = testApplication {
     application {
         install(Koin) {
             modules(module {
-                single { agentService }
+                single<AgentLauncher> { agentService }
                 single<JiraLabelChecker> { FakeJiraLabelChecker(jiraAutonomous) }
             })
         }
@@ -284,11 +282,13 @@ private class FakeJiraLabelChecker(private val autonomous: Boolean) : JiraLabelC
     override suspend fun isAutonomous(ticketKey: String) = autonomous
 }
 
-private class TrackingAgentLaunchService : AgentLaunchService(repoPath = "", scope = CoroutineScope(Dispatchers.IO)) {
+private class FakeAgentLauncher : AgentLauncher {
     var agentLaunches = 0
     var commentReviewLaunches = 0
     var inlineReplies = 0
     var lastReviewerLogin: String? = null
+
+    override fun launch(ticketKey: String, ticketContent: String?, dryRun: Boolean) = false
 
     override fun launchForPrReview(
         ticketKey: String, prNumber: Int, branchRef: String, commentBody: String, reviewerLogin: String
@@ -298,7 +298,9 @@ private class TrackingAgentLaunchService : AgentLaunchService(repoPath = "", sco
         return true
     }
 
-    override fun launchForCommentReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String): Boolean {
+    override fun launchForCommentReview(
+        ticketKey: String, prNumber: Int, branchRef: String, commentBody: String
+    ): Boolean {
         commentReviewLaunches++
         return true
     }

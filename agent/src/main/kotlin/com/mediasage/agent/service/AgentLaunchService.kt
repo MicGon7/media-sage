@@ -40,15 +40,16 @@ private const val PR_COMMENT_REVIEW_PROMPT =
  * Guards against double-firing: a second launch call for the same key is a no-op
  * until the first agent process exits.
  */
-open class AgentLaunchService(
+class AgentLaunchService(
     private val repoPath: String,
     private val scope: CoroutineScope,
     private val verboseLogging: Boolean = false,
     private val cloudRun: CloudRunDispatch? = null,
     private val jiraCommentPoster: JiraCommentPoster? = null,
     private val agentBriefing: AgentBriefing? = null,
-    private val jiraStatusChecker: JiraTicketStatusChecker? = null
-) {
+    private val jiraStatusChecker: JiraTicketStatusChecker? = null,
+    private val worktreeManager: WorktreeManager = DefaultWorktreeManager(repoPath)
+) : AgentLauncher {
 
     private val log = LoggerFactory.getLogger(AgentLaunchService::class.java)
 
@@ -60,7 +61,7 @@ open class AgentLaunchService(
     // Stored for future cancellation support.
     private val activeRuns = ConcurrentHashMap<String, Job>()
 
-    fun launch(ticketKey: String, ticketContent: String? = null, dryRun: Boolean = false): Boolean {
+    override fun launch(ticketKey: String, ticketContent: String?, dryRun: Boolean): Boolean {
         val basePrompt = if (ticketContent != null) {
             BOOTSTRAP_PROMPT_WITH_CONTENT.format(ticketKey, ticketContent)
         } else {
@@ -135,8 +136,6 @@ open class AgentLaunchService(
         }
     }
 
-
-
     suspend fun recoverInterruptedJobs() {
         val cloudRun = cloudRun ?: return
         val runningJobs = cloudRun.jobs.findRunningJobs()
@@ -162,12 +161,12 @@ open class AgentLaunchService(
         // each other's git state. We use --no-checkout because the agent creates its own
         // branch as its first action — there is no existing branch to check out yet.
         val worktreePath = "${repoPath}-worktrees/$ticketKey"
-        val worktreeCreated = createWorktree(worktreePath)
+        val worktreeCreated = worktreeManager.createWorktree(worktreePath)
         return spawnAgent(
             key = ticketKey,
             prompt = prompt,
             workDir = if (worktreeCreated) File(worktreePath) else File(repoPath),
-            teardown = { if (worktreeCreated) removeWorktree(worktreePath) }
+            teardown = { if (worktreeCreated) worktreeManager.removeWorktree(worktreePath) }
         )
     }
 
@@ -177,76 +176,39 @@ open class AgentLaunchService(
      * isolation and cannot switch branches in the developer's main checkout.
      * De-duplicates by PR number — a second call while one is running is a no-op.
      */
-    open fun launchForPrReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String, reviewerLogin: String): Boolean {
+    override fun launchForPrReview(
+        ticketKey: String,
+        prNumber: Int,
+        branchRef: String,
+        commentBody: String,
+        reviewerLogin: String
+    ): Boolean {
         val key = "PR-$prNumber"
         val worktreePath = "/tmp/media-sage-pr-$prNumber"
         val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
-        val worktreeCreated = createWorktree(worktreePath, branchRef)
+        val worktreeCreated = worktreeManager.createWorktree(worktreePath, branchRef)
         return spawnAgent(
             key, prompt,
             workDir = if (worktreeCreated) File(worktreePath) else File(repoPath),
             teardown = {
-                if (worktreeCreated) removeWorktree(worktreePath)
+                if (worktreeCreated) worktreeManager.removeWorktree(worktreePath)
                 requestReview(prNumber, reviewerLogin, repoPath, log)
             }
         )
     }
 
-    /**
-     * Creates a git worktree at [path].
-     *
-     * When [branchRef] is provided (PR review flow), the worktree checks out that existing branch.
-     * When [branchRef] is null (Jira ticket flow), --no-checkout is used — the agent creates
-     * its own branch as its first action, so there is nothing to check out yet.
-     *
-     * Returns true if the worktree was created successfully, false otherwise.
-     * On failure the caller falls back to running the agent in repoPath.
-     */
-    protected open fun createWorktree(path: String, branchRef: String? = null): Boolean = try {
-        val args = if (branchRef != null) {
-            listOf("git", "worktree", "add", path, branchRef)
-        } else {
-            listOf("git", "worktree", "add", "--no-checkout", path)
-        }
-        val exitCode = ProcessBuilder(args)
-            .directory(File(repoPath))
-            .redirectError(ProcessBuilder.Redirect.INHERIT)
-            .start()
-            .waitFor()
-        if (exitCode != 0) log.warn("Worktree creation failed at $path — running agent in repoPath.")
-        exitCode == 0
-    } catch (e: Exception) {
-        log.warn("Worktree creation failed at $path: ${e.message}. Running agent in repoPath.")
-        false
-    }
-
-    protected open fun removeWorktree(path: String) {
-        ProcessBuilder("git", "worktree", "remove", "--force", path)
-            .directory(File(repoPath))
-            .start()
-            .waitFor()
-    }
-
-    /**
-     * Builds and starts the agent process. Protected open so tests can substitute a
-     * controllable fake process without needing a real `claude` binary on the PATH.
-     *
-     * This follows the Template Method pattern: the algorithm lives in [spawnAgent],
-     * the specific command is the overridable implementation detail.
-     */
-    protected open fun buildAgentProcess(prompt: String, workDir: File): Process =
-        ProcessBuilder(claudeCommand(prompt))
-            .directory(workDir)
-            .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
-            .start()
-
-    open fun launchForCommentReview(ticketKey: String, prNumber: Int, branchRef: String, commentBody: String): Boolean {
+    override fun launchForCommentReview(
+        ticketKey: String,
+        prNumber: Int,
+        branchRef: String,
+        commentBody: String
+    ): Boolean {
         val key = "PR-$prNumber"
         val prompt = PR_COMMENT_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
         return spawnAgent(key, prompt, workDir = File(repoPath))
     }
 
-    open fun postInlineCommentReply(prNumber: Int) {
+    override fun postInlineCommentReply(prNumber: Int) {
         val body = "🤖 **Agent:** I noticed your inline comment. Please submit a formal review " +
             "with **Changes requested** and I'll address all your feedback in one pass."
         scope.launch(Dispatchers.IO) {
@@ -303,7 +265,7 @@ open class AgentLaunchService(
             return false
         }
         try {
-            val process = buildAgentProcess(prompt, workDir)
+            val process = worktreeManager.buildAgentProcess(prompt, workDir)
             log.info("Agent launched for $key (pid ${process.pid()}) in ${workDir.path}")
             pipeStreams(key, process)
             // activeKeys.add() succeeded above, so only this thread reaches here.
@@ -313,9 +275,11 @@ open class AgentLaunchService(
                     val exitCode = process.waitFor()
                     log.info("Agent for $key exited with code $exitCode")
                 } finally {
-                    teardown?.invoke()
+                    // Release the key before teardown so callers polling isActive() see the
+                    // release before any teardown side-effects (e.g. countdown latches) fire.
                     activeKeys.remove(key)
                     activeRuns.remove(key)
+                    teardown?.invoke()
                 }
             }
             activeRuns[key] = job
@@ -382,10 +346,3 @@ private fun requestReview(prNumber: Int, reviewerLogin: String, repoPath: String
         log.warn("Failed to re-request review on PR#$prNumber: ${e.message}")
     }
 }
-
-private fun claudeCommand(prompt: String) = listOf(
-    "claude", "-p", prompt,
-    "--dangerously-skip-permissions",
-    "--output-format", "stream-json",
-    "--verbose"
-)
