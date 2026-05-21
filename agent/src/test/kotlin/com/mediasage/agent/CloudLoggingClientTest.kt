@@ -114,4 +114,34 @@ class CloudLoggingClientTest {
         )
         assertNull(metrics)
     }
+
+    // ── jsonPayload path (API gateway) ────────────────────────────────────────
+
+    @Test
+    fun `fetchMetrics parses result event from jsonPayload with modelUsage fallback`() = runTest {
+        // Mirrors the real MS-180 log entry: jsonPayload with zeroed usage and
+        // per-model token counts in modelUsage (camelCase keys).
+        val loggingResponse = """
+            {"entries":[{"jsonPayload":{
+              "type":"result","total_cost_usd":2.0007,"duration_ms":1385655,"num_turns":47,
+              "usage":{"input_tokens":0,"output_tokens":0,"cache_read_input_tokens":0,"cache_creation_input_tokens":0},
+              "modelUsage":{
+                "claude-sonnet-4":{"inputTokens":9977,"outputTokens":38185,"cacheReadInputTokens":4653492,"cacheCreationInputTokens":0},
+                "claude-haiku-4-5":{"inputTokens":1832,"outputTokens":26,"cacheReadInputTokens":0,"cacheCreationInputTokens":0}
+              }
+            }}]}
+        """.trimIndent()
+
+        val metrics = client(mockClient(loggingResponse)).fetchMetrics(
+            "projects/p/locations/r/jobs/j/executions/j-gateway"
+        )
+
+        assertEquals(9977 + 1832, metrics?.inputTokens)
+        assertEquals(38185 + 26, metrics?.outputTokens)
+        assertEquals(4653492, metrics?.cacheReadTokens)
+        assertEquals(0, metrics?.cacheCreationTokens)
+        assertEquals(2.0007, metrics?.totalCostUsd)
+        assertEquals(1385655L, metrics?.durationMs)
+        assertEquals(47, metrics?.numTurns)
+    }
 }

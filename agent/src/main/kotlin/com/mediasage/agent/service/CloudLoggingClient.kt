@@ -93,19 +93,21 @@ class CloudLoggingClient(
 
     /**
      * Builds the Cloud Logging entries.list request body.
-     * Filters to textPayload entries containing the Claude Code `result` event marker.
+     *
+     * Filters by execution ID only — no payload-type constraint — because the Claude Code
+     * `result` event arrives as `textPayload` (raw JSON string) or `jsonPayload` (structured
+     * object) depending on the API gateway. `orderBy: timestamp desc` + `pageSize: 10`
+     * ensures the result event (always the last thing written) is in the first page.
      */
     private fun listEntriesBody(executionId: String): String {
-        val filter = """resource.type="cloud_run_job" """ +
-            """resource.labels.execution_id="$executionId" """ +
-            """textPayload=~"\"type\":\"result\""""
+        val filter = """resource.type="cloud_run_job" resource.labels.execution_id="$executionId""""
         val encodedFilter = json.encodeToString(JsonPrimitive.serializer(), JsonPrimitive(filter))
         return """{"resourceNames":["projects/$projectId"],"filter":$encodedFilter,"orderBy":"timestamp desc","pageSize":10}"""
     }
 
     /**
      * Walks the `entries` array from the Cloud Logging response and returns the first
-     * entry whose `textPayload` is a valid Claude Code `result` event.
+     * entry that is a Claude Code `result` event.
      */
     private fun parseMetricsFromResponse(responseBody: String): WorkerMetrics? {
         return runCatching {
@@ -118,24 +120,46 @@ class CloudLoggingClient(
     }
 
     /**
-     * Parses a single Cloud Logging entry. Returns [WorkerMetrics] if the entry's
-     * `textPayload` is a Claude Code `result` event, null otherwise.
+     * Parses a single Cloud Logging entry. Returns [WorkerMetrics] if the entry is a
+     * Claude Code `result` event, null otherwise.
+     *
+     * Handles two payload shapes:
+     * - `textPayload`: raw JSON string (direct Claude Code stdout, no API gateway)
+     * - `jsonPayload`: structured object (API gateway re-serialises the stream-json line)
+     *
+     * When the result comes via `jsonPayload`, the top-level `usage` token counts are
+     * zeroed out by the gateway. In that case we sum the per-model `modelUsage` entries
+     * which use camelCase keys (`inputTokens`, `cacheReadInputTokens`, etc.).
      */
     private fun parseResultEntry(entry: JsonObject): WorkerMetrics? {
-        val text = entry["textPayload"]?.jsonPrimitive?.content
-        val event = text?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
-        val usage = event?.takeIf { it["type"]?.jsonPrimitive?.content == "result" }?.get("usage")?.jsonObject
-        return usage?.let {
-            WorkerMetrics(
-                inputTokens = it["input_tokens"]?.jsonPrimitive?.int ?: 0,
-                outputTokens = it["output_tokens"]?.jsonPrimitive?.int ?: 0,
-                cacheReadTokens = it["cache_read_input_tokens"]?.jsonPrimitive?.int ?: 0,
-                cacheCreationTokens = it["cache_creation_input_tokens"]?.jsonPrimitive?.int ?: 0,
-                totalCostUsd = event["total_cost_usd"]?.jsonPrimitive?.double ?: 0.0,
-                durationMs = event["duration_ms"]?.jsonPrimitive?.long ?: 0L,
-                numTurns = event["num_turns"]?.jsonPrimitive?.int ?: 0
-            )
-        }
+        val event = entry["textPayload"]?.jsonPrimitive?.content
+            ?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
+            ?: entry["jsonPayload"]?.jsonObject
+
+        if (event?.get("type")?.jsonPrimitive?.content != "result") return null
+
+        val usage = event["usage"]?.jsonObject
+        val modelUsage = event["modelUsage"]?.jsonObject
+
+        // When top-level usage tokens are zeroed (gateway aggregation), fall back to summing modelUsage.
+        val inputTokens = usage?.get("input_tokens")?.jsonPrimitive?.int?.takeIf { it > 0 }
+            ?: modelUsage?.values?.sumOf { it.jsonObject["inputTokens"]?.jsonPrimitive?.int ?: 0 } ?: 0
+        val outputTokens = usage?.get("output_tokens")?.jsonPrimitive?.int?.takeIf { it > 0 }
+            ?: modelUsage?.values?.sumOf { it.jsonObject["outputTokens"]?.jsonPrimitive?.int ?: 0 } ?: 0
+        val cacheReadTokens = usage?.get("cache_read_input_tokens")?.jsonPrimitive?.int?.takeIf { it > 0 }
+            ?: modelUsage?.values?.sumOf { it.jsonObject["cacheReadInputTokens"]?.jsonPrimitive?.int ?: 0 } ?: 0
+        val cacheCreationTokens = usage?.get("cache_creation_input_tokens")?.jsonPrimitive?.int?.takeIf { it > 0 }
+            ?: modelUsage?.values?.sumOf { it.jsonObject["cacheCreationInputTokens"]?.jsonPrimitive?.int ?: 0 } ?: 0
+
+        return WorkerMetrics(
+            inputTokens = inputTokens,
+            outputTokens = outputTokens,
+            cacheReadTokens = cacheReadTokens,
+            cacheCreationTokens = cacheCreationTokens,
+            totalCostUsd = event["total_cost_usd"]?.jsonPrimitive?.double ?: 0.0,
+            durationMs = event["duration_ms"]?.jsonPrimitive?.long ?: 0L,
+            numTurns = event["num_turns"]?.jsonPrimitive?.int ?: 0
+        )
     }
 
     private fun accessToken(): String {
