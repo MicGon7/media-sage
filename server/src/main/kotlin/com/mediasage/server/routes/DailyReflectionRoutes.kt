@@ -49,7 +49,8 @@ data class DailyReflectionResponse(
     val scriptureText: String,
     val reflection: String,
     val sources: List<String>,
-    val tone: String
+    val tone: String,
+    val generatedAt: Long
 )
 
 private fun DailyReflectionResult.toResponse() = DailyReflectionResponse(
@@ -57,5 +58,6 @@ private fun DailyReflectionResult.toResponse() = DailyReflectionResponse(
     scriptureText = scriptureText,
     reflection = reflection,
     sources = sources,
-    tone = tone
+    tone = tone,
+    generatedAt = generatedAt
 )

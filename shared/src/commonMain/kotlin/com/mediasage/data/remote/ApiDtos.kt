@@ -115,7 +115,8 @@ data class DailyReflectionResponseDto(
     val scriptureText: String,
     val reflection: String,
     val sources: List<String>,
-    val tone: String
+    val tone: String,
+    val generatedAt: Long = 0L
 )
 
 // ---- Scripture endpoint DTOs ----

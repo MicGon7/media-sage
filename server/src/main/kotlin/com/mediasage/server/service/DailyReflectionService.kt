@@ -120,5 +120,6 @@ data class DailyReflectionResult(
     val scriptureText: String,
     val reflection: String,
     val sources: List<String>,
-    val tone: String
+    val tone: String,
+    val generatedAt: Long = System.currentTimeMillis()
 )
