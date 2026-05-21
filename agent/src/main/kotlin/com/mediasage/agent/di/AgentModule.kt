@@ -3,6 +3,7 @@ package com.mediasage.agent.di
 import com.mediasage.agent.db.AgentDatabase
 import com.mediasage.agent.db.JobRepository
 import com.mediasage.agent.service.AgentBriefing
+import com.mediasage.agent.service.AgentLauncher
 import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.CloudRunJobsClient
@@ -41,6 +42,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
         val briefing = if (config.useCloudRunWorkers && config.agentBriefingEnabled) AgentBriefing(config.repoPath) else null
         AgentLaunchService(config.repoPath, scope, config.verboseLogging, cloudRun, get(), briefing, get<JiraTicketStatusChecker>())
     }
+    single<AgentLauncher> { get<AgentLaunchService>() }
 }
 
 private fun buildHttpClient() = HttpClient(OkHttp) {

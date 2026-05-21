@@ -1,6 +1,6 @@
 package com.mediasage.agent.routes
 
-import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.AgentLauncher
 import com.mediasage.agent.service.JiraLabelChecker
 import io.ktor.http.*
 import io.ktor.server.request.*
@@ -80,7 +80,7 @@ private val log = LoggerFactory.getLogger("GitHubWebhookRoutes")
 private val ticketKeyRegex = Regex("[A-Z]+-\\d+")
 private val webhookJson = Json { ignoreUnknownKeys = true }
 fun Route.githubWebhookRoutes(webhookSecret: String) {
-    val agentService by inject<AgentLaunchService>()
+    val agentService by inject<AgentLauncher>()
     val jiraLabelChecker by inject<JiraLabelChecker>()
 
     post("/webhook/github") {
@@ -105,7 +105,7 @@ fun Route.githubWebhookRoutes(webhookSecret: String) {
 private suspend fun handleGitHubEvent(
     eventType: String,
     rawBody: ByteArray,
-    agentService: AgentLaunchService,
+    agentService: AgentLauncher,
     jiraLabelChecker: JiraLabelChecker
 ) {
     when (eventType) {

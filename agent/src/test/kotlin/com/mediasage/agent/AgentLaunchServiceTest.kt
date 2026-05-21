@@ -1,6 +1,7 @@
 package com.mediasage.agent
 
 import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.WorktreeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import java.io.File
@@ -16,11 +17,11 @@ import kotlin.test.assertTrue
 /**
  * Unit tests for AgentLaunchService.
  *
- * Strategy: each test creates an anonymous subclass that overrides the three
- * protected-open extension points:
+ * Strategy: each test injects a [FakeWorktreeManager] that controls the three
+ * OS-level extension points without spawning real git processes:
  *
- *   - createWorktree  — captures path/branchRef without running git
- *   - removeWorktree  — captures cleanup calls without running git
+ *   - createWorktree  — captures path/branchRef, returns a configurable result
+ *   - removeWorktree  — captures cleanup calls, invokes an optional callback
  *   - buildAgentProcess — returns a real but controlled OS process:
  *       • `cat`          blocks on stdin → process stays alive for concurrency tests
  *       • `sh -c exit 0` exits immediately → tests cleanup/teardown behaviour
@@ -45,6 +46,22 @@ class AgentLaunchServiceTest {
         activeProcesses.clear()
     }
 
+    // ── Fakes ─────────────────────────────────────────────────────────────────
+
+    private class FakeWorktreeManager(
+        private val createResult: Boolean = true,
+        private val onCreate: (path: String, branchRef: String?) -> Unit = { _, _ -> },
+        private val onRemove: (path: String) -> Unit = {},
+        private val processBuilder: () -> Process = { ProcessBuilder("sh", "-c", "exit 0").start() }
+    ) : WorktreeManager {
+        override fun createWorktree(path: String, branchRef: String?): Boolean {
+            onCreate(path, branchRef)
+            return createResult
+        }
+        override fun removeWorktree(path: String) = onRemove(path)
+        override fun buildAgentProcess(prompt: String, workDir: File): Process = processBuilder()
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
@@ -55,17 +72,16 @@ class AgentLaunchServiceTest {
         repoPath: String = "/repo",
         createdWorktrees: MutableList<String> = mutableListOf(),
         removedWorktrees: MutableList<String> = mutableListOf(),
-    ): AgentLaunchService = object : AgentLaunchService(repoPath, scope) {
-        override fun createWorktree(path: String, branchRef: String?): Boolean {
-            createdWorktrees.add(path)
-            return true
-        }
-        override fun removeWorktree(path: String) {
-            removedWorktrees.add(path)
-        }
-        override fun buildAgentProcess(prompt: String, workDir: File): Process =
-            ProcessBuilder("cat").start().also { activeProcesses.add(it) }
-    }
+    ): AgentLaunchService = AgentLaunchService(
+        repoPath = repoPath,
+        scope = scope,
+        worktreeManager = FakeWorktreeManager(
+            createResult = true,
+            onCreate = { path, _ -> createdWorktrees.add(path) },
+            onRemove = { path -> removedWorktrees.add(path) },
+            processBuilder = { ProcessBuilder("cat").start().also { activeProcesses.add(it) } }
+        )
+    )
 
     /**
      * Returns a service whose process exits immediately (runs `sh -c "exit 0"`).
@@ -74,12 +90,15 @@ class AgentLaunchServiceTest {
     private fun exitingService(
         repoPath: String = "/repo",
         onRemoveWorktree: (String) -> Unit = {},
-    ): AgentLaunchService = object : AgentLaunchService(repoPath, scope) {
-        override fun createWorktree(path: String, branchRef: String?) = true
-        override fun removeWorktree(path: String) { onRemoveWorktree(path) }
-        override fun buildAgentProcess(prompt: String, workDir: File): Process =
-            ProcessBuilder("sh", "-c", "exit 0").start()
-    }
+    ): AgentLaunchService = AgentLaunchService(
+        repoPath = repoPath,
+        scope = scope,
+        worktreeManager = FakeWorktreeManager(
+            createResult = true,
+            onRemove = onRemoveWorktree,
+            processBuilder = { ProcessBuilder("sh", "-c", "exit 0").start() }
+        )
+    )
 
     // ── Deduplication ────────────────────────────────────────────────────────
 
@@ -123,13 +142,14 @@ class AgentLaunchServiceTest {
     @Test
     fun `launch creates worktree at the correct sibling path`() {
         val created = mutableListOf<String>()
-        val service = object : AgentLaunchService("/home/agent/media-sage", scope) {
-            override fun createWorktree(path: String, branchRef: String?): Boolean {
-                created.add(path)
-                return false // return false → falls back to repoPath, no real process needed
-            }
-            override fun removeWorktree(path: String) { /* not called when createWorktree returns false */ }
-        }
+        val service = AgentLaunchService(
+            repoPath = "/home/agent/media-sage",
+            scope = scope,
+            worktreeManager = FakeWorktreeManager(
+                createResult = false, // falls back to repoPath, avoids real process
+                onCreate = { path, _ -> created.add(path) }
+            )
+        )
         service.launch("MS-99")
         // Worktrees dir is a sibling of the repo root, not inside it.
         assertEquals("/home/agent/media-sage-worktrees/MS-99", created.single())
@@ -140,13 +160,14 @@ class AgentLaunchServiceTest {
         // The Jira flow must pass null branchRef so createWorktree uses --no-checkout.
         // The agent creates its own branch — there is nothing to check out at worktree time.
         var capturedBranchRef: String? = "sentinel"
-        val service = object : AgentLaunchService("/repo", scope) {
-            override fun createWorktree(path: String, branchRef: String?): Boolean {
-                capturedBranchRef = branchRef
-                return false
-            }
-            override fun removeWorktree(path: String) { /* not called when createWorktree returns false */ }
-        }
+        val service = AgentLaunchService(
+            repoPath = "/repo",
+            scope = scope,
+            worktreeManager = FakeWorktreeManager(
+                createResult = false,
+                onCreate = { _, branchRef -> capturedBranchRef = branchRef }
+            )
+        )
         service.launch("MS-99")
         assertNull(capturedBranchRef, "Jira launch must use --no-checkout (null branchRef)")
     }
@@ -169,15 +190,19 @@ class AgentLaunchServiceTest {
     @Test
     fun `key is released after agent exits so the ticket can be re-triggered`() {
         val latch = CountDownLatch(1)
-        val service = object : AgentLaunchService("/repo", scope) {
-            override fun createWorktree(path: String, branchRef: String?) = true
-            override fun removeWorktree(path: String) { latch.countDown() }
-            override fun buildAgentProcess(prompt: String, workDir: File): Process =
-                ProcessBuilder("sh", "-c", "exit 0").start()
-        }
+        val service = AgentLaunchService(
+            repoPath = "/repo",
+            scope = scope,
+            worktreeManager = FakeWorktreeManager(
+                createResult = true,
+                onRemove = { latch.countDown() },
+                processBuilder = { ProcessBuilder("sh", "-c", "exit 0").start() }
+            )
+        )
         service.launch("MS-99")
         assertTrue(latch.await(5, TimeUnit.SECONDS), "Agent did not complete within 5 s")
-        // After exit the key must be cleared — a fresh launch for the same ticket must succeed.
+        // Key is released before teardown fires, so isActive is already false when the
+        // latch unblocks. A fresh launch for the same ticket must succeed.
         assertTrue(service.launch("MS-99"), "Key was not released after agent exited")
         // Clean up the second agent's process
         activeProcesses.forEach { it.destroyForcibly() }
