@@ -26,7 +26,7 @@ WORKDIR /home/agent
 # into the correct hash-based directory structure, then remove the wrapper files.
 COPY --chown=agent:agent gradlew gradlew
 COPY --chown=agent:agent gradle/wrapper gradle/wrapper
-RUN chmod +x gradlew && ./gradlew --version --no-daemon && rm -f gradlew && rm -rf gradle
+RUN chmod +x gradlew && ./gradlew help --no-daemon && rm -f gradlew && rm -rf gradle
 
 COPY --chown=agent:agent agent/worker-entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
