@@ -132,35 +132,60 @@ class CloudLoggingClient(
      * which use camelCase keys (`inputTokens`, `cacheReadInputTokens`, etc.).
      */
     private fun parseResultEntry(entry: JsonObject): WorkerMetrics? {
-        val event = entry["textPayload"]?.jsonPrimitive?.content
-            ?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
-            ?: entry["jsonPayload"]?.jsonObject
-
-        if (event?.get("type")?.jsonPrimitive?.content != "result") return null
-
-        val usage = event["usage"]?.jsonObject
-        val modelUsage = event["modelUsage"]?.jsonObject
-
-        // When top-level usage tokens are zeroed (gateway aggregation), fall back to summing modelUsage.
-        val inputTokens = usage?.get("input_tokens")?.jsonPrimitive?.int?.takeIf { it > 0 }
-            ?: modelUsage?.values?.sumOf { it.jsonObject["inputTokens"]?.jsonPrimitive?.int ?: 0 } ?: 0
-        val outputTokens = usage?.get("output_tokens")?.jsonPrimitive?.int?.takeIf { it > 0 }
-            ?: modelUsage?.values?.sumOf { it.jsonObject["outputTokens"]?.jsonPrimitive?.int ?: 0 } ?: 0
-        val cacheReadTokens = usage?.get("cache_read_input_tokens")?.jsonPrimitive?.int?.takeIf { it > 0 }
-            ?: modelUsage?.values?.sumOf { it.jsonObject["cacheReadInputTokens"]?.jsonPrimitive?.int ?: 0 } ?: 0
-        val cacheCreationTokens = usage?.get("cache_creation_input_tokens")?.jsonPrimitive?.int?.takeIf { it > 0 }
-            ?: modelUsage?.values?.sumOf { it.jsonObject["cacheCreationInputTokens"]?.jsonPrimitive?.int ?: 0 } ?: 0
-
+        val event = extractResultEvent(entry) ?: return null
+        val tokenCounts = resolveTokenCounts(event)
         return WorkerMetrics(
-            inputTokens = inputTokens,
-            outputTokens = outputTokens,
-            cacheReadTokens = cacheReadTokens,
-            cacheCreationTokens = cacheCreationTokens,
+            inputTokens = tokenCounts.inputTokens,
+            outputTokens = tokenCounts.outputTokens,
+            cacheReadTokens = tokenCounts.cacheReadTokens,
+            cacheCreationTokens = tokenCounts.cacheCreationTokens,
             totalCostUsd = event["total_cost_usd"]?.jsonPrimitive?.double ?: 0.0,
             durationMs = event["duration_ms"]?.jsonPrimitive?.long ?: 0L,
             numTurns = event["num_turns"]?.jsonPrimitive?.int ?: 0
         )
     }
+
+    /** Extracts the event [JsonObject] from a log entry, or null if it is not a `result` event. */
+    private fun extractResultEvent(entry: JsonObject): JsonObject? {
+        val event = entry["textPayload"]?.jsonPrimitive?.content
+            ?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
+            ?: entry["jsonPayload"]?.jsonObject
+        return event?.takeIf { it["type"]?.jsonPrimitive?.content == "result" }
+    }
+
+    private data class TokenCounts(
+        val inputTokens: Int,
+        val outputTokens: Int,
+        val cacheReadTokens: Int,
+        val cacheCreationTokens: Int,
+    )
+
+    /**
+     * Resolves token counts from the result event.
+     *
+     * Prefers top-level `usage` (snake_case) when non-zero. Falls back to summing
+     * per-model `modelUsage` (camelCase) when the API gateway zeroes `usage`.
+     */
+    private fun resolveTokenCounts(event: JsonObject): TokenCounts {
+        val usage = event["usage"]?.jsonObject
+        val modelUsage = event["modelUsage"]?.jsonObject
+        return TokenCounts(
+            inputTokens = resolveToken(usage, "input_tokens", modelUsage, "inputTokens"),
+            outputTokens = resolveToken(usage, "output_tokens", modelUsage, "outputTokens"),
+            cacheReadTokens = resolveToken(usage, "cache_read_input_tokens", modelUsage, "cacheReadInputTokens"),
+            cacheCreationTokens = resolveToken(usage, "cache_creation_input_tokens", modelUsage, "cacheCreationInputTokens"),
+        )
+    }
+
+    /** Returns the snake_case [usageKey] value from [usage] if > 0, else sums [modelKey] across [modelUsage]. */
+    private fun resolveToken(
+        usage: JsonObject?,
+        usageKey: String,
+        modelUsage: JsonObject?,
+        modelKey: String,
+    ): Int = usage?.get(usageKey)?.jsonPrimitive?.int?.takeIf { it > 0 }
+        ?: modelUsage?.values?.sumOf { it.jsonObject[modelKey]?.jsonPrimitive?.int ?: 0 }
+        ?: 0
 
     private fun accessToken(): String {
         if (tokenProvider != null) return tokenProvider.invoke()
