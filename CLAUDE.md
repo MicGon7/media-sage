@@ -189,7 +189,8 @@ source ~/.zshrc && ./gradlew :agent:run
 # Build agent container image locally
 docker build -f agent/Dockerfile -t media-sage-agent .
 
-# Build worker image for Cloud Run (must target linux/amd64 — Cloud Run rejects multi-arch manifests)
+# Build worker image for Cloud Run (automated via .github/workflows/build-worker-image.yml on merge to main)
+# Manual build only needed when testing Dockerfile.worker changes locally before pushing:
 docker build --platform linux/amd64 -f Dockerfile.worker \
   -t us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:latest .
 docker push us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:latest
