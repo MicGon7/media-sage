@@ -21,12 +21,22 @@ RUN useradd -m -s /bin/bash agent
 USER agent
 WORKDIR /home/agent
 
-# Pre-bake the Gradle wrapper distribution so workers don't download it at runtime.
-# Copy the wrapper files, run ./gradlew --version to trigger download + extraction
-# into the correct hash-based directory structure, then remove the wrapper files.
+# Pre-bake the Gradle distribution, internal API jars, and all :agent + :server
+# runtime/test dependencies into the image layer at build time.
+# --configure-on-demand ensures Android/iOS modules are never evaluated here —
+# there is no Android SDK in this image and it is not needed by the worker.
+# At runtime the worker makes zero Gradle downloads; everything resolves from
+# the image layer on the local container filesystem.
 COPY --chown=agent:agent gradlew gradlew
-COPY --chown=agent:agent gradle/wrapper gradle/wrapper
-RUN chmod +x gradlew && ./gradlew help --no-daemon && rm -f gradlew && rm -rf gradle
+COPY --chown=agent:agent gradle/ gradle/
+COPY --chown=agent:agent settings.gradle.kts settings.gradle.kts
+COPY --chown=agent:agent build.gradle.kts build.gradle.kts
+COPY --chown=agent:agent agent/build.gradle.kts agent/build.gradle.kts
+COPY --chown=agent:agent server/build.gradle.kts server/build.gradle.kts
+RUN chmod +x gradlew && \
+    ./gradlew help --no-daemon && \
+    ./gradlew :agent:dependencies :server:dependencies --no-daemon --configure-on-demand && \
+    rm -f gradlew && rm -rf gradle
 
 COPY --chown=agent:agent agent/worker-entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh

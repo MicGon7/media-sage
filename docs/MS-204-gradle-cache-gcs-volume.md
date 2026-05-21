@@ -1,5 +1,12 @@
 # MS-204 — Persist Gradle Cache Across Cloud Run Worker Executions via GCS Volume
 
+> **Superseded by MS-209.** The GCS FUSE approach described here was removed because
+> GCS FUSE does not support the POSIX file locking that Gradle's `modules-2` cache
+> requires on cold starts. Warm-cache reads worked; cold-start writes silently failed,
+> causing plugin resolution errors. MS-209 replaced this with dependency pre-baking in
+> the Docker image layer. The GCS bucket `media-sage-gradle-cache` and its Cloud Run
+> volume mount have been removed.
+
 ## What was built
 
 Every Cloud Run worker execution previously started cold — no compiled classes,
