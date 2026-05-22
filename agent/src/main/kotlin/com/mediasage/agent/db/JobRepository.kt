@@ -3,6 +3,7 @@ package com.mediasage.agent.db
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -124,6 +125,24 @@ class JobRepository : JobRegistry {
             }
         }
         Unit
+    }
+
+    override suspend fun findRunningByTicketKey(ticketKey: String): JobRow? = withContext(Dispatchers.IO) {
+        transaction {
+            JobsTable.selectAll()
+                .where { (JobsTable.ticketKey eq ticketKey) and (JobsTable.status eq JobStatus.RUNNING.name) }
+                .orderBy(JobsTable.createdAt, SortOrder.DESC)
+                .limit(1)
+                .map {
+                    JobRow(
+                        jobId = it[JobsTable.jobId],
+                        ticketKey = ticketKey,
+                        status = JobStatus.RUNNING,
+                        executionName = it[JobsTable.executionName]
+                    )
+                }
+                .firstOrNull()
+        }
     }
 
     override suspend fun findRunningJobs(): List<JobRow> = withContext(Dispatchers.IO) {

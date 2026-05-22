@@ -8,4 +8,7 @@ import com.mediasage.agent.db.JobRegistry
  * as Cloud Run Jobs and tracks their state in Supabase Postgres; when null, workers run
  * in-process instead.
  */
-data class CloudRunDispatch(val dispatcher: JobDispatcher, val jobs: JobRegistry)
+data class CloudRunDispatch(val dispatcher: JobDispatcher, val jobs: JobRegistry) {
+    /** Returns the [CloudRunJobsClient] backing [dispatcher], or null if a different implementation is used. */
+    val client: CloudRunJobsClient? get() = dispatcher as? CloudRunJobsClient
+}

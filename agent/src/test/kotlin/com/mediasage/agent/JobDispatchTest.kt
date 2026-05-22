@@ -52,6 +52,8 @@ class JobDispatchTest {
         override suspend fun markFailed(jobId: UUID) { failed.add(jobId) }
         override suspend fun markInterrupted(jobId: UUID) { interrupted.add(jobId) }
         override suspend fun findRunningJobs() = runningJobs
+        override suspend fun findRunningByTicketKey(ticketKey: String): JobRow? =
+            runningJobs.firstOrNull { it.ticketKey == ticketKey }
     }
 
     private class FakeJiraStatusChecker(private val status: String?) : JiraTicketStatusChecker {
