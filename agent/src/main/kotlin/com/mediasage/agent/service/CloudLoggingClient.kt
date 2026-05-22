@@ -190,6 +190,12 @@ class CloudLoggingClient(
         ?: modelUsage?.values?.sumOf { it.jsonObject[modelKey]?.jsonPrimitive?.int ?: 0 }
         ?: 0
 
+    /**
+     * Returns a valid OAuth2 bearer token for the Cloud Logging API.
+     *
+     * Uses [tokenProvider] when set (test injection). In production, refreshes
+     * [credentials] if expired and returns the current access token value.
+     */
     private fun accessToken(): String {
         if (tokenProvider != null) return tokenProvider.invoke()
         credentials.refreshIfExpired()
