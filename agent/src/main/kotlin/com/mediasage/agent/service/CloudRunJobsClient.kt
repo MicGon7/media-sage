@@ -169,6 +169,7 @@ class CloudRunJobsClient(
         } else {
             log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
             val executionName = operation.response?.name
+            log.info("[$ticketKey] LRO response execution name: $executionName")
             val metrics = if (executionName != null) {
                 cloudLoggingClient.fetchMetrics(executionName).also { m ->
                     if (m != null) {
