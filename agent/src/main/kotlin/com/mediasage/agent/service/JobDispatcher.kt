@@ -2,6 +2,13 @@ package com.mediasage.agent.service
 
 import java.util.UUID
 
+/**
+ * Executes and recovers agent jobs on behalf of the orchestrator.
+ *
+ * Implementations choose the execution backend — in-process for local development or
+ * Cloud Run Jobs for production. [AgentLaunchService] depends on this interface so the
+ * backend can be swapped via Koin without changing dispatch logic.
+ */
 interface JobDispatcher {
     suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String): Boolean
 

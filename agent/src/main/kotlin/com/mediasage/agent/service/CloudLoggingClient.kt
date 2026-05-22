@@ -58,6 +58,8 @@ class CloudLoggingClient(
      *
      * @param executionName Full Cloud Run execution resource name, e.g.
      *   `projects/p/locations/r/jobs/j/executions/j-xxxxx`
+     * @return Parsed [WorkerMetrics] on success, or null if the result event was not found
+     *   in Cloud Logging after [MAX_ATTEMPTS] retries or if the response could not be parsed.
      */
     suspend fun fetchMetrics(executionName: String): WorkerMetrics? {
         val executionId = executionName.substringAfterLast("/")
