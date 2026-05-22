@@ -6,7 +6,6 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlinx.coroutines.delay
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -54,14 +53,14 @@ private data class OperationError(
 )
 
 /**
- * Calls the Cloud Run Jobs Admin API to execute the worker job with per-run env var overrides.
+ * Calls the Cloud Run Jobs Admin API to dispatch the worker job with per-run env var overrides.
  *
- * Dispatches the job, marks it RUNNING with the execution name, then polls the LRO until
- * completion before updating the job row to COMPLETED or FAILED. This keeps the job row
- * accurate for the full duration of the worker run.
+ * Dispatches the job and marks it RUNNING, then returns immediately. Completion is signalled
+ * by the worker itself via a Pub/Sub push event to [POST /webhook/pubsub], which calls
+ * [onJobCompleted] to fetch metrics and update the job row.
  *
- * The [JobDispatcher] interface is the intelligence seam for MS-179 — a future implementation
- * can enrich the prompt before delegating here.
+ * [recoverJob] is the startup safety net: on restart it checks RUNNING jobs whose Pub/Sub
+ * event may have been missed while the orchestrator was down.
  */
 class CloudRunJobsClient(
     private val httpClient: HttpClient,
@@ -69,7 +68,7 @@ class CloudRunJobsClient(
     private val region: String,
     private val jobName: String,
     private val credentialsJson: String,
-    private val jobRepository: JobRepository,
+    internal val jobRepository: JobRepository,
     private val cloudLoggingClient: CloudLoggingClient,
     private val jiraCommentPoster: JiraCommentPoster
 ) : JobDispatcher {
@@ -104,13 +103,14 @@ class CloudRunJobsClient(
 
         if (!response.status.isSuccess()) {
             log.warn("[$ticketKey] Cloud Run job dispatch failed: ${response.status} — ${response.bodyAsText()}")
+            jobRepository.markFailed(jobId)
             return false
         }
 
         val operation = json.decodeFromString(OperationResponse.serializer(), response.bodyAsText())
-        log.info("[$ticketKey] Cloud Run job dispatched — polling operation ${operation.name}")
+        log.info("[$ticketKey] Cloud Run job dispatched — awaiting Pub/Sub completion event (operation: ${operation.name})")
         jobRepository.markRunning(jobId, operation.name)
-        return pollUntilDone(jobId, ticketKey, operation.name)
+        return true
     }
 
     override suspend fun recoverJob(jobId: UUID, ticketKey: String, executionName: String): Boolean {
@@ -125,64 +125,28 @@ class CloudRunJobsClient(
         }
         val operation = json.decodeFromString(OperationResponse.serializer(), response.bodyAsText())
         return if (operation.done) {
+            log.info("[$ticketKey] Recovery: execution already done — processing completion")
             handleDone(jobId, ticketKey, operation)
         } else {
-            log.info("[$ticketKey] Recovery: execution still running — resuming poll")
-            pollUntilDone(jobId, ticketKey, executionName)
+            log.info("[$ticketKey] Recovery: execution still running — Pub/Sub event expected on completion")
+            false
         }
-    }
-
-    private suspend fun pollUntilDone(jobId: UUID, ticketKey: String, operationName: String): Boolean {
-        val url = "https://run.googleapis.com/v2/$operationName"
-        val deadline = System.currentTimeMillis() + JOB_TIMEOUT_MS
-        while (System.currentTimeMillis() < deadline) {
-            delay(POLL_INTERVAL_MS)
-            val response = httpClient.get(url) {
-                header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
-            }
-            if (!response.status.isSuccess()) {
-                log.warn("[$ticketKey] Failed to poll operation: ${response.status}")
-                continue
-            }
-            val operation = json.decodeFromString(OperationResponse.serializer(), response.bodyAsText())
-            if (operation.done) return handleDone(jobId, ticketKey, operation)
-            log.info("[$ticketKey] Cloud Run job still running...")
-        }
-        log.warn("[$ticketKey] Cloud Run job timed out after 30 minutes")
-        jobRepository.markFailed(jobId)
-        return false
     }
 
     /**
-     * Lists executions for the job sorted by createTime descending and returns the name
-     * of the most recent one. This is more reliable than reading [OperationResponse.response]
-     * because the GCP Cloud Run v2 REST API does not always populate the `response` field
-     * in the completed LRO JSON.
+     * Called by the Pub/Sub webhook route when the worker signals completion.
+     *
+     * @param executionName Short Cloud Run execution name (e.g. `media-sage-agent-worker-dtz62`),
+     *   passed directly from the worker's [CLOUD_RUN_EXECUTION] env var. Used to look up metrics
+     *   in Cloud Logging without an additional executions list API call.
      */
-    private suspend fun fetchLatestExecutionName(ticketKey: String): String? {
-        val url = "https://run.googleapis.com/v2/projects/$projectId/locations/$region/jobs/$jobName/executions" +
-            "?pageSize=1"
-        return runCatching {
-            val httpResponse = httpClient.get(url) {
-                header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
-            }
-            val body = httpResponse.bodyAsText()
-            log.info("[$ticketKey] Executions API status: ${httpResponse.status}, body: ${body.take(300)}")
-            if (!httpResponse.status.isSuccess()) {
-                log.warn("[$ticketKey] Failed to list executions: ${httpResponse.status}")
-                return@runCatching null
-            }
-            json.parseToJsonElement(body)
-                .jsonObject["executions"]
-                ?.jsonArray
-                ?.firstOrNull()
-                ?.jsonObject
-                ?.get("name")
-                ?.jsonPrimitive
-                ?.content
-        }.getOrElse {
-            log.warn("[$ticketKey] Error fetching latest execution name: ${it.message}", it)
-            null
+    suspend fun onJobCompleted(jobId: UUID, ticketKey: String, executionName: String, succeeded: Boolean): Boolean {
+        return if (succeeded) {
+            handleSuccess(jobId, ticketKey, executionName)
+        } else {
+            log.warn("[$ticketKey] Worker reported failure via Pub/Sub")
+            jobRepository.markFailed(jobId)
+            false
         }
     }
 
@@ -192,14 +156,14 @@ class CloudRunJobsClient(
             jobRepository.markFailed(jobId)
             false
         } else {
-            handleSuccess(jobId, ticketKey)
+            val executionName = fetchLatestExecutionName(ticketKey)
+            log.info("[$ticketKey] Latest execution name: $executionName")
+            handleSuccess(jobId, ticketKey, executionName)
         }
     }
 
-    private suspend fun handleSuccess(jobId: UUID, ticketKey: String): Boolean {
+    private suspend fun handleSuccess(jobId: UUID, ticketKey: String, executionName: String?): Boolean {
         log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
-        val executionName = fetchLatestExecutionName(ticketKey)
-        log.info("[$ticketKey] Latest execution name: $executionName")
         val metrics = if (executionName != null) {
             cloudLoggingClient.fetchMetrics(executionName).also { m ->
                 if (m != null) {
@@ -219,6 +183,35 @@ class CloudRunJobsClient(
         }
         jobRepository.markCompleted(jobId, metrics)
         return true
+    }
+
+    /**
+     * Lists executions for the job and returns the name of the most recent one.
+     * Used only in the recovery path when the execution name is not available from a Pub/Sub event.
+     */
+    private suspend fun fetchLatestExecutionName(ticketKey: String): String? {
+        val url = "https://run.googleapis.com/v2/projects/$projectId/locations/$region/jobs/$jobName/executions" +
+            "?pageSize=1"
+        return runCatching {
+            val httpResponse = httpClient.get(url) {
+                header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
+            }
+            if (!httpResponse.status.isSuccess()) {
+                log.warn("[$ticketKey] Failed to list executions: ${httpResponse.status}")
+                return@runCatching null
+            }
+            json.parseToJsonElement(httpResponse.bodyAsText())
+                .jsonObject["executions"]
+                ?.jsonArray
+                ?.firstOrNull()
+                ?.jsonObject
+                ?.get("name")
+                ?.jsonPrimitive
+                ?.content
+        }.getOrElse {
+            log.warn("[$ticketKey] Error fetching latest execution name: ${it.message}", it)
+            null
+        }
     }
 
     /**
@@ -265,10 +258,5 @@ class CloudRunJobsClient(
     private fun accessToken(): String {
         credentials.refreshIfExpired()
         return credentials.accessToken.tokenValue
-    }
-
-    private companion object {
-        const val POLL_INTERVAL_MS = 30_000L
-        const val JOB_TIMEOUT_MS = 1_800_000L
     }
 }

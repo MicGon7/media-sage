@@ -4,6 +4,7 @@ import com.mediasage.agent.di.AgentConfig
 import com.mediasage.agent.di.agentModule
 import com.mediasage.agent.plugins.*
 import com.mediasage.agent.routes.githubWebhookRoutes
+import com.mediasage.agent.routes.pubSubWebhookRoutes
 import com.mediasage.agent.routes.webhookRoutes
 import com.mediasage.agent.service.AgentLaunchService
 import io.ktor.http.HttpStatusCode
@@ -26,7 +27,11 @@ fun Application.module() {
     val config = buildAgentConfig(environment.config)
     val scope = CoroutineScope(Dispatchers.IO)
     install(Koin) { modules(agentModule(config, scope)) }
-    scope.launch { get<AgentLaunchService>().recoverInterruptedJobs() }
+    val agentLaunchService = get<AgentLaunchService>()
+    scope.launch { agentLaunchService.recoverInterruptedJobs() }
+    // Resolve optional Cloud Run client before routing block to avoid Ktor routing DSL name collision
+    val cloudRunJobsClient = agentLaunchService.cloudRun?.client
+    val jobRegistry = agentLaunchService.cloudRun?.jobs
     configureContentNegotiation()
     configureCallLogging()
     configureStatusPages()
@@ -34,6 +39,9 @@ fun Application.module() {
         get("/health") { call.respond(HttpStatusCode.OK, "OK") }
         webhookRoutes(config.jiraBotAccountId)
         githubWebhookRoutes(config.githubWebhookSecret)
+        if (config.pubSubWebhookSecret.isNotBlank() && cloudRunJobsClient != null && jobRegistry != null) {
+            pubSubWebhookRoutes(config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry, scope)
+        }
     }
 }
 
@@ -60,6 +68,7 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",
         googleCredentialsJson = credentialsJson,
         supabaseDbUrl = str("app.supabase.dbUrl"),
-        agentBriefingEnabled = bool("app.agent.briefingEnabled")
+        agentBriefingEnabled = bool("app.agent.briefingEnabled"),
+        pubSubWebhookSecret = str("app.pubSub.webhookSecret")
     )
 }

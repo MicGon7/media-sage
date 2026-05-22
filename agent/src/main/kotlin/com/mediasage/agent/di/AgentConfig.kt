@@ -25,6 +25,8 @@ package com.mediasage.agent.di
  *   persistent dedup and job recovery across restarts.
  * @property agentBriefingEnabled Enables the AgentBriefing feature. Off by default until latency
  *   issues are resolved; set `AGENT_BRIEFING_ENABLED=true` to enable for demos.
+ * @property pubSubWebhookSecret Shared secret token appended as `?token=` to the Pub/Sub push
+ *   subscription URL. The orchestrator verifies this on every push delivery to reject spoofed requests.
  */
 data class AgentConfig(
     val repoPath: String,
@@ -42,5 +44,6 @@ data class AgentConfig(
     val gcpJobName: String = "media-sage-agent-worker",
     val googleCredentialsJson: String = "",
     val supabaseDbUrl: String = "",
-    val agentBriefingEnabled: Boolean = false
+    val agentBriefingEnabled: Boolean = false,
+    val pubSubWebhookSecret: String = ""
 )

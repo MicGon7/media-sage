@@ -44,7 +44,7 @@ class AgentLaunchService(
     private val repoPath: String,
     private val scope: CoroutineScope,
     private val verboseLogging: Boolean = false,
-    private val cloudRun: CloudRunDispatch? = null,
+    internal val cloudRun: CloudRunDispatch? = null,
     private val jiraCommentPoster: JiraCommentPoster? = null,
     private val agentBriefing: AgentBriefing? = null,
     private val jiraStatusChecker: JiraTicketStatusChecker? = null,
