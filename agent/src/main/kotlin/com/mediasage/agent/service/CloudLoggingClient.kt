@@ -94,13 +94,16 @@ class CloudLoggingClient(
     /**
      * Builds the Cloud Logging entries.list request body.
      *
-     * Filters by execution ID only — no payload-type constraint — because the Claude Code
-     * `result` event arrives as `textPayload` (raw JSON string) or `jsonPayload` (structured
-     * object) depending on the API gateway. `orderBy: timestamp desc` + `pageSize: 10`
-     * ensures the result event (always the last thing written) is in the first page.
+     * Cloud Run Jobs does not expose the execution ID in `resource.labels` — it is stored
+     * under `labels."run.googleapis.com/execution_name"` as the short execution name
+     * (e.g. `media-sage-agent-worker-pvk42`). We extract that short name from the last
+     * path segment of the full execution resource name passed by the caller.
+     *
+     * `orderBy: timestamp desc` + `pageSize: 10` ensures the `result` event (always the
+     * last line written by Claude Code) is in the first page.
      */
     private fun listEntriesBody(executionId: String): String {
-        val filter = """resource.type="cloud_run_job" resource.labels.execution_id="$executionId""""
+        val filter = """resource.type="cloud_run_job" labels."run.googleapis.com/execution_name"="$executionId""""
         val encodedFilter = json.encodeToString(JsonPrimitive.serializer(), JsonPrimitive(filter))
         return """{"resourceNames":["projects/$projectId"],"filter":$encodedFilter,"orderBy":"timestamp desc","pageSize":10}"""
     }
