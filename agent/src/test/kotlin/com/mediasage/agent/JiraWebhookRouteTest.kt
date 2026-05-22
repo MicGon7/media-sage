@@ -1,7 +1,5 @@
 package com.mediasage.agent
 
-import com.mediasage.agent.di.AgentConfig
-import com.mediasage.agent.di.agentModule
 import com.mediasage.agent.plugins.configureContentNegotiation
 import com.mediasage.agent.plugins.configureStatusPages
 import com.mediasage.agent.routes.webhookRoutes
@@ -69,39 +67,6 @@ class JiraWebhookRouteTest {
         assertEquals(HttpStatusCode.OK, response.status)
     }
 
-    // Regression test for MS-187: when Cloud Run setup fails on startup (bad DB URL,
-    // missing credentials, etc.), the Koin singleton must not poison subsequent resolutions.
-    // Before the fix, getOrNull<CloudRunDispatch?>() threw instead of returning null,
-    // causing AgentLaunchService to fail to create and all webhooks to return 500.
-    @Test
-    fun webhookReturns200WhenCloudRunSetupFails() = testApplication {
-        application {
-            val config = AgentConfig(
-                repoPath = "",
-                githubWebhookSecret = "",
-                jiraEmail = "",
-                jiraApiToken = "",
-                jiraCloudId = "",
-                jiraBotAccountId = BOT_ACCOUNT_ID,
-                useCloudRunWorkers = true,
-                supabaseDbUrl = "jdbc:postgresql://invalid-host:5432/postgres",
-                googleCredentialsJson = "{}"
-            )
-            val scope = CoroutineScope(Dispatchers.IO)
-            install(Koin) { modules(agentModule(config, scope)) }
-            configureContentNegotiation()
-            configureStatusPages()
-            routing { webhookRoutes(BOT_ACCOUNT_ID) }
-        }
-        // Use "To Do" so shouldFire = false and no real claude process is spawned —
-        // the inject<AgentLaunchService>() lazy delegate still resolves on the first
-        // request, which is exactly what we're testing.
-        val response = client.post("/webhook/jira") {
-            contentType(ContentType.Application.Json)
-            setBody(webhookPayload(event = "jira:issue_updated", assigneeAccountId = BOT_ACCOUNT_ID, status = "To Do"))
-        }
-        assertEquals(HttpStatusCode.OK, response.status)
-    }
 }
 
 private fun webhookPayload(event: String, assigneeAccountId: String?, status: String) = """

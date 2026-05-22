@@ -151,7 +151,7 @@ scripts/src/main/kotlin/com/mediasage/scripts/
 
 ### Agent Job Registry (Supabase Postgres)
 
-When `USE_CLOUD_RUN_WORKERS=true`, the orchestrator maintains a persistent `jobs` table in Supabase Postgres. This replaces the in-memory dedup gate and survives restarts.
+The orchestrator maintains a persistent `jobs` table in Supabase Postgres. This replaces the in-memory dedup gate and survives restarts.
 
 **Schema:**
 ```sql
@@ -361,7 +361,6 @@ Railway `:agent` service environment variables:
 | `JIRA_API_TOKEN` | Atlassian account API token |
 | `JIRA_BOT_ACCOUNT_ID` | Jira account ID of `media-sage-bot` (triggers the agent when ticket is assigned to this account + In Progress) |
 | `PORT` | `8081` |
-| `USE_CLOUD_RUN_WORKERS` | `true` to dispatch workers via Cloud Run Jobs (requires GCP + Supabase vars) |
 | `SUPABASE_DB_URL` | `postgresql://postgres.<ref>:<password>@<host>:5432/postgres` — persistent job registry |
 | `GCP_PROJECT_ID` | GCP project ID |
 | `GCP_REGION` | `us-central1` (default) |
