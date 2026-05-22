@@ -12,7 +12,7 @@ Five-module Gradle project (`settings.gradle.kts`):
 :composeApp   — Compose Multiplatform UI (Android + iOS)
 :shared       — KMP library (networking, database, domain models)
 :server       — Ktor app API, deployed to Railway (port 8080)
-:agent        — Ktor orchestration server, deployed as Docker container on Railway (port 8081)
+:agent        — Ktor orchestration server, deployed as Cloud Run Service on GCP (port 8081)
 :scripts      — One-off batch jobs, run manually (no server, no Koin wiring)
 ```
 
@@ -21,7 +21,7 @@ Five-module Gradle project (`settings.gradle.kts`):
 - **composeApp**: UI layer only. Depends on `:shared`. Uses Compose Material3, Koin for DI, Lifecycle ViewModel, and Nav3 for navigation.
 - **shared**: Business logic, data layer, networking. Room for persistence, Ktor Client for HTTP, kotlinx-serialization for JSON. Platform engines: OkHttp (Android), Darwin (iOS).
 - **server**: JVM-only Ktor server (Netty). Calls external APIs (Claude, News, Scripture). Uses Koin for DI, CORS, StatusPages, ContentNegotiation, CallLogging. Deployed to Railway.
-- **agent**: JVM-only Ktor server (Netty, port 8081). Receives Jira and GitHub webhooks, spawns Claude Code worker processes. Uses Exposed + PostgreSQL (Supabase) for persistent job state when Cloud Run workers are enabled. Deployed as a Docker container on Railway.
+- **agent**: JVM-only Ktor server (Netty, port 8081). Receives Jira and GitHub webhooks, dispatches Claude Code workers via Cloud Run Jobs. Uses Exposed + PostgreSQL (Supabase) for persistent job state. Deployed as a Cloud Run Service on GCP (`media-sage-orchestrator`, `us-central1`). Railway agent service is kept as a manual fallback (deactivated; re-enable by redeploying and updating webhooks).
 - **scripts**: JVM-only standalone scripts. No Ktor server, no Koin. Uses Exposed + SQLite/Postgres for DB access. Run manually via Gradle tasks (e.g., `generateImages`).
 
 ### Data Flow
@@ -340,36 +340,56 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 - **Level 3 — Autonomous (self-triggering)**: Human describes the intent to the assisted agent, which creates the Jira ticket. Human assigns the ticket to the bot account and moves it to In Progress — the Jira webhook fires the bootstrap automatically. Human only reviews the PR.
 - **Level 4 — Autonomous (self-responding to PR review)**: Human leaves a review comment on a PR for an `autonomous`-labeled ticket. A GitHub webhook fires the agent, which pushes a fix commit or replies with `🤖 **Agent:**`, then automatically re-requests review from the original reviewer. Human's only touchpoint remains the PR review.
 
-_This project is at Level 4. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:agent` module, deployed as a Docker container on Railway._
+_This project is at Level 4. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:agent` module, deployed as a Cloud Run Service on GCP._
 
 **Level 3 & 4 setup (container — production):**
 
-The `:agent` server runs as a Docker container on Railway. It clones the repo at startup using the bot account token, then starts the Ktor server.
+The `:agent` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`). It clones the repo at startup using the bot account token, then starts the Ktor server.
 
-Railway `:agent` service environment variables:
+**Active deployment: GCP Cloud Run Service**
+
+- **Service:** `media-sage-orchestrator`
+- **URL:** `https://media-sage-orchestrator-924166357877.us-central1.run.app`
+- **Project:** `media-sage-agent` · **Region:** `us-central1`
+- **Service account:** `media-sage-orchestrator@media-sage-agent.iam.gserviceaccount.com`
+- **Config:** `--min-instances=1 --max-instances=3 --memory=2Gi --cpu=1 --port=8081 --timeout=3600`
+- **Image:** `us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest` (linux/amd64)
+
+Config is split between plain env vars (set directly on the service) and secrets (stored in Secret Manager and mounted at runtime):
+
+**Plain env vars (non-sensitive):**
 
 | Variable | Value |
 |---|---|
 | `AGENT_REPO_PATH` | `/home/agent/media-sage` |
-| `ANTHROPIC_API_KEY` | Anthropic account API key |
-| `GITHUB_BOT_TOKEN` | PAT for `media-sage-bot` (scopes: `repo`, `workflow`) |
 | `GITHUB_BOT_LOGIN` | `media-sage-bot` |
 | `GITHUB_BOT_EMAIL` | Bot account email |
 | `GITHUB_BOT_NAME` | `media-sage-bot` |
-| `GITHUB_WEBHOOK_SECRET` | Same secret registered in GitHub repo webhook settings |
 | `JIRA_EMAIL` | `micgon7@gmail.com` |
-| `JIRA_API_TOKEN` | Atlassian account API token |
-| `JIRA_BOT_ACCOUNT_ID` | Jira account ID of `media-sage-bot` (triggers the agent when ticket is assigned to this account + In Progress) |
-| `PORT` | `8081` |
-| `SUPABASE_DB_URL` | `postgresql://postgres.<ref>:<password>@<host>:5432/postgres` — persistent job registry |
-| `GCP_PROJECT_ID` | GCP project ID |
-| `GCP_REGION` | `us-central1` (default) |
-| `GCP_JOB_NAME` | `media-sage-agent-worker` (default) |
-| `GOOGLE_CREDENTIALS_BASE64` | Base64-encoded GCP service account JSON key |
+| `JIRA_BOT_EMAIL` | Bot Jira account email |
+| `JIRA_CLOUD_ID` | `ad358528-f7e9-4e40-9531-c51049908d6d` |
+| `JIRA_BOT_ACCOUNT_ID` | Jira account ID of `media-sage-bot` |
+| `GCP_PROJECT_ID` | `media-sage-agent` |
+| `GCP_REGION` | `us-central1` |
+| `GCP_JOB_NAME` | `media-sage-agent-worker` |
+| `ANTHROPIC_BASE_URL` | `https://api.fuelix.ai` (Fuelix proxy) |
 
-Webhook URLs (stable Railway URL — no ngrok required):
-- Jira: `https://<railway-agent-url>/webhook/jira`
-- GitHub: `https://<railway-agent-url>/webhook/github`
+**Secrets (Secret Manager → `media-sage-orchestrator` SA has `secretAccessor` role):**
+
+| Secret name | Env var | Description |
+|---|---|---|
+| `anthropic-auth-token` | `ANTHROPIC_AUTH_TOKEN` | Fuelix API token (`ak-...`) |
+| `github-bot-token` | `GITHUB_BOT_TOKEN` | PAT for `media-sage-bot` (scopes: `repo`, `workflow`) |
+| `github-webhook-secret` | `GITHUB_WEBHOOK_SECRET` | Shared secret for GitHub webhook HMAC verification |
+| `jira-api-token` | `JIRA_API_TOKEN` | Atlassian account API token |
+| `jira-bot-api-token` | `JIRA_BOT_API_TOKEN` | Bot Atlassian API token |
+| `supabase-db-url` | `SUPABASE_DB_URL` | Postgres URI with credentials |
+| `pubsub-webhook-secret` | `PUBSUB_WEBHOOK_SECRET` | Shared secret for Pub/Sub push URL auth |
+| `google-credentials-base64` | `GOOGLE_CREDENTIALS_BASE64` | Base64-encoded GCP SA JSON (worker dispatch) |
+
+Webhook URLs:
+- Jira: `https://media-sage-orchestrator-924166357877.us-central1.run.app/webhook/jira`
+- GitHub: `https://media-sage-orchestrator-924166357877.us-central1.run.app/webhook/github`
 
 Register the Jira webhook at **media-sage.atlassian.net → Settings → System → WebHooks**:
 - Events: Issue **created** and **updated**
@@ -378,6 +398,16 @@ Register the Jira webhook at **media-sage.atlassian.net → Settings → System 
 Register the GitHub webhook in repo **Settings → Webhooks**:
 - Content type: `application/json`
 - Events: `Pull request reviews`, `Pull request review comments`
+
+**To redeploy** after a new image push:
+```bash
+gcloud run deploy media-sage-orchestrator \
+  --image us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest \
+  --region us-central1 --project media-sage-agent
+```
+
+**Manual fallback (Railway):**
+The Railway `:orchestrator` service retains all env vars and is kept deactivated. To switch back: redeploy Railway service → update Jira + GitHub webhook URLs to the Railway URL (takes ~2 min). Switch back to GCP by doing the reverse.
 
 **Level 3 & 4 setup (laptop — local dev/demo):**
 
@@ -390,6 +420,7 @@ For local development only (not needed when container is running):
 See `docs/MS-78-level-4-github-webhook.md` for full details and enterprise notes.
 See `docs/MS-69-level-3-autonomous-agent.md` for Level 3 setup details.
 See `docs/MS-84-containerized-agent-deployment.md` for container architecture and Railway setup.
+See `docs/MS-193-gcp-cloud-run-service-orchestrator.md` for GCP deployment details and migration notes.
 
 **Autonomous vs Assisted:**
 
