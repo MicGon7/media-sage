@@ -51,6 +51,8 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         jiraApiToken = str("app.jira.apiToken"),
         jiraCloudId = str("app.jira.cloudId"),
         jiraBotAccountId = str("app.jira.botAccountId"),
+        jiraBotEmail = str("app.jira.botEmail"),
+        jiraBotApiToken = str("app.jira.botApiToken"),
         verboseLogging = bool("app.agent.verboseLogging"),
         useCloudRunWorkers = bool("app.cloudRun.useWorkers"),
         gcpProjectId = str("app.cloudRun.projectId"),
