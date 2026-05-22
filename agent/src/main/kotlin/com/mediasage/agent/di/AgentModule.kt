@@ -28,8 +28,17 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single { JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken) }
     single<JiraLabelChecker> { get<JiraApiService>() }
     single<JiraTicketFetcher> { get<JiraApiService>() }
-    single<JiraCommentPoster> { get<JiraApiService>() }
     single<JiraTicketStatusChecker> { get<JiraApiService>() }
+    // Bot credentials for posting automated comments — falls back to human credentials if not configured.
+    single<JiraCommentPoster> {
+        val botEmail = config.jiraBotEmail
+        val botToken = config.jiraBotApiToken
+        if (botEmail.isNotBlank() && botToken.isNotBlank()) {
+            JiraApiService(get(), config.jiraCloudId, botEmail, botToken)
+        } else {
+            get<JiraApiService>()
+        }
+    }
     single {
         // CloudRunDispatch is resolved eagerly here so a startup failure (bad DB URL,
         // missing credentials) degrades gracefully to null rather than poisoning a

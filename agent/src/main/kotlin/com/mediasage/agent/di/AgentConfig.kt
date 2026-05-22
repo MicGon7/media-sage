@@ -7,6 +7,8 @@ data class AgentConfig(
     val jiraApiToken: String,
     val jiraCloudId: String,
     val jiraBotAccountId: String = "",
+    val jiraBotEmail: String = "",
+    val jiraBotApiToken: String = "",
     val verboseLogging: Boolean = false,
     // Cloud Run worker feature flag — false keeps existing local process behaviour
     val useCloudRunWorkers: Boolean = false,
