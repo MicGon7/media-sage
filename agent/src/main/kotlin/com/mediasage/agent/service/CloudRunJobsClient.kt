@@ -161,7 +161,7 @@ class CloudRunJobsClient(
      */
     private suspend fun fetchLatestExecutionName(ticketKey: String): String? {
         val url = "https://run.googleapis.com/v2/projects/$projectId/locations/$region/jobs/$jobName/executions" +
-            "?pageSize=1&orderBy=create_time+desc"
+            "?pageSize=1"
         return runCatching {
             val httpResponse = httpClient.get(url) {
                 header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
