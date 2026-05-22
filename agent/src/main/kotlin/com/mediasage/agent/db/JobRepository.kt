@@ -30,8 +30,22 @@ data class JobDurationRow(
     val completedAt: Instant?
 )
 
+/**
+ * Supabase Postgres implementation of [JobRegistry].
+ *
+ * All queries run on [Dispatchers.IO] via [withContext] and use synchronous Exposed
+ * transactions. This is correct because Exposed's transaction DSL is blocking and must
+ * not run on the default coroutine dispatcher.
+ */
 class JobRepository : JobRegistry {
 
+    /**
+     * Returns true if a job for [ticketKey] should be dispatched.
+     *
+     * Skips dispatch when the latest row for [ticketKey] is RUNNING (concurrent duplicate)
+     * or COMPLETED (permanent dedup). Returns true for FAILED or INTERRUPTED rows so those
+     * tickets can be retried, and also when no row exists yet.
+     */
     override suspend fun shouldDispatch(ticketKey: String): Boolean = withContext(Dispatchers.IO) {
         val latest = transaction {
             JobsTable.selectAll()
@@ -45,6 +59,7 @@ class JobRepository : JobRegistry {
         latest != JobStatus.RUNNING.name && latest != JobStatus.COMPLETED.name
     }
 
+    /** Returns the most recently created [JobRow] for [ticketKey], or null if no row exists. */
     override suspend fun findLatestJob(ticketKey: String): JobRow? = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.selectAll()
@@ -63,6 +78,10 @@ class JobRepository : JobRegistry {
         }
     }
 
+    /**
+     * Inserts a new PENDING job row for [ticketKey] with the given [prompt] and returns
+     * the generated [UUID] that identifies the job throughout its lifecycle.
+     */
     override suspend fun insert(ticketKey: String, prompt: String): UUID = withContext(Dispatchers.IO) {
         val id = UUID.randomUUID()
         transaction {
@@ -77,6 +96,10 @@ class JobRepository : JobRegistry {
         id
     }
 
+    /**
+     * Transitions [jobId] to RUNNING, records the Cloud Run [executionName], and stamps
+     * [JobsTable.startedAt] with the current time.
+     */
     override suspend fun markRunning(jobId: UUID, executionName: String) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
@@ -88,6 +111,13 @@ class JobRepository : JobRegistry {
         Unit
     }
 
+    /**
+     * Transitions [jobId] to COMPLETED and stamps [JobsTable.completedAt].
+     *
+     * If [metrics] is non-null, also persists token counts, cost, Claude duration, and turn
+     * count sourced from the Cloud Logging result event. These columns remain null when
+     * metrics are unavailable (e.g. Cloud Logging ingestion timeout).
+     */
     override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
@@ -107,6 +137,7 @@ class JobRepository : JobRegistry {
         Unit
     }
 
+    /** Transitions [jobId] to FAILED and stamps [JobsTable.completedAt]. */
     override suspend fun markFailed(jobId: UUID) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
@@ -117,6 +148,12 @@ class JobRepository : JobRegistry {
         Unit
     }
 
+    /**
+     * Transitions [jobId] to INTERRUPTED and stamps [JobsTable.completedAt].
+     *
+     * Called by startup recovery when a RUNNING execution is no longer present in Cloud Run
+     * and cannot be resumed via LRO polling.
+     */
     override suspend fun markInterrupted(jobId: UUID) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
@@ -127,6 +164,7 @@ class JobRepository : JobRegistry {
         Unit
     }
 
+    /** Returns the most recent RUNNING job for [ticketKey], or null if none is active. */
     override suspend fun findRunningByTicketKey(ticketKey: String): JobRow? = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.selectAll()
@@ -145,6 +183,12 @@ class JobRepository : JobRegistry {
         }
     }
 
+    /**
+     * Returns all jobs currently in the RUNNING state, across all ticket keys.
+     *
+     * Used by startup recovery to find executions whose LRO poll was lost on orchestrator
+     * restart, so they can be resumed or marked INTERRUPTED.
+     */
     override suspend fun findRunningJobs(): List<JobRow> = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.selectAll()
@@ -160,6 +204,14 @@ class JobRepository : JobRegistry {
         }
     }
 
+    /**
+     * Returns all rows from the `job_durations` Postgres view, ordered by [JobDurationRow.startedAt]
+     * descending.
+     *
+     * The view pre-computes elapsed time between [JobDurationRow.startedAt] and
+     * [JobDurationRow.completedAt] as an integer number of seconds. A null [JobDurationRow.durationSeconds]
+     * indicates the job has not yet left the RUNNING state.
+     */
     suspend fun getJobDurations(): List<JobDurationRow> = withContext(Dispatchers.IO) {
         transaction {
             exec(
