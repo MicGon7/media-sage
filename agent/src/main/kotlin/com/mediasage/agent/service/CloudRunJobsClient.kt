@@ -166,11 +166,13 @@ class CloudRunJobsClient(
             val httpResponse = httpClient.get(url) {
                 header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
             }
+            val body = httpResponse.bodyAsText()
+            log.info("[$ticketKey] Executions API status: ${httpResponse.status}, body: ${body.take(300)}")
             if (!httpResponse.status.isSuccess()) {
                 log.warn("[$ticketKey] Failed to list executions: ${httpResponse.status}")
                 return@runCatching null
             }
-            json.parseToJsonElement(httpResponse.bodyAsText())
+            json.parseToJsonElement(body)
                 .jsonObject["executions"]
                 ?.jsonArray
                 ?.firstOrNull()
@@ -179,7 +181,7 @@ class CloudRunJobsClient(
                 ?.jsonPrimitive
                 ?.content
         }.getOrElse {
-            log.warn("[$ticketKey] Error fetching latest execution name: ${it.message}")
+            log.warn("[$ticketKey] Error fetching latest execution name: ${it.message}", it)
             null
         }
     }
