@@ -10,6 +10,9 @@ import kotlinx.coroutines.delay
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.ByteArrayInputStream
 import java.util.UUID
 import org.slf4j.LoggerFactory
@@ -41,24 +44,13 @@ private data class RunJobRequest(
 private data class OperationResponse(
     @SerialName("name") val name: String,
     @SerialName("done") val done: Boolean = false,
-    @SerialName("error") val error: OperationError? = null,
-    @SerialName("response") val response: ExecutionResponse? = null
+    @SerialName("error") val error: OperationError? = null
 )
 
 @Serializable
 private data class OperationError(
     @SerialName("code") val code: Int = 0,
     @SerialName("message") val message: String = ""
-)
-
-/**
- * The Cloud Run execution resource embedded in a completed LRO response.
- * [name] is the full execution resource name, e.g.
- * `projects/p/locations/r/jobs/j/executions/j-abc123`.
- */
-@Serializable
-private data class ExecutionResponse(
-    @SerialName("name") val name: String = ""
 )
 
 /**
@@ -161,35 +153,70 @@ class CloudRunJobsClient(
         return false
     }
 
+    /**
+     * Lists executions for the job sorted by createTime descending and returns the name
+     * of the most recent one. This is more reliable than reading [OperationResponse.response]
+     * because the GCP Cloud Run v2 REST API does not always populate the `response` field
+     * in the completed LRO JSON.
+     */
+    private suspend fun fetchLatestExecutionName(ticketKey: String): String? {
+        val url = "https://run.googleapis.com/v2/projects/$projectId/locations/$region/jobs/$jobName/executions" +
+            "?pageSize=1&orderBy=create_time+desc"
+        return runCatching {
+            val httpResponse = httpClient.get(url) {
+                header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
+            }
+            if (!httpResponse.status.isSuccess()) {
+                log.warn("[$ticketKey] Failed to list executions: ${httpResponse.status}")
+                return@runCatching null
+            }
+            json.parseToJsonElement(httpResponse.bodyAsText())
+                .jsonObject["executions"]
+                ?.jsonArray
+                ?.firstOrNull()
+                ?.jsonObject
+                ?.get("name")
+                ?.jsonPrimitive
+                ?.content
+        }.getOrElse {
+            log.warn("[$ticketKey] Error fetching latest execution name: ${it.message}")
+            null
+        }
+    }
+
     private suspend fun handleDone(jobId: UUID, ticketKey: String, operation: OperationResponse): Boolean {
         return if (operation.error != null) {
             log.warn("[$ticketKey] Cloud Run job failed: ${operation.error.message}")
             jobRepository.markFailed(jobId)
             false
         } else {
-            log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
-            val executionName = operation.response?.name
-            log.info("[$ticketKey] LRO response execution name: $executionName")
-            val metrics = if (executionName != null) {
-                cloudLoggingClient.fetchMetrics(executionName).also { m ->
-                    if (m != null) {
-                        log.info(
-                            "[$ticketKey] Metrics: ${m.numTurns} turns, " +
-                                "${m.inputTokens + m.outputTokens} tokens, " +
-                                "\$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}"
-                        )
-                        postMetricsComment(ticketKey, m)
-                    } else {
-                        log.warn("[$ticketKey] Worker metrics unavailable — job marked complete without cost data")
-                    }
-                }
-            } else {
-                log.warn("[$ticketKey] No execution name in LRO response — skipping metrics fetch")
-                null
-            }
-            jobRepository.markCompleted(jobId, metrics)
-            true
+            handleSuccess(jobId, ticketKey)
         }
+    }
+
+    private suspend fun handleSuccess(jobId: UUID, ticketKey: String): Boolean {
+        log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
+        val executionName = fetchLatestExecutionName(ticketKey)
+        log.info("[$ticketKey] Latest execution name: $executionName")
+        val metrics = if (executionName != null) {
+            cloudLoggingClient.fetchMetrics(executionName).also { m ->
+                if (m != null) {
+                    log.info(
+                        "[$ticketKey] Metrics: ${m.numTurns} turns, " +
+                            "${m.inputTokens + m.outputTokens} tokens, " +
+                            "\$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}"
+                    )
+                    postMetricsComment(ticketKey, m)
+                } else {
+                    log.warn("[$ticketKey] Worker metrics unavailable — job marked complete without cost data")
+                }
+            }
+        } else {
+            log.warn("[$ticketKey] Could not determine execution name — skipping metrics fetch")
+            null
+        }
+        jobRepository.markCompleted(jobId, metrics)
+        return true
     }
 
     /**
