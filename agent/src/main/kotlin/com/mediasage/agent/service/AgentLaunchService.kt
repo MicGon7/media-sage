@@ -61,6 +61,25 @@ class AgentLaunchService(
     // Stored for future cancellation support.
     private val activeRuns = ConcurrentHashMap<String, Job>()
 
+    /**
+     * Launches an autonomous Claude Code agent for [ticketKey].
+     *
+     * **Dedup policy (local-process mode):** A `ConcurrentHashMap` key set acts as an atomic
+     * in-process gate. If [ticketKey] is already active the call returns false immediately.
+     *
+     * **Dedup policy (Cloud Run mode):** A second persistent gate checks the job registry:
+     * - RUNNING or COMPLETED → skip (concurrent duplicate or already finished)
+     * - FAILED or INTERRUPTED → re-dispatch (retry eligible)
+     *
+     * The in-process gate is always evaluated first to prevent the TOCTOU race between
+     * reading and writing the persistent DB row.
+     *
+     * @param ticketKey Jira issue key (e.g. "MS-123"). Used as the dedup key and forwarded to the agent.
+     * @param ticketContent Raw ticket text from Jira used to build the bootstrap prompt.
+     *   Pass null to fall back to a prompt that instructs the agent to fetch the ticket itself.
+     * @param dryRun If true (Cloud Run mode only), inserts a job row but skips execution dispatch.
+     * @return true if an agent was dispatched; false if the call was deduplicated.
+     */
     override fun launch(ticketKey: String, ticketContent: String?, dryRun: Boolean): Boolean {
         val basePrompt = if (ticketContent != null) {
             BOOTSTRAP_PROMPT_WITH_CONTENT.format(ticketKey, ticketContent)
@@ -136,6 +155,14 @@ class AgentLaunchService(
         }
     }
 
+    /**
+     * Recovers jobs left in RUNNING state after an orchestrator restart.
+     *
+     * Called once at startup by [Application]. Queries the job registry for all RUNNING rows and,
+     * for each, asks [JobDispatcher.recoverJob] to check whether the backing Cloud Run execution
+     * is still alive. If the execution is gone the job is marked INTERRUPTED and a Jira comment
+     * is posted instructing the team to re-trigger manually. No-op when Cloud Run is not configured.
+     */
     suspend fun recoverInterruptedJobs() {
         val cloudRun = cloudRun ?: return
         val runningJobs = cloudRun.jobs.findRunningJobs()
