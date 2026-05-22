@@ -13,9 +13,6 @@ package com.mediasage.agent.di
  * @property jiraBotEmail Email of the bot Jira account, used for filtering webhook events.
  * @property jiraBotApiToken API token for the bot Jira account.
  * @property verboseLogging Enables verbose debug logging when `true`.
- * @property useCloudRunWorkers When `true`, dispatches worker processes via Cloud Run Jobs instead
- *   of local subprocesses. Requires [gcpProjectId], [gcpRegion], [gcpJobName], and
- *   [googleCredentialsJson] to be set.
  * @property gcpProjectId GCP project ID used for Cloud Run Job dispatch.
  * @property gcpRegion GCP region for Cloud Run Jobs. Defaults to `us-central1`.
  * @property gcpJobName Cloud Run Job name for the worker image. Defaults to `media-sage-agent-worker`.
@@ -38,7 +35,6 @@ data class AgentConfig(
     val jiraBotEmail: String = "",
     val jiraBotApiToken: String = "",
     val verboseLogging: Boolean = false,
-    val useCloudRunWorkers: Boolean = false,
     val gcpProjectId: String = "",
     val gcpRegion: String = "us-central1",
     val gcpJobName: String = "media-sage-agent-worker",

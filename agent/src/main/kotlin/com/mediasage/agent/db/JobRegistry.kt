@@ -3,8 +3,7 @@ package com.mediasage.agent.db
 import java.util.UUID
 
 /**
- * Persistent store for agent job state, backed by Supabase Postgres when
- * [USE_CLOUD_RUN_WORKERS][com.mediasage.agent.di.AgentConfig.useCloudRunWorkers] is enabled.
+ * Persistent store for agent job state, backed by Supabase Postgres.
  *
  * Replaces the in-memory dedup gate so job state survives orchestrator restarts. Before
  * dispatching a Cloud Run worker, callers check [shouldDispatch] to enforce the dedup policy:

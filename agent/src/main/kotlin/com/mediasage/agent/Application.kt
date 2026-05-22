@@ -29,7 +29,7 @@ fun Application.module() {
     install(Koin) { modules(agentModule(config, scope)) }
     val agentLaunchService = get<AgentLaunchService>()
     scope.launch { agentLaunchService.recoverInterruptedJobs() }
-    // Resolve optional Cloud Run client before routing block to avoid Ktor routing DSL name collision
+    // Resolve Cloud Run client before routing block to avoid Ktor routing DSL name collision
     val cloudRunJobsClient = agentLaunchService.cloudRun?.client
     val jobRegistry = agentLaunchService.cloudRun?.jobs
     configureContentNegotiation()
@@ -62,7 +62,6 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         jiraBotEmail = str("app.jira.botEmail"),
         jiraBotApiToken = str("app.jira.botApiToken"),
         verboseLogging = bool("app.agent.verboseLogging"),
-        useCloudRunWorkers = bool("app.cloudRun.useWorkers"),
         gcpProjectId = str("app.cloudRun.projectId"),
         gcpRegion = config.propertyOrNull("app.cloudRun.region")?.getString() ?: "us-central1",
         gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",

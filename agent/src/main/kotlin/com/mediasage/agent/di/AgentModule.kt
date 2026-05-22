@@ -21,7 +21,6 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
-import org.slf4j.LoggerFactory
 
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single { buildHttpClient() }
@@ -40,16 +39,8 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
         }
     }
     single {
-        // CloudRunDispatch is resolved eagerly here so a startup failure (bad DB URL,
-        // missing credentials) degrades gracefully to null rather than poisoning a
-        // Koin nullable singleton — Koin 4 cannot store null as a singleton value.
-        val cloudRun = try {
-            buildCloudRunDispatch(config, get(), get())
-        } catch (e: Exception) {
-            LoggerFactory.getLogger("AgentModule").warn("Cloud Run dispatch disabled: ${e.message}")
-            null
-        }
-        val briefing = if (config.useCloudRunWorkers && config.agentBriefingEnabled) AgentBriefing(config.repoPath) else null
+        val cloudRun = buildCloudRunDispatch(config, get(), get())
+        val briefing = if (config.agentBriefingEnabled) AgentBriefing(config.repoPath) else null
         AgentLaunchService(config.repoPath, scope, config.verboseLogging, cloudRun, get(), briefing, get<JiraTicketStatusChecker>())
     }
     single<AgentLauncher> { get<AgentLaunchService>() }
@@ -71,8 +62,8 @@ private fun buildCloudRunDispatch(
     httpClient: HttpClient,
     jiraCommentPoster: JiraCommentPoster
 ): CloudRunDispatch? {
-    if (!config.useCloudRunWorkers || config.googleCredentialsJson.isBlank()) return null
-    if (config.supabaseDbUrl.isBlank()) return null
+    if (config.googleCredentialsJson.isBlank()) error("GOOGLE_CREDENTIALS_BASE64 is required — Cloud Run is the only worker dispatch path")
+    if (config.supabaseDbUrl.isBlank()) error("SUPABASE_DB_URL is required — job registry must be configured")
     AgentDatabase.init(config.supabaseDbUrl)
     val jobRepository = JobRepository()
     val loggingClient = CloudLoggingClient(
