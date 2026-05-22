@@ -35,7 +35,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
         // missing credentials) degrades gracefully to null rather than poisoning a
         // Koin nullable singleton — Koin 4 cannot store null as a singleton value.
         val cloudRun = try {
-            buildCloudRunDispatch(config, get())
+            buildCloudRunDispatch(config, get(), get())
         } catch (e: Exception) {
             LoggerFactory.getLogger("AgentModule").warn("Cloud Run dispatch disabled: ${e.message}")
             null
@@ -57,7 +57,11 @@ private fun buildHttpClient() = HttpClient(OkHttp) {
     }
 }
 
-private fun buildCloudRunDispatch(config: AgentConfig, httpClient: HttpClient): CloudRunDispatch? {
+private fun buildCloudRunDispatch(
+    config: AgentConfig,
+    httpClient: HttpClient,
+    jiraCommentPoster: JiraCommentPoster
+): CloudRunDispatch? {
     if (!config.useCloudRunWorkers || config.googleCredentialsJson.isBlank()) return null
     if (config.supabaseDbUrl.isBlank()) return null
     AgentDatabase.init(config.supabaseDbUrl)
@@ -74,7 +78,8 @@ private fun buildCloudRunDispatch(config: AgentConfig, httpClient: HttpClient): 
         jobName = config.gcpJobName,
         credentialsJson = config.googleCredentialsJson,
         jobRepository = jobRepository,
-        cloudLoggingClient = loggingClient
+        cloudLoggingClient = loggingClient,
+        jiraCommentPoster = jiraCommentPoster
     )
     return CloudRunDispatch(client, jobRepository)
 }
