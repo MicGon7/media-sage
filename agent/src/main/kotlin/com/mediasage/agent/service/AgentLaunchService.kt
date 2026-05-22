@@ -136,6 +136,9 @@ class AgentLaunchService(
         }
     }
 
+    // Runs on startup to handle jobs left in RUNNING state by a previous orchestrator instance
+    // that crashed or was redeployed. Resumes polling each execution so in-flight work isn't
+    // abandoned and the DB doesn't stay permanently stuck in RUNNING.
     suspend fun recoverInterruptedJobs() {
         val cloudRun = cloudRun ?: return
         val runningJobs = cloudRun.jobs.findRunningJobs()
