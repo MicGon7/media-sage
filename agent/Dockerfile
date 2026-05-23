@@ -1,7 +1,7 @@
 FROM eclipse-temurin:21-jdk-jammy AS builder
 WORKDIR /workspace
 COPY . .
-RUN ./gradlew :agent:shadowJar --no-daemon
+RUN ./gradlew :agent:shadowJar --no-daemon --settings-file settings-agent.gradle.kts
 
 FROM eclipse-temurin:21-jdk-jammy
 
