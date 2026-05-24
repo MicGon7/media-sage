@@ -1,6 +1,7 @@
 package com.mediasage.agent.service
 
 import com.mediasage.agent.db.JobStatus
+import net.logstash.logback.argument.StructuredArguments.kv
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -259,10 +260,10 @@ class AgentLaunchService(
         scope.launch(Dispatchers.IO) {
             BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line ->
                 if (verboseLogging) {
-                    log.info("[$key] $line")
+                    log.info("[$key] $line", kv("source", "worker"))
                 } else {
                     parseStreamJsonMilestone(line)?.let { milestone ->
-                        milestone.lines().forEach { log.info("[$key] $it") }
+                        milestone.lines().forEach { log.info("[$key] $it", kv("source", "worker")) }
                     }
                 }
             }
@@ -271,9 +272,9 @@ class AgentLaunchService(
             BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line ->
                 val milestone = parseStreamJsonMilestone(line)
                 if (milestone != null) {
-                    milestone.lines().forEach { log.info("[$key] $it") }
+                    milestone.lines().forEach { log.info("[$key] $it", kv("source", "worker")) }
                 } else {
-                    log.warn("[$key] $line")
+                    log.warn("[$key] $line", kv("source", "worker"))
                 }
             }
         }
