@@ -61,13 +61,11 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         jiraBotAccountId = str("app.jira.botAccountId"),
         jiraBotEmail = str("app.jira.botEmail"),
         jiraBotApiToken = str("app.jira.botApiToken"),
-        verboseLogging = bool("app.agent.verboseLogging"),
         gcpProjectId = str("app.cloudRun.projectId"),
         gcpRegion = config.propertyOrNull("app.cloudRun.region")?.getString() ?: "us-central1",
         gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",
         googleCredentialsJson = credentialsJson,
         supabaseDbUrl = str("app.supabase.dbUrl"),
-        agentBriefingEnabled = bool("app.agent.briefingEnabled"),
         pubSubWebhookSecret = str("app.pubSub.webhookSecret")
     )
 }

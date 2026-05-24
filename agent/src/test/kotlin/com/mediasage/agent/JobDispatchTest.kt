@@ -62,10 +62,12 @@ class JobDispatchTest {
 
     private class FakeJobDispatcher(private val recoverResult: Boolean = true) : JobDispatcher {
         val executions = mutableListOf<String>()         // ticket keys passed to executeJob
+        val prompts = mutableListOf<String>()            // prompts passed to executeJob
         val recoveries = mutableListOf<String>()         // executionNames passed to recoverJob
 
         override suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String): Boolean {
             executions.add(ticketKey)
+            prompts.add(prompt)
             return true
         }
         override suspend fun recoverJob(jobId: UUID, ticketKey: String, executionName: String): Boolean {
@@ -322,5 +324,61 @@ class JobDispatchTest {
         assertEquals(listOf(executionName), dispatcher.recoveries)
         assertEquals(1, poster.comments.size)
         assertEquals("MS-99", poster.comments[0].first)
+    }
+
+    // ── PR review: Cloud Run dispatch ─────────────────────────────────────────
+
+    @Test
+    fun `launchForPrReview dispatches Cloud Run job with PR key`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        service.launchForPrReview("MS-42", 42, "feature/MS-42-some-feature", "Please fix this.", "jane-reviewer")
+        advanceUntilIdle()
+
+        assertEquals(listOf("PR-42"), registry.inserted)
+        assertEquals(listOf("PR-42"), dispatcher.executions)
+    }
+
+    @Test
+    fun `launchForPrReview prompt includes reviewer login for re-request`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        service.launchForPrReview("MS-42", 42, "feature/MS-42-some-feature", "Please fix this.", "jane-reviewer")
+        advanceUntilIdle()
+
+        assertTrue(dispatcher.prompts.single().contains("jane-reviewer"),
+            "Prompt must include reviewer login for gh pr review-request")
+    }
+
+    @Test
+    fun `launchForCommentReview dispatches Cloud Run job with PR key`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        service.launchForCommentReview("MS-42", 42, "feature/MS-42-some-feature", "What does this do?")
+        advanceUntilIdle()
+
+        assertEquals(listOf("PR-42"), registry.inserted)
+        assertEquals(listOf("PR-42"), dispatcher.executions)
+    }
+
+    @Test
+    fun `duplicate launchForPrReview for same PR is ignored`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        val first = service.launchForPrReview("MS-42", 42, "feature/MS-42", "Fix this.", "jane")
+        val second = service.launchForPrReview("MS-42", 42, "feature/MS-42", "Fix this too.", "jane")
+        advanceUntilIdle()
+
+        assertTrue(first, "First launch must return true")
+        assertFalse(second, "Second launch for same PR must be deduplicated")
+        assertEquals(1, dispatcher.executions.size, "Only one job must be dispatched")
     }
 }
