@@ -1,14 +1,10 @@
 package com.mediasage.agent.service
 
 import com.mediasage.agent.db.JobStatus
-import net.logstash.logback.argument.StructuredArguments.kv
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import java.io.BufferedReader
 import java.io.File
-import java.io.InputStreamReader
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -25,7 +21,8 @@ private const val BOOTSTRAP_PROMPT_FALLBACK =
 private const val PR_REVIEW_PROMPT =
     "PR #%1\$d for ticket %2\$s has a new review comment: \"%3\$s\". " +
     "Check out branch %4\$s, read the relevant source files, and make the necessary change. " +
-    "Then push a fix commit. If no code change is needed, post a comment on the PR using " +
+    "Then push a fix commit and run: gh pr review-request %1\$d --reviewer %5\$s " +
+    "If no code change is needed, post a comment on the PR using " +
     "`gh pr comment %1\$d --body '🤖 **Agent:** your explanation here'` and exit. " +
     "Follow the Agent Guidelines in CLAUDE.md."
 
@@ -37,19 +34,20 @@ private const val PR_COMMENT_REVIEW_PROMPT =
     "Do NOT push any code changes. Follow the Agent Guidelines in CLAUDE.md."
 
 /**
- * Spawns autonomous Claude Code agents.
+ * Dispatches autonomous Claude Code agents via Cloud Run Jobs.
  * Guards against double-firing: a second launch call for the same key is a no-op
- * until the first agent process exits.
+ * until the first dispatch coroutine completes.
+ *
+ * All agent work — ticket implementation and PR review — is dispatched as Cloud Run Jobs.
+ * The orchestrator is a pure event router: it receives webhooks, builds prompts, and
+ * dispatches jobs. No agent processes run locally.
  */
 class AgentLaunchService(
     private val repoPath: String,
     private val scope: CoroutineScope,
-    private val verboseLogging: Boolean = false,
     internal val cloudRun: CloudRunDispatch? = null,
     private val jiraCommentPoster: JiraCommentPoster? = null,
-    private val agentBriefing: AgentBriefing? = null,
-    private val jiraStatusChecker: JiraTicketStatusChecker? = null,
-    private val worktreeManager: WorktreeManager = DefaultWorktreeManager(repoPath)
+    private val jiraStatusChecker: JiraTicketStatusChecker? = null
 ) : AgentLauncher {
 
     private val log = LoggerFactory.getLogger(AgentLaunchService::class.java)
@@ -58,52 +56,35 @@ class AgentLaunchService(
     // This prevents the TOCTOU race condition that ConcurrentHashMap.containsKey() + put() would have.
     private val activeKeys: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
-    // Job registry — safe to write after activeKeys.add() succeeds (only one thread reaches this).
-    // Stored for future cancellation support.
-    private val activeRuns = ConcurrentHashMap<String, Job>()
-
     /**
-     * Launches an autonomous Claude Code agent for [ticketKey].
+     * Launches an autonomous Claude Code agent for [ticketKey] via Cloud Run Jobs.
      *
-     * **Dedup policy (local-process mode):** A `ConcurrentHashMap` key set acts as an atomic
-     * in-process gate. If [ticketKey] is already active the call returns false immediately.
-     *
-     * **Dedup policy (Cloud Run mode):** A second persistent gate checks the job registry:
+     * **Dedup policy:** A second persistent gate checks the job registry:
      * - RUNNING or COMPLETED → skip (concurrent duplicate or already finished)
      * - FAILED or INTERRUPTED → re-dispatch (retry eligible)
      *
-     * The in-process gate is always evaluated first to prevent the TOCTOU race between
-     * reading and writing the persistent DB row.
+     * The in-process [activeKeys] gate is always evaluated first to prevent the TOCTOU race
+     * between reading and writing the persistent DB row.
      *
      * @param ticketKey Jira issue key (e.g. "MS-123"). Used as the dedup key and forwarded to the agent.
      * @param ticketContent Raw ticket text from Jira used to build the bootstrap prompt.
      *   Pass null to fall back to a prompt that instructs the agent to fetch the ticket itself.
-     * @param dryRun If true (Cloud Run mode only), inserts a job row but skips execution dispatch.
-     * @return true if an agent was dispatched; false if the call was deduplicated.
+     * @param dryRun If true, inserts a job row but skips execution dispatch.
+     * @return true if an agent was dispatched; false if the call was deduplicated or Cloud Run is not configured.
      */
     override fun launch(ticketKey: String, ticketContent: String?, dryRun: Boolean): Boolean {
-        val basePrompt = if (ticketContent != null) {
+        val cloudRun = cloudRun ?: return false
+        val prompt = if (ticketContent != null) {
             BOOTSTRAP_PROMPT_WITH_CONTENT.format(ticketKey, ticketContent)
         } else {
             BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
         }
-        return if (cloudRun != null) {
-            dispatchToCloudRun(ticketKey, basePrompt, ticketContent, cloudRun, dryRun)
-        } else {
-            val briefing = if (agentBriefing != null && ticketContent != null) {
-                agentBriefing.prepare(ticketKey, ticketContent)
-            } else {
-                ""
-            }
-            val prompt = if (briefing.isNotBlank()) "$basePrompt\n\n## Agent Briefing\n$briefing" else basePrompt
-            dispatchToLocalProcess(ticketKey, prompt)
-        }
+        return dispatchToCloudRun(ticketKey, prompt, cloudRun, dryRun)
     }
 
     private fun dispatchToCloudRun(
         ticketKey: String,
-        basePrompt: String,
-        ticketContent: String?,
+        prompt: String,
         cloudRun: CloudRunDispatch,
         dryRun: Boolean = false
     ): Boolean {
@@ -116,7 +97,7 @@ class AgentLaunchService(
         }
         scope.launch {
             try {
-                doDispatch(ticketKey, basePrompt, ticketContent, cloudRun, dryRun)
+                doDispatch(ticketKey, prompt, cloudRun, dryRun)
             } finally {
                 activeKeys.remove(ticketKey)
             }
@@ -126,8 +107,7 @@ class AgentLaunchService(
 
     private suspend fun doDispatch(
         ticketKey: String,
-        basePrompt: String,
-        ticketContent: String?,
+        prompt: String,
         cloudRun: CloudRunDispatch,
         dryRun: Boolean
     ) {
@@ -136,11 +116,6 @@ class AgentLaunchService(
             return
         }
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
-        // Dedup passed — safe to run AgentBriefing now (costs tokens, must not run on duplicates).
-        val briefing = if (agentBriefing != null && ticketContent != null) {
-            agentBriefing.prepare(ticketKey, ticketContent)
-        } else { "" }
-        val prompt = if (briefing.isNotBlank()) "$basePrompt\n\n## Agent Briefing\n$briefing" else basePrompt
         val jobId = cloudRun.jobs.insert(ticketKey, prompt)
         if (dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
@@ -184,24 +159,10 @@ class AgentLaunchService(
         }
     }
 
-    private fun dispatchToLocalProcess(ticketKey: String, prompt: String): Boolean {
-        // Each Jira ticket gets an isolated worktree so concurrent agents can't corrupt
-        // each other's git state. We use --no-checkout because the agent creates its own
-        // branch as its first action — there is no existing branch to check out yet.
-        val worktreePath = "${repoPath}-worktrees/$ticketKey"
-        val worktreeCreated = worktreeManager.createWorktree(worktreePath)
-        return spawnAgent(
-            key = ticketKey,
-            prompt = prompt,
-            workDir = if (worktreeCreated) File(worktreePath) else File(repoPath),
-            teardown = { if (worktreeCreated) worktreeManager.removeWorktree(worktreePath) }
-        )
-    }
-
     /**
-     * Launches an agent to respond to a PR review comment for [ticketKey].
-     * Creates a git worktree at /tmp/media-sage-pr-{prNumber} so the agent works in
-     * isolation and cannot switch branches in the developer's main checkout.
+     * Launches a Cloud Run Job to respond to a PR review comment for [ticketKey].
+     * The worker checks out [branchRef], makes the necessary change, pushes a fix commit,
+     * then re-requests review from [reviewerLogin] via `gh pr review-request`.
      * De-duplicates by PR number — a second call while one is running is a no-op.
      */
     override fun launchForPrReview(
@@ -211,18 +172,10 @@ class AgentLaunchService(
         commentBody: String,
         reviewerLogin: String
     ): Boolean {
+        val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
-        val worktreePath = "/tmp/media-sage-pr-$prNumber"
-        val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
-        val worktreeCreated = worktreeManager.createWorktree(worktreePath, branchRef)
-        return spawnAgent(
-            key, prompt,
-            workDir = if (worktreeCreated) File(worktreePath) else File(repoPath),
-            teardown = {
-                if (worktreeCreated) worktreeManager.removeWorktree(worktreePath)
-                requestReview(prNumber, reviewerLogin, repoPath, log)
-            }
-        )
+        val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef, reviewerLogin)
+        return dispatchToCloudRun(key, prompt, cloudRun)
     }
 
     override fun launchForCommentReview(
@@ -231,9 +184,10 @@ class AgentLaunchService(
         branchRef: String,
         commentBody: String
     ): Boolean {
+        val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
         val prompt = PR_COMMENT_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
-        return spawnAgent(key, prompt, workDir = File(repoPath))
+        return dispatchToCloudRun(key, prompt, cloudRun)
     }
 
     override fun postInlineCommentReply(prNumber: Int) {
@@ -255,69 +209,6 @@ class AgentLaunchService(
     }
 
     fun isActive(key: String): Boolean = key in activeKeys
-
-    private fun pipeStreams(key: String, process: Process) {
-        scope.launch(Dispatchers.IO) {
-            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line ->
-                if (verboseLogging) {
-                    log.info("[$key] $line", kv("source", "worker"))
-                } else {
-                    parseStreamJsonMilestone(line)?.let { milestone ->
-                        milestone.lines().forEach { log.info("[$key] $it", kv("source", "worker")) }
-                    }
-                }
-            }
-        }
-        scope.launch(Dispatchers.IO) {
-            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line ->
-                val milestone = parseStreamJsonMilestone(line)
-                if (milestone != null) {
-                    milestone.lines().forEach { log.info("[$key] $it", kv("source", "worker")) }
-                } else {
-                    log.warn("[$key] $line", kv("source", "worker"))
-                }
-            }
-        }
-    }
-
-    private fun spawnAgent(
-        key: String,
-        prompt: String,
-        workDir: File = File(repoPath),
-        teardown: (() -> Unit)? = null
-    ): Boolean {
-        // activeKeys.add() is the atomic gate. If it returns false, the key was already
-        // present — another agent is running for this ticket. Ignore the duplicate.
-        if (!activeKeys.add(key)) {
-            log.info("[$key] already in flight — ignoring duplicate webhook")
-            return false
-        }
-        try {
-            val process = worktreeManager.buildAgentProcess(prompt, workDir)
-            log.info("Agent launched for $key (pid ${process.pid()}) in ${workDir.path}")
-            pipeStreams(key, process)
-            // activeKeys.add() succeeded above, so only this thread reaches here.
-            // It is safe to write to activeRuns without a race condition.
-            val job = scope.launch(Dispatchers.IO) {
-                try {
-                    val exitCode = process.waitFor()
-                    log.info("Agent for $key exited with code $exitCode")
-                } finally {
-                    // Release the key before teardown so callers polling isActive() see the
-                    // release before any teardown side-effects (e.g. countdown latches) fire.
-                    activeKeys.remove(key)
-                    activeRuns.remove(key)
-                    teardown?.invoke()
-                }
-            }
-            activeRuns[key] = job
-        } catch (e: Exception) {
-            activeKeys.remove(key)
-            activeRuns.remove(key)
-            log.warn("Failed to launch agent for $key: ${e.message}")
-        }
-        return true
-    }
 }
 
 /**
@@ -359,18 +250,4 @@ private suspend fun postInterruptedComment(ticketKey: String, poster: JiraCommen
         "⚠️ The agent job for this ticket was interrupted during an orchestrator restart. " +
             "To re-trigger, move the ticket back to **In Progress**."
     )
-}
-
-private fun requestReview(prNumber: Int, reviewerLogin: String, repoPath: String, log: Logger) {
-    try {
-        ProcessBuilder("gh", "pr", "review-request", prNumber.toString(), "--reviewer", reviewerLogin)
-            .directory(java.io.File(repoPath))
-            .redirectInput(ProcessBuilder.Redirect.from(java.io.File("/dev/null")))
-            .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-            .redirectError(ProcessBuilder.Redirect.INHERIT)
-            .start()
-            .waitFor()
-    } catch (e: Exception) {
-        log.warn("Failed to re-request review on PR#$prNumber: ${e.message}")
-    }
 }

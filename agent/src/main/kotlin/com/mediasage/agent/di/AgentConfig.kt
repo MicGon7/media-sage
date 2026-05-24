@@ -12,7 +12,6 @@ package com.mediasage.agent.di
  *   and transitioned to In Progress trigger autonomous mode via the Jira webhook.
  * @property jiraBotEmail Email of the bot Jira account, used for filtering webhook events.
  * @property jiraBotApiToken API token for the bot Jira account.
- * @property verboseLogging Enables verbose debug logging when `true`.
  * @property gcpProjectId GCP project ID used for Cloud Run Job dispatch.
  * @property gcpRegion GCP region for Cloud Run Jobs. Defaults to `us-central1`.
  * @property gcpJobName Cloud Run Job name for the worker image. Defaults to `media-sage-agent-worker`.
@@ -20,8 +19,6 @@ package com.mediasage.agent.di
  *   Cloud Run API calls.
  * @property supabaseDbUrl PostgreSQL connection URL for the Supabase job registry, used for
  *   persistent dedup and job recovery across restarts.
- * @property agentBriefingEnabled Enables the AgentBriefing feature. Off by default until latency
- *   issues are resolved; set `AGENT_BRIEFING_ENABLED=true` to enable for demos.
  * @property pubSubWebhookSecret Shared secret token appended as `?token=` to the Pub/Sub push
  *   subscription URL. The orchestrator verifies this on every push delivery to reject spoofed requests.
  */
@@ -34,12 +31,10 @@ data class AgentConfig(
     val jiraBotAccountId: String = "",
     val jiraBotEmail: String = "",
     val jiraBotApiToken: String = "",
-    val verboseLogging: Boolean = false,
     val gcpProjectId: String = "",
     val gcpRegion: String = "us-central1",
     val gcpJobName: String = "media-sage-agent-worker",
     val googleCredentialsJson: String = "",
     val supabaseDbUrl: String = "",
-    val agentBriefingEnabled: Boolean = false,
     val pubSubWebhookSecret: String = ""
 )
