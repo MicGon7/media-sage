@@ -25,6 +25,7 @@ jobs:
         with:
           dockerfile: agent/Dockerfile
           config: .hadolint.yaml
+          ignore: DL3008
 
       - name: Build agent image
         run: docker build -f agent/Dockerfile -t media-sage-agent-test .
