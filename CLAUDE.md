@@ -366,7 +366,6 @@ Config is split between plain env vars (set directly on the service) and secrets
 |---|---|
 | `AGENT_REPO_PATH` | `/home/agent/media-sage` |
 | `GITHUB_BOT_LOGIN` | `media-sage-worker[bot]` (GitHub App identity — note `[bot]` suffix) |
-| `GITHUB_BOT_EMAIL` | GitHub App noreply email (e.g. `APP_ID+media-sage-worker[bot]@users.noreply.github.com`) |
 | `GITHUB_BOT_NAME` | `media-sage-worker` |
 | `GITHUB_APP_ID` | Numeric App ID from the `media-sage-worker` GitHub App settings page |
 | `GITHUB_APP_INSTALLATION_ID` | Installation ID for the media-sage repo |
@@ -392,7 +391,7 @@ Config is split between plain env vars (set directly on the service) and secrets
 | `pubsub-webhook-secret` | `PUBSUB_WEBHOOK_SECRET` | Shared secret for Pub/Sub push URL auth |
 | `google-credentials-base64` | `GOOGLE_CREDENTIALS_BASE64` | Base64-encoded GCP SA JSON (worker dispatch) |
 
-**GitHub App auth pattern:** Both the orchestrator (Cloud Run Service) and worker (Cloud Run Job) authenticate as `media-sage-worker[bot]` using short-lived installation tokens (1-hour TTL). Tokens are generated at container startup via `get-github-token.py` (JWT → GitHub API exchange). The Kotlin orchestrator additionally refreshes tokens at runtime via `GitHubAppTokenService` before any `gh` CLI call. Store the private key base64-encoded: `base64 -i private-key.pem | tr -d '\n'`.
+**GitHub App auth pattern:** Both the orchestrator (Cloud Run Service) and worker (Cloud Run Job) authenticate as `media-sage-worker[bot]` using short-lived installation tokens (1-hour TTL). Tokens are generated at container startup via `get-github-token.py` (JWT → GitHub API exchange) and exported as `GH_TOKEN`. The git commit email is derived automatically from the App ID: `{GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com` — no `GITHUB_BOT_EMAIL` env var needed. Store the private key base64-encoded: `base64 -i private-key.pem | tr -d '\n'`.
 
 Webhook URLs:
 - Jira: `https://media-sage-orchestrator-924166357877.us-central1.run.app/webhook/jira`

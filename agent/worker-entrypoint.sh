@@ -2,7 +2,8 @@
 set -e
 
 git config --global user.name "${GITHUB_BOT_NAME:-media-sage-worker}"
-git config --global user.email "${GITHUB_BOT_EMAIL}"
+# GitHub App noreply email — deterministic from the App ID, no env var needed
+git config --global user.email "${GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com"
 
 # Generate a GitHub App installation token for git clone and gh CLI.
 # Workers typically run for 10-30 minutes; the 1-hour token TTL covers this.

@@ -47,8 +47,7 @@ class AgentLaunchService(
     private val scope: CoroutineScope,
     internal val cloudRun: CloudRunDispatch? = null,
     private val jiraCommentPoster: JiraCommentPoster? = null,
-    private val jiraStatusChecker: JiraTicketStatusChecker? = null,
-    private val githubAppTokenService: GitHubAppTokenService? = null
+    private val jiraStatusChecker: JiraTicketStatusChecker? = null
 ) : AgentLauncher {
 
     private val log = LoggerFactory.getLogger(AgentLaunchService::class.java)
@@ -196,15 +195,13 @@ class AgentLaunchService(
             "with **Changes requested** and I'll address all your feedback in one pass."
         scope.launch(Dispatchers.IO) {
             try {
-                val pb = ProcessBuilder("gh", "pr", "comment", prNumber.toString(), "--body", body)
+                ProcessBuilder("gh", "pr", "comment", prNumber.toString(), "--body", body)
                     .directory(File(repoPath))
                     .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
                     .redirectOutput(ProcessBuilder.Redirect.INHERIT)
                     .redirectError(ProcessBuilder.Redirect.INHERIT)
-                // Inject a fresh installation token so gh always has valid credentials,
-                // even if the token set at orchestrator startup has expired (1-hour TTL).
-                githubAppTokenService?.let { pb.environment()["GH_TOKEN"] = it.getToken() }
-                pb.start().waitFor()
+                    .start()
+                    .waitFor()
             } catch (e: Exception) {
                 log.warn("Failed to post inline comment reply on PR#$prNumber: ${e.message}")
             }

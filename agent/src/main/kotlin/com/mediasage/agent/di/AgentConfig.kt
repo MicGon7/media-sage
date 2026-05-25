@@ -5,9 +5,6 @@ package com.mediasage.agent.di
  *
  * @property repoPath Absolute path to the local clone of the media-sage repository used by worker processes.
  * @property githubWebhookSecret Secret used to verify HMAC-SHA256 signatures on incoming GitHub webhook payloads.
- * @property githubAppId Numeric GitHub App ID for `media-sage-worker`. Used to generate JWTs for installation token exchange.
- * @property githubAppInstallationId Installation ID of `media-sage-worker` on the media-sage repo.
- * @property githubAppPrivateKey RSA private key PEM content (decoded from base64 env var) for signing JWTs.
  * @property jiraEmail Email address for authenticating with the Jira REST API.
  * @property jiraApiToken API token for the Jira REST API, paired with [jiraEmail].
  * @property jiraCloudId Jira cloud instance hostname (e.g. `media-sage.atlassian.net`).
@@ -28,9 +25,6 @@ package com.mediasage.agent.di
 data class AgentConfig(
     val repoPath: String,
     val githubWebhookSecret: String,
-    val githubAppId: String = "",
-    val githubAppInstallationId: String = "",
-    val githubAppPrivateKey: String = "",
     val jiraEmail: String,
     val jiraApiToken: String,
     val jiraCloudId: String,

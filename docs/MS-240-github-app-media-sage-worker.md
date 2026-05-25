@@ -5,9 +5,10 @@
 Replaced the static `GITHUB_BOT_TOKEN` PAT (a fake user account credential) with GitHub App
 installation tokens issued to the `media-sage-worker` GitHub App.
 
-Both Docker images now generate a fresh installation token at startup. The Kotlin orchestrator
-additionally refreshes tokens at runtime before any `gh` CLI invocation, so the 1-hour TTL
-is never a concern for long-running orchestrator processes.
+Both Docker images generate a fresh installation token at startup via a small Python script
+(`get-github-token.py`). Workers run for 10–30 minutes well within the 1-hour TTL. The
+orchestrator accepts the TTL limitation for its rare `postInlineCommentReply` path — no
+in-process token refresh is needed at this stage.
 
 ## Why GitHub Apps
 
@@ -29,29 +30,22 @@ Startup (entrypoint.sh / worker-entrypoint.sh)
     ↓
 get-github-token.py
     ↓ reads: GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID, GITHUB_APP_PRIVATE_KEY_BASE64
-    ↓ generates: RS256 JWT (9-min window, signed with private key)
+    ↓ generates: RS256 JWT (9-min window) using Python cryptography package
     ↓ exchanges: POST /app/installations/{id}/access_tokens
     → installation token (1 hour)
-    → export GH_TOKEN + git clone URL (x-access-token:{token}@github.com/...)
-
-Runtime (Kotlin orchestrator — AgentLaunchService.postInlineCommentReply)
-    ↓
-GitHubAppTokenService.getToken()
-    ↓ returns cached token if > 10 min remaining
-    ↓ otherwise: new JWT → token exchange → cache
-    → injected as GH_TOKEN into ProcessBuilder environment
+    → export GH_TOKEN; set git clone URL to x-access-token:{token}@github.com/...
 ```
 
-### No external JWT library
+### Why Python for token generation
 
-`GitHubAppTokenService` uses JDK built-ins only:
-- `java.security.KeyFactory` + `PKCS8EncodedKeySpec` for key loading
-- `java.security.Signature` (SHA256withRSA) for signing
-- `java.util.Base64` for URL-safe encoding
+The `cryptography` pip package handles PKCS#1 RSA keys natively (GitHub App private keys
+ship in PKCS#1 PEM format). Java's `KeyFactory` only supports PKCS#8, requiring a manual
+DER wrapping step — significant boilerplate with no added value. The Python script is simpler,
+runs at container startup only, and keeps all GitHub App crypto in one place (no Kotlin JDK
+workarounds needed).
 
-GitHub App private keys are PKCS#1 format (`BEGIN RSA PRIVATE KEY`). Java's `KeyFactory`
-natively handles PKCS#8. `wrapInPkcs8()` converts PKCS#1 DER bytes to a PKCS#8 envelope
-using the fixed RSA algorithm OID — no BouncyCastle required.
+`get-github-token.py` is a pure-stdlib script (plus `cryptography`) with no Ktor/Koin
+dependencies — it runs in both the orchestrator and worker images identically.
 
 ## New Environment Variables
 
@@ -81,8 +75,9 @@ which use the account username.
 
 ## What Was Not Changed
 
-- Workers run for 10-30 minutes; the 1-hour token TTL covers this without credential helper support
-- `GITHUB_BOT_EMAIL` — still required for `git config user.email`
+- Workers run for 10–30 minutes; the 1-hour token TTL covers this without credential helper support
+- `GITHUB_BOT_EMAIL` — **removed**; the bot email is now derived automatically from `GITHUB_APP_ID`:
+  `${GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com`
 - `GITHUB_WEBHOOK_SECRET` — unchanged
 - All Cloud Run Job dispatch logic — unchanged
 
