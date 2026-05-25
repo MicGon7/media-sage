@@ -7,6 +7,7 @@ import com.mediasage.agent.routes.githubWebhookRoutes
 import com.mediasage.agent.routes.pubSubWebhookRoutes
 import com.mediasage.agent.routes.webhookRoutes
 import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.GitHubAppTokenService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
 import io.ktor.server.netty.EngineMain
@@ -47,14 +48,20 @@ fun Application.module() {
 
 private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): AgentConfig {
     fun str(key: String) = config.propertyOrNull(key)?.getString() ?: ""
-    fun bool(key: String) = config.propertyOrNull(key)?.getString()?.toBoolean() ?: false
     val credentialsBase64 = str("app.cloudRun.credentialsBase64")
     val credentialsJson = if (credentialsBase64.isNotBlank()) {
         String(java.util.Base64.getDecoder().decode(credentialsBase64))
     } else ""
+    val appPrivateKeyBase64 = str("app.github.app.privateKeyBase64")
+    val appPrivateKey = if (appPrivateKeyBase64.isNotBlank()) {
+        GitHubAppTokenService.decodeBase64Key(appPrivateKeyBase64)
+    } else ""
     return AgentConfig(
         repoPath = str("app.agent.repoPath"),
         githubWebhookSecret = str("app.github.webhookSecret"),
+        githubAppId = str("app.github.app.id"),
+        githubAppInstallationId = str("app.github.app.installationId"),
+        githubAppPrivateKey = appPrivateKey,
         jiraEmail = str("app.jira.email"),
         jiraApiToken = str("app.jira.apiToken"),
         jiraCloudId = str("app.jira.cloudId"),

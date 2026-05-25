@@ -15,7 +15,7 @@ RUN apt-get update && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends gh && \
-    pip3 install --no-cache-dir mcp-atlassian==0.21.1 && \
+    pip3 install --no-cache-dir mcp-atlassian==0.21.1 cryptography && \
     npm install -g @anthropic-ai/claude-code@2.1.139 && \
     rm -rf /var/lib/apt/lists/*
 
@@ -28,6 +28,7 @@ WORKDIR /home/agent
 
 COPY --from=builder --chown=agent:agent /workspace/agent/build/libs/agent-all.jar app.jar
 COPY --chown=agent:agent agent/entrypoint.sh entrypoint.sh
+COPY --chown=agent:agent agent/get-github-token.py get-github-token.py
 RUN chmod +x entrypoint.sh
 
 EXPOSE 8081

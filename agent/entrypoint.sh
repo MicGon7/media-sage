@@ -1,12 +1,25 @@
 #!/bin/bash
 set -e
 
-git config --global user.name "${GITHUB_BOT_NAME:-media-sage-bot}"
+git config --global user.name "${GITHUB_BOT_NAME:-media-sage-worker}"
 git config --global user.email "${GITHUB_BOT_EMAIL}"
-export GH_TOKEN="${GITHUB_BOT_TOKEN}"
+
+# Generate a GitHub App installation token for git and gh CLI authentication.
+# The token is valid for 1 hour — sufficient for orchestrator startup operations.
+# Runtime gh calls (e.g. postInlineCommentReply) use GitHubAppTokenService in the
+# Kotlin code to refresh the token automatically before each invocation.
+echo "Generating GitHub App installation token..."
+GITHUB_TOKEN=$(python3 /home/agent/get-github-token.py)
+if [ -z "$GITHUB_TOKEN" ]; then
+  echo "ERROR: Failed to generate GitHub App installation token." >&2
+  echo "Ensure GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID, and GITHUB_APP_PRIVATE_KEY_BASE64 are set." >&2
+  exit 1
+fi
+export GH_TOKEN="$GITHUB_TOKEN"
 
 REPO_DIR="${AGENT_REPO_PATH:-/home/agent/media-sage}"
-REPO_URL="https://${GITHUB_BOT_TOKEN}@github.com/MicGon7/media-sage.git"
+# GitHub App installation tokens use x-access-token as the username in clone URLs
+REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/MicGon7/media-sage.git"
 
 if [ -d "$REPO_DIR/.git" ]; then
   echo "Repo exists, pulling latest..."

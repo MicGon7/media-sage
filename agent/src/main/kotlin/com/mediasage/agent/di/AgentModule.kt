@@ -7,6 +7,7 @@ import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.CloudLoggingClient
 import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.CloudRunJobsClient
+import com.mediasage.agent.service.GitHubAppTokenService
 import com.mediasage.agent.service.JiraApiService
 import com.mediasage.agent.service.JiraCommentPoster
 import com.mediasage.agent.service.JiraLabelChecker
@@ -39,9 +40,17 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     }
     single {
         val cloudRun = buildCloudRunDispatch(config, get(), get())
-        AgentLaunchService(config.repoPath, scope, cloudRun, get(), get<JiraTicketStatusChecker>())
+        val githubAppTokenService = buildGitHubAppTokenService(config, get())
+        AgentLaunchService(config.repoPath, scope, cloudRun, get(), get<JiraTicketStatusChecker>(), githubAppTokenService)
     }
     single<AgentLauncher> { get<AgentLaunchService>() }
+}
+
+private fun buildGitHubAppTokenService(config: AgentConfig, httpClient: HttpClient): GitHubAppTokenService? {
+    if (config.githubAppId.isBlank() || config.githubAppInstallationId.isBlank() || config.githubAppPrivateKey.isBlank()) {
+        return null
+    }
+    return GitHubAppTokenService(config.githubAppId, config.githubAppInstallationId, config.githubAppPrivateKey, httpClient)
 }
 
 private fun buildHttpClient() = HttpClient(OkHttp) {
