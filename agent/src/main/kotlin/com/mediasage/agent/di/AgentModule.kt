@@ -21,6 +21,20 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
 
+/**
+ * Koin module for the agent orchestration server.
+ *
+ * Registers the full dependency graph for webhook routing and Cloud Run Job dispatch:
+ * - [HttpClient] — OkHttp client with JSON content negotiation and request timeouts.
+ * - [JiraApiService] — bound to the [JiraLabelChecker], [JiraTicketFetcher], and
+ *   [JiraTicketStatusChecker] interfaces using human account credentials.
+ * - [JiraCommentPoster] — uses bot credentials when configured, falling back to human credentials.
+ * - [AgentLaunchService] — orchestrates Cloud Run Job dispatch and performs job recovery on startup.
+ * - [AgentLauncher] — interface alias for [AgentLaunchService].
+ *
+ * @param config Runtime configuration sourced from environment variables. See [AgentConfig].
+ * @param scope Coroutine scope used by [AgentLaunchService] for background startup job recovery.
+ */
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single { buildHttpClient() }
     single { JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken) }
