@@ -18,6 +18,12 @@ if [ -z "$GITHUB_TOKEN" ]; then
 fi
 export GH_TOKEN="$GITHUB_TOKEN"
 
+# Configure git credential store so all git operations (including those run by
+# Claude Code) authenticate without prompting. Cloud Run has no TTY, so git
+# cannot prompt for credentials — this must be set up before any git command runs.
+git config --global credential.helper store
+echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+
 REPO_DIR="/home/agent/media-sage"
 # GitHub App installation tokens use x-access-token as the username in clone URLs
 REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/MicGon7/media-sage.git"
