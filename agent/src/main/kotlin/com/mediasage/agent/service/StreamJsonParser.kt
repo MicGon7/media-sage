@@ -11,6 +11,23 @@ import kotlinx.serialization.json.longOrNull
 
 private val parserJson = Json { ignoreUnknownKeys = true }
 
+/**
+ * Parses a single line of Claude Code streaming JSON output into a concise human-readable
+ * milestone string suitable for Jira progress comments.
+ *
+ * Recognises four event types emitted by `claude --output-format stream-json`:
+ * - `system` — session initialisation (model name)
+ * - `assistant` — tool calls and text blocks produced by the model
+ * - `user` — tool results, surfaced only when an error is present
+ * - `result` — final completion summary with duration and cost
+ *
+ * Lines that are not valid JSON, carry an unrecognised type, or contain no meaningful
+ * content return `null` and are silently skipped by the caller.
+ *
+ * @param line A single newline-delimited JSON object from the Claude streaming output.
+ * @return A short descriptive string (e.g. `"tool: Bash — ls -la"`, `"done — success 4200ms $0.0120"`)
+ *   or `null` if the line carries no milestone-worthy information.
+ */
 internal fun parseStreamJsonMilestone(line: String): String? = try {
     val obj = parserJson.parseToJsonElement(line).jsonObject
     when (obj["type"]?.jsonPrimitive?.content) {
