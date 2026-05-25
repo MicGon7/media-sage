@@ -206,9 +206,12 @@ docker push us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:
 docker run -p 8081:8081 \
   -e ANTHROPIC_API_KEY=... \
   -e AGENT_REPO_PATH=/home/agent/media-sage \
-  -e GITHUB_BOT_TOKEN=... \
-  -e GITHUB_BOT_LOGIN=media-sage-bot \
+  -e GITHUB_APP_ID=... \
+  -e GITHUB_APP_INSTALLATION_ID=... \
+  -e GITHUB_APP_PRIVATE_KEY_BASE64=... \
+  -e GITHUB_BOT_LOGIN="media-sage-worker[bot]" \
   -e GITHUB_BOT_EMAIL=... \
+  -e GITHUB_BOT_NAME=media-sage-worker \
   -e GITHUB_WEBHOOK_SECRET=... \
   -e JIRA_EMAIL=... \
   -e JIRA_API_TOKEN=... \
@@ -362,13 +365,15 @@ Config is split between plain env vars (set directly on the service) and secrets
 | Variable | Value |
 |---|---|
 | `AGENT_REPO_PATH` | `/home/agent/media-sage` |
-| `GITHUB_BOT_LOGIN` | `media-sage-bot` |
-| `GITHUB_BOT_EMAIL` | Bot account email |
-| `GITHUB_BOT_NAME` | `media-sage-bot` |
+| `GITHUB_BOT_LOGIN` | `media-sage-worker[bot]` (GitHub App identity — note `[bot]` suffix) |
+| `GITHUB_BOT_EMAIL` | GitHub App noreply email (e.g. `APP_ID+media-sage-worker[bot]@users.noreply.github.com`) |
+| `GITHUB_BOT_NAME` | `media-sage-worker` |
+| `GITHUB_APP_ID` | Numeric App ID from the `media-sage-worker` GitHub App settings page |
+| `GITHUB_APP_INSTALLATION_ID` | Installation ID for the media-sage repo |
 | `JIRA_EMAIL` | `micgon7@gmail.com` |
 | `JIRA_BOT_EMAIL` | Bot Jira account email |
 | `JIRA_CLOUD_ID` | `ad358528-f7e9-4e40-9531-c51049908d6d` |
-| `JIRA_BOT_ACCOUNT_ID` | Jira account ID of `media-sage-bot` |
+| `JIRA_BOT_ACCOUNT_ID` | Jira account ID of the bot user |
 | `GCP_PROJECT_ID` | `media-sage-agent` |
 | `GCP_REGION` | `us-central1` |
 | `GCP_JOB_NAME` | `media-sage-agent-worker` |
@@ -379,13 +384,15 @@ Config is split between plain env vars (set directly on the service) and secrets
 | Secret name | Env var | Description |
 |---|---|---|
 | `anthropic-auth-token` | `ANTHROPIC_AUTH_TOKEN` | Fuelix API token (`ak-...`) |
-| `github-bot-token` | `GITHUB_BOT_TOKEN` | PAT for `media-sage-bot` (scopes: `repo`, `workflow`) |
+| `github-app-private-key-base64` | `GITHUB_APP_PRIVATE_KEY_BASE64` | RSA private key for `media-sage-worker` GitHub App, base64-encoded PEM |
 | `github-webhook-secret` | `GITHUB_WEBHOOK_SECRET` | Shared secret for GitHub webhook HMAC verification |
 | `jira-api-token` | `JIRA_API_TOKEN` | Atlassian account API token |
 | `jira-bot-api-token` | `JIRA_BOT_API_TOKEN` | Bot Atlassian API token |
 | `supabase-db-url` | `SUPABASE_DB_URL` | Postgres URI with credentials |
 | `pubsub-webhook-secret` | `PUBSUB_WEBHOOK_SECRET` | Shared secret for Pub/Sub push URL auth |
 | `google-credentials-base64` | `GOOGLE_CREDENTIALS_BASE64` | Base64-encoded GCP SA JSON (worker dispatch) |
+
+**GitHub App auth pattern:** Both the orchestrator (Cloud Run Service) and worker (Cloud Run Job) authenticate as `media-sage-worker[bot]` using short-lived installation tokens (1-hour TTL). Tokens are generated at container startup via `get-github-token.py` (JWT → GitHub API exchange). The Kotlin orchestrator additionally refreshes tokens at runtime via `GitHubAppTokenService` before any `gh` CLI call. Store the private key base64-encoded: `base64 -i private-key.pem | tr -d '\n'`.
 
 Webhook URLs:
 - Jira: `https://media-sage-orchestrator-924166357877.us-central1.run.app/webhook/jira`
