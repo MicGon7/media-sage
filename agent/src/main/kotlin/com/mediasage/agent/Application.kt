@@ -47,7 +47,6 @@ fun Application.module() {
 
 private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): AgentConfig {
     fun str(key: String) = config.propertyOrNull(key)?.getString() ?: ""
-    fun bool(key: String) = config.propertyOrNull(key)?.getString()?.toBoolean() ?: false
     val credentialsBase64 = str("app.cloudRun.credentialsBase64")
     val credentialsJson = if (credentialsBase64.isNotBlank()) {
         String(java.util.Base64.getDecoder().decode(credentialsBase64))

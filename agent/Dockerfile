@@ -28,6 +28,7 @@ WORKDIR /home/agent
 
 COPY --from=builder --chown=agent:agent /workspace/agent/build/libs/agent-all.jar app.jar
 COPY --chown=agent:agent agent/entrypoint.sh entrypoint.sh
+COPY --chown=agent:agent agent/get-github-token.py get-github-token.py
 RUN chmod +x entrypoint.sh
 
 EXPOSE 8081

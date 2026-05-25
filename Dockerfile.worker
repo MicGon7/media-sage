@@ -50,6 +50,7 @@ RUN chmod +x gradlew && \
     rm -f gradlew && rm -rf gradle
 
 COPY --chown=agent:agent agent/worker-entrypoint.sh entrypoint.sh
+COPY --chown=agent:agent agent/get-github-token.py get-github-token.py
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]
