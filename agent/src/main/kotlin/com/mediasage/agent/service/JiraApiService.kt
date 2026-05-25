@@ -15,19 +15,52 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.util.Base64
 import org.slf4j.LoggerFactory
 
+/** Checks whether a Jira ticket carries the `autonomous` label. */
 interface JiraLabelChecker {
+    /**
+     * Returns true if [ticketKey] has the `autonomous` label in Jira, false otherwise.
+     *
+     * @param ticketKey Jira issue key (e.g. `MS-242`).
+     */
     suspend fun isAutonomous(ticketKey: String): Boolean
 }
 
+/** Fetches the human-readable content of a Jira ticket. */
 interface JiraTicketFetcher {
+    /**
+     * Returns the summary and description of [ticketKey] as a formatted string, or null if
+     * the ticket cannot be retrieved.
+     *
+     * @param ticketKey Jira issue key (e.g. `MS-242`).
+     * @return Markdown-ish string starting with `**KEY: Summary**` followed by description
+     *   text, or null on HTTP error or network failure.
+     */
     suspend fun getTicketContent(ticketKey: String): String?
 }
 
+/** Posts a comment on a Jira ticket. */
 interface JiraCommentPoster {
+    /**
+     * Adds [body] as a plain-text comment on [ticketKey] using the Jira Cloud REST API v3.
+     *
+     * Failures are logged and swallowed — callers do not need to handle exceptions.
+     *
+     * @param ticketKey Jira issue key (e.g. `MS-242`).
+     * @param body Comment text to post.
+     */
     suspend fun addComment(ticketKey: String, body: String)
 }
 
+/** Retrieves the workflow status of a Jira ticket. */
 interface JiraTicketStatusChecker {
+    /**
+     * Returns the status name of [ticketKey] (e.g. `"In Progress"`), or null if the ticket
+     * cannot be retrieved.
+     *
+     * @param ticketKey Jira issue key (e.g. `MS-242`).
+     * @return Status name string as configured in the Jira workflow, or null on HTTP error
+     *   or network failure.
+     */
     suspend fun getTicketStatus(ticketKey: String): String?
 }
 
@@ -75,6 +108,19 @@ private data class JiraContentFields(
     val description: JsonElement? = null
 )
 
+/**
+ * Jira Cloud REST API v3 client that implements label checking, ticket content fetching,
+ * status inspection, and comment posting for the Media Sage agent orchestrator.
+ *
+ * All methods authenticate with HTTP Basic auth derived from [email] and [apiToken].
+ * Failures are logged at WARN level and returned as null or false rather than thrown,
+ * so callers can treat a missing response as a safe no-op.
+ *
+ * @param httpClient Ktor HTTP client used for all Jira API requests.
+ * @param cloudId Atlassian Cloud instance ID (UUID in the `api.atlassian.com` URL path).
+ * @param email Email address of the Atlassian account used for Basic auth.
+ * @param apiToken Atlassian API token paired with [email].
+ */
 class JiraApiService(
     private val httpClient: HttpClient,
     private val cloudId: String,
@@ -88,6 +134,14 @@ class JiraApiService(
 
     private val baseUrl = "https://api.atlassian.com/ex/jira/$cloudId/rest/api/3"
 
+    /**
+     * Returns true if [ticketKey] has the `autonomous` label in Jira.
+     *
+     * Fetches only the `labels` field to minimise payload size. Returns false on any
+     * HTTP or network failure.
+     *
+     * @param ticketKey Jira issue key (e.g. `MS-242`).
+     */
     override suspend fun isAutonomous(ticketKey: String): Boolean {
         return try {
             val response = httpClient.get("$baseUrl/issue/$ticketKey?fields=labels") {
@@ -102,6 +156,17 @@ class JiraApiService(
         }
     }
 
+    /**
+     * Returns the summary and description of [ticketKey] as a formatted string, or null if
+     * the ticket cannot be retrieved.
+     *
+     * The description is extracted from Atlassian Document Format (ADF) by recursively
+     * collecting all `text` leaf nodes. The returned string has the form:
+     * `"**KEY: Summary**\n\n<description text>"`.
+     *
+     * @param ticketKey Jira issue key (e.g. `MS-242`).
+     * @return Formatted ticket content string, or null on HTTP error or network failure.
+     */
     override suspend fun getTicketContent(ticketKey: String): String? {
         return try {
             val response = httpClient.get("$baseUrl/issue/$ticketKey?fields=summary,description") {
@@ -125,6 +190,14 @@ class JiraApiService(
         }
     }
 
+    /**
+     * Returns the workflow status name of [ticketKey] (e.g. `"In Progress"`), or null if
+     * the ticket cannot be retrieved.
+     *
+     * @param ticketKey Jira issue key (e.g. `MS-242`).
+     * @return Status name as configured in the Jira workflow, or null on HTTP error or
+     *   network failure.
+     */
     override suspend fun getTicketStatus(ticketKey: String): String? {
         return try {
             val response = httpClient.get("$baseUrl/issue/$ticketKey?fields=status") {
@@ -143,6 +216,15 @@ class JiraApiService(
         }
     }
 
+    /**
+     * Posts [body] as a plain-text comment on [ticketKey] using the Jira ADF comment payload.
+     *
+     * Failures are logged at WARN level and swallowed — callers do not need to handle
+     * exceptions.
+     *
+     * @param ticketKey Jira issue key (e.g. `MS-242`).
+     * @param body Comment text to post.
+     */
     override suspend fun addComment(ticketKey: String, body: String) {
         try {
             val escapedBody = kotlinx.serialization.json.Json.encodeToString(
