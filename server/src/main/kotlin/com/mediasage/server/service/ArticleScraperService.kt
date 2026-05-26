@@ -13,7 +13,7 @@ class ArticleScraperService {
         private const val TIMEOUT_MS = 15_000
         private const val MAX_TEXT_LENGTH = 5_000
         private const val USER_AGENT =
-            "Mozilla/5.0 (compatible; MediaSageBot/1.0; +https://github.com/MicGon7/media-sage)"
+            "Mozilla/5.0 (compatible; MediaSageBot/1.0; +https://github.com/michael-gonzalez-dev/media-sage)"
     }
 
     private val cache = ConcurrentHashMap<String, String>()

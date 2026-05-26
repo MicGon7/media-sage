@@ -26,7 +26,7 @@ echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
 
 REPO_DIR="/home/agent/media-sage"
 # GitHub App installation tokens use x-access-token as the username in clone URLs
-REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/MicGon7/media-sage.git"
+REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/michael-gonzalez-dev/media-sage.git"
 
 echo "Cloning repo..."
 git clone --depth=1 "$REPO_URL" "$REPO_DIR"
@@ -91,4 +91,4 @@ else
   echo "PUBSUB_TOPIC or GCP_PROJECT_ID not set — skipping Pub/Sub notification"
 fi
 
-exit $CLAUDE_EXIT
+exit $CLAUDE_EXIt
