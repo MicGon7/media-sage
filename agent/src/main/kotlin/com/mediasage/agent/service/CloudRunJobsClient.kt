@@ -140,9 +140,15 @@ class CloudRunJobsClient(
      *   passed directly from the worker's [CLOUD_RUN_EXECUTION] env var. Used to look up metrics
      *   in Cloud Logging without an additional executions list API call.
      */
-    suspend fun onJobCompleted(jobId: UUID, ticketKey: String, executionName: String, succeeded: Boolean): Boolean {
+    suspend fun onJobCompleted(
+        jobId: UUID,
+        ticketKey: String,
+        executionName: String,
+        succeeded: Boolean,
+        commentBody: String? = null
+    ): Boolean {
         return if (succeeded) {
-            handleSuccess(jobId, ticketKey, executionName)
+            handleSuccess(jobId, ticketKey, executionName, commentBody)
         } else {
             log.warn("[$ticketKey] Worker reported failure via Pub/Sub")
             jobRepository.markFailed(jobId)
@@ -162,7 +168,12 @@ class CloudRunJobsClient(
         }
     }
 
-    private suspend fun handleSuccess(jobId: UUID, ticketKey: String, executionName: String?): Boolean {
+    private suspend fun handleSuccess(
+        jobId: UUID,
+        ticketKey: String,
+        executionName: String?,
+        commentBody: String? = null
+    ): Boolean {
         log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
         val metrics = if (executionName != null) {
             cloudLoggingClient.fetchMetrics(executionName).also { m ->
@@ -172,7 +183,7 @@ class CloudRunJobsClient(
                             "${m.inputTokens + m.outputTokens} tokens, " +
                             "\$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}"
                     )
-                    postMetricsComment(ticketKey, m)
+                    postConsolidatedComment(ticketKey, m, commentBody)
                 } else {
                     log.warn("[$ticketKey] Worker metrics unavailable — job marked complete without cost data")
                 }
@@ -215,32 +226,55 @@ class CloudRunJobsClient(
     }
 
     /**
-     * Posts a human-readable worker run summary to the Jira ticket.
+     * Posts the consolidated run metrics comment to the Jira ticket as Media Sage Bot.
+     *
+     * Combines the rich comment body written by Claude (pipeline checkpoints, PR link, quality
+     * gates, AC) with accurate metrics fetched from Cloud Logging (turns, tokens, cost, duration).
+     * If no comment body was provided (e.g. worker exited before writing the file), falls back
+     * to a plain metrics-only comment.
      *
      * Example comment:
      * ```
-     * 🤖 Worker run complete
-     * • Turns: 47
-     * • Duration: 1h 23m 5s
+     * 🤖 Agent: Run metrics summary for MS-XXX
+     *
+     * Task: ...
+     * Pipeline checkpoints verified:
+     * ✅ ...
+     * PR: https://github.com/...
+     * ...
+     *
+     * Run metrics:
+     * • Turns: 47 · Duration: 1h 23m 5s
      * • Tokens: 11,809 input · 38,211 output · 4,653,492 cached
      * • Cost: $2.0007
      * ```
      */
-    private suspend fun postMetricsComment(ticketKey: String, m: com.mediasage.agent.db.WorkerMetrics) {
+    private suspend fun postConsolidatedComment(
+        ticketKey: String,
+        m: com.mediasage.agent.db.WorkerMetrics,
+        commentBody: String?
+    ) {
         val durationStr = formatDuration(m.durationMs)
-        val comment = buildString {
-            appendLine("🤖 **Worker run complete**")
-            appendLine("• **Turns:** ${m.numTurns}")
-            appendLine("• **Duration:** $durationStr")
+        val metricsSection = buildString {
+            appendLine("Run metrics:")
             appendLine(
-                "• **Tokens:** ${"%,d".format(m.inputTokens)} input · " +
+                "• Turns: ${m.numTurns} · Duration: $durationStr"
+            )
+            appendLine(
+                "• Tokens: ${"%,d".format(m.inputTokens)} input · " +
                     "${"%,d".format(m.outputTokens)} output · " +
                     "${"%,d".format(m.cacheReadTokens)} cached"
             )
-            append("• **Cost:** \$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}")
+            append("• Cost: \$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}")
+        }
+        val comment = if (!commentBody.isNullOrBlank()) {
+            "${commentBody.trimEnd()}\n\n$metricsSection"
+        } else {
+            // Fallback: worker exited before writing the comment file
+            "🤖 Agent: Run metrics summary for $ticketKey\n\n$metricsSection"
         }
         runCatching { jiraCommentPoster.addComment(ticketKey, comment) }
-            .onFailure { log.warn("[$ticketKey] Failed to post metrics comment to Jira: ${it.message}") }
+            .onFailure { log.warn("[$ticketKey] Failed to post consolidated comment to Jira: ${it.message}") }
     }
 
     private fun formatDuration(ms: Long): String {

@@ -34,7 +34,8 @@ private data class PubSubPushRequest(
 private data class JobCompletionEvent(
     @SerialName("ticketKey") val ticketKey: String,
     @SerialName("executionName") val executionName: String,
-    @SerialName("status") val status: String // "success" or "failure"
+    @SerialName("status") val status: String, // "success" or "failure"
+    @SerialName("commentBody") val commentBody: String? = null
 )
 
 /**
@@ -99,6 +100,7 @@ private suspend fun processCompletion(
         jobId = job.jobId,
         ticketKey = event.ticketKey,
         executionName = event.executionName,
-        succeeded = event.status == "success"
+        succeeded = event.status == "success",
+        commentBody = event.commentBody
     )
 }
