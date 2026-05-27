@@ -3,6 +3,11 @@ package com.mediasage.agent.di
 /**
  * Configuration for the agent orchestration server.
  *
+ * Holds all runtime parameters needed by the orchestrator: GitHub App credentials for webhook
+ * verification and installation token generation, Jira credentials for ticket transitions and
+ * comment posting, GCP credentials for Cloud Run Job dispatch, and database/Pub/Sub settings
+ * for persistent job state and completion callbacks.
+ *
  * @property repoPath Absolute path to the local clone of the media-sage repository used by worker processes.
  * @property githubWebhookSecret Secret used to verify HMAC-SHA256 signatures on incoming GitHub webhook payloads.
  * @property jiraEmail Email address for authenticating with the Jira REST API.
