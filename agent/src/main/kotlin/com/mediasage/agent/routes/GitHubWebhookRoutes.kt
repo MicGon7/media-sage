@@ -79,6 +79,23 @@ private data class WebhookContext(
 private val log = LoggerFactory.getLogger("GitHubWebhookRoutes")
 private val ticketKeyRegex = Regex("[A-Z]+-\\d+")
 private val webhookJson = Json { ignoreUnknownKeys = true }
+
+/**
+ * Registers the GitHub webhook route at `POST /webhook/github`.
+ *
+ * Accepts [pull_request_review] and [pull_request_review_comment] events from GitHub.
+ * Validates the request signature using HMAC-SHA256 against [webhookSecret], then dispatches
+ * to the appropriate handler based on the event type.
+ *
+ * Expected headers:
+ * - `X-GitHub-Event`: event type (`pull_request_review`, `pull_request_review_comment`)
+ * - `X-Hub-Signature-256`: HMAC-SHA256 signature of the raw request body
+ *
+ * Responds `200 OK` on success, `400 Bad Request` if the event header is missing,
+ * `401 Unauthorized` if the signature is missing or invalid.
+ *
+ * @param webhookSecret shared secret used to verify the GitHub webhook HMAC-SHA256 signature
+ */
 fun Route.githubWebhookRoutes(webhookSecret: String) {
     val agentService by inject<AgentLauncher>()
     val jiraLabelChecker by inject<JiraLabelChecker>()
@@ -102,6 +119,17 @@ fun Route.githubWebhookRoutes(webhookSecret: String) {
     }
 }
 
+/**
+ * Dispatches a verified GitHub webhook event to the appropriate handler.
+ *
+ * Supported events:
+ * - `pull_request_review`: if the ticket extracted from the branch ref is labeled `autonomous`
+ *   in Jira, launches the agent via [AgentLauncher.launchForPrReview] for `changes_requested`
+ *   reviews or [AgentLauncher.launchForCommentReview] for `commented` reviews. Ignores
+ *   agent-authored reviews (body starts with "🤖 **Agent:**") and all other review states.
+ * - `pull_request_review_comment`: calls [AgentLauncher.postInlineCommentReply] for the PR.
+ *   Ignores agent-authored comments.
+ */
 private suspend fun handleGitHubEvent(
     eventType: String,
     rawBody: ByteArray,
@@ -131,6 +159,15 @@ private suspend fun handleGitHubEvent(
     }
 }
 
+/**
+ * Parses a `pull_request_review` webhook payload into a [WebhookContext].
+ *
+ * Returns `null` if:
+ * - the action is not `submitted`
+ * - the review state is not `changes_requested` or `commented`
+ * - the branch ref contains no Jira ticket key matching `[A-Z]+-\d+`
+ * - the review body was authored by the agent (starts with "🤖 **Agent:**")
+ */
 private fun parseReviewContext(rawBody: ByteArray): WebhookContext? {
     val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
     val reviewBody = payload.review?.body.orEmpty()
@@ -144,6 +181,12 @@ private fun parseReviewContext(rawBody: ByteArray): WebhookContext? {
         ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, reviewBody, state, payload.sender.login) }
 }
 
+/**
+ * Parses a `pull_request_review_comment` payload and returns the PR number.
+ *
+ * Returns `null` if the action is not `created` or if the comment was authored by the agent
+ * (body starts with "🤖 **Agent:**").
+ */
 private fun parseInlineCommentPrNumber(rawBody: ByteArray): Int? {
     val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
     val commentBody = payload.comment?.body.orEmpty()
@@ -152,6 +195,15 @@ private fun parseInlineCommentPrNumber(rawBody: ByteArray): Int? {
         ?.takeIf { !commentBody.startsWith("🤖 **Agent:**") }
 }
 
+/**
+ * Verifies the GitHub HMAC-SHA256 signature header against the raw request body.
+ *
+ * Uses constant-time comparison via [MessageDigest.isEqual] to prevent timing attacks.
+ *
+ * @param secret the webhook shared secret
+ * @param body the raw request body bytes
+ * @param signature the value of the `X-Hub-Signature-256` header (e.g. `sha256=abc123...`)
+ */
 private fun validateSignature(secret: String, body: ByteArray, signature: String): Boolean {
     val expected = "sha256=${computeHmacSha256(secret, body)}"
     return MessageDigest.isEqual(expected.toByteArray(Charsets.UTF_8), signature.toByteArray(Charsets.UTF_8))
