@@ -26,7 +26,7 @@ publish_completion() {
     "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" \
     -H "Metadata-Flavor: Google" \
     | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])") || {
-    echo "Warning: Failed to fetch GCP metadata token — skipping Pub/Sub notification"
+    echo "Warning: Failed to fetch GCP metadata token — cannot publish without auth; orchestrator will recover on restart"
     return
   }
 
