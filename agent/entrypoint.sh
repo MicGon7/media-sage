@@ -20,7 +20,7 @@ export GH_TOKEN="$GITHUB_TOKEN"
 
 REPO_DIR="${AGENT_REPO_PATH:-/home/agent/media-sage}"
 # GitHub App installation tokens use x-access-token as the username in clone URLs
-REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/MicGon7/media-sage.git"
+REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/michael-gonzalez-dev/media-sage.git"
 
 if [ -d "$REPO_DIR/.git" ]; then
   echo "Repo exists, pulling latest..."
