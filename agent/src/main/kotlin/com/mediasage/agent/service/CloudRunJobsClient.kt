@@ -267,8 +267,11 @@ class CloudRunJobsClient(
             )
             append("• Cost: \$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}")
         }
-        val comment = if (!commentBody.isNullOrBlank()) {
-            "${commentBody.trimEnd()}\n\n$metricsSection"
+        // Resolve any pending checkpoints the agent wrote before exiting — if the orchestrator
+        // is posting this comment, Pub/Sub has already fired and Supabase is already updated.
+        val resolvedBody = commentBody?.replace("⏳", "✅")
+        val comment = if (!resolvedBody.isNullOrBlank()) {
+            "${resolvedBody.trimEnd()}\n\n$metricsSection"
         } else {
             // Fallback: worker exited before writing the comment file
             "🤖 Agent: Run metrics summary for $ticketKey\n\n$metricsSection"
