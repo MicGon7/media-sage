@@ -272,7 +272,7 @@ docker run -p 8081:8081 \
 4. Create feature branch (`feature/MS-{ticket}-description`)
 5. Do the work
 6. Update Jira AC checkboxes
-7. Update `docs/` with ticket learning doc
+7. Update `docs/` with ticket learning doc — **skip for `pipeline-test` tickets**: no `docs/` entry required; these tickets exist to verify pipeline infrastructure, not produce artifacts
 8. Update this file (CLAUDE.md) if introducing new patterns
 9. Commit everything, push, create PR
 10. Transition ticket to In Review
@@ -289,6 +289,8 @@ docker run -p 8081:8081 \
 - Never merge a PR — human reviews and merges
 
 ### After a PR is merged
+Do not include tickets labeled `pipeline-test` or `smoketest` in the Confluence impact doc — these tickets exist to exercise the pipeline, not deliver product or infrastructure value.
+
 Update the Agentic Development Impact page in Confluence (media-sage.atlassian.net, page ID: `163844`) at natural milestones — not after every individual PR. Batch small or related tickets (e.g. a hotfix paired with a feature) into a single update. A good trigger is when a feature is fully working end-to-end in production.
 
 For each batch, add:
