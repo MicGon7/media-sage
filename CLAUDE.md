@@ -142,6 +142,11 @@ agent/src/main/kotlin/com/mediasage/agent/
 ├── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiService
 └── tools/               — ToolDefinitions (Anthropic orchestrator-worker pattern)
 
+pipelineScenarios/src/test/kotlin/com/mediasage/pipeline/
+├── support/             — ScenarioConfig, ValidationReport, DedupScenarioBase, FullPipelineScenarioBase
+├── dedup/               — DedupRunningE2eTest, DedupCompletedE2eTest, DedupFailedRetryE2eTest
+└── pipeline/            — ConflictResolutionE2eTest, PrReviewResponseE2eTest, FailureRecoveryE2eTest
+
 scripts/src/main/kotlin/com/mediasage/scripts/
 ├── GenerateFigureImages.kt  — Portrait batch generation entry point
 └── service/
@@ -176,7 +181,7 @@ CREATE INDEX ON jobs (ticket_key, created_at DESC);
 - `FAILED` / `INTERRUPTED` → re-dispatch (retry eligible)
 - No row → dispatch fresh
 
-**Recovery on startup:** `AgentLaunchService.recoverInterruptedJobs()` queries all RUNNING rows. For each, `CloudRunJobsClient.recoverJob()` checks the saved LRO URL — resumes polling if still running, marks INTERRUPTED if the execution is gone.
+**Recovery on startup:** `AgentLaunchService.recoverInterruptedJobs()` queries all RUNNING rows. For each, `CloudRunJobsClient.recoverJob()` makes a real Cloud Run API call using the saved execution name — if the execution is still running, no-op (Pub/Sub will signal completion); if the execution is gone (404), marks the job INTERRUPTED and posts a Jira comment instructing the team to re-trigger manually.
 
 ## Build & Run
 
@@ -258,6 +263,8 @@ docker run -p 8081:8081 \
 - Use `runTest` from `kotlinx-coroutines-test` for suspending test functions
 - Every new feature must include tests — run `./gradlew allTests` before creating a PR
 - Smoke test external API changes with real APIs before creating a PR
+- **PR body format**: pre-check unit test items with `[x]` (already verified before push); tests that require a live deployed system go in a separate `## Post-deploy verification` section; omit the test plan section entirely for PRs with no live smoke test
+- **Pipeline E2E scenarios** (`:pipelineScenarios`): on-demand health checks run via `./gradlew :pipelineScenarios:e2e*`. Never run in standard CI — they dispatch real Cloud Run Jobs. `e2eDedupCompleted` is the post-deploy canary (Supabase only, no Cloud Run).
 
 ### Quality Gates
 - **Detekt**: Runs in CI before build. `./gradlew detekt` must pass.
