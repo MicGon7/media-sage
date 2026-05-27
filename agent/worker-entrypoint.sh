@@ -32,13 +32,22 @@ publish_completion() {
 
   local message
   message=$(python3 -c "
-import json, base64
-payload = json.dumps({
+import json, base64, os
+
+payload = {
   'ticketKey': '${TICKET_KEY}',
   'executionName': '${CLOUD_RUN_EXECUTION}',
   'status': '$status'
-})
-data = base64.b64encode(payload.encode()).decode()
+}
+
+# Include comment body written by Claude — orchestrator appends metrics and posts to Jira.
+# Read via Python to avoid shell quoting issues with newlines and special characters.
+comment_file = '/tmp/jira_comment.txt'
+if os.path.exists(comment_file):
+    with open(comment_file) as f:
+        payload['commentBody'] = f.read()
+
+data = base64.b64encode(json.dumps(payload).encode()).decode()
 print(json.dumps({'messages': [{'data': data}]}))
 ")
 

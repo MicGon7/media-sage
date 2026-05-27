@@ -275,8 +275,37 @@ docker run -p 8081:8081 \
 7. Update `docs/` with ticket learning doc — **skip for `pipeline-test` tickets**: no `docs/` entry required; these tickets exist to verify pipeline infrastructure, not produce artifacts
 8. Update this file (CLAUDE.md) if introducing new patterns
 9. Commit everything, push, create PR
-10. Transition ticket to In Review
-11. Reply to any PR review comments with `🤖 **Agent:**` prefix
+10. Write the run metrics summary to `/tmp/jira_comment.txt` — **do NOT post a Jira comment via the Atlassian MCP**. The orchestrator reads this file from the Pub/Sub completion event, appends accurate metrics from Cloud Logging (turns, tokens, cost), and posts the consolidated comment as Media Sage Bot. Use this exact format (plain text only — no `**bold**` or other markdown):
+
+    ```
+    🤖 Agent: Run metrics summary for {TICKET_KEY}
+
+    Task: {one-line task description}
+
+    Pipeline checkpoints verified:
+    ✅ Jira webhook fired when ticket moved to In Progress
+    ✅ Orchestrator dispatched Cloud Run Job
+    ✅ Worker cloned from michael-gonzalez-dev/media-sage successfully
+    ✅ Worker completed the task and opened a PR
+    ⏳ Pub/Sub completion event — fires after this comment
+    ⏳ Job marked COMPLETED in Supabase — pending Pub/Sub
+    ✅ Run metrics comment posted (this comment)
+
+    PR: {pr_url}
+
+    Quality gates:
+    ✅ Detekt: {result}
+    ✅ Affected tests: {result}
+
+    Diff: {summary}
+
+    Acceptance criteria:
+    ✅ {ac_item}
+    ```
+
+    Do not include a "Run metrics" section — the orchestrator appends that after you exit.
+11. Transition ticket to In Review
+12. Reply to any PR review comments with `🤖 **Agent:**` prefix
 
 ### Before submitting work
 - Run `./gradlew allTests` and ensure all pass. **Exception: when running inside the container (Linux, no Android/iOS SDK), run `./scripts/run-affected-tests.sh` instead. It detects committed, staged, and unstaged Kotlin changes, maps them to test classes, and runs only those with `--no-daemon`. If the script skips for any reason, do not run any Gradle test command manually — CI is the authoritative quality gate for the full test suite.**
