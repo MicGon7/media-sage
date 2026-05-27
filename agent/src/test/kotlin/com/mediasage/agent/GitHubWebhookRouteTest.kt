@@ -202,9 +202,90 @@ class GitHubWebhookRouteTest {
         }
         assertEquals(HttpStatusCode.OK, response.status)
     }
+
+    @Test
+    fun mergeConflictDequeueFiresConflictResolver() {
+        val tracking = FakeAgentLauncher()
+        testGitHubApp(jiraAutonomous = true, agentService = tracking) {
+            val body = dequeuePayload(reason = "merge_conflict")
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(1, tracking.conflictResolutionLaunches, "Conflict resolver must fire for merge_conflict dequeue")
+        }
+    }
+
+    @Test
+    fun ciFailureDequeueIsIgnored() {
+        val tracking = FakeAgentLauncher()
+        testGitHubApp(jiraAutonomous = true, agentService = tracking) {
+            val body = dequeuePayload(reason = "checks_failed")
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(0, tracking.conflictResolutionLaunches, "Conflict resolver must NOT fire for CI failure dequeue")
+        }
+    }
+
+    @Test
+    fun nonAutonomousTicketDequeueIsIgnored() {
+        val tracking = FakeAgentLauncher()
+        testGitHubApp(jiraAutonomous = false, agentService = tracking) {
+            val body = dequeuePayload(reason = "merge_conflict")
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(0, tracking.conflictResolutionLaunches, "Conflict resolver must NOT fire for non-autonomous ticket")
+        }
+    }
+
+    @Test
+    fun dequeueWithNoTicketKeyIsIgnored() {
+        val tracking = FakeAgentLauncher()
+        testGitHubApp(jiraAutonomous = true, agentService = tracking) {
+            val body = dequeuePayload(reason = "merge_conflict", branchRef = "hotfix/no-ticket-here")
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(0, tracking.conflictResolutionLaunches, "Conflict resolver must NOT fire when branch has no ticket key")
+        }
+    }
 }
 
 // ---- Payload builders ----
+
+private fun dequeuePayload(
+    reason: String = "merge_conflict",
+    branchRef: String = "feature/MS-42-some-feature",
+    prNumber: Int = 42,
+    senderLogin: String = "github-merge-queue[bot]"
+) = """
+{
+  "action": "dequeued",
+  "reason": "$reason",
+  "sender": { "login": "$senderLogin" },
+  "pull_request": {
+    "number": $prNumber,
+    "head": { "ref": "$branchRef" }
+  }
+}
+""".trimIndent()
 
 private fun prReviewPayload(
     action: String = "submitted",
@@ -285,6 +366,7 @@ private class FakeJiraLabelChecker(private val autonomous: Boolean) : JiraLabelC
 private class FakeAgentLauncher : AgentLauncher {
     var agentLaunches = 0
     var commentReviewLaunches = 0
+    var conflictResolutionLaunches = 0
     var inlineReplies = 0
     var lastReviewerLogin: String? = null
 
@@ -302,6 +384,11 @@ private class FakeAgentLauncher : AgentLauncher {
         ticketKey: String, prNumber: Int, branchRef: String, commentBody: String
     ): Boolean {
         commentReviewLaunches++
+        return true
+    }
+
+    override fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String): Boolean {
+        conflictResolutionLaunches++
         return true
     }
 

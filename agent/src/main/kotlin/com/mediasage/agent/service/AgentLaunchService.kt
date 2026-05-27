@@ -26,6 +26,15 @@ private const val PR_REVIEW_PROMPT =
     "`gh pr comment %1\$d --body '🤖 **Agent:** your explanation here'` and exit. " +
     "Follow the Agent Guidelines in CLAUDE.md."
 
+private const val CONFLICT_RESOLUTION_PROMPT =
+    "Branch %3\$s for ticket %2\$s was ejected from the merge queue due to a conflict with main. " +
+    "Run: git fetch origin && git rebase origin/main\n" +
+    "Resolve any conflicts with intent — read the conflicting changes carefully before accepting either side. " +
+    "Push the rebased branch. " +
+    "Find the last reviewer with: gh pr view %1\$d --json reviews " +
+    "and re-request review with: gh pr review-request %1\$d --reviewer <login>. " +
+    "Follow the Agent Guidelines in CLAUDE.md."
+
 private const val PR_COMMENT_REVIEW_PROMPT =
     "PR #%1\$d for ticket %2\$s has a new comment review: \"%3\$s\". " +
     "Read the relevant source files on branch %4\$s to understand the context, then answer the " +
@@ -187,6 +196,17 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
         val prompt = PR_COMMENT_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
+        return dispatchToCloudRun(key, prompt, cloudRun)
+    }
+
+    /**
+     * Launches a Cloud Run Job to rebase a branch ejected from the merge queue due to a conflict.
+     * De-duplicates by PR number using the key `CONFLICT-{prNumber}`.
+     */
+    override fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String): Boolean {
+        val cloudRun = cloudRun ?: return false
+        val key = "CONFLICT-$prNumber"
+        val prompt = CONFLICT_RESOLUTION_PROMPT.format(prNumber, ticketKey, branchRef)
         return dispatchToCloudRun(key, prompt, cloudRun)
     }
 
