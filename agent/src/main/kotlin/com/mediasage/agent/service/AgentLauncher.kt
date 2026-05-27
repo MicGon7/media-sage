@@ -67,6 +67,24 @@ interface AgentLauncher {
     ): Boolean
 
     /**
+     * Launches a Cloud Run Job to rebase [branchRef] after it was ejected from the merge queue
+     * due to a conflict with main.
+     *
+     * The worker fetches, rebases onto `origin/main`, resolves conflicts, pushes the rebased branch,
+     * then re-requests review from the last reviewer. Deduplicates by [prNumber] (`CONFLICT-{prNumber}`)
+     * — a second ejection event for the same PR while a resolver is running is a no-op.
+     *
+     * Only dispatched for `autonomous`-labeled tickets — conflict resolution on `assisted` tickets
+     * requires human intervention.
+     *
+     * @param ticketKey Jira issue key included in the agent prompt for context.
+     * @param prNumber GitHub PR number. Used as the dedup key and passed to `gh` CLI commands.
+     * @param branchRef Branch that was ejected (e.g. "feature/MS-123-...").
+     * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
+     */
+    fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String): Boolean
+
+    /**
      * Posts a nudge comment on PR [prNumber] asking the reviewer to submit a formal
      * **Changes requested** review rather than leaving standalone inline comments.
      *

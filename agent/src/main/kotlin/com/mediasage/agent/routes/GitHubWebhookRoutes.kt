@@ -28,7 +28,9 @@ data class GitHubWebhookPayload(
     @SerialName("review")
     val review: GitHubReview? = null,
     @SerialName("comment")
-    val comment: GitHubComment? = null
+    val comment: GitHubComment? = null,
+    @SerialName("reason")
+    val reason: String? = null
 )
 
 @Serializable
@@ -76,6 +78,12 @@ private data class WebhookContext(
     val reviewerLogin: String
 )
 
+private data class DequeueContext(
+    val ticketKey: String,
+    val prNumber: Int,
+    val branchRef: String
+)
+
 private val log = LoggerFactory.getLogger("GitHubWebhookRoutes")
 private val ticketKeyRegex = Regex("[A-Z]+-\\d+")
 private val webhookJson = Json { ignoreUnknownKeys = true }
@@ -83,12 +91,12 @@ private val webhookJson = Json { ignoreUnknownKeys = true }
 /**
  * Registers the GitHub webhook route at `POST /webhook/github`.
  *
- * Accepts [pull_request_review] and [pull_request_review_comment] events from GitHub.
+ * Accepts [pull_request], [pull_request_review], and [pull_request_review_comment] events from GitHub.
  * Validates the request signature using HMAC-SHA256 against [webhookSecret], then dispatches
  * to the appropriate handler based on the event type.
  *
  * Expected headers:
- * - `X-GitHub-Event`: event type (`pull_request_review`, `pull_request_review_comment`)
+ * - `X-GitHub-Event`: event type (`pull_request`, `pull_request_review`, `pull_request_review_comment`)
  * - `X-Hub-Signature-256`: HMAC-SHA256 signature of the raw request body
  *
  * Responds `200 OK` on success, `400 Bad Request` if the event header is missing,
@@ -123,6 +131,9 @@ fun Route.githubWebhookRoutes(webhookSecret: String) {
  * Dispatches a verified GitHub webhook event to the appropriate handler.
  *
  * Supported events:
+ * - `pull_request` with `action: dequeued` and `reason: merge_conflict`: if the ticket is labeled
+ *   `autonomous`, dispatches a conflict-resolution Cloud Run Job via [AgentLauncher.launchForConflictResolution].
+ *   CI-failure and other non-conflict dequeue reasons are silently ignored.
  * - `pull_request_review`: if the ticket extracted from the branch ref is labeled `autonomous`
  *   in Jira, launches the agent via [AgentLauncher.launchForPrReview] for `changes_requested`
  *   reviews or [AgentLauncher.launchForCommentReview] for `commented` reviews. Ignores
@@ -137,26 +148,60 @@ private suspend fun handleGitHubEvent(
     jiraLabelChecker: JiraLabelChecker
 ) {
     when (eventType) {
-        "pull_request_review" -> {
-            val context = parseReviewContext(rawBody) ?: return
-            log.info("GitHub review submitted: ticketKey=${context.ticketKey} PR#${context.prNumber} state=${context.reviewState}")
-            if (jiraLabelChecker.isAutonomous(context.ticketKey)) {
-                when (context.reviewState) {
-                    "changes_requested" -> agentService.launchForPrReview(
-                        context.ticketKey, context.prNumber, context.branchRef, context.commentBody, context.reviewerLogin
-                    )
-                    "commented" -> agentService.launchForCommentReview(
-                        context.ticketKey, context.prNumber, context.branchRef, context.commentBody
-                    )
-                }
-            }
-        }
+        "pull_request" -> handleDequeueEvent(rawBody, agentService, jiraLabelChecker)
+        "pull_request_review" -> handleReviewEvent(rawBody, agentService, jiraLabelChecker)
         "pull_request_review_comment" -> {
             val prNumber = parseInlineCommentPrNumber(rawBody) ?: return
             log.info("GitHub inline comment on PR#$prNumber — posting quick reply")
             agentService.postInlineCommentReply(prNumber)
         }
     }
+}
+
+private suspend fun handleDequeueEvent(
+    rawBody: ByteArray,
+    agentService: AgentLauncher,
+    jiraLabelChecker: JiraLabelChecker
+) {
+    val context = parseDequeueContext(rawBody) ?: return
+    log.info("[${context.ticketKey}] GitHub PR#${context.prNumber} dequeued (merge_conflict) — checking autonomous label")
+    if (jiraLabelChecker.isAutonomous(context.ticketKey)) {
+        agentService.launchForConflictResolution(context.ticketKey, context.prNumber, context.branchRef)
+    }
+}
+
+private suspend fun handleReviewEvent(
+    rawBody: ByteArray,
+    agentService: AgentLauncher,
+    jiraLabelChecker: JiraLabelChecker
+) {
+    val context = parseReviewContext(rawBody) ?: return
+    log.info("GitHub review submitted: ticketKey=${context.ticketKey} PR#${context.prNumber} state=${context.reviewState}")
+    if (!jiraLabelChecker.isAutonomous(context.ticketKey)) return
+    when (context.reviewState) {
+        "changes_requested" -> agentService.launchForPrReview(
+            context.ticketKey, context.prNumber, context.branchRef, context.commentBody, context.reviewerLogin
+        )
+        "commented" -> agentService.launchForCommentReview(
+            context.ticketKey, context.prNumber, context.branchRef, context.commentBody
+        )
+    }
+}
+
+/**
+ * Parses a `pull_request` webhook payload into a [DequeueContext].
+ *
+ * Returns `null` if:
+ * - the action is not `dequeued`
+ * - the reason is not `merge_conflict` (e.g. CI failure, queue cleared — ignored)
+ * - the branch ref contains no Jira ticket key matching `[A-Z]+-\d+`
+ */
+private fun parseDequeueContext(rawBody: ByteArray): DequeueContext? {
+    val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
+    if (payload.action != "dequeued") return null
+    if (payload.reason != "merge_conflict") return null
+    val ticketKey = ticketKeyRegex.find(payload.pullRequest.head.ref)?.value ?: return null
+    return DequeueContext(ticketKey, payload.pullRequest.number, payload.pullRequest.head.ref)
 }
 
 /**
