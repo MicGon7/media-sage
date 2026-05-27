@@ -76,6 +76,9 @@ scenarios.forEach { scenario ->
         testClassesDirs = sourceSets["test"].output.classesDirs
         classpath = sourceSets["test"].runtimeClasspath
         filter { includeTestsMatching(scenario.className) }
+        testLogging { showStandardStreams = true }
+        // E2E tasks always hit live infrastructure — never treat as up-to-date
+        outputs.upToDateWhen { false }
         // Forward all pipeline-relevant env vars to the test JVM
         listOf(
             "SUPABASE_DB_URL",
