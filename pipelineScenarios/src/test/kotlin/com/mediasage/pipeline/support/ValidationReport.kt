@@ -27,6 +27,9 @@ class ValidationReport(private val scenarioName: String) {
     private val checkpoints = mutableListOf<Pair<String, Boolean>>()
     private var metricsLine: String? = null
 
+    /** Total number of recorded checkpoints. */
+    val checkpointCount: Int get() = checkpoints.size
+
     /**
      * Records a named checkpoint and returns [passed] for inline chaining.
      *
