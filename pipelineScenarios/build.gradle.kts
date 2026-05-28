@@ -79,6 +79,10 @@ scenarios.forEach { scenario ->
         testLogging { showStandardStreams = true }
         // E2E tasks always hit live infrastructure — never treat as up-to-date
         outputs.upToDateWhen { false }
+        // Skip silently when credentials aren't present (CI runs allTests without them)
+        onlyIf("SUPABASE_DB_URL must be set to run E2E scenarios") {
+            !System.getenv("SUPABASE_DB_URL").isNullOrBlank()
+        }
         // Forward all pipeline-relevant env vars to the test JVM
         listOf(
             "SUPABASE_DB_URL",
