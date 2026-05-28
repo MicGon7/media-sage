@@ -15,12 +15,8 @@ data class ScenarioConfig(
     val gcpJobName: String,
     val googleCredentialsJson: String,
     val repoPath: String,
-    /** Jira ticket key used as the dispatch key in full pipeline scenarios (e.g. "MS-42"). */
-    val e2eTicketKey: String,
-    /** GitHub PR number used in PR review and conflict resolution scenarios. */
-    val e2ePrNumber: Int,
-    /** Branch ref used in full pipeline scenarios (e.g. "feature/MS-42-test"). */
-    val e2eBranchRef: String
+    /** Personal GitHub token with repo write access — used by GitHubFixtureClient. */
+    val githubToken: String
 ) {
     companion object {
         fun fromEnv(): ScenarioConfig {
@@ -42,9 +38,7 @@ data class ScenarioConfig(
                 gcpJobName = optional("GCP_JOB_NAME", "media-sage-agent-worker"),
                 googleCredentialsJson = credentialsJson,
                 repoPath = optional("AGENT_REPO_PATH", "."),
-                e2eTicketKey = optional("E2E_TICKET_KEY", "MS-E2E"),
-                e2ePrNumber = optional("E2E_PR_NUMBER", "0").toIntOrNull() ?: 0,
-                e2eBranchRef = optional("E2E_BRANCH_REF", "feature/MS-E2E-test")
+                githubToken = optional("GITHUB_TOKEN")
             )
         }
     }

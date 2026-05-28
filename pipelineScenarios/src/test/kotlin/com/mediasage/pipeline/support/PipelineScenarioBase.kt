@@ -61,6 +61,7 @@ abstract class FullPipelineScenarioBase {
     protected lateinit var config: ScenarioConfig
     protected lateinit var jobRegistry: JobRegistry
     protected lateinit var service: AgentLaunchService
+    protected lateinit var fixture: GitHubFixtureClient
     protected lateinit var report: ValidationReport
     private lateinit var httpClient: HttpClient
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -74,6 +75,7 @@ abstract class FullPipelineScenarioBase {
         val jobRepository = JobRepository()
         jobRegistry = jobRepository
         httpClient = buildHttpClient()
+        fixture = GitHubFixtureClient(httpClient = httpClient, token = config.githubToken)
         service = AgentLaunchService(
             repoPath = config.repoPath,
             scope = scope,
