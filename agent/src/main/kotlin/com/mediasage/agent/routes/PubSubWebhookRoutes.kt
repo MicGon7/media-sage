@@ -93,6 +93,21 @@ private suspend fun parsePushEvent(call: io.ktor.server.application.ApplicationC
     }
 }
 
+/**
+ * Handles a [JobCompletionEvent] received from Pub/Sub after a Cloud Run job execution finishes.
+ *
+ * Looks up the corresponding RUNNING job in Supabase via [jobRegistry]. If found, computes
+ * wall-clock duration from [JobRegistry] `startedAt` to the current receipt time, then delegates
+ * to [CloudRunJobsClient.onJobCompleted] which fetches Cloud Logging metrics, posts the run
+ * summary comment to Jira, and transitions the job row to COMPLETED or FAILED in Supabase.
+ *
+ * If no RUNNING job is found (e.g. duplicate Pub/Sub delivery after a successful processing),
+ * the event is silently dropped with a warning log.
+ *
+ * @param event Decoded [JobCompletionEvent] from the Pub/Sub push message.
+ * @param jobRegistry Supabase-backed job store used to find and update job state.
+ * @param cloudRunJobsClient Handles post-completion actions: metrics fetch, Jira comment, DB update.
+ */
 private suspend fun processCompletion(
     event: JobCompletionEvent,
     jobRegistry: JobRegistry,
