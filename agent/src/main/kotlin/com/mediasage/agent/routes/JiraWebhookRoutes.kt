@@ -54,8 +54,33 @@ data class JiraAssignee(
 private val relevantEvents = setOf("jira:issue_created", "jira:issue_updated")
 
 /**
- * Jira webhook endpoint. Fires an autonomous Claude Code agent when a ticket
- * assigned to the bot account transitions to In Progress.
+ * Registers the Jira webhook route (`POST /webhook/jira`) on this [Route].
+ *
+ * **Expected payload shape:**
+ * The endpoint accepts a JSON body matching [JiraWebhookPayload], which Atlassian sends
+ * for `jira:issue_created` and `jira:issue_updated` events. The relevant fields are:
+ * - `webhookEvent`: event type string (e.g. `"jira:issue_updated"`)
+ * - `issue.key`: Jira ticket key (e.g. `"MS-123"`)
+ * - `issue.fields.status.name`: current status of the issue
+ * - `issue.fields.assignee.accountId`: Atlassian account ID of the assignee
+ * - `issue.fields.labels`: labels attached to the issue
+ *
+ * **Dispatch behavior:**
+ * A Cloud Run Job is dispatched when all three conditions are satisfied:
+ * 1. `webhookEvent` is `"jira:issue_created"` or `"jira:issue_updated"`.
+ * 2. The issue assignee matches [botAccountId] (the autonomous bot account).
+ * 3. The issue status is `"In Progress"`.
+ *
+ * When dispatched, the route fetches full ticket content via [JiraTicketFetcher], then
+ * calls [AgentLauncher.launch] with the ticket key and content. The response is always
+ * `200 OK` — failures surface via logs and dedup state in Supabase rather than HTTP
+ * error codes, preventing Jira from retrying on transient errors.
+ *
+ * An optional `X-Dry-Run: true` request header runs only the dedup check and row
+ * insertion without dispatching a Cloud Run Job, useful for smoke-testing the pipeline.
+ *
+ * @param botAccountId Atlassian account ID of the autonomous bot. Only issues assigned
+ *   to this account trigger a dispatch.
  */
 fun Route.webhookRoutes(botAccountId: String) {
     val log = LoggerFactory.getLogger("JiraWebhookRoutes")
