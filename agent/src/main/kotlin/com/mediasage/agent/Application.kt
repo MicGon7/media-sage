@@ -38,7 +38,7 @@ fun Application.module() {
     routing {
         get("/health") { call.respond(HttpStatusCode.OK, "OK") }
         webhookRoutes(config.jiraBotAccountId)
-        githubWebhookRoutes(config.githubWebhookSecret)
+        githubWebhookRoutes(config.githubWebhookSecret, config.githubBotLogin)
         if (config.pubSubWebhookSecret.isNotBlank() && cloudRunJobsClient != null && jobRegistry != null) {
             pubSubWebhookRoutes(config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry, scope)
         }
@@ -54,6 +54,7 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
     return AgentConfig(
         repoPath = str("app.agent.repoPath"),
         githubWebhookSecret = str("app.github.webhookSecret"),
+        githubBotLogin = str("app.github.botLogin"),
         jiraEmail = str("app.jira.email"),
         jiraApiToken = str("app.jira.apiToken"),
         jiraCloudId = str("app.jira.cloudId"),
