@@ -65,6 +65,12 @@ print(json.dumps({'messages': [{'data': data}]}))
     && echo "Pub/Sub completion event published (status=$status)" \
     || echo "Warning: Failed to publish Pub/Sub completion event — orchestrator will recover on restart"
 }
+# Cloud Run sends SIGTERM when a task exceeds its timeout (default 1800s).
+# Without an explicit TERM trap, bash may exit with code 0 (the last successful
+# command's exit code), causing publish_completion to report status=success even
+# though the worker was cancelled. Exiting with 143 (128 + SIGTERM) ensures the
+# EXIT trap always sees a non-zero code on cancellation or interruption.
+trap 'exit 143' TERM INT
 # Register once — fires on every exit path, including set -e early exits.
 trap 'publish_completion $?' EXIT
 
