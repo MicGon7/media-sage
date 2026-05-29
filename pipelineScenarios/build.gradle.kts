@@ -92,7 +92,9 @@ scenarios.forEach { scenario ->
             "GCP_JOB_NAME",
             "GOOGLE_CREDENTIALS_BASE64",
             "AGENT_REPO_PATH",
-            "GH_TOKEN"
+            "GH_TOKEN",
+            "ORCHESTRATOR_URL",
+            "GITHUB_WEBHOOK_SECRET"
         ).forEach { key -> environment(key, System.getenv(key) ?: "") }
     }
 }

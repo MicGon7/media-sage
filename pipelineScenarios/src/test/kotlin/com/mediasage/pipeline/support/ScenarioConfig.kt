@@ -15,8 +15,12 @@ data class ScenarioConfig(
     val gcpJobName: String,
     val googleCredentialsJson: String,
     val repoPath: String,
-    /** GitHub token (GH_TOKEN from gh CLI) — used by GitHubFixtureClient. */
-    val githubToken: String
+    /** GitHub token (GH_TOKEN) — used by GitHubFixtureClient for branch/PR operations. */
+    val githubToken: String,
+    /** Base URL of the live orchestrator (e.g. Cloud Run Service URL). Used to POST simulated webhook events. */
+    val orchestratorUrl: String,
+    /** GitHub webhook secret — used to compute HMAC-SHA256 signatures on simulated webhook payloads. */
+    val webhookSecret: String
 ) {
     companion object {
         fun fromEnv(): ScenarioConfig {
@@ -38,7 +42,9 @@ data class ScenarioConfig(
                 gcpJobName = optional("GCP_JOB_NAME", "media-sage-agent-worker"),
                 googleCredentialsJson = credentialsJson,
                 repoPath = optional("AGENT_REPO_PATH", "."),
-                githubToken = optional("GH_TOKEN")
+                githubToken = optional("GH_TOKEN"),
+                orchestratorUrl = optional("ORCHESTRATOR_URL"),
+                webhookSecret = optional("GITHUB_WEBHOOK_SECRET")
             )
         }
     }
