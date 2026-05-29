@@ -30,8 +30,8 @@ private const val PR_REVIEW_PROMPT =
     "Follow the Agent Guidelines in CLAUDE.md."
 
 private const val CONFLICT_RESOLUTION_PROMPT =
-    "Branch %3\$s for ticket %2\$s was ejected from the merge queue due to a conflict with main. " +
-    "Run: git fetch origin && git rebase origin/main\n" +
+    "Branch %3\$s for ticket %2\$s was ejected from the merge queue due to a conflict with %4\$s. " +
+    "Run: git fetch origin && git rebase origin/%4\$s\n" +
     "Resolve any conflicts with intent — read the conflicting changes carefully before accepting either side. " +
     "Push the rebased branch. " +
     "Find the last reviewer with: gh pr view %1\$d --json reviews " +
@@ -211,10 +211,15 @@ class AgentLaunchService(
      * Launches a Cloud Run Job to rebase a branch ejected from the merge queue due to a conflict.
      * De-duplicates by PR number using the key `CONFLICT-{prNumber}`.
      */
-    override fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String): Boolean {
+    override fun launchForConflictResolution(
+        ticketKey: String,
+        prNumber: Int,
+        branchRef: String,
+        baseBranch: String
+    ): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "CONFLICT-$prNumber"
-        val prompt = CONFLICT_RESOLUTION_PROMPT.format(prNumber, ticketKey, branchRef)
+        val prompt = CONFLICT_RESOLUTION_PROMPT.format(prNumber, ticketKey, branchRef, baseBranch)
         return dispatchToCloudRun(key, prompt, cloudRun, jiraTicketKey = ticketKey)
     }
 

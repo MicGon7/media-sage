@@ -82,7 +82,7 @@ interface AgentLauncher {
      * @param branchRef Branch that was ejected (e.g. "feature/MS-123-...").
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String): Boolean
+    fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String, baseBranch: String = "main"): Boolean
 
     /**
      * Posts a nudge comment on PR [prNumber] asking the reviewer to submit a formal
