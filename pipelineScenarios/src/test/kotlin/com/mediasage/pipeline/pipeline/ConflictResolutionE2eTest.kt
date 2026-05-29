@@ -111,6 +111,7 @@ class ConflictResolutionE2eTest : FullPipelineScenarioBase() {
           "pull_request": {
             "number": $prNumber,
             "head": {"ref": "$branchName"},
+            "base": {"ref": "${GitHubFixtureClient.E2E_BASE_BRANCH}"},
             "user": {"login": "media-sage-worker[bot]"}
           }
         }
