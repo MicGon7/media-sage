@@ -44,6 +44,8 @@ data class GitHubPullRequest(
     val number: Int,
     @SerialName("head")
     val head: GitHubBranch,
+    @SerialName("base")
+    val base: GitHubBranch = GitHubBranch("main"),
     @SerialName("user")
     val user: GitHubUser
 )
@@ -82,7 +84,8 @@ private data class WebhookContext(
 private data class DequeueContext(
     val ticketKey: String,
     val prNumber: Int,
-    val branchRef: String
+    val branchRef: String,
+    val baseBranch: String
 )
 
 private val log = LoggerFactory.getLogger("GitHubWebhookRoutes")
@@ -170,8 +173,9 @@ private suspend fun handleDequeueEvent(
     botLogin: String
 ) {
     val context = parseDequeueContext(rawBody, botLogin) ?: return
-    log.info("[${context.ticketKey}] PR#${context.prNumber} dequeued (merge_conflict) — bot-authored PR, dispatching conflict resolver")
-    agentService.launchForConflictResolution(context.ticketKey, context.prNumber, context.branchRef)
+    log.info("[${context.ticketKey}] PR#${context.prNumber} dequeued (merge_conflict) — " +
+        "bot-authored PR, dispatching conflict resolver (base: ${context.baseBranch})")
+    agentService.launchForConflictResolution(context.ticketKey, context.prNumber, context.branchRef, context.baseBranch)
 }
 
 private suspend fun handleReviewEvent(
@@ -208,7 +212,7 @@ private fun parseDequeueContext(rawBody: ByteArray, botLogin: String): DequeueCo
         return null
     }
     val ticketKey = ticketKeyRegex.find(payload.pullRequest.head.ref)?.value ?: return null
-    return DequeueContext(ticketKey, payload.pullRequest.number, payload.pullRequest.head.ref)
+    return DequeueContext(ticketKey, payload.pullRequest.number, payload.pullRequest.head.ref, payload.pullRequest.base.ref)
 }
 
 /**

@@ -221,7 +221,7 @@ class GitHubWebhookRouteTest {
     fun mergeConflictDequeueFiresConflictResolver() {
         val tracking = FakeAgentLauncher()
         testGitHubApp(agentService = tracking) {
-            val body = dequeuePayload(prAuthorLogin = BOT_LOGIN, reason = "merge_conflict")
+            val body = dequeuePayload(prAuthorLogin = BOT_LOGIN, reason = "merge_conflict", baseBranch = "release/1.0")
             val response = client.post("/webhook/github") {
                 contentType(ContentType.Application.Json)
                 header("X-GitHub-Event", "pull_request")
@@ -229,11 +229,10 @@ class GitHubWebhookRouteTest {
                 setBody(body)
             }
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(
-                1,
-                tracking.conflictResolutionLaunches,
-                "Conflict resolver must fire for bot-authored PR with merge_conflict dequeue"
-            )
+            assertEquals(1, tracking.conflictResolutionLaunches,
+                "Conflict resolver must fire for bot-authored PR with merge_conflict dequeue")
+            assertEquals("release/1.0", tracking.lastBaseBranch,
+                "Base branch from payload must be passed to launchForConflictResolution")
         }
     }
 
@@ -292,6 +291,7 @@ private fun dequeuePayload(
     prAuthorLogin: String = BOT_LOGIN,
     reason: String = "merge_conflict",
     branchRef: String = "feature/MS-42-some-feature",
+    baseBranch: String = "main",
     prNumber: Int = 42,
     senderLogin: String = "github-merge-queue[bot]"
 ) = """
@@ -302,6 +302,7 @@ private fun dequeuePayload(
   "pull_request": {
     "number": $prNumber,
     "head": { "ref": "$branchRef" },
+    "base": { "ref": "$baseBranch" },
     "user": { "login": "$prAuthorLogin" }
   }
 }
@@ -388,6 +389,7 @@ private class FakeAgentLauncher : AgentLauncher {
     var conflictResolutionLaunches = 0
     var inlineReplies = 0
     var lastReviewerLogin: String? = null
+    var lastBaseBranch: String? = null
 
     override fun launch(ticketKey: String, ticketContent: String?, dryRun: Boolean) = false
 
@@ -406,8 +408,9 @@ private class FakeAgentLauncher : AgentLauncher {
         return true
     }
 
-    override fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String): Boolean {
+    override fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String, baseBranch: String): Boolean {
         conflictResolutionLaunches++
+        lastBaseBranch = baseBranch
         return true
     }
 
