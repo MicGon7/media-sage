@@ -8,27 +8,42 @@ package com.mediasage.agent.di
  * comment posting, GCP credentials for Cloud Run Job dispatch, and database/Pub/Sub settings
  * for persistent job state and completion callbacks.
  *
- * @property repoPath Absolute path to the local clone of the media-sage repository used by worker processes.
- * @property githubWebhookSecret Secret used to verify HMAC-SHA256 signatures on incoming GitHub webhook payloads.
- * @property githubBotLogin GitHub login of the bot account (e.g. `media-sage-worker[bot]`). Webhook events are
- *   only acted on when the PR was authored by this identity — prevents the orchestrator from responding to
- *   human-authored PRs.
- * @property jiraEmail Email address for authenticating with the Jira REST API.
+ * All values are sourced from environment variables via `application.conf` using Ktor's `${?VAR}`
+ * substitution syntax.
+ *
+ * @property repoPath Absolute path to the local clone of the media-sage repository used by worker
+ *   processes. Sourced from env var `AGENT_REPO_PATH`.
+ * @property githubWebhookSecret Secret used to verify HMAC-SHA256 signatures on incoming GitHub
+ *   webhook payloads. Sourced from env var `GITHUB_WEBHOOK_SECRET`.
+ * @property githubBotLogin GitHub login of the bot account (e.g. `media-sage-worker[bot]`). Webhook
+ *   events are only acted on when the PR was authored by this identity — prevents the orchestrator
+ *   from responding to human-authored PRs. Sourced from env var `GITHUB_BOT_LOGIN`.
+ * @property jiraEmail Email address for authenticating with the Jira REST API (human account).
+ *   Sourced from env var `JIRA_EMAIL`.
  * @property jiraApiToken API token for the Jira REST API, paired with [jiraEmail].
- * @property jiraCloudId Jira cloud instance hostname (e.g. `media-sage.atlassian.net`).
+ *   Sourced from env var `JIRA_API_TOKEN`.
+ * @property jiraCloudId Jira cloud instance identifier (e.g. `ad358528-f7e9-4e40-9531-c51049908d6d`).
+ *   Sourced from env var `JIRA_CLOUD_ID`; falls back to the hardcoded media-sage cloud ID if unset.
  * @property jiraBotAccountId Jira account ID of the bot account. Tickets assigned to this account
  *   and transitioned to In Progress trigger autonomous mode via the Jira webhook.
- * @property jiraBotEmail Email of the bot Jira account, used for filtering webhook events.
- * @property jiraBotApiToken API token for the bot Jira account.
- * @property gcpProjectId GCP project ID used for Cloud Run Job dispatch.
+ *   Sourced from env var `JIRA_BOT_ACCOUNT_ID`.
+ * @property jiraBotEmail Email of the bot Jira account, used when posting automated comments as the
+ *   bot identity. Falls back to the human account if blank. Sourced from env var `JIRA_BOT_EMAIL`.
+ * @property jiraBotApiToken API token for the bot Jira account, paired with [jiraBotEmail].
+ *   Sourced from env var `JIRA_BOT_API_TOKEN`.
+ * @property gcpProjectId GCP project ID used for Cloud Run Job dispatch (e.g. `media-sage-agent`).
+ *   Sourced from env var `GCP_PROJECT_ID`.
  * @property gcpRegion GCP region for Cloud Run Jobs. Defaults to `us-central1`.
+ *   Sourced from env var `GCP_REGION`.
  * @property gcpJobName Cloud Run Job name for the worker image. Defaults to `media-sage-agent-worker`.
- * @property googleCredentialsJson Base64-encoded GCP service account JSON key for authenticating
- *   Cloud Run API calls.
+ *   Sourced from env var `GCP_JOB_NAME`.
+ * @property googleCredentialsJson GCP service account JSON key decoded from the base64 value in env
+ *   var `GOOGLE_CREDENTIALS_BASE64`. Used to authenticate Cloud Run API calls.
  * @property supabaseDbUrl PostgreSQL connection URL for the Supabase job registry, used for
- *   persistent dedup and job recovery across restarts.
+ *   persistent dedup and job recovery across restarts. Sourced from env var `SUPABASE_DB_URL`.
  * @property pubSubWebhookSecret Shared secret token appended as `?token=` to the Pub/Sub push
- *   subscription URL. The orchestrator verifies this on every push delivery to reject spoofed requests.
+ *   subscription URL. The orchestrator verifies this on every push delivery to reject spoofed
+ *   requests. Sourced from env var `PUBSUB_WEBHOOK_SECRET`.
  */
 data class AgentConfig(
     val repoPath: String,
