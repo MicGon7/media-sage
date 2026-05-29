@@ -11,22 +11,34 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 
-private val TIMEOUT = 15.minutes.inWholeMilliseconds
+private val TIMEOUT = 20.minutes.inWholeMilliseconds
 
 /**
- * Full pipeline scenario: PR review response.
+ * Full pipeline scenario: PR review response via webhook.
  *
- * Creates a real PR on GitHub via [GitHubFixtureClient], then simulates a reviewer
- * submitting a changes_requested review. Dispatches a real Cloud Run Job, polls until
- * completion, and validates each checkpoint.
+ * Creates a real PR on GitHub, then simulates a reviewer submitting a `changes_requested` review
+ * by POSTing directly to the live orchestrator with a valid HMAC signature. The orchestrator
+ * dispatches a real Cloud Run Job, the worker pushes a fix commit and re-requests review, and
+ * the test polls Supabase until COMPLETED.
+ *
+ * This tests the full orchestrator code path:
+ * - HMAC signature verification
+ * - Payload parsing and bot identity check (pull_request.user.login == botLogin)
+ * - Ticket key extraction from branch ref ([A-Z]+-\d+ regex)
+ * - Supabase dedup gate
+ * - Cloud Run Job dispatch
+ *
+ * Branch naming uses `feature/MS-257-e2e-review-{id}` so the ticket key regex extracts
+ * `MS-257` — no Jira lookup needed since the orchestrator only checks PR author after MS-258.
  *
  * Setup:
- * 1. Sync [E2E_BASE_BRANCH] to main (force-reset discards prior test commits)
- * 2. Create a short-lived feature branch off [E2E_BASE_BRANCH]
- * 3. Push a trivial scratch commit to give the branch a unique diff
+ * 1. Sync [E2E_BASE_BRANCH] to main
+ * 2. Create feature branch off [E2E_BASE_BRANCH]
+ * 3. Push a trivial scratch commit so the branch has a unique diff
  * 4. Open a PR from the feature branch targeting [E2E_BASE_BRANCH]
  *
- * Required env vars: SUPABASE_DB_URL, GCP_PROJECT_ID, GOOGLE_CREDENTIALS_BASE64, GITHUB_TOKEN
+ * Required env vars: SUPABASE_DB_URL, GCP_PROJECT_ID, GOOGLE_CREDENTIALS_BASE64,
+ * ORCHESTRATOR_URL, GITHUB_WEBHOOK_SECRET, GH_TOKEN
  *
  * ⚠️ Dispatches a real Cloud Run Job. Only ever writes to e2e-scratch/ — real code is never affected.
  */
@@ -36,8 +48,7 @@ class PrReviewResponseE2eTest : FullPipelineScenarioBase() {
     override fun scenarioName() = "PR Review Response"
 
     private val shortId = UUID.randomUUID().toString().take(8)
-    private val ticketKey = "MS-E2E-${shortId.uppercase()}"
-    private val branchName = "e2e/review-$shortId"
+    private val branchName = "feature/MS-257-e2e-review-$shortId"
     private val scratchPath = "e2e-scratch/review-$shortId.txt"
     private var prNumber: Int = -1
 
@@ -53,7 +64,7 @@ class PrReviewResponseE2eTest : FullPipelineScenarioBase() {
         )
         prNumber = fixture.openPullRequest(
             branch = branchName,
-            title = "[$ticketKey] E2E PR review response fixture",
+            title = "[$branchName] E2E PR review response fixture",
             body = "Automated E2E fixture PR — safe to close"
         )
     }
@@ -66,24 +77,18 @@ class PrReviewResponseE2eTest : FullPipelineScenarioBase() {
 
     @Test
     fun `pr review response scenario`() = runBlocking {
-        val reviewComment = "Please extract this logic into a helper function."
-        val reviewerLogin = "michael-gonzalez-dev"
-
         println("\n Starting PR review response scenario")
-        println(" Ticket: $ticketKey | PR: #$prNumber | Branch: $branchName\n")
+        println(" Branch: $branchName | PR: #$prNumber\n")
 
-        val dispatched = service.launchForPrReview(ticketKey, prNumber, branchName, reviewComment, reviewerLogin)
-        report.checkpoint("Cloud Run Job dispatched", dispatched)
-
-        if (!dispatched) {
-            report.print()
-            report.assertAllPassed()
-            return@runBlocking
-        }
+        postWebhook("pull_request_review", reviewWebhookPayload(prNumber, branchName))
+        report.checkpoint("Review webhook accepted by orchestrator", true)
 
         val dedupKey = "PR-$prNumber"
         val finalStatus = waitForCompletion(dedupKey, TIMEOUT)
-        report.checkpoint("Job reached terminal state (${finalStatus ?: "TIMEOUT"})", finalStatus == JobStatus.COMPLETED)
+        report.checkpoint(
+            "Job reached terminal state (${finalStatus ?: "TIMEOUT"})",
+            finalStatus == JobStatus.COMPLETED
+        )
 
         val job = jobRegistry.findLatestJob(dedupKey)
         report.checkpoint("Job COMPLETED in Supabase", job?.status == JobStatus.COMPLETED)
@@ -91,4 +96,20 @@ class PrReviewResponseE2eTest : FullPipelineScenarioBase() {
         report.print()
         report.assertAllPassed()
     }
+
+    private fun reviewWebhookPayload(prNumber: Int, branchName: String) = """
+        {
+          "action": "submitted",
+          "sender": {"login": "michael-gonzalez-dev"},
+          "pull_request": {
+            "number": $prNumber,
+            "head": {"ref": "$branchName"},
+            "user": {"login": "media-sage-worker[bot]"}
+          },
+          "review": {
+            "state": "changes_requested",
+            "body": "Please extract this logic into a helper function."
+          }
+        }
+    """.trimIndent()
 }

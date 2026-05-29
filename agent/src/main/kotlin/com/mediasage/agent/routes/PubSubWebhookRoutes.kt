@@ -35,7 +35,13 @@ private data class JobCompletionEvent(
     @SerialName("ticketKey") val ticketKey: String,
     @SerialName("executionName") val executionName: String,
     @SerialName("status") val status: String, // "success" or "failure"
-    @SerialName("commentBody") val commentBody: String? = null
+    @SerialName("commentBody") val commentBody: String? = null,
+    /**
+     * The actual Jira issue key (e.g. "MS-257") when [ticketKey] is a synthetic dedup key
+     * (e.g. "PR-200", "CONFLICT-199"). Set only for PR review and conflict resolution jobs.
+     * When present, used in place of [ticketKey] for Jira comment posting.
+     */
+    @SerialName("jiraTicketKey") val jiraTicketKey: String? = null
 )
 
 /**
@@ -101,6 +107,7 @@ private suspend fun processCompletion(
         ticketKey = event.ticketKey,
         executionName = event.executionName,
         succeeded = event.status == "success",
-        commentBody = event.commentBody
+        commentBody = event.commentBody,
+        jiraTicketKey = event.jiraTicketKey
     )
 }

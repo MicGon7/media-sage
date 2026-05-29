@@ -65,7 +65,7 @@ class JobDispatchTest {
         val prompts = mutableListOf<String>()            // prompts passed to executeJob
         val recoveries = mutableListOf<String>()         // executionNames passed to recoverJob
 
-        override suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String): Boolean {
+        override suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String, jiraTicketKey: String?): Boolean {
             executions.add(ticketKey)
             prompts.add(prompt)
             return true

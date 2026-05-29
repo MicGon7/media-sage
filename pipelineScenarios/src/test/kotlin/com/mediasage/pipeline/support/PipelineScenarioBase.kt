@@ -12,6 +12,9 @@ import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +24,8 @@ import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import java.util.UUID
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 private const val POLL_INTERVAL_MS = 5_000L
 
@@ -71,6 +76,8 @@ abstract class FullPipelineScenarioBase {
         config = ScenarioConfig.fromEnv()
         check(config.gcpProjectId.isNotBlank()) { "GCP_PROJECT_ID is required for full pipeline scenarios" }
         check(config.googleCredentialsJson.isNotBlank()) { "GOOGLE_CREDENTIALS_BASE64 is required for full pipeline scenarios" }
+        check(config.orchestratorUrl.isNotBlank()) { "ORCHESTRATOR_URL is required for full pipeline scenarios" }
+        check(config.webhookSecret.isNotBlank()) { "GITHUB_WEBHOOK_SECRET is required for full pipeline scenarios" }
         AgentDatabase.init(config.supabaseDbUrl)
         val jobRepository = JobRepository()
         jobRegistry = jobRepository
@@ -104,6 +111,39 @@ abstract class FullPipelineScenarioBase {
             jiraCommentPoster = noOpPoster
         )
         return CloudRunDispatch(client, jobRepository)
+    }
+
+    /**
+     * POSTs [payload] to the live orchestrator's `/webhook/github` endpoint, simulating a GitHub
+     * webhook event. Computes a valid HMAC-SHA256 signature using [ScenarioConfig.webhookSecret]
+     * so the orchestrator passes signature verification — identical to a real GitHub webhook.
+     *
+     * This is the entry point for full pipeline E2E scenarios: instead of calling
+     * `service.launchFor*()` directly (which bypasses the webhook), the test sends a realistic
+     * payload and lets the orchestrator handle routing, bot identity check, and job dispatch.
+     *
+     * @param eventType value for the `X-GitHub-Event` header (e.g. `pull_request`, `pull_request_review`)
+     * @param payload JSON body — must include `pull_request.user.login = "media-sage-worker[bot]"` to
+     *   pass the bot identity gate introduced in MS-258
+     * @throws IllegalStateException if the orchestrator responds with a non-2xx status
+     */
+    protected suspend fun postWebhook(eventType: String, payload: String) {
+        val bodyBytes = payload.toByteArray(Charsets.UTF_8)
+        val signature = "sha256=${hmacSha256(config.webhookSecret, bodyBytes)}"
+        val response = httpClient.post("${config.orchestratorUrl}/webhook/github") {
+            header("X-GitHub-Event", eventType)
+            header("X-Hub-Signature-256", signature)
+            setBody(TextContent(payload, ContentType.Application.Json))
+        }
+        check(response.status.isSuccess()) {
+            "Webhook POST to orchestrator failed: ${response.status}"
+        }
+    }
+
+    private fun hmacSha256(secret: String, data: ByteArray): String {
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+        return mac.doFinal(data).joinToString("") { "%02x".format(it) }
     }
 
     @AfterEach
