@@ -352,7 +352,7 @@ An **autonomous agent** runs the full workflow — Jira, branch, code, tests, do
 
 `assisted` is always the starting point. Promote to `autonomous` only after the pattern has been built and validated in `assisted` mode. When in doubt, stay `assisted`.
 
-**Trigger model (Level 3 & 4):** The Jira webhook fires when a ticket is **assigned to the bot account** and its status transitions to **In Progress**. The `autonomous` label is a documentation tag for filtering and reporting — it is NOT what fires the agent. The GitHub webhook fires when a `pull_request_review` or `pull_request_review_comment` event arrives for a branch whose ticket key maps to an `autonomous`-labeled issue in Jira.
+**Trigger model (Level 2 — Autonomous):** The Jira webhook fires when a ticket is **assigned to the bot account** and its status transitions to **In Progress**. The `autonomous` label is a documentation tag for filtering and reporting — it is NOT what fires the agent. The GitHub webhook fires when a `pull_request_review` or `pull_request_review_comment` event arrives for a branch whose ticket key maps to an `autonomous`-labeled issue in Jira.
 
 **Invocation:**
 ```bash
@@ -376,14 +376,18 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 
 **Automation levels:**
 
-- **Level 1 — Assisted**: Human writes the prompt and approves every tool call. Run via an interactive `claude` session.
-- **Level 2 — Autonomous (manual trigger)**: Human describes the intent to the assisted agent, which creates the Jira ticket with AC and the `autonomous` label. Human fires the bootstrap command once, then only reviews the PR. Run via `claude -p "..." --dangerously-skip-permissions`.
-- **Level 3 — Autonomous (self-triggering)**: Human describes the intent to the assisted agent, which creates the Jira ticket. Human assigns the ticket to the bot account and moves it to In Progress — the Jira webhook fires the bootstrap automatically. Human only reviews the PR.
-- **Level 4 — Autonomous (self-responding to PR review)**: Human leaves a review comment on a PR for an `autonomous`-labeled ticket. A GitHub webhook fires the agent, which pushes a fix commit or replies with `🤖 **Agent:**`, then automatically re-requests review from the original reviewer. Human's only touchpoint remains the PR review.
+- **Level 1 — Assisted**: Human works interactively with Claude Code in any configuration (auto-accept, plan mode, or with tool approvals). The configuration doesn't define the level — the human's presence does. They can steer, redirect, and co-author at any point. This is AI-augmented pair programming.
+- **Level 2 — Autonomous**: Jira webhook fires when a ticket is assigned to the bot account and moved to In Progress. The orchestrator dispatches a Cloud Run Job. The worker runs the full workflow autonomously. The human's only touchpoint is the PR review.
 
-_This project is at Level 4. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:agent` module, deployed as a Cloud Run Service on GCP._
+  The full PR lifecycle is part of Level 2 — not a separate level:
+  - **PR review comments** → GitHub webhook → orchestrator dispatches a worker → fix commit + re-request review
+  - **Merge queue conflict** → GitHub webhook → orchestrator dispatches a worker → rebase + re-request review
 
-**Level 3 & 4 setup (container — production):**
+  The human's touchpoint (PR review) never changes regardless of how many review cycles occur.
+
+_This project is at Level 2. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:agent` module, deployed as a Cloud Run Service on GCP. See `docs/diagrams/agent-pipeline.md` for the full flow diagram._
+
+**Autonomous setup (container — production):**
 
 The `:agent` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`). It clones the repo at startup using the bot account token, then starts the Ktor server.
 
@@ -453,7 +457,7 @@ gcloud run deploy media-sage-orchestrator \
 **Manual fallback (Railway):**
 The Railway `:orchestrator` service retains all env vars and is kept deactivated. To switch back: redeploy Railway service → update Jira + GitHub webhook URLs to the Railway URL (takes ~2 min). Switch back to GCP by doing the reverse.
 
-**Level 3 & 4 setup (laptop — local dev/demo):**
+**Autonomous setup (laptop — local dev/demo):**
 
 For local development only (not needed when container is running):
 1. Add `export AGENT_REPO_PATH="/path/to/media-sage"` to `~/.zshrc` and `source ~/.zshrc`
@@ -461,14 +465,15 @@ For local development only (not needed when container is running):
 3. Start ngrok: `ngrok http 8081` — copy the public HTTPS URL
 4. Temporarily update Jira and GitHub webhook URLs to the ngrok URL
 
-See `docs/MS-78-level-4-github-webhook.md` for full details and enterprise notes.
-See `docs/MS-69-level-3-autonomous-agent.md` for Level 3 setup details.
+See `docs/MS-78-level-4-github-webhook.md` for GitHub webhook setup details.
 See `docs/MS-84-containerized-agent-deployment.md` for container architecture and Railway setup.
 See `docs/MS-193-gcp-cloud-run-service-orchestrator.md` for GCP deployment details and migration notes.
+See `docs/diagrams/agent-pipeline.md` for the full autonomous pipeline flow diagram.
+See `docs/diagrams/infrastructure-overview.md` for the infrastructure architecture diagram.
 
 **Autonomous vs Assisted:**
 
-- **Human touchpoints**: Autonomous = PR review only. Assisted = every tool call.
+- **Human touchpoints**: Autonomous = PR review only. Assisted = human present throughout.
 - **Speed**: Autonomous = minutes. Assisted = hours.
 - **Best for**: Autonomous = well-defined tasks where all patterns already exist. Assisted = exploratory work, new architecture, anything ambiguous.
 - **Risk**: Autonomous = mistakes reach the PR before any human sees them. Assisted = human can course-correct mid-run.
