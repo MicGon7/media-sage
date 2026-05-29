@@ -152,10 +152,11 @@ class CloudRunJobsClient(
         executionName: String,
         succeeded: Boolean,
         commentBody: String? = null,
-        jiraTicketKey: String? = null
+        jiraTicketKey: String? = null,
+        wallClockMs: Long? = null
     ): Boolean {
         return if (succeeded) {
-            handleSuccess(jobId, ticketKey, executionName, commentBody, jiraTicketKey)
+            handleSuccess(jobId, ticketKey, executionName, commentBody, jiraTicketKey, wallClockMs)
         } else {
             log.warn("[$ticketKey] Worker reported failure via Pub/Sub")
             jobRepository.markFailed(jobId)
@@ -180,7 +181,8 @@ class CloudRunJobsClient(
         ticketKey: String,
         executionName: String?,
         commentBody: String? = null,
-        jiraTicketKey: String? = null
+        jiraTicketKey: String? = null,
+        wallClockMs: Long? = null
     ): Boolean {
         log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
         val effectiveJiraKey = jiraTicketKey ?: ticketKey
@@ -192,7 +194,7 @@ class CloudRunJobsClient(
                             "${m.inputTokens + m.outputTokens} tokens, " +
                             "\$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}"
                     )
-                    postConsolidatedComment(effectiveJiraKey, m, commentBody)
+                    postConsolidatedComment(effectiveJiraKey, m, commentBody, wallClockMs)
                 } else {
                     log.warn("[$ticketKey] Worker metrics unavailable — job marked complete without cost data")
                 }
@@ -261,9 +263,13 @@ class CloudRunJobsClient(
     private suspend fun postConsolidatedComment(
         ticketKey: String,
         m: com.mediasage.agent.db.WorkerMetrics,
-        commentBody: String?
+        commentBody: String?,
+        wallClockMs: Long? = null
     ) {
-        val durationStr = formatDuration(m.durationMs)
+        // Prefer wall-clock duration (job dispatch → Pub/Sub receipt) over Claude API time.
+        // m.durationMs from Cloud Logging only measures time inside Claude API calls — it
+        // excludes container cold start, GitHub token generation, and git clone (~1-3 min overhead).
+        val durationStr = formatDuration(wallClockMs ?: m.durationMs)
         val metricsSection = buildString {
             appendLine("Run metrics:")
             appendLine(

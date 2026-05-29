@@ -12,6 +12,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
+import java.time.Instant
 import java.util.Base64
 
 private val log = LoggerFactory.getLogger("PubSubWebhookRoutes")
@@ -97,17 +98,23 @@ private suspend fun processCompletion(
     jobRegistry: JobRegistry,
     cloudRunJobsClient: CloudRunJobsClient
 ) {
+    // Capture receipt time first — this is the closest timestamp to actual job completion.
+    // Wall-clock duration = receipt time - startedAt (stored in Supabase when Cloud Run dispatch succeeded).
+    val receiptTime = Instant.now()
     val job = jobRegistry.findRunningByTicketKey(event.ticketKey)
     if (job == null) {
         log.warn("[${event.ticketKey}] Pub/Sub webhook: no RUNNING job found — may have already been processed")
         return
     }
+    // Compute wall-clock here so CloudRunJobsClient.onJobCompleted stays under the param limit.
+    val wallClockMs = job.startedAt?.let { receiptTime.toEpochMilli() - it.toEpochMilli() }
     cloudRunJobsClient.onJobCompleted(
         jobId = job.jobId,
         ticketKey = event.ticketKey,
         executionName = event.executionName,
         succeeded = event.status == "success",
         commentBody = event.commentBody,
-        jiraTicketKey = event.jiraTicketKey
+        jiraTicketKey = event.jiraTicketKey,
+        wallClockMs = wallClockMs
     )
 }

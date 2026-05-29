@@ -18,7 +18,9 @@ data class JobRow(
     val jobId: UUID,
     val ticketKey: String,
     val status: JobStatus,
-    val executionName: String?
+    val executionName: String?,
+    /** Timestamp when the Cloud Run execution started (set in [JobRepository.markRunning]). */
+    val startedAt: Instant? = null
 )
 
 data class JobDurationRow(
@@ -176,7 +178,8 @@ class JobRepository : JobRegistry {
                         jobId = it[JobsTable.jobId],
                         ticketKey = ticketKey,
                         status = JobStatus.RUNNING,
-                        executionName = it[JobsTable.executionName]
+                        executionName = it[JobsTable.executionName],
+                        startedAt = it[JobsTable.startedAt]
                     )
                 }
                 .firstOrNull()

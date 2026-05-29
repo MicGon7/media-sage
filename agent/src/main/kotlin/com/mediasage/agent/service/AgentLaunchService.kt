@@ -24,6 +24,9 @@ private const val PR_REVIEW_PROMPT =
     "Then push a fix commit and run: gh pr review-request %1\$d --reviewer %5\$s " +
     "If no code change is needed, post a comment on the PR using " +
     "`gh pr comment %1\$d --body '🤖 **Agent:** your explanation here'` and exit. " +
+    "Before exiting, write a brief plain-text summary to /tmp/jira_comment.txt covering: " +
+    "what was done, the PR URL (gh pr view %1\$d --json url -q .url), and quality gate results. " +
+    "Use the format from CLAUDE.md Agent Guidelines (no bold markdown). " +
     "Follow the Agent Guidelines in CLAUDE.md."
 
 private const val CONFLICT_RESOLUTION_PROMPT =
@@ -33,6 +36,9 @@ private const val CONFLICT_RESOLUTION_PROMPT =
     "Push the rebased branch. " +
     "Find the last reviewer with: gh pr view %1\$d --json reviews " +
     "and re-request review with: gh pr review-request %1\$d --reviewer <login>. " +
+    "Before exiting, write a brief plain-text summary to /tmp/jira_comment.txt covering: " +
+    "what conflicts were resolved, the PR URL (gh pr view %1\$d --json url -q .url), and the rebase result. " +
+    "Use the format from CLAUDE.md Agent Guidelines (no bold markdown). " +
     "Follow the Agent Guidelines in CLAUDE.md."
 
 private const val PR_COMMENT_REVIEW_PROMPT =
