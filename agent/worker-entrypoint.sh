@@ -40,6 +40,12 @@ payload = {
   'status': '$status'
 }
 
+# jiraTicketKey is set when TICKET_KEY is a synthetic dedup key (e.g. PR-200, CONFLICT-199).
+# The orchestrator uses it to post the Jira metrics comment on the correct issue.
+jira_key = os.environ.get('JIRA_TICKET_KEY', '').strip()
+if jira_key:
+    payload['jiraTicketKey'] = jira_key
+
 # Include comment body written by Claude — orchestrator appends metrics and posts to Jira.
 # Read via Python to avoid shell quoting issues with newlines and special characters.
 comment_file = '/tmp/jira_comment.txt'

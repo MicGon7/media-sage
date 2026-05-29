@@ -95,7 +95,8 @@ class AgentLaunchService(
         ticketKey: String,
         prompt: String,
         cloudRun: CloudRunDispatch,
-        dryRun: Boolean = false
+        dryRun: Boolean = false,
+        jiraTicketKey: String? = null
     ): Boolean {
         // activeKeys is the synchronous in-process gate. It prevents the TOCTOU race where
         // two concurrent webhooks both pass shouldDispatch() before either inserts a DB row.
@@ -106,7 +107,7 @@ class AgentLaunchService(
         }
         scope.launch {
             try {
-                doDispatch(ticketKey, prompt, cloudRun, dryRun)
+                doDispatch(ticketKey, prompt, cloudRun, dryRun, jiraTicketKey)
             } finally {
                 activeKeys.remove(ticketKey)
             }
@@ -118,7 +119,8 @@ class AgentLaunchService(
         ticketKey: String,
         prompt: String,
         cloudRun: CloudRunDispatch,
-        dryRun: Boolean
+        dryRun: Boolean,
+        jiraTicketKey: String? = null
     ) {
         if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
             log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
@@ -133,7 +135,7 @@ class AgentLaunchService(
         }
         log.info("[$ticketKey] job $jobId inserted — dispatching to Cloud Run")
         try {
-            cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt)
+            cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt, jiraTicketKey)
         } catch (e: Exception) {
             cloudRun.jobs.markFailed(jobId)
             log.warn("[$ticketKey] dispatch error: ${e.message}")
@@ -184,7 +186,7 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
         val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef, reviewerLogin)
-        return dispatchToCloudRun(key, prompt, cloudRun)
+        return dispatchToCloudRun(key, prompt, cloudRun, jiraTicketKey = ticketKey)
     }
 
     override fun launchForCommentReview(
@@ -196,7 +198,7 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
         val prompt = PR_COMMENT_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
-        return dispatchToCloudRun(key, prompt, cloudRun)
+        return dispatchToCloudRun(key, prompt, cloudRun, jiraTicketKey = ticketKey)
     }
 
     /**
@@ -207,7 +209,7 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "CONFLICT-$prNumber"
         val prompt = CONFLICT_RESOLUTION_PROMPT.format(prNumber, ticketKey, branchRef)
-        return dispatchToCloudRun(key, prompt, cloudRun)
+        return dispatchToCloudRun(key, prompt, cloudRun, jiraTicketKey = ticketKey)
     }
 
     override fun postInlineCommentReply(prNumber: Int) {

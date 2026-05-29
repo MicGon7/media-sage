@@ -82,13 +82,19 @@ class CloudRunJobsClient(
             .createScoped("https://www.googleapis.com/auth/cloud-platform")
     }
 
-    override suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String): Boolean {
+    override suspend fun executeJob(
+        jobId: UUID,
+        ticketKey: String,
+        prompt: String,
+        jiraTicketKey: String?
+    ): Boolean {
         val url = "https://run.googleapis.com/v2/projects/$projectId/locations/$region/jobs/$jobName:run"
 
-        val envVars = listOf(
-            EnvVar("PROMPT", prompt),
-            EnvVar("TICKET_KEY", ticketKey)
-        )
+        val envVars = buildList {
+            add(EnvVar("PROMPT", prompt))
+            add(EnvVar("TICKET_KEY", ticketKey))
+            if (jiraTicketKey != null) add(EnvVar("JIRA_TICKET_KEY", jiraTicketKey))
+        }
 
         val body = json.encodeToString(
             RunJobRequest.serializer(),
@@ -145,10 +151,11 @@ class CloudRunJobsClient(
         ticketKey: String,
         executionName: String,
         succeeded: Boolean,
-        commentBody: String? = null
+        commentBody: String? = null,
+        jiraTicketKey: String? = null
     ): Boolean {
         return if (succeeded) {
-            handleSuccess(jobId, ticketKey, executionName, commentBody)
+            handleSuccess(jobId, ticketKey, executionName, commentBody, jiraTicketKey)
         } else {
             log.warn("[$ticketKey] Worker reported failure via Pub/Sub")
             jobRepository.markFailed(jobId)
@@ -172,9 +179,11 @@ class CloudRunJobsClient(
         jobId: UUID,
         ticketKey: String,
         executionName: String?,
-        commentBody: String? = null
+        commentBody: String? = null,
+        jiraTicketKey: String? = null
     ): Boolean {
         log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
+        val effectiveJiraKey = jiraTicketKey ?: ticketKey
         val metrics = if (executionName != null) {
             cloudLoggingClient.fetchMetrics(executionName).also { m ->
                 if (m != null) {
@@ -183,7 +192,7 @@ class CloudRunJobsClient(
                             "${m.inputTokens + m.outputTokens} tokens, " +
                             "\$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}"
                     )
-                    postConsolidatedComment(ticketKey, m, commentBody)
+                    postConsolidatedComment(effectiveJiraKey, m, commentBody)
                 } else {
                     log.warn("[$ticketKey] Worker metrics unavailable — job marked complete without cost data")
                 }

@@ -10,7 +10,13 @@ import java.util.UUID
  * backend can be swapped via Koin without changing dispatch logic.
  */
 interface JobDispatcher {
-    suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String): Boolean
+    /**
+     * @param jiraTicketKey The actual Jira issue key (e.g. "MS-257") when it differs from [ticketKey].
+     *   For standard autonomous launches [ticketKey] IS the Jira key, so this is null.
+     *   For PR review and conflict resolution, [ticketKey] is a synthetic dedup key ("PR-200",
+     *   "CONFLICT-199") and [jiraTicketKey] carries the real Jira key for comment posting.
+     */
+    suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String, jiraTicketKey: String? = null): Boolean
 
     /**
      * Called on orchestrator startup for each RUNNING job whose LRO poll was lost.
