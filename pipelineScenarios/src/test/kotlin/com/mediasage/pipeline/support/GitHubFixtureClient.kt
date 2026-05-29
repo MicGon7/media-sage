@@ -123,10 +123,10 @@ class GitHubFixtureClient(
             header("Accept", "application/vnd.github+json")
             header("X-GitHub-Api-Version", "2022-11-28")
         }
-        return json.parseToJsonElement(response.bodyAsText())
-            .jsonObject["object"]!!
-            .jsonObject["sha"]!!
-            .jsonPrimitive.content
+        val body = response.bodyAsText()
+        val element = json.parseToJsonElement(body)
+        return element.jsonObject["object"]?.jsonObject?.get("sha")?.jsonPrimitive?.content
+            ?: error("getBranchSha($branch) failed — status ${response.status}, body: $body")
     }
 
     private suspend fun getFileSha(branch: String, path: String): String? {

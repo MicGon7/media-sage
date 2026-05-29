@@ -15,7 +15,7 @@ data class ScenarioConfig(
     val gcpJobName: String,
     val googleCredentialsJson: String,
     val repoPath: String,
-    /** Personal GitHub token with repo write access — used by GitHubFixtureClient. */
+    /** GitHub token (GH_TOKEN from gh CLI) — used by GitHubFixtureClient. */
     val githubToken: String
 ) {
     companion object {
@@ -38,7 +38,7 @@ data class ScenarioConfig(
                 gcpJobName = optional("GCP_JOB_NAME", "media-sage-agent-worker"),
                 googleCredentialsJson = credentialsJson,
                 repoPath = optional("AGENT_REPO_PATH", "."),
-                githubToken = optional("GITHUB_TOKEN")
+                githubToken = optional("GH_TOKEN")
             )
         }
     }

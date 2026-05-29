@@ -6,6 +6,7 @@ dependencies {
     testImplementation(project(":agent"))
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
+    testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.kotlinx.coroutines.test)
     // Ktor client — needed to build CloudRunJobsClient in FullPipelineScenarioBase
     testImplementation(libs.ktor.client.core)
@@ -91,7 +92,7 @@ scenarios.forEach { scenario ->
             "GCP_JOB_NAME",
             "GOOGLE_CREDENTIALS_BASE64",
             "AGENT_REPO_PATH",
-            "GITHUB_TOKEN"
+            "GH_TOKEN"
         ).forEach { key -> environment(key, System.getenv(key) ?: "") }
     }
 }

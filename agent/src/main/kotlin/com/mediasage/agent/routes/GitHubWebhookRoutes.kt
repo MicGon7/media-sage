@@ -1,7 +1,6 @@
 package com.mediasage.agent.routes
 
 import com.mediasage.agent.service.AgentLauncher
-import com.mediasage.agent.service.JiraLabelChecker
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -44,7 +43,9 @@ data class GitHubPullRequest(
     @SerialName("number")
     val number: Int,
     @SerialName("head")
-    val head: GitHubBranch
+    val head: GitHubBranch,
+    @SerialName("user")
+    val user: GitHubUser
 )
 
 @Serializable
@@ -95,6 +96,10 @@ private val webhookJson = Json { ignoreUnknownKeys = true }
  * Validates the request signature using HMAC-SHA256 against [webhookSecret], then dispatches
  * to the appropriate handler based on the event type.
  *
+ * Only acts on events for PRs authored by [botLogin] — PRs opened by humans are silently ignored.
+ * This replaces the previous Jira `autonomous` label check, making the gate portable across projects
+ * and removing a live Jira API call from the webhook hot path.
+ *
  * Expected headers:
  * - `X-GitHub-Event`: event type (`pull_request`, `pull_request_review`, `pull_request_review_comment`)
  * - `X-Hub-Signature-256`: HMAC-SHA256 signature of the raw request body
@@ -103,10 +108,11 @@ private val webhookJson = Json { ignoreUnknownKeys = true }
  * `401 Unauthorized` if the signature is missing or invalid.
  *
  * @param webhookSecret shared secret used to verify the GitHub webhook HMAC-SHA256 signature
+ * @param botLogin GitHub login of the bot account (e.g. `media-sage-worker[bot]`). Only PRs authored
+ *   by this identity trigger agent dispatch.
  */
-fun Route.githubWebhookRoutes(webhookSecret: String) {
+fun Route.githubWebhookRoutes(webhookSecret: String, botLogin: String) {
     val agentService by inject<AgentLauncher>()
-    val jiraLabelChecker by inject<JiraLabelChecker>()
 
     post("/webhook/github") {
         val eventType = call.request.header("X-GitHub-Event") ?: run {
@@ -122,7 +128,7 @@ fun Route.githubWebhookRoutes(webhookSecret: String) {
             call.respond(HttpStatusCode.Unauthorized)
             return@post
         }
-        handleGitHubEvent(eventType, rawBody, agentService, jiraLabelChecker)
+        handleGitHubEvent(eventType, rawBody, agentService, botLogin)
         call.respond(HttpStatusCode.OK)
     }
 }
@@ -131,13 +137,13 @@ fun Route.githubWebhookRoutes(webhookSecret: String) {
  * Dispatches a verified GitHub webhook event to the appropriate handler.
  *
  * Supported events:
- * - `pull_request` with `action: dequeued` and `reason: merge_conflict`: if the ticket is labeled
- *   `autonomous`, dispatches a conflict-resolution Cloud Run Job via [AgentLauncher.launchForConflictResolution].
+ * - `pull_request` with `action: dequeued` and `reason: merge_conflict`: if the PR was authored
+ *   by [botLogin], dispatches a conflict-resolution Cloud Run Job via [AgentLauncher.launchForConflictResolution].
  *   CI-failure and other non-conflict dequeue reasons are silently ignored.
- * - `pull_request_review`: if the ticket extracted from the branch ref is labeled `autonomous`
- *   in Jira, launches the agent via [AgentLauncher.launchForPrReview] for `changes_requested`
- *   reviews or [AgentLauncher.launchForCommentReview] for `commented` reviews. Ignores
- *   agent-authored reviews (body starts with "🤖 **Agent:**") and all other review states.
+ * - `pull_request_review`: if the PR was authored by [botLogin], launches the agent via
+ *   [AgentLauncher.launchForPrReview] for `changes_requested` reviews or
+ *   [AgentLauncher.launchForCommentReview] for `commented` reviews. Ignores agent-authored reviews
+ *   (body starts with "🤖 **Agent:**") and all other review states.
  * - `pull_request_review_comment`: calls [AgentLauncher.postInlineCommentReply] for the PR.
  *   Ignores agent-authored comments.
  */
@@ -145,11 +151,11 @@ private suspend fun handleGitHubEvent(
     eventType: String,
     rawBody: ByteArray,
     agentService: AgentLauncher,
-    jiraLabelChecker: JiraLabelChecker
+    botLogin: String
 ) {
     when (eventType) {
-        "pull_request" -> handleDequeueEvent(rawBody, agentService, jiraLabelChecker)
-        "pull_request_review" -> handleReviewEvent(rawBody, agentService, jiraLabelChecker)
+        "pull_request" -> handleDequeueEvent(rawBody, agentService, botLogin)
+        "pull_request_review" -> handleReviewEvent(rawBody, agentService, botLogin)
         "pull_request_review_comment" -> {
             val prNumber = parseInlineCommentPrNumber(rawBody) ?: return
             log.info("GitHub inline comment on PR#$prNumber — posting quick reply")
@@ -161,23 +167,20 @@ private suspend fun handleGitHubEvent(
 private suspend fun handleDequeueEvent(
     rawBody: ByteArray,
     agentService: AgentLauncher,
-    jiraLabelChecker: JiraLabelChecker
+    botLogin: String
 ) {
-    val context = parseDequeueContext(rawBody) ?: return
-    log.info("[${context.ticketKey}] GitHub PR#${context.prNumber} dequeued (merge_conflict) — checking autonomous label")
-    if (jiraLabelChecker.isAutonomous(context.ticketKey)) {
-        agentService.launchForConflictResolution(context.ticketKey, context.prNumber, context.branchRef)
-    }
+    val context = parseDequeueContext(rawBody, botLogin) ?: return
+    log.info("[${context.ticketKey}] PR#${context.prNumber} dequeued (merge_conflict) — bot-authored PR, dispatching conflict resolver")
+    agentService.launchForConflictResolution(context.ticketKey, context.prNumber, context.branchRef)
 }
 
 private suspend fun handleReviewEvent(
     rawBody: ByteArray,
     agentService: AgentLauncher,
-    jiraLabelChecker: JiraLabelChecker
+    botLogin: String
 ) {
-    val context = parseReviewContext(rawBody) ?: return
+    val context = parseReviewContext(rawBody, botLogin) ?: return
     log.info("GitHub review submitted: ticketKey=${context.ticketKey} PR#${context.prNumber} state=${context.reviewState}")
-    if (!jiraLabelChecker.isAutonomous(context.ticketKey)) return
     when (context.reviewState) {
         "changes_requested" -> agentService.launchForPrReview(
             context.ticketKey, context.prNumber, context.branchRef, context.commentBody, context.reviewerLogin
@@ -194,12 +197,16 @@ private suspend fun handleReviewEvent(
  * Returns `null` if:
  * - the action is not `dequeued`
  * - the reason is not `merge_conflict` (e.g. CI failure, queue cleared — ignored)
+ * - the PR was not authored by [botLogin]
  * - the branch ref contains no Jira ticket key matching `[A-Z]+-\d+`
  */
-private fun parseDequeueContext(rawBody: ByteArray): DequeueContext? {
+private fun parseDequeueContext(rawBody: ByteArray, botLogin: String): DequeueContext? {
     val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
-    if (payload.action != "dequeued") return null
-    if (payload.reason != "merge_conflict") return null
+    if (payload.action != "dequeued" || payload.reason != "merge_conflict") return null
+    if (payload.pullRequest.user.login != botLogin) {
+        log.info("PR#${payload.pullRequest.number} dequeued but not bot-authored (${payload.pullRequest.user.login}), ignoring")
+        return null
+    }
     val ticketKey = ticketKeyRegex.find(payload.pullRequest.head.ref)?.value ?: return null
     return DequeueContext(ticketKey, payload.pullRequest.number, payload.pullRequest.head.ref)
 }
@@ -210,14 +217,20 @@ private fun parseDequeueContext(rawBody: ByteArray): DequeueContext? {
  * Returns `null` if:
  * - the action is not `submitted`
  * - the review state is not `changes_requested` or `commented`
+ * - the PR was not authored by [botLogin]
  * - the branch ref contains no Jira ticket key matching `[A-Z]+-\d+`
  * - the review body was authored by the agent (starts with "🤖 **Agent:**")
  */
-private fun parseReviewContext(rawBody: ByteArray): WebhookContext? {
+private fun parseReviewContext(rawBody: ByteArray, botLogin: String): WebhookContext? {
     val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
     val reviewBody = payload.review?.body.orEmpty()
     val ticketKey = ticketKeyRegex.find(payload.pullRequest.head.ref)?.value
     val state = payload.review?.state?.lowercase() ?: return null
+
+    if (payload.pullRequest.user.login != botLogin) {
+        log.info("PR#${payload.pullRequest.number} review submitted but not bot-authored (${payload.pullRequest.user.login}), ignoring")
+        return null
+    }
 
     return ticketKey
         ?.takeIf { payload.action == "submitted" }

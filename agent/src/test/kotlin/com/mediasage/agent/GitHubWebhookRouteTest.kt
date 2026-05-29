@@ -4,7 +4,6 @@ import com.mediasage.agent.plugins.configureContentNegotiation
 import com.mediasage.agent.plugins.configureStatusPages
 import com.mediasage.agent.routes.githubWebhookRoutes
 import com.mediasage.agent.service.AgentLauncher
-import com.mediasage.agent.service.JiraLabelChecker
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -18,6 +17,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 private const val TEST_SECRET = "test-webhook-secret"
+private const val BOT_LOGIN = "media-sage-worker[bot]"
+private const val HUMAN_LOGIN = "human-reviewer"
 
 class GitHubWebhookRouteTest {
 
@@ -90,8 +91,8 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
-    fun autonomousTicketChangesRequestedReturns200() = testGitHubApp(jiraAutonomous = true) {
-        val body = prReviewPayload(state = "changes_requested", reviewBody = "Please extract this to a helper.")
+    fun botAuthoredPrChangesRequestedReturns200() = testGitHubApp {
+        val body = prReviewPayload(prAuthorLogin = BOT_LOGIN, state = "changes_requested", reviewBody = "Please extract this to a helper.")
         val response = client.post("/webhook/github") {
             contentType(ContentType.Application.Json)
             header("X-GitHub-Event", "pull_request_review")
@@ -104,8 +105,8 @@ class GitHubWebhookRouteTest {
     @Test
     fun uppercaseChangesRequestedFiresAgent() {
         val tracking = FakeAgentLauncher()
-        testGitHubApp(jiraAutonomous = true, agentService = tracking) {
-            val body = prReviewPayload(state = "CHANGES_REQUESTED", reviewBody = "Please fix this.")
+        testGitHubApp(agentService = tracking) {
+            val body = prReviewPayload(prAuthorLogin = BOT_LOGIN, state = "CHANGES_REQUESTED", reviewBody = "Please fix this.")
             val response = client.post("/webhook/github") {
                 contentType(ContentType.Application.Json)
                 header("X-GitHub-Event", "pull_request_review")
@@ -120,8 +121,13 @@ class GitHubWebhookRouteTest {
     @Test
     fun changesRequestedPassesReviewerLogin() {
         val tracking = FakeAgentLauncher()
-        testGitHubApp(jiraAutonomous = true, agentService = tracking) {
-            val body = prReviewPayload(state = "changes_requested", senderLogin = "jane-reviewer", reviewBody = "Please fix this.")
+        testGitHubApp(agentService = tracking) {
+            val body = prReviewPayload(
+                prAuthorLogin = BOT_LOGIN,
+                state = "changes_requested",
+                senderLogin = "jane-reviewer",
+                reviewBody = "Please fix this."
+            )
             val response = client.post("/webhook/github") {
                 contentType(ContentType.Application.Json)
                 header("X-GitHub-Event", "pull_request_review")
@@ -136,8 +142,8 @@ class GitHubWebhookRouteTest {
     @Test
     fun commentedReviewFiresCommentAgent() {
         val tracking = FakeAgentLauncher()
-        testGitHubApp(jiraAutonomous = true, agentService = tracking) {
-            val body = prReviewPayload(state = "commented", reviewBody = "What does this function do?")
+        testGitHubApp(agentService = tracking) {
+            val body = prReviewPayload(prAuthorLogin = BOT_LOGIN, state = "commented", reviewBody = "What does this function do?")
             val response = client.post("/webhook/github") {
                 contentType(ContentType.Application.Json)
                 header("X-GitHub-Event", "pull_request_review")
@@ -151,15 +157,23 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
-    fun nonAutonomousTicketReturns200WithoutFiring() = testGitHubApp(jiraAutonomous = false) {
-        val body = prReviewPayload(state = "changes_requested", reviewBody = "Please extract this to a helper.")
-        val response = client.post("/webhook/github") {
-            contentType(ContentType.Application.Json)
-            header("X-GitHub-Event", "pull_request_review")
-            header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
-            setBody(body)
+    fun humanAuthoredPrReturns200WithoutFiring() {
+        val tracking = FakeAgentLauncher()
+        testGitHubApp(agentService = tracking) {
+            val body = prReviewPayload(
+                prAuthorLogin = HUMAN_LOGIN,
+                state = "changes_requested",
+                reviewBody = "Please extract this to a helper."
+            )
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request_review")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(0, tracking.agentLaunches, "Agent must NOT fire for human-authored PR")
         }
-        assertEquals(HttpStatusCode.OK, response.status)
     }
 
     @Test
@@ -193,7 +207,7 @@ class GitHubWebhookRouteTest {
 
     @Test
     fun branchWithNoTicketKeyReturns200WithoutFiring() = testGitHubApp {
-        val body = prReviewPayload(branchRef = "main", state = "changes_requested", reviewBody = "Fix this.")
+        val body = prReviewPayload(prAuthorLogin = BOT_LOGIN, branchRef = "main", state = "changes_requested", reviewBody = "Fix this.")
         val response = client.post("/webhook/github") {
             contentType(ContentType.Application.Json)
             header("X-GitHub-Event", "pull_request_review")
@@ -206,8 +220,8 @@ class GitHubWebhookRouteTest {
     @Test
     fun mergeConflictDequeueFiresConflictResolver() {
         val tracking = FakeAgentLauncher()
-        testGitHubApp(jiraAutonomous = true, agentService = tracking) {
-            val body = dequeuePayload(reason = "merge_conflict")
+        testGitHubApp(agentService = tracking) {
+            val body = dequeuePayload(prAuthorLogin = BOT_LOGIN, reason = "merge_conflict")
             val response = client.post("/webhook/github") {
                 contentType(ContentType.Application.Json)
                 header("X-GitHub-Event", "pull_request")
@@ -215,15 +229,19 @@ class GitHubWebhookRouteTest {
                 setBody(body)
             }
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(1, tracking.conflictResolutionLaunches, "Conflict resolver must fire for merge_conflict dequeue")
+            assertEquals(
+                1,
+                tracking.conflictResolutionLaunches,
+                "Conflict resolver must fire for bot-authored PR with merge_conflict dequeue"
+            )
         }
     }
 
     @Test
     fun ciFailureDequeueIsIgnored() {
         val tracking = FakeAgentLauncher()
-        testGitHubApp(jiraAutonomous = true, agentService = tracking) {
-            val body = dequeuePayload(reason = "checks_failed")
+        testGitHubApp(agentService = tracking) {
+            val body = dequeuePayload(prAuthorLogin = BOT_LOGIN, reason = "checks_failed")
             val response = client.post("/webhook/github") {
                 contentType(ContentType.Application.Json)
                 header("X-GitHub-Event", "pull_request")
@@ -236,10 +254,10 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
-    fun nonAutonomousTicketDequeueIsIgnored() {
+    fun humanAuthoredPrDequeueIsIgnored() {
         val tracking = FakeAgentLauncher()
-        testGitHubApp(jiraAutonomous = false, agentService = tracking) {
-            val body = dequeuePayload(reason = "merge_conflict")
+        testGitHubApp(agentService = tracking) {
+            val body = dequeuePayload(prAuthorLogin = HUMAN_LOGIN, reason = "merge_conflict")
             val response = client.post("/webhook/github") {
                 contentType(ContentType.Application.Json)
                 header("X-GitHub-Event", "pull_request")
@@ -247,15 +265,15 @@ class GitHubWebhookRouteTest {
                 setBody(body)
             }
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(0, tracking.conflictResolutionLaunches, "Conflict resolver must NOT fire for non-autonomous ticket")
+            assertEquals(0, tracking.conflictResolutionLaunches, "Conflict resolver must NOT fire for human-authored PR")
         }
     }
 
     @Test
     fun dequeueWithNoTicketKeyIsIgnored() {
         val tracking = FakeAgentLauncher()
-        testGitHubApp(jiraAutonomous = true, agentService = tracking) {
-            val body = dequeuePayload(reason = "merge_conflict", branchRef = "hotfix/no-ticket-here")
+        testGitHubApp(agentService = tracking) {
+            val body = dequeuePayload(prAuthorLogin = BOT_LOGIN, reason = "merge_conflict", branchRef = "hotfix/no-ticket-here")
             val response = client.post("/webhook/github") {
                 contentType(ContentType.Application.Json)
                 header("X-GitHub-Event", "pull_request")
@@ -271,6 +289,7 @@ class GitHubWebhookRouteTest {
 // ---- Payload builders ----
 
 private fun dequeuePayload(
+    prAuthorLogin: String = BOT_LOGIN,
     reason: String = "merge_conflict",
     branchRef: String = "feature/MS-42-some-feature",
     prNumber: Int = 42,
@@ -282,14 +301,16 @@ private fun dequeuePayload(
   "sender": { "login": "$senderLogin" },
   "pull_request": {
     "number": $prNumber,
-    "head": { "ref": "$branchRef" }
+    "head": { "ref": "$branchRef" },
+    "user": { "login": "$prAuthorLogin" }
   }
 }
 """.trimIndent()
 
 private fun prReviewPayload(
+    prAuthorLogin: String = BOT_LOGIN,
     action: String = "submitted",
-    senderLogin: String = "human-reviewer",
+    senderLogin: String = HUMAN_LOGIN,
     branchRef: String = "feature/MS-42-some-feature",
     prNumber: Int = 42,
     state: String = "commented",
@@ -300,7 +321,8 @@ private fun prReviewPayload(
   "sender": { "login": "$senderLogin" },
   "pull_request": {
     "number": $prNumber,
-    "head": { "ref": "$branchRef" }
+    "head": { "ref": "$branchRef" },
+    "user": { "login": "$prAuthorLogin" }
   },
   "review": {
     "state": "$state",
@@ -311,7 +333,8 @@ private fun prReviewPayload(
 
 private fun reviewCommentPayload(
     action: String = "created",
-    senderLogin: String = "human-reviewer",
+    senderLogin: String = HUMAN_LOGIN,
+    prAuthorLogin: String = BOT_LOGIN,
     branchRef: String = "feature/MS-42-some-feature",
     prNumber: Int = 42,
     commentId: Long = 1001L,
@@ -322,7 +345,8 @@ private fun reviewCommentPayload(
   "sender": { "login": "$senderLogin" },
   "pull_request": {
     "number": $prNumber,
-    "head": { "ref": "$branchRef" }
+    "head": { "ref": "$branchRef" },
+    "user": { "login": "$prAuthorLogin" }
   },
   "comment": {
     "id": $commentId,
@@ -341,7 +365,7 @@ private fun validSignature(secret: String, body: String): String {
 }
 
 private fun testGitHubApp(
-    jiraAutonomous: Boolean = true,
+    botLogin: String = BOT_LOGIN,
     agentService: AgentLauncher = FakeAgentLauncher(),
     block: suspend ApplicationTestBuilder.() -> Unit
 ) = testApplication {
@@ -349,18 +373,13 @@ private fun testGitHubApp(
         install(Koin) {
             modules(module {
                 single<AgentLauncher> { agentService }
-                single<JiraLabelChecker> { FakeJiraLabelChecker(jiraAutonomous) }
             })
         }
         configureContentNegotiation()
         configureStatusPages()
-        routing { githubWebhookRoutes(TEST_SECRET) }
+        routing { githubWebhookRoutes(TEST_SECRET, botLogin) }
     }
     block()
-}
-
-private class FakeJiraLabelChecker(private val autonomous: Boolean) : JiraLabelChecker {
-    override suspend fun isAutonomous(ticketKey: String) = autonomous
 }
 
 private class FakeAgentLauncher : AgentLauncher {

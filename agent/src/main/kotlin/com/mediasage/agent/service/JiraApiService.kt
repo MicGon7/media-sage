@@ -15,16 +15,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.util.Base64
 import org.slf4j.LoggerFactory
 
-/** Checks whether a Jira ticket carries the `autonomous` label. */
-interface JiraLabelChecker {
-    /**
-     * Returns true if [ticketKey] has the `autonomous` label in Jira, false otherwise.
-     *
-     * @param ticketKey Jira issue key (e.g. `MS-242`).
-     */
-    suspend fun isAutonomous(ticketKey: String): Boolean
-}
-
 /** Fetches the human-readable content of a Jira ticket. */
 interface JiraTicketFetcher {
     /**
@@ -63,18 +53,6 @@ interface JiraTicketStatusChecker {
      */
     suspend fun getTicketStatus(ticketKey: String): String?
 }
-
-@Serializable
-private data class JiraIssueLabelsResponse(
-    @SerialName("fields")
-    val fields: JiraLabelsFields
-)
-
-@Serializable
-private data class JiraLabelsFields(
-    @SerialName("labels")
-    val labels: List<String> = emptyList()
-)
 
 @Serializable
 private data class JiraIssueStatusResponse(
@@ -126,35 +104,13 @@ class JiraApiService(
     private val cloudId: String,
     private val email: String,
     private val apiToken: String
-) : JiraLabelChecker, JiraTicketFetcher, JiraCommentPoster, JiraTicketStatusChecker {
+) : JiraTicketFetcher, JiraCommentPoster, JiraTicketStatusChecker {
 
     private val log = LoggerFactory.getLogger(JiraApiService::class.java)
     private val authHeader = "Basic " + Base64.getEncoder()
         .encodeToString("$email:$apiToken".toByteArray(Charsets.UTF_8))
 
     private val baseUrl = "https://api.atlassian.com/ex/jira/$cloudId/rest/api/3"
-
-    /**
-     * Returns true if [ticketKey] has the `autonomous` label in Jira.
-     *
-     * Fetches only the `labels` field to minimise payload size. Returns false on any
-     * HTTP or network failure.
-     *
-     * @param ticketKey Jira issue key (e.g. `MS-242`).
-     */
-    override suspend fun isAutonomous(ticketKey: String): Boolean {
-        return try {
-            val response = httpClient.get("$baseUrl/issue/$ticketKey?fields=labels") {
-                header(HttpHeaders.Authorization, authHeader)
-                accept(ContentType.Application.Json)
-            }
-            val body = response.body<JiraIssueLabelsResponse>()
-            "autonomous" in body.fields.labels
-        } catch (e: Exception) {
-            log.warn("Failed to check Jira labels for $ticketKey: ${e.message}")
-            false
-        }
-    }
 
     /**
      * Returns the summary and description of [ticketKey] as a formatted string, or null if
