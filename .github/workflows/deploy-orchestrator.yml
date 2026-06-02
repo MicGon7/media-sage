@@ -49,6 +49,13 @@ jobs:
           image: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest
           region: us-central1
 
+      - name: Deploy pipeline orchestrator to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: agent-orchestrator-pipe
+          image: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest
+          region: us-central1
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
