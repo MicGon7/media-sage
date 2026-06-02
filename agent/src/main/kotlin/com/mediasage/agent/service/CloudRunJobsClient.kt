@@ -53,6 +53,16 @@ private data class OperationError(
 )
 
 /**
+ * GitHub owner and repository the worker clones and opens PRs against.
+ *
+ * Grouped to keep [CloudRunJobsClient]'s constructor under the parameter limit.
+ */
+data class GitHubTarget(
+    val owner: String = "michael-gonzalez-dev",
+    val repo: String = "media-sage"
+)
+
+/**
  * Calls the Cloud Run Jobs Admin API to dispatch the worker job with per-run env var overrides.
  *
  * Dispatches the job and marks it RUNNING, then returns immediately. Completion is signalled
@@ -70,7 +80,8 @@ class CloudRunJobsClient(
     private val credentialsJson: String,
     internal val jobRepository: JobRepository,
     private val cloudLoggingClient: CloudLoggingClient,
-    private val jiraCommentPoster: JiraCommentPoster
+    private val jiraCommentPoster: JiraCommentPoster,
+    private val gitHubTarget: GitHubTarget = GitHubTarget()
 ) : JobDispatcher {
 
     private val log = LoggerFactory.getLogger(CloudRunJobsClient::class.java)
@@ -93,6 +104,8 @@ class CloudRunJobsClient(
         val envVars = buildList {
             add(EnvVar("PROMPT", prompt))
             add(EnvVar("TICKET_KEY", ticketKey))
+            add(EnvVar("GITHUB_OWNER", gitHubTarget.owner))
+            add(EnvVar("GITHUB_REPO", gitHubTarget.repo))
             if (jiraTicketKey != null) add(EnvVar("JIRA_TICKET_KEY", jiraTicketKey))
         }
 

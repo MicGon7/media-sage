@@ -55,6 +55,8 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         repoPath = str("app.agent.repoPath"),
         githubWebhookSecret = str("app.github.webhookSecret"),
         githubBotLogin = str("app.github.botLogin"),
+        githubOwner = config.propertyOrNull("app.github.owner")?.getString() ?: "michael-gonzalez-dev",
+        githubRepo = config.propertyOrNull("app.github.repo")?.getString() ?: "media-sage",
         jiraEmail = str("app.jira.email"),
         jiraApiToken = str("app.jira.apiToken"),
         jiraCloudId = str("app.jira.cloudId"),

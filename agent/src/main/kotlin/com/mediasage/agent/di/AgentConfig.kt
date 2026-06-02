@@ -18,6 +18,10 @@ package com.mediasage.agent.di
  * @property githubBotLogin GitHub login of the bot account (e.g. `media-sage-worker[bot]`). Webhook
  *   events are only acted on when the PR was authored by this identity — prevents the orchestrator
  *   from responding to human-authored PRs. Sourced from env var `GITHUB_BOT_LOGIN`.
+ * @property githubOwner GitHub org or user that owns the target repo (e.g. `michael-gonzalez-dev`).
+ *   Sourced from env var `GITHUB_OWNER`; defaults to `michael-gonzalez-dev`.
+ * @property githubRepo GitHub repository the worker clones and opens PRs against (e.g. `media-sage`).
+ *   Sourced from env var `GITHUB_REPO`; defaults to `media-sage`.
  * @property jiraEmail Email address for authenticating with the Jira REST API (human account).
  *   Sourced from env var `JIRA_EMAIL`.
  * @property jiraApiToken API token for the Jira REST API, paired with [jiraEmail].
@@ -49,6 +53,8 @@ data class AgentConfig(
     val repoPath: String,
     val githubWebhookSecret: String,
     val githubBotLogin: String = "",
+    val githubOwner: String = "michael-gonzalez-dev",
+    val githubRepo: String = "media-sage",
     val jiraEmail: String,
     val jiraApiToken: String,
     val jiraCloudId: String,
