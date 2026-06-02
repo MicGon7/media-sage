@@ -16,16 +16,23 @@ private const val MAX_TOKENS = 1024
 private val log = LoggerFactory.getLogger(HttpBriefingService::class.java)
 
 /**
- * Generates a pre-dispatch briefing for workers by calling the Claude Messages API with Haiku.
+ * [BriefingService] implementation that calls the Claude Messages API via HTTP.
  *
- * The briefing eliminates the worker's discovery turns — instead of spending the first 1-3 turns
- * figuring out what to do, the worker receives a concise summary of the task, the relevant
- * context, and a clear action plan before the Cloud Run Job starts.
+ * Named for its transport (HTTP), not the model — [BRIEFING_MODEL] is a configuration value
+ * that can change independently of the service. The briefing eliminates worker discovery turns:
+ * instead of spending the first 1-3 turns figuring out what to do, the worker receives a concise
+ * summary of the task, relevant context, and a clear action plan before the Cloud Run Job starts.
  *
- * This service is only instantiated when `INTELLIGENT_DISPATCH_ENABLED=true`. When disabled,
- * [AgentLaunchService] receives `null` and dispatches without a briefing.
+ * Uses the existing Ktor [HttpClient] rather than the `anthropic-java` SDK. The SDK uses
+ * CompletableFuture with no native coroutine support, which would require a `future.await()`
+ * bridge running on a thread pool we don't control. The Messages API is a single POST — using
+ * Ktor avoids the dependency and stays in the project's async model.
  *
- * @param httpClient Shared Ktor client — must be configured with JSON content negotiation.
+ * Only instantiated when `INTELLIGENT_DISPATCH_ENABLED=true`. When disabled, [AgentLaunchService]
+ * receives `null` and dispatches without a briefing.
+ *
+ * @param httpClient Dedicated briefing client with a 15s timeout (see [AgentModule]) — not the
+ *   shared client. The tighter timeout enforces the briefing budget without affecting other calls.
  * @param anthropicBaseUrl Base URL for the Claude API (e.g. `https://api.fuelix.ai`).
  * @param anthropicAuthToken Bearer token for the Claude API.
  */
