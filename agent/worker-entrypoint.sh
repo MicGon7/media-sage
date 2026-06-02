@@ -121,6 +121,9 @@ cat > "$REPO_DIR/.mcp.json" << EOF
 }
 EOF
 
+# Log the prompt so briefing content is visible in Cloud Run Job execution logs.
+echo "[worker] prompt (first 500 chars): ${PROMPT:0:500}"
+
 # Run Claude Code — no exec so the trap can capture the exit code for Pub/Sub.
 claude -p "$PROMPT" \
   --dangerously-skip-permissions \
