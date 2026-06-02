@@ -267,6 +267,7 @@ class AgentLaunchService(
         val briefing = briefingContext?.let { briefingService?.brief(it) }
         return if (briefing != null) {
             log.info("[$ticketKey] briefing generated (${briefing.length} chars) — appending to prompt")
+            log.info("[$ticketKey] briefing content:\n$briefing")
             "$basePrompt\n\n## Agent Briefing\n$briefing"
         } else {
             if (briefingService != null && briefingContext != null) {
