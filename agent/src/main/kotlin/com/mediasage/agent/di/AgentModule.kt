@@ -5,7 +5,7 @@ import com.mediasage.agent.db.JobRepository
 import com.mediasage.agent.service.AgentLauncher
 import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.BriefingService
-import com.mediasage.agent.service.HaikuBriefingService
+import com.mediasage.agent.service.HttpBriefingService
 import com.mediasage.agent.service.CloudLoggingClient
 import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.CloudRunJobsClient
@@ -53,7 +53,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     }
     single {
         val briefingService = if (config.intelligentDispatchEnabled && config.anthropicAuthToken.isNotBlank()) {
-            HaikuBriefingService(buildBriefingHttpClient(), config.anthropicBaseUrl, config.anthropicAuthToken)
+            HttpBriefingService(buildBriefingHttpClient(), config.anthropicBaseUrl, config.anthropicAuthToken)
         } else null
         val cloudRun = buildCloudRunDispatch(config, get(), get())
         AgentLaunchService(config.repoPath, scope, cloudRun, get(), get<JiraTicketStatusChecker>(), briefingService)
@@ -61,16 +61,17 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single<AgentLauncher> { get<AgentLaunchService>() }
 }
 
-// Dedicated client for briefing calls — tighter 5s timeout so a slow Claude API
-// response never delays dispatch beyond the briefing budget.
+// Dedicated client for briefing calls — 15s timeout gives Haiku room to process
+// large diffs without blocking dispatch indefinitely. The webhook has already
+// returned 200 by this point, so this only affects time-to-dispatch, not latency.
 private fun buildBriefingHttpClient() = HttpClient(OkHttp) {
     install(ContentNegotiation) {
         json(Json { prettyPrint = false; ignoreUnknownKeys = true })
     }
     install(HttpTimeout) {
-        requestTimeoutMillis = 5_000
+        requestTimeoutMillis = 15_000
         connectTimeoutMillis = 5_000
-        socketTimeoutMillis = 5_000
+        socketTimeoutMillis = 15_000
     }
 }
 

@@ -1,7 +1,7 @@
 package com.mediasage.agent
 
 import com.mediasage.agent.service.BriefingContext
-import com.mediasage.agent.service.HaikuBriefingService
+import com.mediasage.agent.service.HttpBriefingService
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 class BriefingServiceTest {
 
     private fun buildClient(responseBody: String, status: HttpStatusCode = HttpStatusCode.OK): HttpClient =
-        // Tests for HaikuBriefingService use runTest which is fine here because HaikuBriefingService
+        // Tests for HttpBriefingService use runTest which is fine here because HttpBriefingService
         // is tested in isolation — no AgentLaunchService coroutine scope involved.
         HttpClient(MockEngine { _ ->
             respond(
@@ -47,7 +47,7 @@ class BriefingServiceTest {
 
     @Test
     fun `brief returns non-null for TicketWork context`() = runTest {
-        val service = HaikuBriefingService(buildClient(successResponse), "https://api.test", "token")
+        val service = HttpBriefingService(buildClient(successResponse), "https://api.test", "token")
         val result = service.brief(BriefingContext.TicketWork("MS-1", "Add a health endpoint"))
         assertNotNull(result)
         assertTrue(result.isNotBlank())
@@ -55,7 +55,7 @@ class BriefingServiceTest {
 
     @Test
     fun `brief returns non-null for PrReview context`() = runTest {
-        val service = HaikuBriefingService(buildClient(successResponse), "https://api.test", "token")
+        val service = HttpBriefingService(buildClient(successResponse), "https://api.test", "token")
         val result = service.brief(
             BriefingContext.PrReview("MS-1", 42, "Add periods to KDoc", "- val foo: String")
         )
@@ -64,14 +64,14 @@ class BriefingServiceTest {
 
     @Test
     fun `brief returns non-null for CommentReview context`() = runTest {
-        val service = HaikuBriefingService(buildClient(successResponse), "https://api.test", "token")
+        val service = HttpBriefingService(buildClient(successResponse), "https://api.test", "token")
         val result = service.brief(BriefingContext.CommentReview("MS-1", 42, "Why is this a suspend fun?"))
         assertNotNull(result)
     }
 
     @Test
     fun `brief returns non-null for ConflictResolution context`() = runTest {
-        val service = HaikuBriefingService(buildClient(successResponse), "https://api.test", "token")
+        val service = HttpBriefingService(buildClient(successResponse), "https://api.test", "token")
         val result = service.brief(
             BriefingContext.ConflictResolution("MS-1", 42, "feature/MS-1-fix", "main")
         )
@@ -82,7 +82,7 @@ class BriefingServiceTest {
 
     @Test
     fun `brief returns null on HTTP error`() = runTest {
-        val service = HaikuBriefingService(
+        val service = HttpBriefingService(
             buildClient("""{"error":"unauthorized"}""", HttpStatusCode.Unauthorized),
             "https://api.test", "bad-token"
         )
@@ -94,7 +94,7 @@ class BriefingServiceTest {
     fun `brief returns null when response content is empty`() = runTest {
         val emptyResponse = """{ "content": [], "id": "msg_01", "model": "m", "role": "assistant",
             "stop_reason": "end_turn", "type": "message", "usage": {"input_tokens":1,"output_tokens":0} }"""
-        val service = HaikuBriefingService(buildClient(emptyResponse), "https://api.test", "token")
+        val service = HttpBriefingService(buildClient(emptyResponse), "https://api.test", "token")
         val result = service.brief(BriefingContext.TicketWork("MS-1", "content"))
         assertNull(result)
     }
@@ -110,12 +110,12 @@ class BriefingServiceTest {
         }) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
         }
-        val longDiff = (1..500).joinToString("\n") { "line $it" }
-        val service = HaikuBriefingService(client, "https://api.test", "token")
+        val longDiff = (1..700).joinToString("\n") { "line $it" }
+        val service = HttpBriefingService(client, "https://api.test", "token")
         service.brief(BriefingContext.PrReview("MS-1", 1, "comment", longDiff))
 
-        // The captured request body should not contain line 301+
-        assertTrue("line 300" in capturedBody)
-        assertTrue("line 301" !in capturedBody)
+        // The captured request body should not contain line 501+
+        assertTrue("line 500" in capturedBody)
+        assertTrue("line 501" !in capturedBody)
     }
 }

@@ -9,14 +9,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 
-// Timeout is enforced by the HttpClient's HttpTimeout plugin (configured in AgentModule).
-// A dedicated briefing client with a tighter socket timeout is used in production
-// to prevent the 5s briefing budget from being consumed by a slow API response.
-private const val HAIKU_MODEL = "claude-haiku-4-5-20251001"
-private const val MAX_DIFF_LINES = 300
-private const val MAX_TOKENS = 512
+private const val BRIEFING_MODEL = "claude-haiku-4-5-20251001"
+private const val MAX_DIFF_LINES = 500
+private const val MAX_TOKENS = 1024
 
-private val log = LoggerFactory.getLogger(HaikuBriefingService::class.java)
+private val log = LoggerFactory.getLogger(HttpBriefingService::class.java)
 
 /**
  * Generates a pre-dispatch briefing for workers by calling the Claude Messages API with Haiku.
@@ -45,7 +42,7 @@ private val log = LoggerFactory.getLogger(HaikuBriefingService::class.java)
  * @param anthropicBaseUrl Base URL for the Claude API (e.g. `https://api.fuelix.ai`).
  * @param anthropicAuthToken Bearer token for the Claude API.
  */
-class HaikuBriefingService(
+class HttpBriefingService(
     private val httpClient: HttpClient,
     private val anthropicBaseUrl: String,
     private val anthropicAuthToken: String,
@@ -54,7 +51,7 @@ class HaikuBriefingService(
     override suspend fun brief(context: BriefingContext): String? = runCatching {
         val prompt = buildPrompt(context)
         val request = MessagesRequest(
-            model = HAIKU_MODEL,
+            model = BRIEFING_MODEL,
             maxTokens = MAX_TOKENS,
             messages = listOf(Message(role = "user", content = prompt)),
         )

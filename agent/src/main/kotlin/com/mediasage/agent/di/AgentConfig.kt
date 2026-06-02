@@ -45,9 +45,10 @@ package com.mediasage.agent.di
  *   subscription URL. The orchestrator verifies this on every push delivery to reject spoofed
  *   requests. Sourced from env var `PUBSUB_WEBHOOK_SECRET`.
  * @property intelligentDispatchEnabled When true, [com.mediasage.agent.service.BriefingService]
- *   generates a pre-dispatch Haiku briefing for every worker launch, eliminating discovery turns
- *   and reducing cached token cost (~8x ROI per run). When false, the orchestrator acts as a pure
- *   dispatcher. Sourced from env var `INTELLIGENT_DISPATCH_ENABLED`; defaults to true.
+ *   generates a pre-dispatch briefing for every worker launch via the Claude Messages API,
+ *   eliminating discovery turns and reducing cached token cost (~8x ROI per run). When false,
+ *   the orchestrator acts as a pure dispatcher.
+ *   Sourced from env var `INTELLIGENT_DISPATCH_ENABLED`; defaults to true.
  * @property anthropicBaseUrl Base URL for the Claude API used by [com.mediasage.agent.service.BriefingService].
  *   Sourced from env var `ANTHROPIC_BASE_URL`; defaults to the Fuelix proxy.
  * @property anthropicAuthToken Bearer token for the Claude API used by [com.mediasage.agent.service.BriefingService].
