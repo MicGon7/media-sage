@@ -18,7 +18,7 @@ package com.mediasage.agent.di
  * @property githubBotLogin GitHub login of the bot account (e.g. `media-sage-worker[bot]`). Webhook
  *   events are only acted on when the PR was authored by this identity — prevents the orchestrator
  *   from responding to human-authored PRs. Sourced from env var `GITHUB_BOT_LOGIN`.
- * @property jiraEmail Email address for authenticating with the Jira REST API (human account).
+ *@property jiraEmail Email address for authenticating with the Jira REST API (human account).
  *   Sourced from env var `JIRA_EMAIL`.
  * @property jiraApiToken API token for the Jira REST API, paired with [jiraEmail].
  *   Sourced from env var `JIRA_API_TOKEN`.
@@ -41,7 +41,7 @@ package com.mediasage.agent.di
  *   var `GOOGLE_CREDENTIALS_BASE64`. Used to authenticate Cloud Run API calls.
  * @property supabaseDbUrl PostgreSQL connection URL for the Supabase job registry, used for
  *   persistent dedup and job recovery across restarts. Sourced from env var `SUPABASE_DB_URL`.
- * @property pubSubWebhookSecret Shared secret token appended as `?token=` to the Pub/Sub push
+ *@property pubSubWebhookSecret Shared secret token appended as `?token=` to the Pub/Sub push
  *   subscription URL. The orchestrator verifies this on every push delivery to reject spoofed
  *   requests. Sourced from env var `PUBSUB_WEBHOOK_SECRET`.
  */

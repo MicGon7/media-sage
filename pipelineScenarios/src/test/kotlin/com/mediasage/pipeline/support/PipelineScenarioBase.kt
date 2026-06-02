@@ -30,10 +30,10 @@ import javax.crypto.spec.SecretKeySpec
 private const val POLL_INTERVAL_MS = 5_000L
 
 /**
- * Base class for dedup E2E scenarios — requires only [ScenarioConfig.supabaseDbUrl].
+ * Base class for dedup E2E scenarios — requires only [PipelineTarget.supabaseDbUrl].
  *
- * Sets up a real [JobRegistry] backed by Supabase Postgres. Uses a unique [testKey]
- * per test run so parallel or repeated runs don't collide.
+ * Sets up a real [JobRegistry] backed by the target's Supabase Postgres instance.
+ * Uses a unique [testKey] per run so parallel or repeated runs don't collide.
  */
 abstract class DedupScenarioBase {
 
@@ -45,9 +45,9 @@ abstract class DedupScenarioBase {
     @BeforeEach
     fun setUpDedup() {
         config = ScenarioConfig.fromEnv()
-        AgentDatabase.init(config.supabaseDbUrl)
+        AgentDatabase.init(config.target.supabaseDbUrl)
         jobRegistry = JobRepository()
-        testKey = "MS-E2E-${UUID.randomUUID().toString().take(8).uppercase()}"
+        testKey = "${config.target.jiraProjectKey}-E2E-${UUID.randomUUID().toString().take(8).uppercase()}"
         report = ValidationReport(scenarioName())
     }
 
@@ -60,6 +60,9 @@ abstract class DedupScenarioBase {
  * Wires up a real [AgentLaunchService] backed by a real [CloudRunDispatch] and a real
  * [JobRegistry]. Provides [waitForCompletion] for polling Supabase until the Cloud Run
  * Job finishes.
+ *
+ * The active target (MS, PIPE, etc.) is injected by the Gradle task via env vars —
+ * no code changes needed to run against a different client.
  */
 abstract class FullPipelineScenarioBase {
 
@@ -76,13 +79,18 @@ abstract class FullPipelineScenarioBase {
         config = ScenarioConfig.fromEnv()
         check(config.gcpProjectId.isNotBlank()) { "GCP_PROJECT_ID is required for full pipeline scenarios" }
         check(config.googleCredentialsJson.isNotBlank()) { "GOOGLE_CREDENTIALS_BASE64 is required for full pipeline scenarios" }
-        check(config.orchestratorUrl.isNotBlank()) { "ORCHESTRATOR_URL is required for full pipeline scenarios" }
-        check(config.webhookSecret.isNotBlank()) { "GITHUB_WEBHOOK_SECRET is required for full pipeline scenarios" }
-        AgentDatabase.init(config.supabaseDbUrl)
+        check(config.target.orchestratorUrl.isNotBlank()) { "ORCHESTRATOR_URL is required for full pipeline scenarios" }
+        check(config.target.webhookSecret.isNotBlank()) { "GITHUB_WEBHOOK_SECRET is required for full pipeline scenarios" }
+        AgentDatabase.init(config.target.supabaseDbUrl)
         val jobRepository = JobRepository()
         jobRegistry = jobRepository
         httpClient = buildHttpClient()
-        fixture = GitHubFixtureClient(httpClient = httpClient, token = config.githubToken)
+        fixture = GitHubFixtureClient(
+            httpClient = httpClient,
+            token = config.githubToken,
+            owner = config.target.githubOwner,
+            repo = config.target.githubRepo
+        )
         service = AgentLaunchService(
             repoPath = config.repoPath,
             scope = scope,
@@ -115,12 +123,11 @@ abstract class FullPipelineScenarioBase {
 
     /**
      * POSTs [payload] to the live orchestrator's `/webhook/github` endpoint, simulating a GitHub
-     * webhook event. Computes a valid HMAC-SHA256 signature using [ScenarioConfig.webhookSecret]
+     * webhook event. Computes a valid HMAC-SHA256 signature using [PipelineTarget.webhookSecret]
      * so the orchestrator passes signature verification — identical to a real GitHub webhook.
      *
-     * This is the entry point for full pipeline E2E scenarios: instead of calling
-     * `service.launchFor*()` directly (which bypasses the webhook), the test sends a realistic
-     * payload and lets the orchestrator handle routing, bot identity check, and job dispatch.
+     * Routes to the orchestrator configured for the active [PipelineTarget] — injected
+     * by the Gradle task, so switching targets requires no code changes.
      *
      * @param eventType value for the `X-GitHub-Event` header (e.g. `pull_request`, `pull_request_review`)
      * @param payload JSON body — must include `pull_request.user.login = "media-sage-worker[bot]"` to
@@ -129,8 +136,8 @@ abstract class FullPipelineScenarioBase {
      */
     protected suspend fun postWebhook(eventType: String, payload: String) {
         val bodyBytes = payload.toByteArray(Charsets.UTF_8)
-        val signature = "sha256=${hmacSha256(config.webhookSecret, bodyBytes)}"
-        val response = httpClient.post("${config.orchestratorUrl}/webhook/github") {
+        val signature = "sha256=${hmacSha256(config.target.webhookSecret, bodyBytes)}"
+        val response = httpClient.post("${config.target.orchestratorUrl}/webhook/github") {
             header("X-GitHub-Event", eventType)
             header("X-Hub-Signature-256", signature)
             setBody(TextContent(payload, ContentType.Application.Json))

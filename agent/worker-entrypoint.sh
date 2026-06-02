@@ -93,9 +93,11 @@ export GH_TOKEN="$GITHUB_TOKEN"
 git config --global credential.helper store
 echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
 
-REPO_DIR="/home/agent/media-sage"
+GITHUB_OWNER="${GITHUB_OWNER:-michael-gonzalez-dev}"
+GITHUB_REPO="${GITHUB_REPO:-media-sage}"
+REPO_DIR="/home/agent/${GITHUB_REPO}"
 # GitHub App installation tokens use x-access-token as the username in clone URLs
-REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/michael-gonzalez-dev/media-sage.git"
+REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git"
 
 echo "Cloning repo..."
 git clone --depth=1 "$REPO_URL" "$REPO_DIR"

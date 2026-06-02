@@ -48,12 +48,13 @@ class ConflictResolutionE2eTest : FullPipelineScenarioBase() {
     override fun scenarioName() = "Conflict Resolution"
 
     private val shortId = UUID.randomUUID().toString().take(8)
-    private val branchName = "feature/MS-257-e2e-conflict-$shortId"
+    private lateinit var branchName: String
     private val scratchPath = "e2e-scratch/conflict-$shortId.txt"
     private var prNumber: Int = -1
 
     @BeforeEach
     fun setUpFixture() = runBlocking {
+        branchName = "feature/${config.target.fixtureTicketKey}-e2e-conflict-$shortId"
         fixture.syncBranchWithMain(GitHubFixtureClient.E2E_BASE_BRANCH)
         fixture.createBranch(branchName)
         fixture.pushCommit(

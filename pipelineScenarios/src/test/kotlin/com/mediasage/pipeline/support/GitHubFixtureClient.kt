@@ -34,13 +34,20 @@ class GitHubFixtureClient(
 
     /**
      * Fast-forwards [branch] to main's current HEAD.
+     * Creates the branch if it does not exist yet (e.g. first run against a fresh repo).
      * Uses force-update so test commits from previous runs don't block the sync.
      * Call this at the start of every full pipeline scenario before creating fixture branches.
      */
     suspend fun syncBranchWithMain(branch: String) {
         val mainSha = getBranchSha("main")
-        patch("$baseUrl/repos/$owner/$repo/git/refs/heads/$branch") {
-            """{"sha":"$mainSha","force":true}"""
+        if (branchExists(branch)) {
+            patch("$baseUrl/repos/$owner/$repo/git/refs/heads/$branch") {
+                """{"sha":"$mainSha","force":true}"""
+            }
+        } else {
+            post("$baseUrl/repos/$owner/$repo/git/refs") {
+                """{"ref":"refs/heads/$branch","sha":"$mainSha"}"""
+            }
         }
     }
 
@@ -116,6 +123,15 @@ class GitHubFixtureClient(
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    private suspend fun branchExists(branch: String): Boolean {
+        val response = httpClient.get("$baseUrl/repos/$owner/$repo/git/refs/heads/$branch") {
+            header("Authorization", "Bearer $token")
+            header("Accept", "application/vnd.github+json")
+            header("X-GitHub-Api-Version", "2022-11-28")
+        }
+        return response.status != HttpStatusCode.NotFound && response.status.isSuccess()
+    }
 
     private suspend fun getBranchSha(branch: String): String {
         val response = httpClient.get("$baseUrl/repos/$owner/$repo/git/refs/heads/$branch") {
