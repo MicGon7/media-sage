@@ -36,19 +36,6 @@ private val log = LoggerFactory.getLogger(HttpBriefingService::class.java)
  * @param anthropicBaseUrl Base URL for the Claude API (e.g. `https://api.fuelix.ai`).
  * @param anthropicAuthToken Bearer token for the Claude API.
  */
-/**
- * [BriefingService] implementation that calls the Claude Messages API using Haiku.
- *
- * Uses the existing Ktor [HttpClient] rather than the `anthropic-java` SDK.
- * The SDK uses CompletableFuture with no native coroutine support, which would require a
- * `future.await()` bridge running on a thread pool we don't control. The Messages API is a
- * single POST — using the existing Ktor client avoids the dependency and stays in the
- * project's async model.
- *
- * @param httpClient Dedicated briefing client with a 5s timeout (see [AgentModule]).
- * @param anthropicBaseUrl Base URL for the Claude API (e.g. `https://api.fuelix.ai`).
- * @param anthropicAuthToken Bearer token for the Claude API.
- */
 class HttpBriefingService(
     private val httpClient: HttpClient,
     private val anthropicBaseUrl: String,
@@ -64,7 +51,7 @@ class HttpBriefingService(
         )
         val response: MessagesResponse = httpClient.post("$anthropicBaseUrl/v1/messages") {
             contentType(ContentType.Application.Json)
-            header("x-api-key", anthropicAuthToken)
+            header("Authorization", "Bearer $anthropicAuthToken")
             header("anthropic-version", "2023-06-01")
             setBody(request)
         }.body()
