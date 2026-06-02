@@ -66,6 +66,11 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",
         googleCredentialsJson = credentialsJson,
         supabaseDbUrl = str("app.supabase.dbUrl"),
-        pubSubWebhookSecret = str("app.pubSub.webhookSecret")
+        pubSubWebhookSecret = str("app.pubSub.webhookSecret"),
+        intelligentDispatchEnabled = config.propertyOrNull("app.dispatch.intelligentDispatchEnabled")
+            ?.getString()?.lowercase() != "false",
+        anthropicBaseUrl = config.propertyOrNull("app.dispatch.anthropicBaseUrl")
+            ?.getString() ?: "https://api.fuelix.ai",
+        anthropicAuthToken = str("app.dispatch.anthropicAuthToken"),
     )
 }
