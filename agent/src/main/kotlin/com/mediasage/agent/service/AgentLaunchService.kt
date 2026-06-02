@@ -9,6 +9,8 @@ import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+private const val MAX_DIFF_LINES = 300
+
 private const val BOOTSTRAP_PROMPT_WITH_CONTENT =
     "Your assigned ticket is %s.\n\n## Ticket\n%s\n\n" +
     "Follow the Agent Guidelines in CLAUDE.md to execute the full autonomous workflow."
@@ -65,7 +67,8 @@ class AgentLaunchService(
     private val scope: CoroutineScope,
     internal val cloudRun: CloudRunDispatch? = null,
     private val jiraCommentPoster: JiraCommentPoster? = null,
-    private val jiraStatusChecker: JiraTicketStatusChecker? = null
+    private val jiraStatusChecker: JiraTicketStatusChecker? = null,
+    private val briefingService: BriefingService? = null,
 ) : AgentLauncher {
 
     private val log = LoggerFactory.getLogger(AgentLaunchService::class.java)
@@ -92,12 +95,15 @@ class AgentLaunchService(
      */
     override fun launch(ticketKey: String, ticketContent: String?, dryRun: Boolean): Boolean {
         val cloudRun = cloudRun ?: return false
-        val prompt = if (ticketContent != null) {
+        val basePrompt = if (ticketContent != null) {
             BOOTSTRAP_PROMPT_WITH_CONTENT.format(ticketKey, ticketContent)
         } else {
             BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
         }
-        return dispatchToCloudRun(ticketKey, prompt, cloudRun, dryRun)
+        val context = ticketContent?.let {
+            BriefingContext.TicketWork(ticketKey, it)
+        }
+        return dispatchToCloudRun(ticketKey, basePrompt, cloudRun, dryRun, briefingContext = context)
     }
 
     private fun dispatchToCloudRun(
@@ -105,7 +111,8 @@ class AgentLaunchService(
         prompt: String,
         cloudRun: CloudRunDispatch,
         dryRun: Boolean = false,
-        jiraTicketKey: String? = null
+        jiraTicketKey: String? = null,
+        briefingContext: BriefingContext? = null,
     ): Boolean {
         // activeKeys is the synchronous in-process gate. It prevents the TOCTOU race where
         // two concurrent webhooks both pass shouldDispatch() before either inserts a DB row.
@@ -116,7 +123,7 @@ class AgentLaunchService(
         }
         scope.launch {
             try {
-                doDispatch(ticketKey, prompt, cloudRun, dryRun, jiraTicketKey)
+                doDispatch(ticketKey, prompt, cloudRun, dryRun, jiraTicketKey, briefingContext)
             } finally {
                 activeKeys.remove(ticketKey)
             }
@@ -126,16 +133,18 @@ class AgentLaunchService(
 
     private suspend fun doDispatch(
         ticketKey: String,
-        prompt: String,
+        basePrompt: String,
         cloudRun: CloudRunDispatch,
         dryRun: Boolean,
-        jiraTicketKey: String? = null
+        jiraTicketKey: String? = null,
+        briefingContext: BriefingContext? = null,
     ) {
         if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
             log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
             return
         }
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
+        val prompt = buildPromptWithBriefing(ticketKey, basePrompt, briefingContext)
         val jobId = cloudRun.jobs.insert(ticketKey, prompt)
         if (dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
@@ -194,8 +203,10 @@ class AgentLaunchService(
     ): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
-        val prompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef, reviewerLogin)
-        return dispatchToCloudRun(key, prompt, cloudRun, jiraTicketKey = ticketKey)
+        val basePrompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef, reviewerLogin)
+        val diff = fetchPrDiff(prNumber)
+        val context = BriefingContext.PrReview(ticketKey, prNumber, commentBody, diff)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey, briefingContext = context)
     }
 
     override fun launchForCommentReview(
@@ -206,8 +217,9 @@ class AgentLaunchService(
     ): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
-        val prompt = PR_COMMENT_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
-        return dispatchToCloudRun(key, prompt, cloudRun, jiraTicketKey = ticketKey)
+        val basePrompt = PR_COMMENT_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
+        val context = BriefingContext.CommentReview(ticketKey, prNumber, commentBody)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey, briefingContext = context)
     }
 
     /**
@@ -222,8 +234,9 @@ class AgentLaunchService(
     ): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "CONFLICT-$prNumber"
-        val prompt = CONFLICT_RESOLUTION_PROMPT.format(prNumber, ticketKey, branchRef, baseBranch)
-        return dispatchToCloudRun(key, prompt, cloudRun, jiraTicketKey = ticketKey)
+        val basePrompt = CONFLICT_RESOLUTION_PROMPT.format(prNumber, ticketKey, branchRef, baseBranch)
+        val context = BriefingContext.ConflictResolution(ticketKey, prNumber, branchRef, baseBranch)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey, briefingContext = context)
     }
 
     override fun postInlineCommentReply(prNumber: Int) {
@@ -245,6 +258,35 @@ class AgentLaunchService(
     }
 
     fun isActive(key: String): Boolean = key in activeKeys
+
+    private suspend fun buildPromptWithBriefing(
+        ticketKey: String,
+        basePrompt: String,
+        briefingContext: BriefingContext?,
+    ): String {
+        val briefing = briefingContext?.let { briefingService?.brief(it) }
+        return if (briefing != null) {
+            log.info("[$ticketKey] briefing generated (${briefing.length} chars) — appending to prompt")
+            "$basePrompt\n\n## Agent Briefing\n$briefing"
+        } else {
+            if (briefingService != null && briefingContext != null) {
+                log.info("[$ticketKey] briefing returned null — dispatching without briefing")
+            }
+            basePrompt
+        }
+    }
+
+    // Fetches the PR diff via gh CLI, capped at MAX_DIFF_LINES to bound Haiku prompt size.
+    // Returns an empty string on failure — briefing proceeds without diff context.
+    private fun fetchPrDiff(prNumber: Int): String = runCatching {
+        val output = ProcessBuilder("gh", "pr", "diff", prNumber.toString())
+            .directory(File(repoPath))
+            .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
+            .start()
+            .inputStream.bufferedReader().readText()
+        output.lines().take(MAX_DIFF_LINES).joinToString("\n")
+    }.onFailure { log.warn("Failed to fetch diff for PR#$prNumber: ${it.message}") }
+        .getOrDefault("")
 }
 
 /**
