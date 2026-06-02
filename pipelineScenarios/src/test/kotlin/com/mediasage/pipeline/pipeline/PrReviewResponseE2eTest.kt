@@ -109,7 +109,7 @@ class PrReviewResponseE2eTest : FullPipelineScenarioBase() {
           },
           "review": {
             "state": "changes_requested",
-            "body": "Please extract this logic into a helper function."
+            "body": "Please add a comment explaining what this file is for."
           }
         }
     """.trimIndent()
