@@ -2,7 +2,6 @@ package com.mediasage.pipeline.pipeline
 
 import com.mediasage.agent.db.JobStatus
 import com.mediasage.pipeline.support.FullPipelineScenarioBase
-import com.mediasage.pipeline.support.GitHubFixtureClient
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -32,10 +31,13 @@ private val TIMEOUT = 40.minutes.inWholeMilliseconds
  * `MS-257` — no Jira lookup needed since the orchestrator only checks PR author after MS-258.
  *
  * Setup:
- * 1. Sync [E2E_BASE_BRANCH] to main
- * 2. Create feature branch off [E2E_BASE_BRANCH]
+ * 1. Create a unique per-run base branch (`e2e-base-{shortId}`) from main
+ * 2. Create feature branch off that base branch
  * 3. Push conflicting content to the same file on both branches
- * 4. Open a PR from the feature branch targeting [E2E_BASE_BRANCH]
+ * 4. Open a PR from the feature branch targeting the per-run base branch
+ *
+ * Using a per-run base branch (instead of a shared `e2e-base`) eliminates shared mutable state
+ * between concurrent test runs — each run is fully isolated and tears down its own branches.
  *
  * Required env vars: SUPABASE_DB_URL, GCP_PROJECT_ID, GOOGLE_CREDENTIALS_BASE64,
  * ORCHESTRATOR_URL, GITHUB_WEBHOOK_SECRET, GH_TOKEN
@@ -48,15 +50,17 @@ class ConflictResolutionE2eTest : FullPipelineScenarioBase() {
     override fun scenarioName() = "Conflict Resolution"
 
     private val shortId = UUID.randomUUID().toString().take(8)
+    private lateinit var baseBranch: String
     private lateinit var branchName: String
     private val scratchPath = "e2e-scratch/conflict-$shortId.txt"
     private var prNumber: Int = -1
 
     @BeforeEach
     fun setUpFixture() = runBlocking {
+        baseBranch = "e2e-base-$shortId"
         branchName = "feature/${config.target.fixtureTicketKey}-e2e-conflict-$shortId"
-        fixture.syncBranchWithMain(GitHubFixtureClient.E2E_BASE_BRANCH)
-        fixture.createBranch(branchName)
+        fixture.syncBranchWithMain(baseBranch)
+        fixture.createBranch(branchName, fromRef = baseBranch)
         fixture.pushCommit(
             branch = branchName,
             path = scratchPath,
@@ -64,13 +68,14 @@ class ConflictResolutionE2eTest : FullPipelineScenarioBase() {
             message = "e2e: add scratch file on feature branch"
         )
         fixture.pushCommit(
-            branch = GitHubFixtureClient.E2E_BASE_BRANCH,
+            branch = baseBranch,
             path = scratchPath,
             content = "base branch content",
-            message = "e2e: add conflicting scratch file on e2e-base"
+            message = "e2e: add conflicting scratch file on base branch"
         )
         prNumber = fixture.openPullRequest(
             branch = branchName,
+            base = baseBranch,
             title = "[$branchName] E2E conflict resolution fixture",
             body = "Automated E2E fixture PR — safe to close"
         )
@@ -80,6 +85,7 @@ class ConflictResolutionE2eTest : FullPipelineScenarioBase() {
     fun tearDownFixture() = runBlocking {
         fixture.closePullRequest(prNumber)
         fixture.deleteBranch(branchName)
+        fixture.deleteBranch(baseBranch)
     }
 
     @Test
@@ -112,7 +118,7 @@ class ConflictResolutionE2eTest : FullPipelineScenarioBase() {
           "pull_request": {
             "number": $prNumber,
             "head": {"ref": "$branchName"},
-            "base": {"ref": "${GitHubFixtureClient.E2E_BASE_BRANCH}"},
+            "base": {"ref": "$baseBranch"},
             "user": {"login": "media-sage-worker[bot]"}
           }
         }
