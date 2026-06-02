@@ -68,6 +68,7 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",
         googleCredentialsJson = credentialsJson,
         supabaseDbUrl = str("app.supabase.dbUrl"),
+        pubSubTopic = config.propertyOrNull("app.pubSub.topic")?.getString() ?: "cloud-run-job-completions",
         pubSubWebhookSecret = str("app.pubSub.webhookSecret")
     )
 }

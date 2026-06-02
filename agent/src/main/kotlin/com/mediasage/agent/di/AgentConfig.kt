@@ -45,6 +45,8 @@ package com.mediasage.agent.di
  *   var `GOOGLE_CREDENTIALS_BASE64`. Used to authenticate Cloud Run API calls.
  * @property supabaseDbUrl PostgreSQL connection URL for the Supabase job registry, used for
  *   persistent dedup and job recovery across restarts. Sourced from env var `SUPABASE_DB_URL`.
+ * @property pubSubTopic Pub/Sub topic name the worker publishes completion events to.
+ *   Sourced from env var `PUBSUB_TOPIC`; defaults to `cloud-run-job-completions`.
  * @property pubSubWebhookSecret Shared secret token appended as `?token=` to the Pub/Sub push
  *   subscription URL. The orchestrator verifies this on every push delivery to reject spoofed
  *   requests. Sourced from env var `PUBSUB_WEBHOOK_SECRET`.
@@ -66,5 +68,6 @@ data class AgentConfig(
     val gcpJobName: String = "media-sage-agent-worker",
     val googleCredentialsJson: String = "",
     val supabaseDbUrl: String = "",
+    val pubSubTopic: String = "cloud-run-job-completions",
     val pubSubWebhookSecret: String = ""
 )
