@@ -110,6 +110,13 @@ val scenarios = listOf(
     ),
     // PIPE target — same test classes, different target config
     Scenario(
+        "pipeE2eDedupRunning",
+        "com.mediasage.pipeline.dedup.DedupRunningE2eTest",
+        dedupGroup,
+        "PIPE target: verifies the dedup gate skips dispatch when a job is already RUNNING",
+        pipeTarget
+    ),
+    Scenario(
         "pipeE2eDedupCompleted",
         "com.mediasage.pipeline.dedup.DedupCompletedE2eTest",
         dedupGroup,
@@ -117,10 +124,31 @@ val scenarios = listOf(
         pipeTarget
     ),
     Scenario(
+        "pipeE2eDedupFailedRetry",
+        "com.mediasage.pipeline.dedup.DedupFailedRetryE2eTest",
+        dedupGroup,
+        "PIPE target: verifies a FAILED job is retried on re-trigger",
+        pipeTarget
+    ),
+    Scenario(
         "pipeE2ePrReviewResponse",
         "com.mediasage.pipeline.pipeline.PrReviewResponseE2eTest",
         pipelineGroup,
         "PIPE target: full pipeline — changes_requested review → agent dispatched → fix committed",
+        pipeTarget
+    ),
+    Scenario(
+        "pipeE2eConflictResolution",
+        "com.mediasage.pipeline.pipeline.ConflictResolutionE2eTest",
+        pipelineGroup,
+        "PIPE target: full pipeline — PR dequeued merge conflict → worker rebases → conflict resolved",
+        pipeTarget
+    ),
+    Scenario(
+        "pipeE2eFailureRecovery",
+        "com.mediasage.pipeline.pipeline.FailureRecoveryE2eTest",
+        pipelineGroup,
+        "PIPE target: orchestrator restart with RUNNING job → recoverInterruptedJobs() → INTERRUPTED",
         pipeTarget
     )
 )

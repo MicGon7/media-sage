@@ -53,22 +53,6 @@ private data class OperationError(
 )
 
 /**
- * Per-target dispatch configuration injected into each worker at run time.
- *
- * Groups the values that vary per pipeline target (GitHub repo, Pub/Sub topic) so
- * [CloudRunJobsClient]'s constructor stays within the parameter limit.
- *
- * @property githubOwner GitHub org or user that owns the target repo.
- * @property githubRepo GitHub repository the worker clones and opens PRs against.
- * @property pubSubTopic Pub/Sub topic the worker publishes completion events to.
- */
-data class DispatchConfig(
-    val githubOwner: String = "michael-gonzalez-dev",
-    val githubRepo: String = "media-sage",
-    val pubSubTopic: String = "cloud-run-job-completions"
-)
-
-/**
  * Calls the Cloud Run Jobs Admin API to dispatch the worker job with per-run env var overrides.
  *
  * Dispatches the job and marks it RUNNING, then returns immediately. Completion is signalled
@@ -86,8 +70,7 @@ class CloudRunJobsClient(
     private val credentialsJson: String,
     internal val jobRepository: JobRepository,
     private val cloudLoggingClient: CloudLoggingClient,
-    private val jiraCommentPoster: JiraCommentPoster,
-    private val dispatchConfig: DispatchConfig = DispatchConfig()
+    private val jiraCommentPoster: JiraCommentPoster
 ) : JobDispatcher {
 
     private val log = LoggerFactory.getLogger(CloudRunJobsClient::class.java)
@@ -110,9 +93,6 @@ class CloudRunJobsClient(
         val envVars = buildList {
             add(EnvVar("PROMPT", prompt))
             add(EnvVar("TICKET_KEY", ticketKey))
-            add(EnvVar("GITHUB_OWNER", dispatchConfig.githubOwner))
-            add(EnvVar("GITHUB_REPO", dispatchConfig.githubRepo))
-            add(EnvVar("PUBSUB_TOPIC", dispatchConfig.pubSubTopic))
             if (jiraTicketKey != null) add(EnvVar("JIRA_TICKET_KEY", jiraTicketKey))
         }
 

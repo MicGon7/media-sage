@@ -252,6 +252,7 @@ docker run -p 8081:8081 \
 - `@SerialName` annotations on their own line above the property
 - String resources in `composeResources/values/strings.xml` — no hardcoded strings in UI
 - API keys stored as env vars in `~/.zshrc`, read via `application.conf`
+- **Cloud Run Job env var overrides append, not replace.** When dispatching a Cloud Run Job with per-run env var overrides (`containerOverrides.env`), the values are appended to the job's existing env vars — they do NOT replace them. If the same key exists in both the static job definition and the per-run override, the static value takes precedence. Rule: never set per-target or per-run values as static env vars on the job definition. Inject them exclusively at dispatch time via `DispatchConfig`. The job definition should only hold env vars that are truly static across all runs (e.g. `ANTHROPIC_BASE_URL`, `GCP_PROJECT_ID`).
 - **Solve problems at the right layer.** Before adding logic to any layer, identify where that concern idiomatically belongs in Android/Kotlin development. Network timeouts belong in the HTTP client (OkHttp `readTimeout`, Ktor `HttpTimeout`), not the ViewModel. Data validation belongs at the repository boundary, not the UI. If you find yourself adding network or I/O mechanics to a ViewModel, stop and check the idiomatic pattern first.
 - Before implementing any Compose effect or Android platform API, verify the approach against NowInAndroid or the official Compose docs. If you find yourself adding a null guard inside a `SideEffect`, you've chosen the wrong effect type.
 

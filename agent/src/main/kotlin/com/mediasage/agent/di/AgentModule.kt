@@ -7,7 +7,6 @@ import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.CloudLoggingClient
 import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.CloudRunJobsClient
-import com.mediasage.agent.service.DispatchConfig
 import com.mediasage.agent.service.JiraApiService
 import com.mediasage.agent.service.JiraCommentPoster
 import com.mediasage.agent.service.JiraTicketFetcher
@@ -90,12 +89,7 @@ private fun buildCloudRunDispatch(
         credentialsJson = config.googleCredentialsJson,
         jobRepository = jobRepository,
         cloudLoggingClient = loggingClient,
-        jiraCommentPoster = jiraCommentPoster,
-        dispatchConfig = DispatchConfig(
-            githubOwner = config.githubOwner,
-            githubRepo = config.githubRepo,
-            pubSubTopic = config.pubSubTopic
-        )
+        jiraCommentPoster = jiraCommentPoster
     )
     return CloudRunDispatch(client, jobRepository)
 }
