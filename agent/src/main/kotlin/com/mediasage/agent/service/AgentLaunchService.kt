@@ -293,14 +293,18 @@ class AgentLaunchService(
         basePrompt: String,
         briefingContext: BriefingContext?,
     ): String {
-        val briefing = briefingContext?.let { briefingService?.brief(it) }
+        if (briefingContext == null) {
+            log.warn("[$ticketKey] no ticket content — briefing skipped, dispatching on fallback prompt")
+            return basePrompt
+        }
+        val briefing = briefingService?.brief(briefingContext)
         return if (briefing != null) {
             log.info("[$ticketKey] briefing generated (${briefing.length} chars) — appending to prompt")
             log.info("[$ticketKey] briefing content:\n$briefing")
             "$basePrompt\n\n## Agent Briefing\n$briefing"
         } else {
-            if (briefingService != null && briefingContext != null) {
-                log.info("[$ticketKey] briefing returned null — dispatching without briefing")
+            if (briefingService != null) {
+                log.warn("[$ticketKey] briefing returned null — dispatching without briefing")
             }
             basePrompt
         }
