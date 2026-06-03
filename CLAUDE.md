@@ -44,8 +44,6 @@ Koin is used across all modules. Define modules per feature, not per layer.
 - **Agent**: `agentModule(config, scope)` — HttpClient, AgentLaunchService, JiraApiService
 - **Shared**: `sharedModule(serverBaseUrl)` — HttpClient, MediaSageApi, repositories
 
-See each module's `CLAUDE.md` for module-specific patterns and conventions.
-
 ## Tech Stack & Versions
 
 Managed in `gradle/libs.versions.toml`:
