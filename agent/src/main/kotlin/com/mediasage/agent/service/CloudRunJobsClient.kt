@@ -82,6 +82,19 @@ class CloudRunJobsClient(
             .createScoped("https://www.googleapis.com/auth/cloud-platform")
     }
 
+    /**
+     * Dispatches a Cloud Run Job execution via the Admin API and marks the job RUNNING.
+     *
+     * Posts to `v2/projects/{project}/locations/{region}/jobs/{jobName}:run` with per-run env var
+     * overrides: `PROMPT`, `TICKET_KEY`, and optionally `JIRA_TICKET_KEY` (when [jiraTicketKey]
+     * differs from [ticketKey], e.g. for PR reviews where [ticketKey] is `PR-{prNumber}`).
+     *
+     * The API response includes an operation name used as the execution name — saved via
+     * [JobRepository.markRunning] so [recoverJob] can look it up after a restart. Returns
+     * immediately; job completion is signalled asynchronously via Pub/Sub → [onJobCompleted].
+     *
+     * @return true if the API call succeeded and the job was marked RUNNING; false on HTTP error.
+     */
     override suspend fun executeJob(
         jobId: UUID,
         ticketKey: String,
@@ -119,6 +132,24 @@ class CloudRunJobsClient(
         return true
     }
 
+    /**
+     * Checks whether the Cloud Run execution identified by [executionName] is still alive,
+     * and reconciles the job row accordingly.
+     *
+     * Called at orchestrator startup for every job left in RUNNING state (see
+     * [AgentLaunchService.recoverInterruptedJobs]). The [executionName] was saved by
+     * [executeJob] via [JobRepository.markRunning], so no additional executions-list call is needed.
+     *
+     * Outcomes:
+     * - Execution not found (404) → job marked INTERRUPTED, returns false.
+     * - Execution done with error → job marked FAILED, returns false.
+     * - Execution done successfully → delegates to [handleDone] (marks COMPLETED, fetches metrics), returns true.
+     * - Execution still running → no-op; Pub/Sub will fire [onJobCompleted] on completion, returns false.
+     *
+     * @param executionName Full Cloud Run execution resource name, e.g.
+     *   `projects/my-project/locations/us-central1/jobs/my-job/executions/my-job-dtz62`.
+     * @return true only if the execution was already done and completion was handled successfully.
+     */
     override suspend fun recoverJob(jobId: UUID, ticketKey: String, executionName: String): Boolean {
         val url = "https://run.googleapis.com/v2/$executionName"
         val response = httpClient.get(url) {
