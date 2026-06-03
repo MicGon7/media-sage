@@ -209,6 +209,18 @@ class AgentLaunchService(
         return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey, briefingContext = context)
     }
 
+    /**
+     * Launches a Cloud Run Job to answer reviewer questions posted as a PR comment (not a formal
+     * changes-requested review). The worker reads the branch context and replies via `gh pr comment`
+     * but does **not** push any code changes.
+     * De-duplicates by PR number — a second call while one is running is a no-op.
+     *
+     * @param ticketKey Jira issue key for context forwarded to the worker.
+     * @param prNumber GitHub PR number.
+     * @param branchRef Branch the PR targets, checked out by the worker for context.
+     * @param commentBody Text of the reviewer's comment.
+     * @return true if a job was dispatched; false if deduplicated or Cloud Run is not configured.
+     */
     override fun launchForCommentReview(
         ticketKey: String,
         prNumber: Int,
@@ -239,6 +251,16 @@ class AgentLaunchService(
         return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey, briefingContext = context)
     }
 
+    /**
+     * Posts a boilerplate reply to an inline (file-level) PR comment asking the reviewer to
+     * submit a formal **Changes requested** review instead. Inline comments don't trigger the
+     * GitHub webhook reliably, so the agent cannot act on them directly; this reply guides the
+     * reviewer toward a workflow the agent can handle.
+     *
+     * The comment is posted asynchronously via `gh pr comment` and does not dispatch a Cloud Run Job.
+     *
+     * @param prNumber GitHub PR number to comment on.
+     */
     override fun postInlineCommentReply(prNumber: Int) {
         val body = "🤖 **Agent:** I noticed your inline comment. Please submit a formal review " +
             "with **Changes requested** and I'll address all your feedback in one pass."
@@ -257,6 +279,13 @@ class AgentLaunchService(
         }
     }
 
+    /**
+     * Returns true if [key] currently has a dispatch coroutine in flight.
+     * Used in tests to assert that a dispatch was started without waiting for it to complete.
+     *
+     * @param key Dedup key — a Jira ticket key (e.g. "MS-123") for ticket launches,
+     *   or a derived key like "PR-456" or "CONFLICT-456" for PR-driven launches.
+     */
     fun isActive(key: String): Boolean = key in activeKeys
 
     private suspend fun buildPromptWithBriefing(
