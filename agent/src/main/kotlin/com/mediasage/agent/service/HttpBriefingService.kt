@@ -42,6 +42,16 @@ class HttpBriefingService(
     private val anthropicAuthToken: String,
 ) : BriefingService {
 
+    /**
+     * Calls the Claude Messages API to generate a briefing for [context].
+     *
+     * Trims diff content to at most [MAX_DIFF_LINES] lines before sending to stay within token
+     * budget. On any failure (network error, timeout, non-OK status), logs a warning and returns
+     * null — dispatch is never blocked by a briefing failure.
+     *
+     * @param context Describes the work scenario (ticket, PR review, inline comment, or merge
+     *   conflict). The concrete subtype determines which prompt template is selected.
+     */
     override suspend fun brief(context: BriefingContext): String? = runCatching {
         val prompt = buildPrompt(context)
         val request = MessagesRequest(
