@@ -37,34 +37,6 @@ Server JSON → Client DTO → Room Entity → Domain Model → UI
 - **Domain Models** (`domain/model/`) — clean types for UI (enums, lists)
 - **Repositories** (`data/repository/`) — bridge all three layers
 
-### UI Architecture (MVI Contract Pattern)
-
-Each feature has 3 files under `composeApp/src/commonMain/kotlin/com/mediasage/feature/{name}/`:
-
-| File | Purpose |
-|------|---------|
-| `{Name}Contract.kt` | UiState (sealed interface) + Intent (sealed interface) + SideEffect (sealed interface) |
-| `{Name}ViewModel.kt` | Processes intents, emits state via StateFlow, side effects via Channel |
-| `{Name}Screen.kt` | Stateless composable — receives state, onIntent, and navigation lambdas |
-
-Key conventions:
-- **Sealed interfaces for UiState**: Loading, Success, Error — mutually exclusive, no invalid combinations
-- **Channels for side effects**: One-off events (navigation, snackbar) via `Channel(Channel.BUFFERED)` → `receiveAsFlow()`. Always use `Channel.BUFFERED` — the default `RENDEZVOUS` capacity causes `send()` to suspend if no collector is active, which blocks `finally` blocks and leaves the UI in a stuck state.
-- **`state` not `uiState`**: The type name already says UiState
-- **Screens are stateless**: Receive state + callbacks, no ViewModel dependency. Previewable and testable.
-- **No base ViewModel class**: Convention over abstraction
-- **Screen parameters — hard rule**: A screen composable accepts exactly three kinds of parameters: `state`, `onIntent`, and navigation lambdas (`onNavigateTo*`). Nothing else. No booleans, no config, no extras.
-- **Ambient config via CompositionLocal**: Values that are needed deep in the tree but are not dynamic state (e.g., `isDebugBuild`) use `CompositionLocal`. Define a `compositionLocalOf { default }` in `commonMain`, provide it once in `App`, read it with `.current` inside the composable. See `LocalIsDebugBuild.kt`.
-- **UiState holds UI state, not build config**: Static build-time constants (e.g., debug flags) do not belong in `UiState` or ViewModel. They are ambient environment values, not runtime state.
-- **`expect/actual` is for platform API differences only**: Never use `expect/actual` for build config constants (e.g., `isDebugBuild`). Doing so creates duplicate class entries in the Android dex and causes `NoSuchMethodError` crashes when the build cache serves a stale artifact. Pass build config as a `Boolean` parameter from each platform entry point (`MainActivity`, `MainViewController`) down to `App`.
-
-### Navigation (Nav3)
-
-- **`navigation/Routes.kt`** — Sealed interface `Route` with type-safe destinations
-- **`navigation/TopLevelDestination.kt`** — Enum of bottom nav tabs with route, label, icon
-- **`navigation/MediaSageAppState.kt`** — Centralizes navigation: `isTopLevel`, `titleRes`, navigate methods
-- **`navigation/MediaSageScaffold.kt`** — Top-level Scaffold with AppState-driven top bar and bottom bar
-
 ### Dependency Injection
 
 Koin is used across all modules. Define modules per feature, not per layer.
@@ -72,12 +44,7 @@ Koin is used across all modules. Define modules per feature, not per layer.
 - **Agent**: `agentModule(config, scope)` — HttpClient, AgentLaunchService, JiraApiService
 - **Shared**: `sharedModule(serverBaseUrl)` — HttpClient, MediaSageApi, repositories
 
-**Interface bindings in tests:** When a route resolves a type via `inject<SomeInterface>()`, every
-test Koin module that exercises that route must include `single<SomeInterface> { get<ConcreteImpl>() }`.
-Missing this binding causes the inject to fail at the call site — not at startup — so tests that
-never reach the inject (e.g. early-return paths) pass silently while tests that do reach it return
-500 instead of the expected status. After introducing a new interface in `AgentModule`, search all
-`*RouteTest.kt` files for manual Koin `module { }` blocks and add the interface binding to each.
+See each module's `CLAUDE.md` for module-specific patterns and conventions.
 
 ## Tech Stack & Versions
 
@@ -154,35 +121,6 @@ scripts/src/main/kotlin/com/mediasage/scripts/
     └── ScriptsDatabase.kt         — Minimal Exposed DB access (figures table)
 ```
 
-### Agent Job Registry (Supabase Postgres)
-
-The orchestrator maintains a persistent `jobs` table in Supabase Postgres. This replaces the in-memory dedup gate and survives restarts.
-
-**Schema:**
-```sql
-CREATE TABLE jobs (
-  job_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  ticket_key     TEXT NOT NULL,
-  prompt         TEXT NOT NULL,
-  status         TEXT NOT NULL DEFAULT 'PENDING',
-  execution_name TEXT,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  started_at     TIMESTAMPTZ,
-  completed_at   TIMESTAMPTZ
-);
-CREATE INDEX ON jobs (ticket_key, created_at DESC);
-```
-
-**Job status state machine:** `PENDING → RUNNING → COMPLETED | FAILED | INTERRUPTED`
-
-**Dedup logic:** Before dispatching, query the latest row for `ticket_key`:
-- `RUNNING` → skip (concurrent duplicate)
-- `COMPLETED` → skip (already done, permanent dedup)
-- `FAILED` / `INTERRUPTED` → re-dispatch (retry eligible)
-- No row → dispatch fresh
-
-**Recovery on startup:** `AgentLaunchService.recoverInterruptedJobs()` queries all RUNNING rows. For each, `CloudRunJobsClient.recoverJob()` makes a real Cloud Run API call using the saved execution name — if the execution is still running, no-op (Pub/Sub will signal completion); if the execution is gone (404), marks the job INTERRUPTED and posts a Jira comment instructing the team to re-trigger manually.
-
 ## Build & Run
 
 ```bash
@@ -252,7 +190,6 @@ docker run -p 8081:8081 \
 - `@SerialName` annotations on their own line above the property
 - String resources in `composeResources/values/strings.xml` — no hardcoded strings in UI
 - API keys stored as env vars in `~/.zshrc`, read via `application.conf`
-- **Cloud Run Job env var overrides append, not replace.** When dispatching a Cloud Run Job with per-run env var overrides (`containerOverrides.env`), the values are appended to the job's existing env vars — they do NOT replace them. If the same key exists in both the static job definition and the per-run override, the static value takes precedence. Rule: never set per-target or per-run values as static env vars on the job definition. Inject them exclusively at dispatch time via `DispatchConfig`. The job definition should only hold env vars that are truly static across all runs (e.g. `ANTHROPIC_BASE_URL`, `GCP_PROJECT_ID`).
 - **Solve problems at the right layer.** Before adding logic to any layer, identify where that concern idiomatically belongs in Android/Kotlin development. Network timeouts belong in the HTTP client (OkHttp `readTimeout`, Ktor `HttpTimeout`), not the ViewModel. Data validation belongs at the repository boundary, not the UI. If you find yourself adding network or I/O mechanics to a ViewModel, stop and check the idiomatic pattern first.
 - Before implementing any Compose effect or Android platform API, verify the approach against NowInAndroid or the official Compose docs. If you find yourself adding a null guard inside a `SideEffect`, you've chosen the wrong effect type.
 
@@ -388,89 +325,7 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 
 _This project is at Level 2. Both the Jira webhook (`POST /webhook/jira`) and the GitHub webhook (`POST /webhook/github`) are live in the `:agent` module, deployed as a Cloud Run Service on GCP. See `docs/diagrams/agent-pipeline.md` for the full flow diagram._
 
-**Autonomous setup (container — production):**
-
-The `:agent` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`). It clones the repo at startup using the bot account token, then starts the Ktor server.
-
-**Active deployment: GCP Cloud Run Service**
-
-- **Service:** `media-sage-orchestrator`
-- **URL:** `https://media-sage-orchestrator-924166357877.us-central1.run.app`
-- **Project:** `media-sage-agent` · **Region:** `us-central1`
-- **Service account:** `media-sage-orchestrator@media-sage-agent.iam.gserviceaccount.com`
-- **Config:** `--min-instances=1 --max-instances=3 --memory=2Gi --cpu=1 --port=8081 --timeout=3600`
-- **Image:** `us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest` (linux/amd64)
-
-Config is split between plain env vars (set directly on the service) and secrets (stored in Secret Manager and mounted at runtime):
-
-**Plain env vars (non-sensitive):**
-
-| Variable | Value |
-|---|---|
-| `AGENT_REPO_PATH` | `/home/agent/media-sage` |
-| `GITHUB_BOT_LOGIN` | `media-sage-worker[bot]` (GitHub App identity — note `[bot]` suffix) |
-| `GITHUB_BOT_NAME` | `media-sage-worker` |
-| `GITHUB_APP_ID` | Numeric App ID from the `media-sage-worker` GitHub App settings page |
-| `GITHUB_APP_INSTALLATION_ID` | Installation ID for the media-sage repo |
-| `JIRA_EMAIL` | `micgon7@gmail.com` |
-| `JIRA_BOT_EMAIL` | Bot Jira account email |
-| `JIRA_CLOUD_ID` | `ad358528-f7e9-4e40-9531-c51049908d6d` |
-| `JIRA_BOT_ACCOUNT_ID` | Jira account ID of the bot user |
-| `GCP_PROJECT_ID` | `media-sage-agent` |
-| `GCP_REGION` | `us-central1` |
-| `GCP_JOB_NAME` | `media-sage-agent-worker` |
-| `ANTHROPIC_BASE_URL` | `https://api.fuelix.ai` (Fuelix proxy) |
-
-**Secrets (Secret Manager → `media-sage-orchestrator` SA has `secretAccessor` role):**
-
-| Secret name | Env var | Description |
-|---|---|---|
-| `anthropic-auth-token` | `ANTHROPIC_AUTH_TOKEN` | Fuelix API token (`ak-...`) |
-| `github-app-private-key-base64` | `GITHUB_APP_PRIVATE_KEY_BASE64` | RSA private key for `media-sage-worker` GitHub App, base64-encoded PEM |
-| `github-webhook-secret` | `GITHUB_WEBHOOK_SECRET` | Shared secret for GitHub webhook HMAC verification |
-| `jira-api-token` | `JIRA_API_TOKEN` | Atlassian account API token |
-| `jira-bot-api-token` | `JIRA_BOT_API_TOKEN` | Bot Atlassian API token |
-| `supabase-db-url` | `SUPABASE_DB_URL` | Postgres URI with credentials |
-| `pubsub-webhook-secret` | `PUBSUB_WEBHOOK_SECRET` | Shared secret for Pub/Sub push URL auth |
-| `google-credentials-base64` | `GOOGLE_CREDENTIALS_BASE64` | Base64-encoded GCP SA JSON (worker dispatch) |
-
-**GitHub App auth pattern:** Both the orchestrator (Cloud Run Service) and worker (Cloud Run Job) authenticate as `media-sage-worker[bot]` using short-lived installation tokens (1-hour TTL). Tokens are generated at container startup via `get-github-token.py` (JWT → GitHub API exchange) and exported as `GH_TOKEN`. The git commit email is derived automatically from the App ID: `{GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com` — no `GITHUB_BOT_EMAIL` env var needed. Store the private key base64-encoded: `base64 -i private-key.pem | tr -d '\n'`.
-
-Webhook URLs:
-- Jira: `https://media-sage-orchestrator-924166357877.us-central1.run.app/webhook/jira`
-- GitHub: `https://media-sage-orchestrator-924166357877.us-central1.run.app/webhook/github`
-
-Register the Jira webhook at **media-sage.atlassian.net → Settings → System → WebHooks**:
-- Events: Issue **created** and **updated**
-- JQL filter: `project = MS` (assignee + status filtering is done in the route, not here)
-
-Register the GitHub webhook in repo **Settings → Webhooks**:
-- Content type: `application/json`
-- Events: `Pull request reviews`, `Pull request review comments`
-
-**To redeploy** after a new image push:
-```bash
-gcloud run deploy media-sage-orchestrator \
-  --image us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest \
-  --region us-central1 --project media-sage-agent
-```
-
-**Manual fallback (Railway):**
-The Railway `:orchestrator` service retains all env vars and is kept deactivated. To switch back: redeploy Railway service → update Jira + GitHub webhook URLs to the Railway URL (takes ~2 min). Switch back to GCP by doing the reverse.
-
-**Autonomous setup (laptop — local dev/demo):**
-
-For local development only (not needed when container is running):
-1. Add `export AGENT_REPO_PATH="/path/to/media-sage"` to `~/.zshrc` and `source ~/.zshrc`
-2. Start the agent server: `source ~/.zshrc && ./gradlew :agent:run`
-3. Start ngrok: `ngrok http 8081` — copy the public HTTPS URL
-4. Temporarily update Jira and GitHub webhook URLs to the ngrok URL
-
-See `docs/MS-78-level-4-github-webhook.md` for GitHub webhook setup details.
-See `docs/MS-84-containerized-agent-deployment.md` for container architecture and Railway setup.
-See `docs/MS-193-gcp-cloud-run-service-orchestrator.md` for GCP deployment details and migration notes.
-See `docs/diagrams/agent-pipeline.md` for the full autonomous pipeline flow diagram.
-See `docs/diagrams/infrastructure-overview.md` for the infrastructure architecture diagram.
+See `agent/CLAUDE.md` for deployment config, env vars, webhook URLs, job registry schema, and local dev setup.
 
 **Autonomous vs Assisted:**
 
