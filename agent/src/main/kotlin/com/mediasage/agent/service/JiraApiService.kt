@@ -116,6 +116,8 @@ class JiraApiService(
      * Returns the summary and description of [ticketKey] as a formatted string, or null if
      * the ticket cannot be retrieved.
      *
+     * Calls `GET /rest/api/3/issue/{ticketKey}?fields=summary,description`.
+     *
      * The description is extracted from Atlassian Document Format (ADF) by recursively
      * collecting all `text` leaf nodes. The returned string has the form:
      * `"**KEY: Summary**\n\n<description text>"`.
@@ -150,6 +152,8 @@ class JiraApiService(
      * Returns the workflow status name of [ticketKey] (e.g. `"In Progress"`), or null if
      * the ticket cannot be retrieved.
      *
+     * Calls `GET /rest/api/3/issue/{ticketKey}?fields=status`.
+     *
      * @param ticketKey Jira issue key (e.g. `MS-242`).
      * @return Status name as configured in the Jira workflow, or null on HTTP error or
      *   network failure.
@@ -174,6 +178,9 @@ class JiraApiService(
 
     /**
      * Posts [body] as a plain-text comment on [ticketKey] using the Jira ADF comment payload.
+     *
+     * Calls `POST /rest/api/3/issue/{ticketKey}/comment`. The body is wrapped in an
+     * Atlassian Document Format (ADF) `doc` → `paragraph` → `text` structure before sending.
      *
      * Failures are logged at WARN level and swallowed — callers do not need to handle
      * exceptions.
