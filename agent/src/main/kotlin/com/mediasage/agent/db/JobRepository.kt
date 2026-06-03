@@ -12,8 +12,26 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
+/**
+ * Lifecycle states for an autonomous agent job.
+ *
+ * State machine: `PENDING → RUNNING → COMPLETED | FAILED | INTERRUPTED`
+ *
+ * - [PENDING] — row inserted but Cloud Run dispatch not yet confirmed
+ * - [RUNNING] — Cloud Run execution is active; dedup gate blocks concurrent dispatches for the same ticket
+ * - [COMPLETED] — worker finished successfully; permanently deduplicated (no re-dispatch)
+ * - [FAILED] — worker exited with an error; eligible for retry on the next webhook event
+ * - [INTERRUPTED] — orchestrator restarted while the job was RUNNING and the Cloud Run execution
+ *   was no longer found; eligible for manual re-trigger
+ */
 enum class JobStatus { PENDING, RUNNING, COMPLETED, FAILED, INTERRUPTED }
 
+/**
+ * Lightweight projection of a `jobs` row used by dispatch and recovery logic.
+ *
+ * Only the fields needed for dedup decisions and LRO recovery are included — heavy fields
+ * like [JobsTable.prompt] and metric columns are omitted to keep query payloads small.
+ */
 data class JobRow(
     val jobId: UUID,
     val ticketKey: String,
@@ -23,6 +41,12 @@ data class JobRow(
     val startedAt: Instant? = null
 )
 
+/**
+ * Projection of the `job_durations` Postgres view, which pre-computes elapsed time as an
+ * integer number of seconds between [startedAt] and [completedAt].
+ *
+ * [durationSeconds] is null for jobs still in the RUNNING state (no [completedAt] yet).
+ */
 data class JobDurationRow(
     val jobId: UUID,
     val ticketKey: String,
