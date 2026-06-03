@@ -11,7 +11,9 @@ import org.slf4j.LoggerFactory
 
 private const val BRIEFING_MODEL = "claude-haiku-4-5-20251001"
 private const val MAX_DIFF_LINES = 500
-private const val MAX_TOKENS = 1024
+// 4096 gives Haiku room to brief complex multi-file tickets without truncation.
+// Simple tickets produce shorter output naturally; this is a ceiling, not a target.
+private const val MAX_TOKENS = 4096
 
 private val log = LoggerFactory.getLogger(HttpBriefingService::class.java)
 
@@ -74,6 +76,7 @@ class HttpBriefingService(
             setBody(request)
         }.body()
         response.content.firstOrNull()?.text?.takeIf { it.isNotBlank() }
+            ?.also { log.info("Briefing content for ${context.ticketKey()}: ${it.replace('\n', ' ')}") }
     }.onFailure { log.warn("Briefing call failed for ${context.ticketKey()}: ${it.message}") }
         .getOrNull()
 
@@ -86,8 +89,9 @@ class HttpBriefingService(
 
     private fun ticketWorkPrompt(ctx: BriefingContext.TicketWork) = """
         You are briefing a software engineer about to start work on a Jira ticket.
-        Summarize in 3-5 sentences: what needs to be built, why, and which files or modules are likely involved.
-        Be concrete and direct — the engineer will use this to start coding immediately.
+        Cover everything they need to start coding immediately: what needs to be built, why it matters,
+        which files and modules are involved, and any non-obvious constraints or patterns to follow.
+        Be as detailed as the task requires — a complex multi-file change needs more context than a one-liner.
 
         Ticket: ${ctx.ticketKey}
         Content:
@@ -96,8 +100,8 @@ class HttpBriefingService(
 
     private fun prReviewPrompt(ctx: BriefingContext.PrReview) = """
         You are briefing a software engineer about to address a PR review comment.
-        Summarize in 3-5 sentences: what the reviewer wants changed, where in the diff the change is needed, and what the fix looks like.
-        Be specific — reference file names and line context from the diff where possible.
+        Explain what the reviewer wants changed, where in the diff the change is needed, and what the fix looks like.
+        Reference specific file names and line context from the diff. Cover every concern the reviewer raised.
 
         Ticket: ${ctx.ticketKey}
         PR: #${ctx.prNumber}
@@ -108,7 +112,7 @@ class HttpBriefingService(
 
     private fun commentReviewPrompt(ctx: BriefingContext.CommentReview) = """
         You are briefing a software engineer about to answer a question left on a PR.
-        Summarize in 2-3 sentences: what the reviewer is asking and what context from the codebase is needed to answer well.
+        Explain what the reviewer is asking and what codebase context is needed to answer well.
         The engineer will post a comment reply — no code changes.
 
         Ticket: ${ctx.ticketKey}
@@ -118,7 +122,8 @@ class HttpBriefingService(
 
     private fun conflictResolutionPrompt(ctx: BriefingContext.ConflictResolution) = """
         You are briefing a software engineer about to resolve a merge conflict.
-        Summarize in 3-4 sentences: which branch conflicted, what the likely cause is based on the branch name, and what to watch for when rebasing.
+        Explain which branch conflicted, what the likely cause is based on the branch name, and what to watch for when rebasing.
+        Include any patterns in the branch name that suggest which files are likely affected.
 
         Ticket: ${ctx.ticketKey}
         PR: #${ctx.prNumber}
@@ -132,6 +137,7 @@ class HttpBriefingService(
         is BriefingContext.CommentReview -> ticketKey
         is BriefingContext.ConflictResolution -> ticketKey
     }
+
 }
 
 @Serializable
