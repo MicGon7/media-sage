@@ -104,6 +104,11 @@ fun Route.webhookRoutes(botAccountId: String) {
             val dryRun = call.request.headers["X-Dry-Run"]?.lowercase() == "true"
             if (dryRun) log.info("Dry-run mode — dedup check and row insert only, Cloud Run dispatch skipped")
             val ticketContent = jiraFetcher.getTicketContent(payload.issue.key)
+            if (ticketContent != null) {
+                log.info("[${payload.issue.key}] ticket content fetched (${ticketContent.length} chars)")
+            } else {
+                log.warn("[${payload.issue.key}] ticket content fetch returned null — dispatching on fallback prompt")
+            }
             agentService.launch(payload.issue.key, ticketContent, dryRun)
         }
 

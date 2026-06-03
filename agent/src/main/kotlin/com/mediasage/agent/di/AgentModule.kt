@@ -21,6 +21,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
+import org.slf4j.LoggerFactory
 
 /**
  * Koin module for the agent orchestration server.
@@ -36,6 +37,8 @@ import org.koin.dsl.module
  * @param config Runtime configuration sourced from environment variables. See [AgentConfig].
  * @param scope Coroutine scope used by [AgentLaunchService] for background startup job recovery.
  */
+private val log = LoggerFactory.getLogger("AgentModule")
+
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single { buildHttpClient() }
     single { JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken) }
@@ -52,13 +55,24 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
         }
     }
     single {
-        val briefingService = if (config.intelligentDispatchEnabled && config.anthropicAuthToken.isNotBlank()) {
-            HttpBriefingService(buildBriefingHttpClient(), config.anthropicBaseUrl, config.anthropicAuthToken)
-        } else null
+        val briefingService = buildBriefingService(config)
         val cloudRun = buildCloudRunDispatch(config, get(), get())
         AgentLaunchService(config.repoPath, scope, cloudRun, get(), get<JiraTicketStatusChecker>(), briefingService)
     }
     single<AgentLauncher> { get<AgentLaunchService>() }
+}
+
+private fun buildBriefingService(config: AgentConfig): HttpBriefingService? {
+    if (config.intelligentDispatchEnabled && config.anthropicAuthToken.isNotBlank()) {
+        log.info("Intelligent dispatch enabled — BriefingService active (base: ${config.anthropicBaseUrl})")
+        return HttpBriefingService(buildBriefingHttpClient(), config.anthropicBaseUrl, config.anthropicAuthToken)
+    }
+    log.warn(
+        "Intelligent dispatch disabled — BriefingService not active " +
+        "(intelligentDispatchEnabled=${config.intelligentDispatchEnabled}, " +
+        "anthropicAuthToken=${if (config.anthropicAuthToken.isBlank()) "BLANK" else "set"})"
+    )
+    return null
 }
 
 // Dedicated client for briefing calls — 15s timeout gives Haiku room to process
