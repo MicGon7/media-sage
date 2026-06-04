@@ -6,5 +6,5 @@
 4. Push the rebased branch.
 5. Find the last reviewer: `gh pr view <pr-number> --json reviews`
    Re-request review: `gh pr review-request <pr-number> --reviewer <login>`
-6. Write `/tmp/jira_comment.txt` in plain text (no bold markdown) covering: what conflicts were resolved, the PR URL (`gh pr view <pr-number> --json url -q .url`), and the rebase result.
+6. Write `/tmp/jira_comment.txt` — see Agent Guidelines for format rules. Content: what conflicts were resolved, rebase result, PR URL (`gh pr view <pr-number> --json url -q .url`).
 

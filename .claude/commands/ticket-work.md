@@ -8,36 +8,14 @@
 8. Write a learning doc under `docs/` following the existing doc format. Commit it alongside the code changes.
 9. Commit all changes with prefix `MS-{TICKET_KEY}: Description` and push: `git push -u origin <branch>`.
 10. Open a PR: `gh pr create` — fill in title and body per the PR template at `.github/pull_request_template.md`.
-11. Write `/tmp/jira_comment.txt` in plain text (no bold markdown). Use this exact format:
-
-    ```
-    🤖 Agent: Run metrics summary for {TICKET_KEY}
-
-    Task: {one-line task description}
-
-    Pipeline checkpoints verified:
-    ✅ Jira webhook fired when ticket moved to In Progress
-    ✅ Orchestrator dispatched Cloud Run Job
-    ✅ Worker cloned from michael-gonzalez-dev/media-sage successfully
-    ✅ Worker completed the task and opened a PR
-    ⏳ Pub/Sub completion event — fires after this comment
-    ⏳ Job marked COMPLETED in Supabase — pending Pub/Sub
-    ✅ Run metrics comment posted (this comment)
-
-    PR: {pr_url}
-
-    Quality gates:
-    ✅ Detekt: {result}
-    ✅ Affected tests: {result}
-
-    Diff: {summary}
-
-    Acceptance criteria:
-    ✅ {ac_item}
-    ```
-
-    Do not include a "Run metrics" section — the orchestrator appends that after you exit.
-    Do NOT post a Jira comment via the Atlassian MCP — the orchestrator reads this file and posts it.
+11. Write `/tmp/jira_comment.txt` — see Agent Guidelines for format rules. Content must include:
+    - Task description
+    - Pipeline checkpoints (webhook → orchestrator → worker → PR → Pub/Sub pending)
+    - PR URL
+    - Quality gate results (detekt, affected tests)
+    - Diff summary
+    - Acceptance criteria checklist
+    - Do not include a "Run metrics" section — the orchestrator appends that after you exit.
 
 12. Transition the Jira ticket to In Review.
 

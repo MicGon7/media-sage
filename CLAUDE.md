@@ -219,6 +219,7 @@ Workflow steps live in skills, not here. See `.claude/commands/` for the full in
 - **No secrets:** No API keys or secrets in code — use environment variables.
 - **Never push to main:** Always create a PR. Never merge a PR — human reviews and merges.
 - **Smoke test external APIs:** Test real API changes with live APIs before writing the learning doc or opening a PR — docs describe verified behaviour, not assumed behaviour.
+- **Jira comment file:** Every job writes a plain-text summary to `/tmp/jira_comment.txt` before exiting. No bold markdown. Do NOT post via the Atlassian MCP — the orchestrator reads this file from the Pub/Sub completion event and posts it as Media Sage Bot. Each skill defines what content to include; the format rules are always: plain text, pipeline checkpoints where relevant, PR URL, quality gate results, AC summary.
 
 ### After a PR is merged
 Do not include tickets labeled `pipeline-test` or `smoketest` in the Confluence impact doc — these tickets exist to exercise the pipeline, not deliver product or infrastructure value.
