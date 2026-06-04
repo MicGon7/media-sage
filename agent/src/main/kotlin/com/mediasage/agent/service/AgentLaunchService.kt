@@ -33,18 +33,7 @@ private const val PR_REVIEW_PROMPT =
 
 private const val CONFLICT_RESOLUTION_PROMPT =
     "Branch %3\$s for ticket %2\$s was ejected from the merge queue due to a conflict with %4\$s. " +
-    "Run: git fetch origin && git rebase origin/%4\$s\n" +
-    "IMPORTANT: If the rebase produces no changes and no conflicts (the branch is already up-to-date), " +
-    "write 'Rebase was a no-op — branch is already up-to-date with %4\$s.' to /tmp/jira_comment.txt " +
-    "and exit immediately. Do not open a PR, do not investigate further, do not spend more turns. " +
-    "Resolve any conflicts with intent — read the conflicting changes carefully before accepting either side. " +
-    "Push the rebased branch. " +
-    "Find the last reviewer with: gh pr view %1\$d --json reviews " +
-    "and re-request review with: gh pr review-request %1\$d --reviewer <login>. " +
-    "Before exiting, write a brief plain-text summary to /tmp/jira_comment.txt covering: " +
-    "what conflicts were resolved, the PR URL (gh pr view %1\$d --json url -q .url), and the rebase result. " +
-    "Use the format from CLAUDE.md Agent Guidelines (no bold markdown). " +
-    "Follow the Agent Guidelines in CLAUDE.md."
+    "PR #%1\$d.\n\n/conflict-resolution"
 
 private const val PR_COMMENT_REVIEW_PROMPT =
     "PR #%1\$d for ticket %2\$s has a new comment review: \"%3\$s\". " +

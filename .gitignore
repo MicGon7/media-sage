@@ -8,7 +8,8 @@ build/
 *.ear
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/commands/
 
 # IDE
 .idea/

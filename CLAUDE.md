@@ -304,6 +304,11 @@ claude -p "Check Jira (cloudId: media-sage.atlassian.net) for the next ticket la
 
 The bootstrap command never changes — the **ticket is the prompt**. Every autonomous ticket must include a clear task description and explicit acceptance criteria so the agent has everything it needs without human input.
 
+**Job-type skills:** Each job type dispatched by the orchestrator ends its bootstrap prompt with a skill invocation (e.g. `/conflict-resolution`). Skills live in `.claude/commands/` and are committed to the repo — workers pick them up automatically on clone. The skill contains the imperative workflow steps for that job type; the bootstrap prompt supplies the job-specific context (branch, ticket, PR number). This separates *what the job is* (prompt) from *how to execute it* (skill), and allows workflow steps to be updated without redeploying the orchestrator image.
+
+Current skills:
+- `/conflict-resolution` — rebase a branch ejected from the merge queue and re-request review
+
 **Autonomous ticket requirements:**
 - Title: concise task description (agent uses this as the task summary)
 - Description: what needs to change and why
