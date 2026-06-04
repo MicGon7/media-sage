@@ -3,6 +3,12 @@ name: CI
 on:
   push:
     branches: [ main ]
+    paths:
+      - '**/*.kt'
+      - '**/*.kts'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'gradlew'
   pull_request:
     branches: [ main ]
 
