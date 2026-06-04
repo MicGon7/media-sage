@@ -92,7 +92,6 @@ abstract class FullPipelineScenarioBase {
             repo = config.target.githubRepo
         )
         service = AgentLaunchService(
-            repoPath = config.repoPath,
             scope = scope,
             cloudRun = buildCloudRunDispatch(jobRepository)
         )

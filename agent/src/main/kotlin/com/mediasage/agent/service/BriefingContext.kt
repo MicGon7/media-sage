@@ -24,21 +24,6 @@ sealed class BriefingContext {
     ) : BriefingContext()
 
     /**
-     * A formal PR review with changes requested.
-     *
-     * @param ticketKey Jira issue key for context.
-     * @param prNumber GitHub PR number.
-     * @param commentBody Text of the reviewer's changes-requested comment.
-     * @param diff PR diff capped at 300 lines via [BriefingService].
-     */
-    data class PrReview(
-        val ticketKey: String,
-        val prNumber: Int,
-        val commentBody: String,
-        val diff: String,
-    ) : BriefingContext()
-
-    /**
      * A PR comment review (not a formal changes-requested review).
      * The worker answers questions but does not push code changes.
      *

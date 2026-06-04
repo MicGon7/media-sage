@@ -177,23 +177,6 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
-    fun inlineCommentPostsQuickReplyNotAgent() {
-        val tracking = FakeAgentLauncher()
-        testGitHubApp(agentService = tracking) {
-            val body = reviewCommentPayload(commentBody = "Rename this variable for clarity.")
-            val response = client.post("/webhook/github") {
-                contentType(ContentType.Application.Json)
-                header("X-GitHub-Event", "pull_request_review_comment")
-                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
-                setBody(body)
-            }
-            assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(0, tracking.agentLaunches, "Full agent must NOT fire for inline comments")
-            assertEquals(1, tracking.inlineReplies, "Quick reply must fire for inline comments")
-        }
-    }
-
-    @Test
     fun inlineCommentEditedIsIgnored() = testGitHubApp {
         val body = reviewCommentPayload(action = "edited", commentBody = "Updated: please rename this variable.")
         val response = client.post("/webhook/github") {
@@ -387,7 +370,6 @@ private class FakeAgentLauncher : AgentLauncher {
     var agentLaunches = 0
     var commentReviewLaunches = 0
     var conflictResolutionLaunches = 0
-    var inlineReplies = 0
     var lastReviewerLogin: String? = null
     var lastBaseBranch: String? = null
 
@@ -412,9 +394,5 @@ private class FakeAgentLauncher : AgentLauncher {
         conflictResolutionLaunches++
         lastBaseBranch = baseBranch
         return true
-    }
-
-    override fun postInlineCommentReply(prNumber: Int) {
-        inlineReplies++
     }
 }

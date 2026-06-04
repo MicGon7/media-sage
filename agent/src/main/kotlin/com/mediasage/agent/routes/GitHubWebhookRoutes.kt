@@ -26,8 +26,6 @@ data class GitHubWebhookPayload(
     val pullRequest: GitHubPullRequest,
     @SerialName("review")
     val review: GitHubReview? = null,
-    @SerialName("comment")
-    val comment: GitHubComment? = null,
     @SerialName("reason")
     val reason: String? = null
 )
@@ -64,14 +62,6 @@ data class GitHubReview(
     val state: String
 )
 
-@Serializable
-data class GitHubComment(
-    @SerialName("id")
-    val id: Long,
-    @SerialName("body")
-    val body: String
-)
-
 private data class WebhookContext(
     val ticketKey: String,
     val prNumber: Int,
@@ -95,7 +85,7 @@ private val webhookJson = Json { ignoreUnknownKeys = true }
 /**
  * Registers the GitHub webhook route at `POST /webhook/github`.
  *
- * Accepts [pull_request], [pull_request_review], and [pull_request_review_comment] events from GitHub.
+ * Accepts [pull_request] and [pull_request_review] events from GitHub.
  * Validates the request signature using HMAC-SHA256 against [webhookSecret], then dispatches
  * to the appropriate handler based on the event type.
  *
@@ -107,8 +97,8 @@ private val webhookJson = Json { ignoreUnknownKeys = true }
  * - `X-GitHub-Event`: event type (`pull_request`, `pull_request_review`, `pull_request_review_comment`)
  * - `X-Hub-Signature-256`: HMAC-SHA256 signature of the raw request body
  *
- * Responds `200 OK` on success, `400 Bad Request` if the event header is missing,
- * `401 Unauthorized` if the signature is missing or invalid.
+ * Responds `200 OK` on success (including unrecognised event types), `400 Bad Request` if the
+ * event header is missing, `401 Unauthorized` if the signature is missing or invalid.
  *
  * @param webhookSecret shared secret used to verify the GitHub webhook HMAC-SHA256 signature
  * @param botLogin GitHub login of the bot account (e.g. `media-sage-worker[bot]`). Only PRs authored
@@ -147,8 +137,7 @@ fun Route.githubWebhookRoutes(webhookSecret: String, botLogin: String) {
  *   [AgentLauncher.launchForPrReview] for `changes_requested` reviews or
  *   [AgentLauncher.launchForCommentReview] for `commented` reviews. Ignores agent-authored reviews
  *   (body starts with "🤖 **Agent:**") and all other review states.
- * - `pull_request_review_comment`: calls [AgentLauncher.postInlineCommentReply] for the PR.
- *   Ignores agent-authored comments.
+ * - All other event types: silently ignored, returns `200 OK`.
  */
 private suspend fun handleGitHubEvent(
     eventType: String,
@@ -159,11 +148,6 @@ private suspend fun handleGitHubEvent(
     when (eventType) {
         "pull_request" -> handleDequeueEvent(rawBody, agentService, botLogin)
         "pull_request_review" -> handleReviewEvent(rawBody, agentService, botLogin)
-        "pull_request_review_comment" -> {
-            val prNumber = parseInlineCommentPrNumber(rawBody) ?: return
-            log.info("GitHub inline comment on PR#$prNumber — posting quick reply")
-            agentService.postInlineCommentReply(prNumber)
-        }
     }
 }
 
@@ -241,20 +225,6 @@ private fun parseReviewContext(rawBody: ByteArray, botLogin: String): WebhookCon
         ?.takeIf { state == "changes_requested" || state == "commented" }
         ?.takeIf { !reviewBody.startsWith("🤖 **Agent:**") }
         ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, reviewBody, state, payload.sender.login) }
-}
-
-/**
- * Parses a `pull_request_review_comment` payload and returns the PR number.
- *
- * Returns `null` if the action is not `created` or if the comment was authored by the agent
- * (body starts with "🤖 **Agent:**").
- */
-private fun parseInlineCommentPrNumber(rawBody: ByteArray): Int? {
-    val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
-    val commentBody = payload.comment?.body.orEmpty()
-    return payload.pullRequest.number
-        .takeIf { payload.action == "created" }
-        ?.takeIf { !commentBody.startsWith("🤖 **Agent:**") }
 }
 
 /**

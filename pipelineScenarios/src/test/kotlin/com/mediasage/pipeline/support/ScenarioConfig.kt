@@ -20,7 +20,6 @@ data class ScenarioConfig(
     val gcpRegion: String,
     val gcpJobName: String,
     val googleCredentialsJson: String,
-    val repoPath: String,
     /** GitHub token (GH_TOKEN) — used by GitHubFixtureClient for branch/PR operations. */
     val githubToken: String
 ) {
@@ -37,7 +36,6 @@ data class ScenarioConfig(
                 gcpRegion = System.getenv("GCP_REGION")?.takeIf { it.isNotBlank() } ?: "us-central1",
                 gcpJobName = System.getenv("GCP_JOB_NAME")?.takeIf { it.isNotBlank() } ?: "media-sage-agent-worker",
                 googleCredentialsJson = credentialsJson,
-                repoPath = System.getenv("AGENT_REPO_PATH")?.takeIf { it.isNotBlank() } ?: ".",
                 githubToken = System.getenv("GH_TOKEN")?.takeIf { it.isNotBlank() } ?: ""
             )
         }

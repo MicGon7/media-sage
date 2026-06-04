@@ -83,13 +83,4 @@ interface AgentLauncher {
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
     fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String, baseBranch: String = "main"): Boolean
-
-    /**
-     * Posts a nudge comment on PR [prNumber] asking the reviewer to submit a formal
-     * **Changes requested** review rather than leaving standalone inline comments.
-     *
-     * This lets the agent batch all feedback into a single Cloud Run Job response instead
-     * of firing one job per inline comment thread.
-     */
-    fun postInlineCommentReply(prNumber: Int)
 }

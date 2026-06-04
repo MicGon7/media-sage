@@ -54,7 +54,7 @@ CREATE INDEX ON jobs (ticket_key, created_at DESC);
 
 ## Deployment (Container — Production)
 
-The `:agent` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`). It clones the repo at startup using the bot account token, then starts the Ktor server.
+The `:agent` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`). It is a stateless HTTP server — it receives webhooks, builds prompts, and dispatches Cloud Run Jobs. It does not clone any repo.
 
 - **Service:** `media-sage-orchestrator`
 - **URL:** `https://media-sage-orchestrator-924166357877.us-central1.run.app`
@@ -67,11 +67,7 @@ The `:agent` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`).
 
 | Variable | Value |
 |---|---|
-| `AGENT_REPO_PATH` | `/home/agent/media-sage` |
 | `GITHUB_BOT_LOGIN` | `media-sage-worker[bot]` (GitHub App identity — note `[bot]` suffix) |
-| `GITHUB_BOT_NAME` | `media-sage-worker` |
-| `GITHUB_APP_ID` | Numeric App ID from the `media-sage-worker` GitHub App settings page |
-| `GITHUB_APP_INSTALLATION_ID` | Installation ID for the media-sage repo |
 | `JIRA_EMAIL` | `micgon7@gmail.com` |
 | `JIRA_BOT_EMAIL` | Bot Jira account email |
 | `JIRA_CLOUD_ID` | `ad358528-f7e9-4e40-9531-c51049908d6d` |
@@ -86,7 +82,6 @@ The `:agent` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`).
 | Secret name | Env var | Description |
 |---|---|---|
 | `anthropic-auth-token` | `ANTHROPIC_AUTH_TOKEN` | Fuelix API token (`ak-...`) |
-| `github-app-private-key-base64` | `GITHUB_APP_PRIVATE_KEY_BASE64` | RSA private key, base64-encoded PEM |
 | `github-webhook-secret` | `GITHUB_WEBHOOK_SECRET` | Shared secret for GitHub webhook HMAC verification |
 | `jira-api-token` | `JIRA_API_TOKEN` | Atlassian account API token |
 | `jira-bot-api-token` | `JIRA_BOT_API_TOKEN` | Bot Atlassian API token |
@@ -94,7 +89,7 @@ The `:agent` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`).
 | `pubsub-webhook-secret` | `PUBSUB_WEBHOOK_SECRET` | Shared secret for Pub/Sub push URL auth |
 | `google-credentials-base64` | `GOOGLE_CREDENTIALS_BASE64` | Base64-encoded GCP SA JSON (worker dispatch) |
 
-**GitHub App auth pattern:** Both orchestrator and worker authenticate as `media-sage-worker[bot]` using short-lived installation tokens (1-hour TTL). Tokens are generated at container startup via `get-github-token.py` (JWT → GitHub API exchange) and exported as `GH_TOKEN`. The git commit email is derived automatically from the App ID: `{GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com`. Store the private key base64-encoded: `base64 -i private-key.pem | tr -d '\n'`.
+**GitHub App auth pattern:** Workers authenticate as `media-sage-worker[bot]` using short-lived installation tokens (1-hour TTL) generated at job startup. The orchestrator does not use GitHub App auth — it is a stateless event router with no GitHub API calls. The git commit email for workers is derived automatically from the App ID: `{GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com`.
 
 **To redeploy** after a new image push:
 ```bash
@@ -107,10 +102,9 @@ gcloud run deploy media-sage-orchestrator \
 
 ## Local Dev
 
-1. Add `export AGENT_REPO_PATH="/path/to/media-sage"` to `~/.zshrc` and `source ~/.zshrc`
-2. Start the agent server: `source ~/.zshrc && ./gradlew :agent:run`
-3. Start ngrok: `ngrok http 8081` — copy the public HTTPS URL
-4. Temporarily update Jira and GitHub webhook URLs to the ngrok URL
+1. Start the agent server: `source ~/.zshrc && ./gradlew :agent:run`
+2. Start ngrok: `ngrok http 8081` — copy the public HTTPS URL
+3. Temporarily update Jira and GitHub webhook URLs to the ngrok URL
 
 ## Webhook URLs
 

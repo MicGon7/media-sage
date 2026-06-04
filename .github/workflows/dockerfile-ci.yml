@@ -34,4 +34,3 @@ jobs:
         run: |
           docker run --rm --entrypoint which media-sage-agent-test javac
           docker run --rm --entrypoint which media-sage-agent-test java
-          docker run --rm --entrypoint which media-sage-agent-test git

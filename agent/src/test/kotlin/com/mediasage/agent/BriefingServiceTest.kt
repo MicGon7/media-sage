@@ -54,15 +54,6 @@ class BriefingServiceTest {
     }
 
     @Test
-    fun `brief returns non-null for PrReview context`() = runTest {
-        val service = HttpBriefingService(buildClient(successResponse), "https://api.test", "token")
-        val result = service.brief(
-            BriefingContext.PrReview("MS-1", 42, "Add periods to KDoc", "- val foo: String")
-        )
-        assertNotNull(result)
-    }
-
-    @Test
     fun `brief returns non-null for CommentReview context`() = runTest {
         val service = HttpBriefingService(buildClient(successResponse), "https://api.test", "token")
         val result = service.brief(BriefingContext.CommentReview("MS-1", 42, "Why is this a suspend fun?"))
@@ -99,23 +90,4 @@ class BriefingServiceTest {
         assertNull(result)
     }
 
-    // ── Diff truncation ───────────────────────────────────────────────────────
-
-    @Test
-    fun `PrReview diff is capped at 300 lines in the prompt sent to the API`() = runTest {
-        var capturedBody = ""
-        val client = HttpClient(MockEngine { request ->
-            capturedBody = request.body.toByteArray().toString(Charsets.UTF_8)
-            respond(successResponse, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
-        }) {
-            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-        }
-        val longDiff = (1..700).joinToString("\n") { "line $it" }
-        val service = HttpBriefingService(client, "https://api.test", "token")
-        service.brief(BriefingContext.PrReview("MS-1", 1, "comment", longDiff))
-
-        // The captured request body should not contain line 501+
-        assertTrue("line 500" in capturedBody)
-        assertTrue("line 501" !in capturedBody)
-    }
 }
