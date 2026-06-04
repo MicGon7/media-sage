@@ -7,42 +7,6 @@ import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-private val BOOTSTRAP_PROMPT_WITH_CONTENT = """
-    Your assigned ticket is %s.
-
-    ## Ticket
-    %s
-
-    Follow the Agent Guidelines in CLAUDE.md to execute the full autonomous workflow. /ticket-work
-""".trimIndent()
-
-private val BOOTSTRAP_PROMPT_FALLBACK = """
-    Your assigned ticket is %s. Retrieve it from Jira (cloudId: media-sage.atlassian.net),
-    read the description and acceptance criteria, then follow the Agent Guidelines in CLAUDE.md
-    to execute the full autonomous workflow. /ticket-work
-""".trimIndent()
-
-private val PR_REVIEW_PROMPT = """
-    PR #%1${'$'}d for ticket %2${'$'}s has a new review comment: "%3${'$'}s".
-    Branch: %4${'$'}s. Reviewer: %5${'$'}s.
-
-    /pr-review
-""".trimIndent()
-
-private val CONFLICT_RESOLUTION_PROMPT = """
-    Branch %3${'$'}s for ticket %2${'$'}s was ejected from the merge queue due to a conflict with %4${'$'}s.
-    PR #%1${'$'}d.
-
-    /conflict-resolution
-""".trimIndent()
-
-private val PR_COMMENT_REVIEW_PROMPT = """
-    PR #%1${'$'}d for ticket %2${'$'}s has a new comment: "%3${'$'}s".
-    Branch: %4${'$'}s.
-
-    /pr-comment
-""".trimIndent()
-
 /**
  * Dispatches autonomous Claude Code agents via Cloud Run Jobs.
  * Guards against double-firing: a second launch call for the same key is a no-op
@@ -88,9 +52,9 @@ class AgentLaunchService(
             log.warn("[$ticketKey] ticket is missing a Relevant files section — worker will start without file guidance")
         }
         val basePrompt = if (ticketContent != null) {
-            BOOTSTRAP_PROMPT_WITH_CONTENT.format(ticketKey, ticketContent)
+            ticketWorkPrompt.format(ticketKey, ticketContent)
         } else {
-            BOOTSTRAP_PROMPT_FALLBACK.format(ticketKey)
+            ticketWorkFallbackPrompt.format(ticketKey)
         }
         val context = ticketContent?.let {
             BriefingContext.TicketWork(ticketKey, it)
@@ -202,7 +166,7 @@ class AgentLaunchService(
     ): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
-        val basePrompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef, reviewerLogin)
+        val basePrompt = prReviewPrompt.format(prNumber, ticketKey, commentBody, branchRef, reviewerLogin)
         return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey)
     }
 
@@ -226,7 +190,7 @@ class AgentLaunchService(
     ): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
-        val basePrompt = PR_COMMENT_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef)
+        val basePrompt = prCommentPrompt.format(prNumber, ticketKey, commentBody, branchRef)
         val context = BriefingContext.CommentReview(ticketKey, prNumber, commentBody)
         return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey, briefingContext = context)
     }
@@ -249,7 +213,7 @@ class AgentLaunchService(
     ): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "CONFLICT-$prNumber"
-        val basePrompt = CONFLICT_RESOLUTION_PROMPT.format(prNumber, ticketKey, branchRef, baseBranch)
+        val basePrompt = conflictResolutionPrompt.format(prNumber, ticketKey, branchRef, baseBranch)
         val context = BriefingContext.ConflictResolution(ticketKey, prNumber, branchRef, baseBranch)
         return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey, briefingContext = context)
     }

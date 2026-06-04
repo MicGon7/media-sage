@@ -408,6 +408,57 @@ class JobDispatchTest {
         assertEquals(listOf("MS-99"), dispatcher.executions)
     }
 
+    // ── Prompt content ────────────────────────────────────────────────────────
+
+    @Test
+    fun `launchForPrReview prompt contains PR number, ticket key, comment, branch, reviewer and skill`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
+
+        service.launchForPrReview("MS-42", 42, "feature/MS-42-fix", "Needs a null check.", "jane")
+        advanceUntilIdle()
+
+        val prompt = dispatcher.prompts.single()
+        assertTrue(prompt.contains("42"), "Prompt must contain PR number")
+        assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
+        assertTrue(prompt.contains("Needs a null check."), "Prompt must contain comment body")
+        assertTrue(prompt.contains("feature/MS-42-fix"), "Prompt must contain branch")
+        assertTrue(prompt.contains("jane"), "Prompt must contain reviewer login")
+        assertTrue(prompt.contains("/pr-review"), "Prompt must invoke /pr-review skill")
+    }
+
+    @Test
+    fun `launchForCommentReview prompt contains PR number, ticket key, comment, branch and skill`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
+
+        service.launchForCommentReview("MS-42", 42, "feature/MS-42-fix", "Why this approach?")
+        advanceUntilIdle()
+
+        val prompt = dispatcher.prompts.single()
+        assertTrue(prompt.contains("42"), "Prompt must contain PR number")
+        assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
+        assertTrue(prompt.contains("Why this approach?"), "Prompt must contain comment body")
+        assertTrue(prompt.contains("feature/MS-42-fix"), "Prompt must contain branch")
+        assertTrue(prompt.contains("/pr-comment"), "Prompt must invoke /pr-comment skill")
+    }
+
+    @Test
+    fun `launchForConflictResolution prompt contains PR number, ticket key, branch, base branch and skill`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
+
+        service.launchForConflictResolution("MS-42", 42, "feature/MS-42-fix", "main")
+        advanceUntilIdle()
+
+        val prompt = dispatcher.prompts.single()
+        assertTrue(prompt.contains("42"), "Prompt must contain PR number")
+        assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
+        assertTrue(prompt.contains("feature/MS-42-fix"), "Prompt must contain branch")
+        assertTrue(prompt.contains("main"), "Prompt must contain base branch")
+        assertTrue(prompt.contains("/conflict-resolution"), "Prompt must invoke /conflict-resolution skill")
+    }
+
     @Test
     fun `duplicate launchForPrReview for same PR is ignored`() = runTest {
         val registry = FakeJobRegistry(shouldDispatchResult = true)

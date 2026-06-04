@@ -205,9 +205,9 @@ docker run -p 8081:8081 \
 
 Each job type the pipeline can execute has its own skill in `.claude/commands/`. The three-part model:
 
+- **CLAUDE.md** — rules (standing constraints that apply across all jobs)
 - **Prompt** — context (job-specific: ticket key, PR number, branch, comment text)
 - **Skill** — instructions (how to execute the job — branch, implement, test, PR, jira comment)
-- **CLAUDE.md** — rules (standing constraints that apply across all jobs)
 
 Workflow steps live in skills, not here. See `.claude/commands/` for the full instruction set for each job type.
 
