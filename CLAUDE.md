@@ -301,12 +301,14 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 
 Current skills:
 - `/conflict-resolution` — rebase a branch ejected from the merge queue and re-request review
+- `/ticket-work` — execute the full ticket work workflow (branch, implement, test, detekt, PR, Jira comment)
 
 **Autonomous ticket requirements:**
 - Title: concise task description (agent uses this as the task summary)
 - Description: what needs to change and why
 - Acceptance criteria: explicit checkboxes the agent checks off as it works
 - Relevant files: **mandatory** — list the 3–5 files the agent should read first, each with a one-line note on why it matters. This is the primary way context is passed to the worker; the briefing skips file enumeration entirely and relies on this section being present. A ticket without a relevant files section is not ready for autonomous mode.
+- Acceptance criteria: describe **outcomes, not commands** — Haiku reads AC as briefing input, so shell commands in AC leak into the dispatch prompt and conflict with the `/ticket-work` skill. Good: "The foo field is validated at the repository boundary." Bad: "Run `./gradlew :shared:test`."
 - Label: `autonomous`
 - No ambiguous requirements — if it needs clarification, use `assisted` instead
 - Tickets that touch `.github/workflows/`, `Dockerfile.worker`, or `agent/worker-entrypoint.sh` must use `assisted` — these files define the pipeline itself, the worker cannot push workflow files without elevated permissions, and mistakes here have wide blast radius

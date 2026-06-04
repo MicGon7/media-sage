@@ -9,12 +9,12 @@ import org.slf4j.LoggerFactory
 
 private const val BOOTSTRAP_PROMPT_WITH_CONTENT =
     "Your assigned ticket is %s.\n\n## Ticket\n%s\n\n" +
-    "Follow the Agent Guidelines in CLAUDE.md to execute the full autonomous workflow."
+    "Follow the Agent Guidelines in CLAUDE.md to execute the full autonomous workflow. /ticket-work"
 
 private const val BOOTSTRAP_PROMPT_FALLBACK =
     "Your assigned ticket is %s. Retrieve it from Jira (cloudId: media-sage.atlassian.net), " +
     "read the description and acceptance criteria, then follow the Agent Guidelines in CLAUDE.md " +
-    "to execute the full autonomous workflow."
+    "to execute the full autonomous workflow. /ticket-work"
 
 private const val PR_REVIEW_PROMPT =
     "PR #%1\$d for ticket %2\$s has a new review comment: \"%3\$s\". " +
