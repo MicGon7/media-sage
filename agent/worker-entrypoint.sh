@@ -86,6 +86,7 @@ if [ -z "$GITHUB_TOKEN" ]; then
   exit 1
 fi
 export GH_TOKEN="$GITHUB_TOKEN"
+echo "GitHub App token generated successfully"
 
 # Configure git credential store so all git operations (including those run by
 # Claude Code) authenticate without prompting. Cloud Run has no TTY, so git
@@ -121,8 +122,8 @@ cat > "$REPO_DIR/.mcp.json" << EOF
 }
 EOF
 
-# Log the prompt so briefing content is visible in Cloud Run Job execution logs.
-echo "[worker] prompt (first 500 chars): ${PROMPT:0:500}"
+# Log the full prompt as a single entry so briefing content and skill invocations are visible.
+printf '[worker] prompt:\n%s\n' "$PROMPT"
 
 # Run Claude Code — no exec so the trap can capture the exit code for Pub/Sub.
 claude -p "$PROMPT" \
