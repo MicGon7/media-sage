@@ -100,14 +100,27 @@ private fun buildHttpClient() = HttpClient(OkHttp) {
     }
 }
 
+private fun initDatabase(supabaseDbUrl: String) {
+    if (supabaseDbUrl.isBlank()) {
+        log.error("SUPABASE_DB_URL is not set — verify environment configuration and restart")
+        kotlin.system.exitProcess(1)
+    }
+    try {
+        AgentDatabase.init(supabaseDbUrl)
+        log.info("Supabase DB connectivity verified")
+    } catch (e: Exception) {
+        log.error("Failed to connect to Supabase database — verify SUPABASE_DB_URL is set correctly", e)
+        kotlin.system.exitProcess(1)
+    }
+}
+
 private fun buildCloudRunDispatch(
     config: AgentConfig,
     httpClient: HttpClient,
     jiraCommentPoster: JiraCommentPoster
 ): CloudRunDispatch? {
     if (config.googleCredentialsJson.isBlank()) error("GOOGLE_CREDENTIALS_BASE64 is required — Cloud Run is the only worker dispatch path")
-    if (config.supabaseDbUrl.isBlank()) error("SUPABASE_DB_URL is required — job registry must be configured")
-    AgentDatabase.init(config.supabaseDbUrl)
+    initDatabase(config.supabaseDbUrl)
     val jobRepository = JobRepository()
     val loggingClient = CloudLoggingClient(
         httpClient = httpClient,
