@@ -177,6 +177,13 @@ class AgentLaunchService(
      * The worker checks out [branchRef], makes the necessary change, pushes a fix commit,
      * then re-requests review from [reviewerLogin] via `gh pr review-request`.
      * De-duplicates by PR number — a second call while one is running is a no-op.
+     *
+     * @param ticketKey Jira issue key forwarded to the worker for context (e.g. "MS-123").
+     * @param prNumber GitHub PR number used as the dedup key and for `gh pr` commands.
+     * @param branchRef Branch the PR targets; checked out by the worker to make the fix.
+     * @param commentBody Text of the reviewer's comment forwarded verbatim to the worker prompt.
+     * @param reviewerLogin GitHub login of the reviewer to re-request review from after the fix.
+     * @return true if a job was dispatched; false if deduplicated or Cloud Run is not configured.
      */
     override fun launchForPrReview(
         ticketKey: String,
@@ -219,6 +226,12 @@ class AgentLaunchService(
     /**
      * Launches a Cloud Run Job to rebase a branch ejected from the merge queue due to a conflict.
      * De-duplicates by PR number using the key `CONFLICT-{prNumber}`.
+     *
+     * @param ticketKey Jira issue key forwarded to the worker for context (e.g. "MS-123").
+     * @param prNumber GitHub PR number used as the dedup key.
+     * @param branchRef The feature branch that was ejected from the merge queue.
+     * @param baseBranch The base branch the feature branch conflicted with (e.g. "main").
+     * @return true if a job was dispatched; false if deduplicated or Cloud Run is not configured.
      */
     override fun launchForConflictResolution(
         ticketKey: String,
