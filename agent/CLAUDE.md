@@ -125,6 +125,24 @@ Register the GitHub webhook in repo **Settings → Webhooks**:
 - Content type: `application/json`
 - Events: `Pull request reviews`, `Pull request review comments`
 
+## Cloud Run Logs Explorer Queries
+
+Use these in GCP Logs Explorer for clean demo log views:
+
+**Worker (Cloud Run Job):**
+```
+resource.type="cloud_run_job"
+resource.labels.job_name="media-sage-agent-worker"
+textPayload=~"."
+```
+
+**Orchestrator (Cloud Run Service):**
+```
+resource.type="cloud_run_revision"
+resource.labels.service_name="media-sage-orchestrator"
+textPayload=~"."
+```
+
 See `docs/MS-193-gcp-cloud-run-service-orchestrator.md` for full GCP migration notes.
 See `docs/diagrams/agent-pipeline.md` for the full autonomous pipeline flow diagram.
 See `docs/diagrams/infrastructure-overview.md` for the infrastructure architecture diagram.

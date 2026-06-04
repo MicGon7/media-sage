@@ -73,7 +73,6 @@ class PrReviewResponseE2eTest : FullPipelineScenarioBase() {
     @AfterEach
     fun tearDownFixture() = runBlocking {
         fixture.closePullRequest(prNumber)
-        fixture.deleteBranch(branchName)
     }
 
     @Test
@@ -93,6 +92,10 @@ class PrReviewResponseE2eTest : FullPipelineScenarioBase() {
 
         val job = jobRegistry.findLatestJob(dedupKey)
         report.checkpoint("Job COMPLETED in Supabase", job?.status == JobStatus.COMPLETED)
+
+        // Delete branch after the job reaches terminal state so the worker doesn't
+        // hit a missing upstream error mid-run.
+        fixture.deleteBranch(branchName)
 
         report.print()
         report.assertAllPassed()

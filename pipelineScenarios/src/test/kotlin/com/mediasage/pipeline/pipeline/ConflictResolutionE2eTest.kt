@@ -84,8 +84,6 @@ class ConflictResolutionE2eTest : FullPipelineScenarioBase() {
     @AfterEach
     fun tearDownFixture() = runBlocking {
         fixture.closePullRequest(prNumber)
-        fixture.deleteBranch(branchName)
-        fixture.deleteBranch(baseBranch)
     }
 
     @Test
@@ -105,6 +103,11 @@ class ConflictResolutionE2eTest : FullPipelineScenarioBase() {
 
         val job = jobRegistry.findLatestJob(dedupKey)
         report.checkpoint("Job COMPLETED in Supabase", job?.status == JobStatus.COMPLETED)
+
+        // Delete branches after the job reaches terminal state so the worker doesn't
+        // hit a missing upstream error (e.g. fatal: invalid upstream 'origin/e2e-base-...').
+        fixture.deleteBranch(branchName)
+        fixture.deleteBranch(baseBranch)
 
         report.print()
         report.assertAllPassed()
