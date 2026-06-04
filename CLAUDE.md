@@ -302,6 +302,8 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 Current skills:
 - `/conflict-resolution` — rebase a branch ejected from the merge queue and re-request review
 - `/ticket-work` — execute the full ticket work workflow (branch, implement, test, detekt, PR, Jira comment)
+- `/pr-review` — respond to a PR review comment: fix code (or explain why not), push, re-request review
+- `/pr-comment` — answer a conversational PR comment via a reply; no code push
 
 **Autonomous ticket requirements:**
 - Title: concise task description (agent uses this as the task summary)
