@@ -2,14 +2,10 @@ package com.mediasage.agent.service
 
 import com.mediasage.agent.db.JobStatus
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
-private const val MAX_DIFF_LINES = 300
 
 private const val BOOTSTRAP_PROMPT_WITH_CONTENT =
     "Your assigned ticket is %s.\n\n## Ticket\n%s\n\n" +
@@ -52,7 +48,6 @@ private const val PR_COMMENT_REVIEW_PROMPT =
  * dispatches jobs. No agent processes run locally.
  */
 class AgentLaunchService(
-    private val repoPath: String,
     private val scope: CoroutineScope,
     internal val cloudRun: CloudRunDispatch? = null,
     private val jiraCommentPoster: JiraCommentPoster? = null,
@@ -193,9 +188,7 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
         val basePrompt = PR_REVIEW_PROMPT.format(prNumber, ticketKey, commentBody, branchRef, reviewerLogin)
-        val diff = fetchPrDiff(prNumber)
-        val context = BriefingContext.PrReview(ticketKey, prNumber, commentBody, diff)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey, briefingContext = context)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey)
     }
 
     /**
@@ -241,34 +234,6 @@ class AgentLaunchService(
     }
 
     /**
-     * Posts a boilerplate reply to an inline (file-level) PR comment asking the reviewer to
-     * submit a formal **Changes requested** review instead. Inline comments don't trigger the
-     * GitHub webhook reliably, so the agent cannot act on them directly; this reply guides the
-     * reviewer toward a workflow the agent can handle.
-     *
-     * The comment is posted asynchronously via `gh pr comment` and does not dispatch a Cloud Run Job.
-     *
-     * @param prNumber GitHub PR number to comment on.
-     */
-    override fun postInlineCommentReply(prNumber: Int) {
-        val body = "🤖 **Agent:** I noticed your inline comment. Please submit a formal review " +
-            "with **Changes requested** and I'll address all your feedback in one pass."
-        scope.launch(Dispatchers.IO) {
-            try {
-                ProcessBuilder("gh", "pr", "comment", prNumber.toString(), "--body", body)
-                    .directory(File(repoPath))
-                    .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
-                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-                    .redirectError(ProcessBuilder.Redirect.INHERIT)
-                    .start()
-                    .waitFor()
-            } catch (e: Exception) {
-                log.warn("Failed to post inline comment reply on PR#$prNumber: ${e.message}")
-            }
-        }
-    }
-
-    /**
      * Returns true if [key] currently has a dispatch coroutine in flight.
      * Used in tests to assert that a dispatch was started without waiting for it to complete.
      *
@@ -298,17 +263,6 @@ class AgentLaunchService(
         }
     }
 
-    // Fetches the PR diff via gh CLI, capped at MAX_DIFF_LINES to bound Haiku prompt size.
-    // Returns an empty string on failure — briefing proceeds without diff context.
-    private fun fetchPrDiff(prNumber: Int): String = runCatching {
-        val output = ProcessBuilder("gh", "pr", "diff", prNumber.toString())
-            .directory(File(repoPath))
-            .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
-            .start()
-            .inputStream.bufferedReader().readText()
-        output.lines().take(MAX_DIFF_LINES).joinToString("\n")
-    }.onFailure { log.warn("Failed to fetch diff for PR#$prNumber: ${it.message}") }
-        .getOrDefault("")
 }
 
 /**

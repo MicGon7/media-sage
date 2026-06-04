@@ -93,7 +93,6 @@ class JobDispatchTest {
         jiraStatusChecker: JiraTicketStatusChecker? = null,
         scope: TestScope,
     ) = AgentLaunchService(
-        repoPath = "/repo",
         scope = scope,
         cloudRun = CloudRunDispatch(dispatcher, registry),
         jiraCommentPoster = poster,
@@ -246,7 +245,7 @@ class JobDispatchTest {
 
     @Test
     fun `recoverInterruptedJobs does nothing without cloudRun config`() = runTest {
-        val service = AgentLaunchService(repoPath = "/repo", scope = this)
+        val service = AgentLaunchService(scope = this)
         service.recoverInterruptedJobs() // must not throw
     }
 

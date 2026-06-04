@@ -52,7 +52,6 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         String(java.util.Base64.getDecoder().decode(credentialsBase64))
     } else ""
     return AgentConfig(
-        repoPath = str("app.agent.repoPath"),
         githubWebhookSecret = str("app.github.webhookSecret"),
         githubBotLogin = str("app.github.botLogin"),
         jiraEmail = str("app.jira.email"),

@@ -11,8 +11,6 @@ package com.mediasage.agent.di
  * All values are sourced from environment variables via `application.conf` using Ktor's `${?VAR}`
  * substitution syntax.
  *
- * @property repoPath Absolute path to the local clone of the media-sage repository used by worker
- *   processes. Sourced from env var `AGENT_REPO_PATH`.
  * @property githubWebhookSecret Secret used to verify HMAC-SHA256 signatures on incoming GitHub
  *   webhook payloads. Sourced from env var `GITHUB_WEBHOOK_SECRET`.
  * @property githubBotLogin GitHub login of the bot account (e.g. `media-sage-worker[bot]`). Webhook
@@ -55,7 +53,6 @@ package com.mediasage.agent.di
  *   Sourced from env var `ANTHROPIC_AUTH_TOKEN`.
  */
 data class AgentConfig(
-    val repoPath: String,
     val githubWebhookSecret: String,
     val githubBotLogin: String = "",
     val jiraEmail: String,

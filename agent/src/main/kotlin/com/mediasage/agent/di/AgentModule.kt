@@ -57,7 +57,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single {
         val briefingService = buildBriefingService(config)
         val cloudRun = buildCloudRunDispatch(config, get(), get())
-        AgentLaunchService(config.repoPath, scope, cloudRun, get(), get<JiraTicketStatusChecker>(), briefingService)
+        AgentLaunchService(scope, cloudRun, get(), get<JiraTicketStatusChecker>(), briefingService)
     }
     single<AgentLauncher> { get<AgentLaunchService>() }
 }

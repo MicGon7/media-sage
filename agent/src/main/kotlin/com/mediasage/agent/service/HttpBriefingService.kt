@@ -10,7 +10,6 @@ import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 
 private const val BRIEFING_MODEL = "claude-haiku-4-5-20251001"
-private const val MAX_DIFF_LINES = 500
 // 4096 gives Haiku room to brief complex multi-file tickets without truncation.
 // Simple tickets produce shorter output naturally; this is a ceiling, not a target.
 private const val MAX_TOKENS = 4096
@@ -55,8 +54,6 @@ class HttpBriefingService(
      * @param context Describes the work scenario. The concrete subtype selects the prompt template:
      *   - [BriefingContext.TicketWork] — summarises the ticket description and acceptance criteria;
      *     used when a new ticket is assigned to the bot.
-     *   - [BriefingContext.PrReview] — explains what the reviewer wants changed and where in the
-     *     diff; used for formal "changes requested" reviews.
      *   - [BriefingContext.CommentReview] — frames the reviewer's question and the codebase context
      *     needed to answer it; used for PR comments that do not request code changes.
      *   - [BriefingContext.ConflictResolution] — describes which branch conflicted and what to
@@ -82,7 +79,6 @@ class HttpBriefingService(
 
     private fun buildPrompt(context: BriefingContext): String = when (context) {
         is BriefingContext.TicketWork -> ticketWorkPrompt(context)
-        is BriefingContext.PrReview -> prReviewPrompt(context)
         is BriefingContext.CommentReview -> commentReviewPrompt(context)
         is BriefingContext.ConflictResolution -> conflictResolutionPrompt(context)
     }
@@ -96,18 +92,6 @@ class HttpBriefingService(
         Ticket: ${ctx.ticketKey}
         Content:
         ${ctx.ticketContent}
-    """.trimIndent()
-
-    private fun prReviewPrompt(ctx: BriefingContext.PrReview) = """
-        You are briefing a software engineer about to address a PR review comment.
-        Explain what the reviewer wants changed, where in the diff the change is needed, and what the fix looks like.
-        Reference specific file names and line context from the diff. Cover every concern the reviewer raised.
-
-        Ticket: ${ctx.ticketKey}
-        PR: #${ctx.prNumber}
-        Reviewer comment: ${ctx.commentBody}
-        Diff (first $MAX_DIFF_LINES lines):
-        ${ctx.diff.lines().take(MAX_DIFF_LINES).joinToString("\n")}
     """.trimIndent()
 
     private fun commentReviewPrompt(ctx: BriefingContext.CommentReview) = """
@@ -133,7 +117,6 @@ class HttpBriefingService(
 
     private fun BriefingContext.ticketKey(): String = when (this) {
         is BriefingContext.TicketWork -> ticketKey
-        is BriefingContext.PrReview -> ticketKey
         is BriefingContext.CommentReview -> ticketKey
         is BriefingContext.ConflictResolution -> ticketKey
     }

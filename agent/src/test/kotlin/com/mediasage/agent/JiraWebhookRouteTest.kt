@@ -87,7 +87,7 @@ private fun testWebhookApp(block: suspend ApplicationTestBuilder.() -> Unit) = t
     application {
         install(Koin) {
             modules(module {
-                single { AgentLaunchService(repoPath = "", scope = CoroutineScope(Dispatchers.IO)) }
+                single { AgentLaunchService(scope = CoroutineScope(Dispatchers.IO)) }
                 single<AgentLauncher> { get<AgentLaunchService>() }
                 single<JiraTicketFetcher> { object : JiraTicketFetcher {
                     override suspend fun getTicketContent(ticketKey: String): String? = null

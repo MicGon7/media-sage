@@ -133,7 +133,7 @@ scripts/src/main/kotlin/com/mediasage/scripts/
 # Run app API server (port 8080 — requires API keys in ~/.zshrc)
 source ~/.zshrc && ./gradlew :server:run
 
-# Run agent orchestration server locally (port 8081 — requires AGENT_REPO_PATH, Jira, GitHub env vars)
+# Run agent orchestration server locally (port 8081 — requires Jira, GitHub env vars)
 source ~/.zshrc && ./gradlew :agent:run
 
 # Build agent container image locally
@@ -147,14 +147,7 @@ docker push us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:
 
 # Run agent container locally (replace values as needed)
 docker run -p 8081:8081 \
-  -e ANTHROPIC_API_KEY=... \
-  -e AGENT_REPO_PATH=/home/agent/media-sage \
-  -e GITHUB_APP_ID=... \
-  -e GITHUB_APP_INSTALLATION_ID=... \
-  -e GITHUB_APP_PRIVATE_KEY_BASE64=... \
   -e GITHUB_BOT_LOGIN="media-sage-worker[bot]" \
-  -e GITHUB_BOT_EMAIL=... \
-  -e GITHUB_BOT_NAME=media-sage-worker \
   -e GITHUB_WEBHOOK_SECRET=... \
   -e JIRA_EMAIL=... \
   -e JIRA_API_TOKEN=... \

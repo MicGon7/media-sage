@@ -59,7 +59,6 @@ class BriefingIntegrationTest {
     private fun makeService(briefingService: BriefingService?, scope: TestScope): Pair<AgentLaunchService, CapturingDispatcher> {
         val dispatcher = CapturingDispatcher()
         val service = AgentLaunchService(
-            repoPath = "/repo",
             scope = scope,
             cloudRun = CloudRunDispatch(dispatcher, AlwaysDispatchRegistry()),
             briefingService = briefingService,
@@ -93,11 +92,11 @@ class BriefingIntegrationTest {
     }
 
     @Test
-    fun `briefing appended for PR review dispatch`() = runTest {
+    fun `briefing not appended for PR review dispatch`() = runTest {
         val (service, dispatcher) = makeService(FakeBriefingService(briefingText), this)
         service.launchForPrReview("MS-1", 42, "feature/MS-1-fix", "Add periods", "reviewer")
         advanceUntilIdle()
-        assertTrue(dispatcher.prompts.single().contains("## Agent Briefing"))
+        assertFalse(dispatcher.prompts.single().contains("## Agent Briefing"))
     }
 
     @Test
