@@ -203,57 +203,22 @@ docker run -p 8081:8081 \
 
 ## Agent Guidelines
 
-### Workflow
-1. Query Jira for assigned tickets: `project = MS AND labels in (assisted, autonomous) AND status = "To Do"`
-2. Create Jira ticket if new work (with acceptance criteria)
-3. Transition ticket to In Progress — **skip in autonomous mode**: the human's In Progress transition fires the webhook; the ticket is already In Progress when the agent starts
-4. Create feature branch (`feature/MS-{ticket}-description`)
-5. Do the work
-6. Update Jira AC checkboxes
-7. Update `docs/` with ticket learning doc — **skip for `pipeline-test` tickets**: no `docs/` entry required; these tickets exist to verify pipeline infrastructure, not produce artifacts
-8. Update this file (CLAUDE.md) if introducing new patterns
-9. Commit everything, push, create PR
-10. Write the run metrics summary to `/tmp/jira_comment.txt` — **do NOT post a Jira comment via the Atlassian MCP**. The orchestrator reads this file from the Pub/Sub completion event, appends accurate metrics from Cloud Logging (turns, tokens, cost), and posts the consolidated comment as Media Sage Bot. Use this exact format (plain text only — no `**bold**` or other markdown):
+Each job type the pipeline can execute has its own skill in `.claude/commands/`. The three-part model:
 
-    ```
-    🤖 Agent: Run metrics summary for {TICKET_KEY}
+- **Prompt** — context (job-specific: ticket key, PR number, branch, comment text)
+- **Skill** — instructions (how to execute the job — branch, implement, test, PR, jira comment)
+- **CLAUDE.md** — rules (standing constraints that apply across all jobs)
 
-    Task: {one-line task description}
+Workflow steps live in skills, not here. See `.claude/commands/` for the full instruction set for each job type.
 
-    Pipeline checkpoints verified:
-    ✅ Jira webhook fired when ticket moved to In Progress
-    ✅ Orchestrator dispatched Cloud Run Job
-    ✅ Worker cloned from michael-gonzalez-dev/media-sage successfully
-    ✅ Worker completed the task and opened a PR
-    ⏳ Pub/Sub completion event — fires after this comment
-    ⏳ Job marked COMPLETED in Supabase — pending Pub/Sub
-    ✅ Run metrics comment posted (this comment)
+### Rules
 
-    PR: {pr_url}
-
-    Quality gates:
-    ✅ Detekt: {result}
-    ✅ Affected tests: {result}
-
-    Diff: {summary}
-
-    Acceptance criteria:
-    ✅ {ac_item}
-    ```
-
-    Do not include a "Run metrics" section — the orchestrator appends that after you exit.
-11. Transition ticket to In Review
-12. Reply to any PR review comments with `🤖 **Agent:**` prefix
-
-### Before submitting work
-- Run `./gradlew allTests` and ensure all pass. **Exception: when running inside the container (Linux, no Android/iOS SDK), run `./scripts/run-affected-tests.sh` instead. It detects committed, staged, and unstaged Kotlin changes, maps them to test classes, and runs only those with `--no-daemon`. If the script skips for any reason, do not run any Gradle test command manually — CI is the authoritative quality gate for the full test suite.**
-- If a required tool, SDK, or Gradle task is missing and cannot be self-resolved without elevated access or SDK installation, **stop immediately** — do not attempt workarounds. Post a comment on the PR (or Jira ticket if no PR exists yet) describing the exact blocker, then exit. Looping on an unresolvable blocker wastes token budget.
-- **OOM stop rule:** If any Gradle command exits with an out-of-memory error, Gradle daemon startup failure, or cgroup memory limit error — **stop immediately**. Do not investigate daemon logs. Do not run `./gradlew help`, `ulimit`, or cgroup diagnostics. Do not retry with alternative JVM flags. The environment is the problem, not the code. Post a comment on the PR or Jira ticket stating that Gradle quality gates are blocked by an environment memory constraint and that CI is the authoritative quality gate, then exit.
-- Run `./gradlew detekt` and ensure no violations
-- Smoke test any external API changes with real APIs before writing the learning doc or opening a PR — docs should describe verified behaviour, not assumed behaviour
-- No API keys or secrets in code — use environment variables
-- Never push directly to main — always create a PR
-- Never merge a PR — human reviews and merges
+- **Tests:** Run `./scripts/run-affected-tests.sh` inside the container (Linux, no Android/iOS SDK). Never run bare `./gradlew :module:test` directly. If the script skips for any reason, do not run any Gradle test task manually — CI is the authoritative quality gate.
+- **Blocker stop rule:** If a required tool, SDK, or Gradle task is missing and cannot be self-resolved, **stop immediately**. Post a comment on the PR or Jira ticket describing the exact blocker, then exit.
+- **OOM stop rule:** If any Gradle command exits with an out-of-memory error, Gradle daemon startup failure, or cgroup memory limit error — **stop immediately**. Do not investigate daemon logs, run diagnostics, or retry with alternative JVM flags. Post a comment stating that Gradle quality gates are blocked by an environment memory constraint and that CI is the authoritative quality gate, then exit.
+- **No secrets:** No API keys or secrets in code — use environment variables.
+- **Never push to main:** Always create a PR. Never merge a PR — human reviews and merges.
+- **Smoke test external APIs:** Test real API changes with live APIs before writing the learning doc or opening a PR — docs describe verified behaviour, not assumed behaviour.
 
 ### After a PR is merged
 Do not include tickets labeled `pipeline-test` or `smoketest` in the Confluence impact doc — these tickets exist to exercise the pipeline, not deliver product or infrastructure value.
