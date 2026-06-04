@@ -122,10 +122,14 @@ cat > "$REPO_DIR/.mcp.json" << EOF
 }
 EOF
 
-# Log the full prompt as a single entry so briefing content and skill invocations are visible.
-printf '[worker] prompt:\n%s\n' "$PROMPT"
+# Log the full prompt as a single Cloud Run log entry by emitting it as a JSON object.
+# Cloud Run splits stdout on newlines — a bare printf/echo produces one entry per line of the prompt.
+# Writing a single JSON line keeps the entire prompt in one entry regardless of embedded newlines.
+python3 -c "import json, os; print(json.dumps({'message': '[worker] prompt', 'prompt': os.environ.get('PROMPT', '')}))"
 
 # Run Claude Code — no exec so the trap can capture the exit code for Pub/Sub.
+# --verbose is required when using --output-format=stream-json.
 claude -p "$PROMPT" \
   --dangerously-skip-permissions \
-  --output-format stream-json
+  --output-format stream-json \
+  --verbose
