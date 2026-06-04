@@ -309,6 +309,7 @@ Current skills:
 - Relevant files: **mandatory** — list the 3–5 files the agent should read first, each with a one-line note on why it matters. This is the primary way context is passed to the worker; the briefing skips file enumeration entirely and relies on this section being present. A ticket without a relevant files section is not ready for autonomous mode.
 - Label: `autonomous`
 - No ambiguous requirements — if it needs clarification, use `assisted` instead
+- Tickets that touch `.github/workflows/`, `Dockerfile.worker`, or `agent/worker-entrypoint.sh` must use `assisted` — these files define the pipeline itself, the worker cannot push workflow files without elevated permissions, and mistakes here have wide blast radius
 
 **Automation levels:**
 
