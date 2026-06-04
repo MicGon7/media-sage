@@ -5,4 +5,3 @@
 5. Re-request review from the original reviewer: `gh pr review-request <pr-number> --reviewer <login>`
 6. Write `/tmp/jira_comment.txt` in plain text (no bold markdown) covering: what was done, the PR URL (`gh pr view <pr-number> --json url -q .url`), and quality gate results. Use the pipeline checkpoints format from the ticket-work skill, adapted for a PR fix (omit Jira transition checkpoint).
 
-Follow the Agent Guidelines in CLAUDE.md for standing rules (no pushing to main, no secrets, stop-and-comment-if-blocked, OOM rule).

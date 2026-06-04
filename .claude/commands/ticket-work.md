@@ -41,4 +41,3 @@
 
 12. Transition the Jira ticket to In Review.
 
-Follow the Agent Guidelines in CLAUDE.md for standing rules (no pushing to main, no secrets, stop-and-comment-if-blocked, OOM rule).
