@@ -10,8 +10,12 @@ package com.mediasage.agent.service
 interface BriefingService {
 
     /**
-     * Returns a plain-text briefing for [context], or null if the call fails or times out.
+     * Generates a plain-text briefing for the given dispatch context.
+     *
      * Never throws — all failures are collapsed to null so dispatch is never blocked.
+     *
+     * @param context the dispatch context containing ticket, prompt, and job metadata
+     * @return a plain-text briefing string, or null if the call fails or times out
      */
     suspend fun brief(context: BriefingContext): String?
 }
