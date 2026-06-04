@@ -15,6 +15,7 @@ object AgentDatabase {
             password = password
         )
         transaction {
+            exec("SELECT 1")
             migrate()
         }
     }
