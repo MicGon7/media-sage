@@ -42,14 +42,14 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-      - name: Deploy to Cloud Run
+      - name: Deploy media-sage orchestrator
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: media-sage-orchestrator
           image: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest
           region: us-central1
 
-      - name: Deploy pipeline orchestrator to Cloud Run
+      - name: Deploy pipe orchestrator
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: agent-orchestrator-pipe
