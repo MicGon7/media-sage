@@ -306,7 +306,7 @@ Current skills:
 - Title: concise task description (agent uses this as the task summary)
 - Description: what needs to change and why
 - Acceptance criteria: explicit checkboxes the agent checks off as it works
-- Relevant files: list the 3–5 files the agent should read first, with a one-line note on why each matters — this replaces codebase exploration and is the primary way context is passed to the worker
+- Relevant files: **mandatory** — list the 3–5 files the agent should read first, each with a one-line note on why it matters. This is the primary way context is passed to the worker; the briefing skips file enumeration entirely and relies on this section being present. A ticket without a relevant files section is not ready for autonomous mode.
 - Label: `autonomous`
 - No ambiguous requirements — if it needs clarification, use `assisted` instead
 
