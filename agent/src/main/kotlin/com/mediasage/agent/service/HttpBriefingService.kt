@@ -10,9 +10,7 @@ import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 
 private const val BRIEFING_MODEL = "claude-haiku-4-5-20251001"
-// 4096 gives Haiku room to brief complex multi-file tickets without truncation.
-// Simple tickets produce shorter output naturally; this is a ceiling, not a target.
-private const val MAX_TOKENS = 4096
+private const val MAX_TOKENS = 1024
 
 private val log = LoggerFactory.getLogger(HttpBriefingService::class.java)
 
@@ -85,9 +83,10 @@ class HttpBriefingService(
 
     private fun ticketWorkPrompt(ctx: BriefingContext.TicketWork) = """
         You are briefing a software engineer about to start work on a Jira ticket.
-        Cover everything they need to start coding immediately: what needs to be built, why it matters,
-        which files and modules are involved, and any non-obvious constraints or patterns to follow.
-        Be as detailed as the task requires — a complex multi-file change needs more context than a one-liner.
+        The engineer already has the full ticket description, acceptance criteria, and relevant file list — do NOT restate them.
+        Cover only what the ticket does not say: a non-obvious codebase constraint, a gotcha to avoid, a precise starting point, or disambiguation between similar patterns.
+        If the ticket is self-contained and nothing is missing, say so in one sentence.
+        Maximum 5-8 sentences.
 
         Ticket: ${ctx.ticketKey}
         Content:
@@ -96,8 +95,9 @@ class HttpBriefingService(
 
     private fun commentReviewPrompt(ctx: BriefingContext.CommentReview) = """
         You are briefing a software engineer about to answer a question left on a PR.
-        Explain what the reviewer is asking and what codebase context is needed to answer well.
-        The engineer will post a comment reply — no code changes.
+        The engineer will have full access to the PR diff and the review comment — do not restate them.
+        Explain only what codebase context is needed to answer well that is not visible in the diff.
+        The engineer will post a comment reply — no code changes. Maximum 3-5 sentences.
 
         Ticket: ${ctx.ticketKey}
         PR: #${ctx.prNumber}
