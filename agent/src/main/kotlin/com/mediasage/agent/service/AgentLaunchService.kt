@@ -18,25 +18,15 @@ private const val BOOTSTRAP_PROMPT_FALLBACK =
 
 private const val PR_REVIEW_PROMPT =
     "PR #%1\$d for ticket %2\$s has a new review comment: \"%3\$s\". " +
-    "Check out branch %4\$s, read the relevant source files, and make the necessary change. " +
-    "Then push a fix commit and run: gh pr review-request %1\$d --reviewer %5\$s " +
-    "If no code change is needed, post a comment on the PR using " +
-    "`gh pr comment %1\$d --body '🤖 **Agent:** your explanation here'` and exit. " +
-    "Before exiting, write a brief plain-text summary to /tmp/jira_comment.txt covering: " +
-    "what was done, the PR URL (gh pr view %1\$d --json url -q .url), and quality gate results. " +
-    "Use the format from CLAUDE.md Agent Guidelines (no bold markdown). " +
-    "Follow the Agent Guidelines in CLAUDE.md."
+    "Branch: %4\$s. Reviewer: %5\$s.\n\n/pr-review"
 
 private const val CONFLICT_RESOLUTION_PROMPT =
     "Branch %3\$s for ticket %2\$s was ejected from the merge queue due to a conflict with %4\$s. " +
     "PR #%1\$d.\n\n/conflict-resolution"
 
 private const val PR_COMMENT_REVIEW_PROMPT =
-    "PR #%1\$d for ticket %2\$s has a new comment review: \"%3\$s\". " +
-    "Read the relevant source files on branch %4\$s to understand the context, then answer the " +
-    "reviewer's questions by posting a PR comment: " +
-    "`gh pr comment %1\$d --body '🤖 **Agent:** your answer here'`. " +
-    "Do NOT push any code changes. Follow the Agent Guidelines in CLAUDE.md."
+    "PR #%1\$d for ticket %2\$s has a new comment: \"%3\$s\". " +
+    "Branch: %4\$s.\n\n/pr-comment"
 
 /**
  * Dispatches autonomous Claude Code agents via Cloud Run Jobs.
