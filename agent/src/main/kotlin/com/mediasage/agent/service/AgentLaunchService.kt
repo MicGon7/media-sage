@@ -79,6 +79,9 @@ class AgentLaunchService(
      */
     override fun launch(ticketKey: String, ticketContent: String?, dryRun: Boolean): Boolean {
         val cloudRun = cloudRun ?: return false
+        if (ticketContent != null && !ticketContent.contains("relevant files", ignoreCase = true)) {
+            log.warn("[$ticketKey] ticket is missing a Relevant files section — worker will start without file guidance")
+        }
         val basePrompt = if (ticketContent != null) {
             BOOTSTRAP_PROMPT_WITH_CONTENT.format(ticketKey, ticketContent)
         } else {
