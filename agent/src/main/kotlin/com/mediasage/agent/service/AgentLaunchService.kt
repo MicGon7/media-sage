@@ -7,26 +7,41 @@ import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-private const val BOOTSTRAP_PROMPT_WITH_CONTENT =
-    "Your assigned ticket is %s.\n\n## Ticket\n%s\n\n" +
-    "Follow the Agent Guidelines in CLAUDE.md to execute the full autonomous workflow. /ticket-work"
+private val BOOTSTRAP_PROMPT_WITH_CONTENT = """
+    Your assigned ticket is %s.
 
-private const val BOOTSTRAP_PROMPT_FALLBACK =
-    "Your assigned ticket is %s. Retrieve it from Jira (cloudId: media-sage.atlassian.net), " +
-    "read the description and acceptance criteria, then follow the Agent Guidelines in CLAUDE.md " +
-    "to execute the full autonomous workflow. /ticket-work"
+    ## Ticket
+    %s
 
-private const val PR_REVIEW_PROMPT =
-    "PR #%1\$d for ticket %2\$s has a new review comment: \"%3\$s\". " +
-    "Branch: %4\$s. Reviewer: %5\$s.\n\n/pr-review"
+    Follow the Agent Guidelines in CLAUDE.md to execute the full autonomous workflow. /ticket-work
+""".trimIndent()
 
-private const val CONFLICT_RESOLUTION_PROMPT =
-    "Branch %3\$s for ticket %2\$s was ejected from the merge queue due to a conflict with %4\$s. " +
-    "PR #%1\$d.\n\n/conflict-resolution"
+private val BOOTSTRAP_PROMPT_FALLBACK = """
+    Your assigned ticket is %s. Retrieve it from Jira (cloudId: media-sage.atlassian.net),
+    read the description and acceptance criteria, then follow the Agent Guidelines in CLAUDE.md
+    to execute the full autonomous workflow. /ticket-work
+""".trimIndent()
 
-private const val PR_COMMENT_REVIEW_PROMPT =
-    "PR #%1\$d for ticket %2\$s has a new comment: \"%3\$s\". " +
-    "Branch: %4\$s.\n\n/pr-comment"
+private val PR_REVIEW_PROMPT = """
+    PR #%1${'$'}d for ticket %2${'$'}s has a new review comment: "%3${'$'}s".
+    Branch: %4${'$'}s. Reviewer: %5${'$'}s.
+
+    /pr-review
+""".trimIndent()
+
+private val CONFLICT_RESOLUTION_PROMPT = """
+    Branch %3${'$'}s for ticket %2${'$'}s was ejected from the merge queue due to a conflict with %4${'$'}s.
+    PR #%1${'$'}d.
+
+    /conflict-resolution
+""".trimIndent()
+
+private val PR_COMMENT_REVIEW_PROMPT = """
+    PR #%1${'$'}d for ticket %2${'$'}s has a new comment: "%3${'$'}s".
+    Branch: %4${'$'}s.
+
+    /pr-comment
+""".trimIndent()
 
 /**
  * Dispatches autonomous Claude Code agents via Cloud Run Jobs.
