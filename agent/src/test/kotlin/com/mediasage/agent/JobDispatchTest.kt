@@ -366,6 +366,48 @@ class JobDispatchTest {
         assertEquals(listOf("PR-42"), dispatcher.executions)
     }
 
+    // ── Relevant files warning ────────────────────────────────────────────────
+
+    @Test
+    fun `launch dispatches when ticket content is missing Relevant files section`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        // Dispatch must not be blocked — warning is advisory only
+        service.launch("MS-99", ticketContent = "## Description\nDo the thing.\n\n## Acceptance criteria\n- [ ] Done")
+        advanceUntilIdle()
+
+        assertEquals(listOf("MS-99"), registry.inserted, "Dispatch must proceed despite missing Relevant files")
+        assertEquals(listOf("MS-99"), dispatcher.executions)
+    }
+
+    @Test
+    fun `launch dispatches normally when ticket content contains Relevant files section`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        service.launch("MS-99", ticketContent = "## Relevant files\n* foo.kt — entry point\n")
+        advanceUntilIdle()
+
+        assertEquals(listOf("MS-99"), registry.inserted)
+        assertEquals(listOf("MS-99"), dispatcher.executions)
+    }
+
+    @Test
+    fun `launch dispatches normally when ticket content is null`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        service.launch("MS-99", ticketContent = null)
+        advanceUntilIdle()
+
+        assertEquals(listOf("MS-99"), registry.inserted)
+        assertEquals(listOf("MS-99"), dispatcher.executions)
+    }
+
     @Test
     fun `duplicate launchForPrReview for same PR is ignored`() = runTest {
         val registry = FakeJobRegistry(shouldDispatchResult = true)
