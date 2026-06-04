@@ -128,5 +128,4 @@ printf '[worker] prompt:\n%s\n' "$PROMPT"
 # Run Claude Code — no exec so the trap can capture the exit code for Pub/Sub.
 claude -p "$PROMPT" \
   --dangerously-skip-permissions \
-  --output-format stream-json \
-  --verbose
+  --output-format stream-json
