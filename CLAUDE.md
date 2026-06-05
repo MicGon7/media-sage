@@ -219,7 +219,45 @@ Workflow steps live in skills, not here. See `.claude/commands/` for the full in
 - **No secrets:** No API keys or secrets in code — use environment variables.
 - **Never push to main:** Always create a PR. Never merge a PR — human reviews and merges.
 - **Smoke test external APIs:** Test real API changes with live APIs before writing the learning doc or opening a PR — docs describe verified behaviour, not assumed behaviour.
-- **Jira comment file:** Every job writes a plain-text summary to `/tmp/jira_comment.txt` before exiting. No bold markdown. Do NOT post via the Atlassian MCP — the orchestrator reads this file from the Pub/Sub completion event and posts it as Media Sage Bot. Each skill defines what content to include; the format rules are always: plain text, pipeline checkpoints where relevant, PR URL, quality gate results, AC summary.
+- **Jira comment file:** Every job writes a plain-text summary to `/tmp/jira_comment.txt` before exiting. Do NOT post via the Atlassian MCP — the orchestrator reads this file from the Pub/Sub completion event and posts it as Media Sage Bot. Use this exact format (plain text only — no `**bold**` or other markdown):
+
+  ```
+  🤖 Agent: Run summary for {TICKET_KEY}
+
+  Task: {one-line task description}
+
+  Pipeline checkpoints:
+  ✅ Jira webhook fired when ticket moved to In Progress
+  ✅ Orchestrator dispatched Cloud Run Job
+  ✅ Worker cloned from michael-gonzalez-dev/media-sage successfully
+  ✅ Worker completed the task and opened a PR
+  ⏳ Pub/Sub completion event — fires after this comment
+  ⏳ Job marked COMPLETED in Supabase — pending Pub/Sub
+
+  PR: {pr_url}
+
+  Quality gates:
+  ✅ Detekt: {result}
+  ✅ Affected tests: {result}
+
+  Diff: {summary}
+
+  Acceptance criteria:
+  ✅ {ac_item}
+  ```
+
+  Do not include a "Run metrics" section — the orchestrator appends that after you exit.
+
+- **Graceful exit when task is already done:** If the task is already fully satisfied by the current state of the code, do not invent work. Check off the relevant AC items, write `/tmp/jira_comment.txt` stating the task was already complete and what was found, transition the ticket to In Review, and exit.
+
+- **Learning doc:** Default to no learning doc. Write one only if the work meets at least one of:
+  - Introduces a new pattern not previously used in the codebase
+  - Makes an architectural decision with non-obvious tradeoffs
+  - Integrates a new external system or API
+
+  If the work follows an established pattern, makes a trivial change, or could have been completed just by reading existing code — skip the doc. When in doubt, skip. The burden of proof is on writing, not skipping.
+
+- **pipeline-test tasks:** Must be additive — choose work that provably does not exist yet. Never choose a task that may already be satisfied in the codebase.
 
 ### After a PR is merged
 Do not include tickets labeled `pipeline-test` or `smoketest` in the Confluence impact doc — these tickets exist to exercise the pipeline, not deliver product or infrastructure value.
