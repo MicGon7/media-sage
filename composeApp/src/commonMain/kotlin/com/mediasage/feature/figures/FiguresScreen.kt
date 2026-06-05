@@ -1,16 +1,14 @@
 package com.mediasage.feature.figures
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.tooling.preview.PreviewParameterProvider
-import com.mediasage.theme.MediaSageTheme
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +37,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +48,10 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import com.mediasage.theme.MediaSageTheme
 import coil3.compose.AsyncImage
 import com.mediasage.ui.FigurePlaceholder
 import mediasage.composeapp.generated.resources.Res
@@ -82,7 +86,12 @@ fun FiguresScreen(
 }
 
 @Composable
-private fun VoicesHeader() {
+private fun VoicesHeader(collapsed: Boolean) {
+    val titleSize by animateFloatAsState(
+        targetValue = if (collapsed) 22f else 36f,
+        label = "titleSize"
+    )
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -90,17 +99,21 @@ private fun VoicesHeader() {
     ) {
         Text(
             text = stringResource(Res.string.title_voices),
-            style = MaterialTheme.typography.displaySmall,
+            fontSize = titleSize.sp,
             fontWeight = FontWeight.Bold,
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = stringResource(Res.string.voices_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            fontStyle = FontStyle.Italic,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(12.dp))
+        AnimatedVisibility(visible = !collapsed) {
+            Column {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(Res.string.voices_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider(
             color = MaterialTheme.colorScheme.primary,
             thickness = 1.dp
@@ -141,6 +154,7 @@ private fun VoicesList(
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
+    val headerCollapsed by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -157,8 +171,12 @@ private fun VoicesList(
                 state = listState,
                 contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
-                item { VoicesHeader() }
-                stickyHeader { SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged) }
+                stickyHeader {
+                    Column {
+                        VoicesHeader(collapsed = headerCollapsed)
+                        SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged)
+                    }
+                }
 
                 if (figures.isEmpty()) {
                     item { EmptyState() }
