@@ -109,7 +109,13 @@ class HomeViewModel(
         val figure = figureRepository.getFigureById(figureId) ?: return
         val tone = currentTone()
         val headlines = headlineRepository.observeHeadlines().first().map { it.title }
-        updateBriefingCard(HomeContract.BriefingCardState.Loading)
+        updateBriefingCard(
+            HomeContract.BriefingCardState.LoadingWithFigure(
+                figureId = figureId,
+                figureName = figure.name,
+                figureImageUrl = figure.portraitUrl
+            )
+        )
         runCatching {
             dailyReflectionRepository.getOrFetch(
                 figureId = figure.serverId.takeIf { it > 0 } ?: figureId,

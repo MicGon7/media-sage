@@ -19,6 +19,11 @@ object HomeContract {
     sealed interface BriefingCardState {
         data object Hidden : BriefingCardState
         data object Loading : BriefingCardState
+        data class LoadingWithFigure(
+            val figureId: Long,
+            val figureName: String,
+            val figureImageUrl: String?
+        ) : BriefingCardState
         data class Ready(
             val figureId: Long,
             val figureName: String,

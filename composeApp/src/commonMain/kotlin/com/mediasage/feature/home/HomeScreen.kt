@@ -157,6 +157,7 @@ private fun HeadlinesFeed(
                 ) { state ->
                     when (state) {
                         is HomeContract.BriefingCardState.Loading -> BriefingCardLoading()
+                        is HomeContract.BriefingCardState.LoadingWithFigure -> BriefingCardLoadingWithFigure(state, onFigureTap)
                         is HomeContract.BriefingCardState.Ready -> BriefingCard(state, onFigureTap)
                         is HomeContract.BriefingCardState.Hidden -> Box(Modifier.fillMaxWidth())
                     }
@@ -283,6 +284,77 @@ private fun BriefingCard(
 
         Spacer(modifier = Modifier.height(12.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+    }
+}
+
+@Composable
+private fun BriefingCardLoadingWithFigure(
+    card: HomeContract.BriefingCardState.LoadingWithFigure,
+    onFigureTap: (Long) -> Unit
+) {
+    val sepiaMatrix = ColorMatrix().apply {
+        set(0, 0, 0.393f); set(0, 1, 0.769f); set(0, 2, 0.189f)
+        set(1, 0, 0.349f); set(1, 1, 0.686f); set(1, 2, 0.168f)
+        set(2, 0, 0.272f); set(2, 1, 0.534f); set(2, 2, 0.131f)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .clip(MaterialTheme.shapes.small)
+                .clickable { onFigureTap(card.figureId) }
+        ) {
+            if (card.figureImageUrl != null) {
+                AsyncImage(
+                    model = card.figureImageUrl,
+                    contentDescription = card.figureName,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    colorFilter = ColorFilter.colorMatrix(sepiaMatrix)
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        FigurePlaceholder(name = card.figureName, size = 80.dp)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = card.figureName,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = stringResource(Res.string.briefing_card_loading).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing * 1.5f,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        LinearProgressIndicator(
+            modifier = Modifier.fillMaxWidth().height(2.dp),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
