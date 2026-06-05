@@ -8,6 +8,6 @@
 8. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
 9. Commit all changes with prefix `MS-{TICKET_KEY}: Description` and push: `git push -u origin <branch>`.
 10. Open a PR: `gh pr create` — fill in title and body per the PR template at `.github/pull_request_template.md`.
-11. Write `/tmp/jira_comment.txt` using the exact format defined in CLAUDE.md Agent Guidelines (Jira comment file rule). Include task description, pipeline checkpoints, PR URL, quality gate results, diff summary, and AC checklist.
+11. Write `/tmp/jira_comment.txt` — see the Jira comment file rule in CLAUDE.md Agent Guidelines.
 12. Transition the Jira ticket to In Review.
 
