@@ -35,7 +35,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -143,29 +142,23 @@ private fun VoicesList(
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        topBar = {
-            LargeTopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(Res.string.title_voices),
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+    Column(modifier = Modifier.fillMaxSize()) {
+        LargeTopAppBar(
+            title = {
+                Text(
+                    text = stringResource(Res.string.title_voices),
+                    fontWeight = FontWeight.Bold,
                 )
+            },
+            scrollBehavior = scrollBehavior,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                scrolledContainerColor = MaterialTheme.colorScheme.surface,
             )
-        }
-    ) { innerPadding ->
+        )
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = innerPadding.calculateTopPadding())
                 .pullToRefresh(
                     isRefreshing = isRefreshing,
                     state = pullToRefreshState,
@@ -177,11 +170,7 @@ private fun VoicesList(
                     .fillMaxSize()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                 state = listState,
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = innerPadding.calculateBottomPadding(),
-                )
+                contentPadding = PaddingValues(horizontal = 16.dp),
             ) {
                 item { VoicesSubtitle() }
                 stickyHeader { SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged) }
