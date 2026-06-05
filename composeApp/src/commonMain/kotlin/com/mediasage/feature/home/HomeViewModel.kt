@@ -28,7 +28,9 @@ class HomeViewModel(
     private val figureRepository: FigureRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<HomeContract.UiState>(HomeContract.UiState.Loading)
+    private val _state = MutableStateFlow<HomeContract.UiState>(
+        HomeContract.UiState.Success(emptyList(), todayLabel = todayLabel())
+    )
     val state: StateFlow<HomeContract.UiState> = _state.asStateFlow()
 
     // Preserved independently so the card survives headline refresh cycles
@@ -60,16 +62,14 @@ class HomeViewModel(
         viewModelScope.launch {
             headlineRepository.observeHeadlines()
                 .collect { headlines ->
-                    if (headlines.isNotEmpty()) {
-                        val current = _state.value
-                        val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
-                        _state.value = HomeContract.UiState.Success(
-                            headlines = headlines.map { it.toItem() },
-                            briefingCard = lastBriefingCard,
-                            isRefreshing = isRefreshing,
-                            todayLabel = todayLabel()
-                        )
-                    }
+                    val current = _state.value
+                    val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
+                    _state.value = HomeContract.UiState.Success(
+                        headlines = headlines.map { it.toItem() },
+                        briefingCard = lastBriefingCard,
+                        isRefreshing = isRefreshing,
+                        todayLabel = todayLabel()
+                    )
                 }
         }
     }
