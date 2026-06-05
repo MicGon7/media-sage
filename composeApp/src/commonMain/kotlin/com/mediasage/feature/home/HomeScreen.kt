@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +36,11 @@ import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.HeadlineImage
 import com.mediasage.ui.MediaSageErrorState
-import com.mediasage.ui.MediaSageLoadingState
+import io.github.alexzhirkevich.compottie.DotLottie
+import io.github.alexzhirkevich.compottie.LottieCompositionSpec
+import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
+import io.github.alexzhirkevich.compottie.rememberLottieComposition
+import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -73,17 +79,39 @@ fun HomeScreen(
 
 @Composable
 private fun HeadlinesFeedLoading(todayLabel: String) {
+    val composition by rememberLottieComposition {
+        LottieCompositionSpec.DotLottie(Res.readBytes("files/book_loader.lottie"))
+    }
+    val progress by animateLottieCompositionAsState(composition, iterations = Int.MAX_VALUE)
+
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item { Masthead() }
         item { NewspaperDateRow(todayLabel = todayLabel) }
         item {
-            LinearProgressIndicator(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+                    .padding(vertical = 48.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (composition != null) {
+                    Image(
+                        painter = rememberLottiePainter(composition = composition, progress = { progress }),
+                        contentDescription = null,
+                        modifier = Modifier.size(120.dp),
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                    )
+                } else {
+                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = stringResource(Res.string.home_loading),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
