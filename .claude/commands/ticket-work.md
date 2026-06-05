@@ -6,7 +6,7 @@
 5. Run `./scripts/run-affected-tests.sh` — never run bare `./gradlew :module:test` directly.
 6. Run `./gradlew detekt` and fix any violations.
 7. Update Jira AC checkboxes as each criterion is met.
-8. Write a learning doc under `docs/` only if the work introduces a new pattern, architectural decision, or external integration not already established in the codebase. If the work follows an existing pattern or is a trivial change, skip the doc. When in doubt, skip.
+8. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
 9. Commit all changes with prefix `MS-{TICKET_KEY}: Description` and push: `git push -u origin <branch>`.
 10. Open a PR: `gh pr create` — fill in title and body per the PR template at `.github/pull_request_template.md`.
 11. Write `/tmp/jira_comment.txt` using the exact format defined in CLAUDE.md Agent Guidelines (Jira comment file rule). Include task description, pipeline checkpoints, PR URL, quality gate results, diff summary, and AC checklist.
