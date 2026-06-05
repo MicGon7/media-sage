@@ -248,6 +248,8 @@ Workflow steps live in skills, not here. See `.claude/commands/` for the full in
 
   Do not include a "Run metrics" section — the orchestrator appends that after you exit.
 
+- **Graceful exit when task is already done:** If the task is already fully satisfied by the current state of the code, do not invent work. Check off the relevant AC items, write `/tmp/jira_comment.txt` stating the task was already complete and what was found, transition the ticket to In Review, and exit.
+
 - **Learning doc:** Default to no learning doc. Write one only if the work meets at least one of:
   - Introduces a new pattern not previously used in the codebase
   - Makes an architectural decision with non-obvious tradeoffs

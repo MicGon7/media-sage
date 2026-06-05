@@ -1,7 +1,6 @@
 1. Read the ticket description and acceptance criteria. If the ticket is not already In Progress in Jira, transition it now.
 2. Create a feature branch: `git checkout -b feature/MS-{TICKET_KEY}-short-description`
-3. Read the files listed in the ticket's "Relevant files" section before writing any code.
-   - If the task is already fully satisfied by the current state of the code: check off the relevant AC items, write `/tmp/jira_comment.txt` (using the exact format in CLAUDE.md Agent Guidelines) stating the task was already complete and what was found, transition the ticket to In Review, and exit. Do not invent work.
+3. Read the files listed in the ticket's "Relevant files" section before writing any code. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
 4. Implement the changes described in the ticket.
 5. Run `./scripts/run-affected-tests.sh` — never run bare `./gradlew :module:test` directly.
 6. Run `./gradlew detekt` and fix any violations.
