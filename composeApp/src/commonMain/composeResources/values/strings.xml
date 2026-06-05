@@ -87,7 +87,6 @@
 
     <string name="figure_detail_pin_to_home">Pin to Home</string>
     <string name="figure_detail_pinned_to_home">Pinned to Home</string>
-    <string name="home_loading">Loading headlines…</string>
     <string name="briefing_card_loading">Daily Briefing</string>
     <string name="briefing_card_based_on">Based on</string>
     <string name="briefing_card_morning">Morning Reflection</string>
