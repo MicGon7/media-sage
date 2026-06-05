@@ -28,24 +28,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -84,14 +81,19 @@ fun FiguresScreen(
     }
 }
 
-
 @Composable
-private fun VoicesSubtitle() {
+private fun VoicesHeader() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
     ) {
+        Text(
+            text = stringResource(Res.string.title_voices),
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(Res.string.voices_subtitle),
             style = MaterialTheme.typography.bodyMedium,
@@ -128,7 +130,6 @@ private fun SearchBar(query: String, onQueryChanged: (String) -> Unit) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VoicesList(
     figures: List<VoiceFigureItem>,
@@ -140,22 +141,8 @@ private fun VoicesList(
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        LargeTopAppBar(
-            title = {
-                Text(
-                    text = stringResource(Res.string.title_voices),
-                    fontWeight = FontWeight.Bold,
-                )
-            },
-            scrollBehavior = scrollBehavior,
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                scrolledContainerColor = MaterialTheme.colorScheme.surface,
-            )
-        )
+    Surface(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -166,13 +153,11 @@ private fun VoicesList(
                 )
         ) {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
+                modifier = Modifier.fillMaxSize(),
                 state = listState,
-                contentPadding = PaddingValues(horizontal = 16.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
-                item { VoicesSubtitle() }
+                item { VoicesHeader() }
                 stickyHeader { SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged) }
 
                 if (figures.isEmpty()) {
