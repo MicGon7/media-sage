@@ -35,8 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.mediasage.theme.MediaSageTheme
 import coil3.compose.AsyncImage
-import coil3.compose.LocalPlatformContext
-import coil3.request.ImageRequest
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.HeadlineImage
@@ -225,10 +223,7 @@ private fun BriefingCard(
         ) {
             if (card.figureImageUrl != null) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalPlatformContext.current)
-                        .data(card.figureImageUrl)
-                        .crossfade(true)
-                        .build(),
+                    model = card.figureImageUrl,
                     contentDescription = card.figureName,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
@@ -375,10 +370,7 @@ private fun BriefingCardLoadingWithFigure(
         ) {
             if (card.figureImageUrl != null) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalPlatformContext.current)
-                        .data(card.figureImageUrl)
-                        .crossfade(true)
-                        .build(),
+                    model = card.figureImageUrl,
                     contentDescription = card.figureName,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
