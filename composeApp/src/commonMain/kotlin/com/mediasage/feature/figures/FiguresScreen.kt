@@ -166,7 +166,6 @@ private fun VoicesList(
                 contentPadding = PaddingValues(
                     start = 16.dp,
                     end = 16.dp,
-                    top = innerPadding.calculateTopPadding(),
                     bottom = innerPadding.calculateBottomPadding(),
                 )
             ) {
@@ -184,9 +183,7 @@ private fun VoicesList(
             PullToRefreshDefaults.Indicator(
                 state = pullToRefreshState,
                 isRefreshing = isRefreshing,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = innerPadding.calculateTopPadding())
+                modifier = Modifier.align(Alignment.TopCenter)
             )
         }
     }
