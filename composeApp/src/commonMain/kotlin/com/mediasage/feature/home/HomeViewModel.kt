@@ -33,9 +33,6 @@ class HomeViewModel(
     )
     val state: StateFlow<HomeContract.UiState> = _state.asStateFlow()
 
-    // Preserved independently so the card survives headline refresh cycles
-    private var lastBriefingCard: HomeContract.BriefingCardState = HomeContract.BriefingCardState.Hidden
-
     private val _sideEffects = Channel<HomeContract.SideEffect>(Channel.BUFFERED)
     val sideEffects = _sideEffects.receiveAsFlow()
 
@@ -65,9 +62,11 @@ class HomeViewModel(
                     if (headlines.isNotEmpty()) {
                         val current = _state.value
                         val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
+                        val briefingCard = (current as? HomeContract.UiState.Success)?.briefingCard
+                            ?: HomeContract.BriefingCardState.Hidden
                         _state.value = HomeContract.UiState.Success(
                             headlines = headlines.map { it.toItem() },
-                            briefingCard = lastBriefingCard,
+                            briefingCard = briefingCard,
                             isRefreshing = isRefreshing,
                             todayLabel = todayLabel()
                         )
@@ -166,7 +165,6 @@ class HomeViewModel(
     }
 
     private fun updateBriefingCard(card: HomeContract.BriefingCardState) {
-        lastBriefingCard = card
         val current = _state.value
         if (current is HomeContract.UiState.Success) {
             _state.value = current.copy(briefingCard = card)
