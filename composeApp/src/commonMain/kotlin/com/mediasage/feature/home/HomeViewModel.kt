@@ -28,11 +28,10 @@ class HomeViewModel(
     private val figureRepository: FigureRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<HomeContract.UiState>(HomeContract.UiState.Loading)
+    private val _state = MutableStateFlow<HomeContract.UiState>(
+        HomeContract.UiState.Loading(todayLabel())
+    )
     val state: StateFlow<HomeContract.UiState> = _state.asStateFlow()
-
-    // Preserved independently so the card survives headline refresh cycles
-    private var lastBriefingCard: HomeContract.BriefingCardState = HomeContract.BriefingCardState.Hidden
 
     private val _sideEffects = Channel<HomeContract.SideEffect>(Channel.BUFFERED)
     val sideEffects = _sideEffects.receiveAsFlow()
@@ -52,7 +51,7 @@ class HomeViewModel(
     }
 
     private fun retryLoad() {
-        _state.value = HomeContract.UiState.Loading
+        _state.value = HomeContract.UiState.Loading(todayLabel())
         fetchHeadlines()
     }
 
@@ -63,9 +62,11 @@ class HomeViewModel(
                     if (headlines.isNotEmpty()) {
                         val current = _state.value
                         val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
+                        val briefingCard = (current as? HomeContract.UiState.Success)?.briefingCard
+                            ?: HomeContract.BriefingCardState.Loading
                         _state.value = HomeContract.UiState.Success(
                             headlines = headlines.map { it.toItem() },
-                            briefingCard = lastBriefingCard,
+                            briefingCard = briefingCard,
                             isRefreshing = isRefreshing,
                             todayLabel = todayLabel()
                         )
@@ -109,7 +110,13 @@ class HomeViewModel(
         val figure = figureRepository.getFigureById(figureId) ?: return
         val tone = currentTone()
         val headlines = headlineRepository.observeHeadlines().first().map { it.title }
-        updateBriefingCard(HomeContract.BriefingCardState.Loading)
+        updateBriefingCard(
+            HomeContract.BriefingCardState.LoadingWithFigure(
+                figureId = figureId,
+                figureName = figure.name,
+                figureImageUrl = figure.portraitUrl
+            )
+        )
         runCatching {
             dailyReflectionRepository.getOrFetch(
                 figureId = figure.serverId.takeIf { it > 0 } ?: figureId,
@@ -158,7 +165,6 @@ class HomeViewModel(
     }
 
     private fun updateBriefingCard(card: HomeContract.BriefingCardState) {
-        lastBriefingCard = card
         val current = _state.value
         if (current is HomeContract.UiState.Success) {
             _state.value = current.copy(briefingCard = card)

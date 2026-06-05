@@ -16,7 +16,12 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +39,6 @@ import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.HeadlineImage
 import com.mediasage.ui.MediaSageErrorState
-import com.mediasage.ui.MediaSageLoadingState
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -48,7 +52,7 @@ fun HomeScreen(
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         when (state) {
-            is HomeContract.UiState.Loading -> MediaSageLoadingState()
+            is HomeContract.UiState.Loading -> HeadlinesFeedLoading(state.todayLabel)
             is HomeContract.UiState.Error -> MediaSageErrorState(
                 message = when (state.errorType) {
                     ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
@@ -68,6 +72,14 @@ fun HomeScreen(
                 onFigureTap = onNavigateToFigureDetail
             )
         }
+    }
+}
+
+@Composable
+private fun HeadlinesFeedLoading(todayLabel: String) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item { Masthead() }
+        item { NewspaperDateRow(todayLabel = todayLabel) }
     }
 }
 
@@ -156,7 +168,8 @@ private fun HeadlinesFeed(
                     modifier = Modifier.animateContentSize(tween(300, easing = LinearEasing))
                 ) { state ->
                     when (state) {
-                        is HomeContract.BriefingCardState.Loading -> BriefingCardLoading()
+                        is HomeContract.BriefingCardState.Loading -> BriefingCardSkeleton()
+                        is HomeContract.BriefingCardState.LoadingWithFigure -> BriefingCardLoadingWithFigure(state, onFigureTap)
                         is HomeContract.BriefingCardState.Ready -> BriefingCard(state, onFigureTap)
                         is HomeContract.BriefingCardState.Hidden -> Box(Modifier.fillMaxWidth())
                     }
@@ -283,6 +296,123 @@ private fun BriefingCard(
 
         Spacer(modifier = Modifier.height(12.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+    }
+}
+
+@Composable
+private fun BriefingCardSkeleton() {
+    val infiniteTransition = rememberInfiniteTransition(label = "skeleton")
+    val shimmerAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.06f,
+        targetValue = 0.14f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "skeletonPulse"
+    )
+    val shimmer = MaterialTheme.colorScheme.onSurface.copy(alpha = shimmerAlpha)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .clip(MaterialTheme.shapes.small)
+                .background(shimmer)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(modifier = Modifier.width(160.dp).height(18.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(modifier = Modifier.width(220.dp).height(12.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(10.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
+        Spacer(modifier = Modifier.height(10.dp))
+        Box(modifier = Modifier.width(100.dp).height(12.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(14.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(modifier = Modifier.fillMaxWidth(0.85f).height(14.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(10.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(14.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(modifier = Modifier.fillMaxWidth(0.7f).height(14.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+    }
+}
+
+@Composable
+private fun BriefingCardLoadingWithFigure(
+    card: HomeContract.BriefingCardState.LoadingWithFigure,
+    onFigureTap: (Long) -> Unit
+) {
+    val sepiaMatrix = ColorMatrix().apply {
+        set(0, 0, 0.393f); set(0, 1, 0.769f); set(0, 2, 0.189f)
+        set(1, 0, 0.349f); set(1, 1, 0.686f); set(1, 2, 0.168f)
+        set(2, 0, 0.272f); set(2, 1, 0.534f); set(2, 2, 0.131f)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .clip(MaterialTheme.shapes.small)
+                .clickable { onFigureTap(card.figureId) }
+        ) {
+            if (card.figureImageUrl != null) {
+                AsyncImage(
+                    model = card.figureImageUrl,
+                    contentDescription = card.figureName,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    colorFilter = ColorFilter.colorMatrix(sepiaMatrix)
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        FigurePlaceholder(name = card.figureName, size = 80.dp)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = card.figureName,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = stringResource(Res.string.briefing_card_loading).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing * 1.5f,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        LinearProgressIndicator(
+            modifier = Modifier.fillMaxWidth().height(2.dp),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
