@@ -160,6 +160,7 @@ private fun VoicesList(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
                 .pullToRefresh(
                     isRefreshing = isRefreshing,
                     state = pullToRefreshState,
