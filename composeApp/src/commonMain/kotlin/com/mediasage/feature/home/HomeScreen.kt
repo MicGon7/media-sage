@@ -48,7 +48,7 @@ fun HomeScreen(
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         when (state) {
-            is HomeContract.UiState.Loading -> MediaSageLoadingState()
+            is HomeContract.UiState.Loading -> HeadlinesFeedLoading(state.todayLabel)
             is HomeContract.UiState.Error -> MediaSageErrorState(
                 message = when (state.errorType) {
                     ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
@@ -66,6 +66,23 @@ fun HomeScreen(
                 onRefresh = { onIntent(HomeContract.Intent.RefreshHeadlines) },
                 onHeadlineClick = { onNavigateToDetail(it.articleUrl) },
                 onFigureTap = onNavigateToFigureDetail
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeadlinesFeedLoading(todayLabel: String) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item { Masthead() }
+        item { NewspaperDateRow(todayLabel = todayLabel) }
+        item {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
     }

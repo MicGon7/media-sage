@@ -6,7 +6,7 @@ import com.mediasage.ui.ErrorType
 object HomeContract {
 
     sealed interface UiState {
-        data object Loading : UiState
+        data class Loading(val todayLabel: String) : UiState
         data class Success(
             val headlines: List<HeadlineItem>,
             val isRefreshing: Boolean = false,

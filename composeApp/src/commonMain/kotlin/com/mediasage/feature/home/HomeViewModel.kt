@@ -29,7 +29,7 @@ class HomeViewModel(
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<HomeContract.UiState>(
-        HomeContract.UiState.Success(emptyList(), todayLabel = todayLabel())
+        HomeContract.UiState.Loading(todayLabel())
     )
     val state: StateFlow<HomeContract.UiState> = _state.asStateFlow()
 
@@ -54,7 +54,7 @@ class HomeViewModel(
     }
 
     private fun retryLoad() {
-        _state.value = HomeContract.UiState.Loading
+        _state.value = HomeContract.UiState.Loading(todayLabel())
         fetchHeadlines()
     }
 
@@ -62,14 +62,16 @@ class HomeViewModel(
         viewModelScope.launch {
             headlineRepository.observeHeadlines()
                 .collect { headlines ->
-                    val current = _state.value
-                    val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
-                    _state.value = HomeContract.UiState.Success(
-                        headlines = headlines.map { it.toItem() },
-                        briefingCard = lastBriefingCard,
-                        isRefreshing = isRefreshing,
-                        todayLabel = todayLabel()
-                    )
+                    if (headlines.isNotEmpty()) {
+                        val current = _state.value
+                        val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
+                        _state.value = HomeContract.UiState.Success(
+                            headlines = headlines.map { it.toItem() },
+                            briefingCard = lastBriefingCard,
+                            isRefreshing = isRefreshing,
+                            todayLabel = todayLabel()
+                        )
+                    }
                 }
         }
     }
