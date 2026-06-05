@@ -63,7 +63,7 @@ class HomeViewModel(
                         val current = _state.value
                         val isRefreshing = current is HomeContract.UiState.Success && current.isRefreshing
                         val briefingCard = (current as? HomeContract.UiState.Success)?.briefingCard
-                            ?: HomeContract.BriefingCardState.Hidden
+                            ?: HomeContract.BriefingCardState.Loading
                         _state.value = HomeContract.UiState.Success(
                             headlines = headlines.map { it.toItem() },
                             briefingCard = briefingCard,

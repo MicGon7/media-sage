@@ -213,7 +213,7 @@ private fun HeadlinesFeed(
                     modifier = Modifier.animateContentSize(tween(300, easing = LinearEasing))
                 ) { state ->
                     when (state) {
-                        is HomeContract.BriefingCardState.Loading -> BriefingCardLoading()
+                        is HomeContract.BriefingCardState.Loading -> BriefingCardSkeleton()
                         is HomeContract.BriefingCardState.LoadingWithFigure -> BriefingCardLoadingWithFigure(state, onFigureTap)
                         is HomeContract.BriefingCardState.Ready -> BriefingCard(state, onFigureTap)
                         is HomeContract.BriefingCardState.Hidden -> Box(Modifier.fillMaxWidth())
@@ -339,6 +339,42 @@ private fun BriefingCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+    }
+}
+
+@Composable
+private fun BriefingCardSkeleton() {
+    val shimmer = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp)
+                .clip(MaterialTheme.shapes.small)
+                .background(shimmer)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(modifier = Modifier.width(160.dp).height(18.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(modifier = Modifier.width(220.dp).height(12.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(10.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
+        Spacer(modifier = Modifier.height(10.dp))
+        Box(modifier = Modifier.width(100.dp).height(12.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(14.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(modifier = Modifier.fillMaxWidth(0.85f).height(14.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(10.dp))
+        Box(modifier = Modifier.fillMaxWidth().height(14.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(modifier = Modifier.fillMaxWidth(0.7f).height(14.dp).clip(MaterialTheme.shapes.small).background(shimmer))
         Spacer(modifier = Modifier.height(12.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
     }
