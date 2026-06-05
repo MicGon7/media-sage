@@ -12,8 +12,10 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import com.mediasage.theme.MediaSageTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -43,7 +46,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
@@ -83,6 +85,27 @@ fun FiguresScreen(
     }
 }
 
+
+@Composable
+private fun VoicesSubtitle() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        Text(
+            text = stringResource(Res.string.voices_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            fontStyle = FontStyle.Italic,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.primary,
+            thickness = 1.dp
+        )
+    }
+}
 
 @Composable
 private fun SearchBar(query: String, onQueryChanged: (String) -> Unit) {
@@ -126,20 +149,10 @@ private fun VoicesList(
         topBar = {
             LargeTopAppBar(
                 title = {
-                    val collapsedFraction = scrollBehavior.state.collapsedFraction
-                    Column {
-                        Text(
-                            text = stringResource(Res.string.title_voices),
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            text = stringResource(Res.string.voices_subtitle),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.graphicsLayer { alpha = 1f - collapsedFraction }
-                        )
-                    }
+                    Text(
+                        text = stringResource(Res.string.title_voices),
+                        fontWeight = FontWeight.Bold,
+                    )
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -169,6 +182,7 @@ private fun VoicesList(
                     bottom = innerPadding.calculateBottomPadding(),
                 )
             ) {
+                item { VoicesSubtitle() }
                 stickyHeader { SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged) }
 
                 if (figures.isEmpty()) {
