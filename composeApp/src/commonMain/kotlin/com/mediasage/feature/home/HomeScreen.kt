@@ -18,7 +18,12 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,34 +88,41 @@ private fun HeadlinesFeedLoading(todayLabel: String) {
         LottieCompositionSpec.DotLottie(Res.readBytes("files/book_loader.lottie"))
     }
     val progress by animateLottieCompositionAsState(composition, iterations = Int.MAX_VALUE)
+    var showIndicator by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(1000)
+        showIndicator = true
+    }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item { Masthead() }
         item { NewspaperDateRow(todayLabel = todayLabel) }
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 48.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (composition != null) {
-                    Image(
-                        painter = rememberLottiePainter(composition = composition, progress = { progress }),
-                        contentDescription = null,
-                        modifier = Modifier.size(120.dp),
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+        if (showIndicator) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (composition != null) {
+                        Image(
+                            painter = rememberLottiePainter(composition = composition, progress = { progress }),
+                            contentDescription = null,
+                            modifier = Modifier.size(120.dp),
+                            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                        )
+                    } else {
+                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(Res.string.home_loading),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                } else {
-                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = stringResource(Res.string.home_loading),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
