@@ -402,3 +402,273 @@ private fun LoginThemeDPreview() {
         backgroundColors = listOf(Navy, Navy)
     )
 }
+
+// ─── Exploration previews ────────────────────────────────────────────────────
+// Exploration only — replace with MediaSageTheme before implementing.
+// Based on reference image: dark olive background, globe hero, lime CTA, social sign-in.
+
+@Preview(showBackground = true, name = "Exploration — Dark Olive / Lime")
+@Composable
+private fun LoginExplorationPreview() {
+    LoginExplorationContent()
+}
+
+private val ExplorationDarkOlive = Color(0xFF12140A)
+private val ExplorationLimeGreen = Color(0xFFCCFF33)
+private val ExplorationFieldSurface = Color(0xFF1E2010)
+private val ExplorationMutedText = Color(0xFF8A9070)
+private val ExplorationOnBackground = Color(0xFFF0F0E8)
+private val ExplorationOutline = Color(0xFF3A3D28)
+
+@Composable
+private fun LoginExplorationContent() {
+    // Exploration only — replace with MediaSageTheme before implementing
+    val darkOlive = ExplorationDarkOlive
+    val limeGreen = ExplorationLimeGreen
+    val fieldSurface = ExplorationFieldSurface
+    val mutedText = ExplorationMutedText
+
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme(
+            background = darkOlive,
+            surface = fieldSurface,
+            primary = limeGreen,
+            onPrimary = Color(0xFF0A0C04),
+            onBackground = Color(0xFFF0F0E8),
+            onSurface = Color(0xFFF0F0E8),
+            outline = Color(0xFF3A3D28)
+        )
+    ) {
+        Box(
+            modifier = androidx.compose.ui.Modifier
+                .fillMaxSize()
+                .background(darkOlive)
+        ) {
+            Column(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(48.dp)
+                )
+
+                // Globe hero placeholder — swap for real asset when implementing
+                Box(
+                    modifier = androidx.compose.ui.Modifier
+                        .height(120.dp)
+                        .padding(bottom = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.Canvas(
+                        modifier = androidx.compose.ui.Modifier
+                            .height(100.dp)
+                            .fillMaxWidth()
+                    ) {
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(Color(0xFF4A5C1A), Color(0xFF1A2008), Color(0xFF0A0C04)),
+                                center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f),
+                                radius = size.minDimension / 2f
+                            ),
+                            radius = size.minDimension / 2f
+                        )
+                    }
+                }
+
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(16.dp)
+                )
+
+                // Headline
+                Text(
+                    text = "Welcome Back!",
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFF0F0E8)
+                    ),
+                    textAlign = TextAlign.Center
+                )
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(8.dp)
+                )
+                Text(
+                    text = "Sign in to access your daily news and theological reflections.",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = mutedText),
+                    textAlign = TextAlign.Center
+                )
+
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(32.dp)
+                )
+
+                // Email field
+                Text(
+                    text = "Email address*",
+                    style = MaterialTheme.typography.labelMedium.copy(color = Color(0xFFF0F0E8)),
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                )
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(4.dp)
+                )
+                OutlinedTextField(
+                    value = "",
+                    onValueChange = {},
+                    placeholder = { Text("example@gmail.com", color = mutedText) },
+                    singleLine = true,
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = Color(0xFF3A3D28),
+                        focusedBorderColor = limeGreen,
+                        unfocusedContainerColor = fieldSurface,
+                        focusedContainerColor = fieldSurface,
+                        unfocusedTextColor = Color(0xFFF0F0E8),
+                        focusedTextColor = Color(0xFFF0F0E8)
+                    )
+                )
+
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(12.dp)
+                )
+
+                // Password field
+                Text(
+                    text = "Password*",
+                    style = MaterialTheme.typography.labelMedium.copy(color = Color(0xFFF0F0E8)),
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                )
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(4.dp)
+                )
+                OutlinedTextField(
+                    value = "",
+                    onValueChange = {},
+                    placeholder = { Text("••••••••", color = mutedText) },
+                    singleLine = true,
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = Color(0xFF3A3D28),
+                        focusedBorderColor = limeGreen,
+                        unfocusedContainerColor = fieldSurface,
+                        focusedContainerColor = fieldSurface,
+                        unfocusedTextColor = Color(0xFFF0F0E8),
+                        focusedTextColor = Color(0xFFF0F0E8)
+                    )
+                )
+
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(12.dp)
+                )
+
+                // Remember me + Forgot password row
+                Row(
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Checkbox(
+                            checked = false,
+                            onCheckedChange = {},
+                            colors = androidx.compose.material3.CheckboxDefaults.colors(
+                                uncheckedColor = mutedText,
+                                checkmarkColor = darkOlive,
+                                checkedColor = limeGreen
+                            )
+                        )
+                        Text("Remember me", style = MaterialTheme.typography.bodySmall.copy(color = mutedText))
+                    }
+                    TextButton(onClick = {}) {
+                        Text("Forgot Password?", style = MaterialTheme.typography.bodySmall.copy(color = mutedText))
+                    }
+                }
+
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(16.dp)
+                )
+
+                // Lime CTA button
+                androidx.compose.material3.Button(
+                    onClick = {},
+                    modifier = androidx.compose.ui.Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = limeGreen,
+                        contentColor = Color(0xFF0A0C04)
+                    )
+                ) {
+                    Text(
+                        "Sign in",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(20.dp)
+                )
+
+                // "Or continue with" divider
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                ) {
+                    HorizontalDivider(modifier = androidx.compose.ui.Modifier.weight(1f), color = Color(0xFF3A3D28))
+                    Text(
+                        "  Or continue with  ",
+                        style = MaterialTheme.typography.bodySmall.copy(color = mutedText)
+                    )
+                    HorizontalDivider(modifier = androidx.compose.ui.Modifier.weight(1f), color = Color(0xFF3A3D28))
+                }
+
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(12.dp)
+                )
+
+                // Social buttons — text only (no brand icons available)
+                Row(
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {},
+                        modifier = androidx.compose.ui.Modifier.weight(1f).height(48.dp),
+                        border = BorderStroke(1.dp, Color(0xFF3A3D28)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF0F0E8))
+                    ) {
+                        Text("G  Google", style = MaterialTheme.typography.labelMedium)
+                    }
+                    OutlinedButton(
+                        onClick = {},
+                        modifier = androidx.compose.ui.Modifier.weight(1f).height(48.dp),
+                        border = BorderStroke(1.dp, Color(0xFF3A3D28)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF0F0E8))
+                    ) {
+                        Text("  Apple", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+
+                androidx.compose.foundation.layout.Spacer(
+                    modifier = androidx.compose.ui.Modifier.height(24.dp)
+                )
+
+                // Footer
+                Row {
+                    Text(
+                        "Don't have an account? ",
+                        style = MaterialTheme.typography.bodySmall.copy(color = mutedText)
+                    )
+                    Text(
+                        "Sign up",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF0F0E8)
+                        )
+                    )
+                }
+            }
+        }
+    }
+}

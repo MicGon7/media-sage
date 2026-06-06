@@ -23,18 +23,51 @@ Check whether the target screen or component already exists in `composeApp/src/c
 
 ## 3. Single Screen or Component
 
-Add one `@Preview` per relevant UI state with realistic fake data:
+**Every `@Preview` function must be a single line that calls a named private composable.** Never put layout code directly inside a `@Preview` function — Android Studio renders named composables faster and the preview pane becomes responsive immediately.
 
 ```kotlin
+// ✅ Correct — preview is one line, layout is in a named composable
 @Preview(name = "HeadlineCard — Default")
 @Composable
-fun HeadlineCardPreview() {
+private fun HeadlineCardPreview() {
+    HeadlineCardContent()
+}
+
+@Composable
+private fun HeadlineCardContent() {
     MediaSageTheme {
         HeadlineCard(
             headline = "World leaders gather for climate summit",
             source = "Reuters",
             publishedAt = "2h ago"
         )
+    }
+}
+
+// ❌ Wrong — layout blob inside the @Preview function, slow to render
+@Preview(name = "HeadlineCard — Default")
+@Composable
+private fun HeadlineCardPreview() {
+    MediaSageTheme {
+        Column {
+            Text("World leaders gather...")
+            // ... dozens of lines ...
+        }
+    }
+}
+```
+
+For exploration themes, define colors as private `val`s above the composable — not inside it:
+
+```kotlin
+private val ExplorationBackground = Color(0xFF12140A)
+private val ExplorationPrimary = Color(0xFFCCFF33)
+
+@Composable
+private fun HeadlineCardExplorationContent() {
+    // Exploration only — replace with MediaSageTheme before implementing
+    MaterialTheme(colorScheme = darkColorScheme(primary = ExplorationPrimary, ...)) {
+        HeadlineCard(...)
     }
 }
 ```
@@ -88,7 +121,19 @@ When the developer says they are done and do not want to keep the previews:
 - **File was created by this skill**: Delete the entire file.
 - **File already existed**: Remove only the `@Preview` functions that were added — leave all existing composable code untouched.
 
-## 8. Wrapping Up
+## 8. Component Extraction
+
+Before handing off, scan what was built and identify any composables that are generic enough to be reusable across the app — custom text field styling, buttons, cards, dividers, or any styled wrapper used more than once in the mockup.
+
+If any are found, ask the developer:
+
+> "I notice [X] and [Y] look reusable across the app. Would you like me to extract them as named components under `composeApp/src/commonMain/kotlin/com/mediasage/ui/`? I'd name them following the project convention — e.g. `MediaSageOutlinedTextField`, `MediaSagePrimaryButton`."
+
+- **Yes** → create the component file(s) in `composeApp/src/commonMain/kotlin/com/mediasage/ui/` using the `MediaSage` prefix, then update the mockup to use them
+- **No** → leave inline, note it in the `/ticket-work` handoff
+- Check `composeApp/src/commonMain/kotlin/com/mediasage/ui/` first — if a component already exists that covers the pattern (e.g. `MediaSageButton.kt`), use it instead of creating a duplicate
+
+## 9. Wrapping Up
 
 When the developer is satisfied and wants to keep the work, remind them:
 
