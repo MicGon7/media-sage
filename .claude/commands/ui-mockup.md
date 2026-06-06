@@ -9,17 +9,23 @@ Ask the developer upfront: "Do you have a reference image — Figma export, scre
 - **Mid-session image**: If the developer pastes a new image during iteration, explicitly acknowledge it and treat it as the new source of truth from that point forward.
 - **No image**: Proceed from the developer's verbal description alone.
 
-## 2. Determine Target
+## 2. Determine Target and Create Preview File
 
-Check whether the target screen or component already exists in `composeApp/src/commonMain/kotlin/com/mediasage/feature/`.
+Always create a dedicated preview file — never add exploration previews to an existing screen file. Existing screens may already have many previews and adding more slows down the Android Studio preview renderer.
 
-**Existing screen or component:**
-- Add `@Preview` functions to the existing file — do not modify any existing composable logic, only add previews at the bottom of the file.
+**Preview file location:** `composeApp/src/commonMain/kotlin/com/mediasage/feature/{name}/{Name}Mockup.kt`
 
-**Component does not exist yet:**
-- Create the file in the correct package: `composeApp/src/commonMain/kotlin/com/mediasage/feature/{name}/{Name}.kt`
-- Write the composable and `@Preview` functions together in the same file.
-- Track that this file was created by this skill — needed for cleanup.
+Examples:
+- Exploring LoginScreen → `feature/login/LoginMockup.kt`
+- Exploring a new HeadlineCard component → `feature/headlines/HeadlineCardMockup.kt`
+
+**If the target composable already exists:** the mockup file imports and calls it with fake state — no changes to the original file.
+
+**If the component does not exist yet:** create two files:
+- `{Name}.kt` — the composable itself (no previews)
+- `{Name}Mockup.kt` — the preview file that imports and calls it
+
+Track both files as created by this skill — needed for cleanup.
 
 ## 3. Single Screen or Component
 
@@ -118,8 +124,9 @@ Do NOT open a PR, commit, or transition any Jira ticket.
 
 When the developer says they are done and do not want to keep the previews:
 
-- **File was created by this skill**: Delete the entire file.
-- **File already existed**: Remove only the `@Preview` functions that were added — leave all existing composable code untouched.
+- Always delete the `{Name}Mockup.kt` file — it is always created by this skill
+- If this skill also created the `{Name}.kt` composable file, delete that too
+- Never touch the original screen file — this skill never modifies existing files
 
 ## 8. Component Extraction
 
