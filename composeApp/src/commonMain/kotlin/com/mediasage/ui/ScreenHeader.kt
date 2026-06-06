@@ -27,6 +27,9 @@ import androidx.compose.ui.unit.sp
  *   2. [subtitle] — visible expanded, hidden collapsed, sits ABOVE the divider
  *   3. Divider — omit via showDivider = false
  *   4. [stickyContent] — always shown BELOW the divider
+ *
+ * Pass [isCollapsed] directly to drive collapse from a non-LazyList scroll source
+ * (e.g. LazyVerticalGrid). When null, collapse is derived from [listState].
  */
 @Composable
 fun ScreenHeader(
@@ -35,14 +38,16 @@ fun ScreenHeader(
     modifier: Modifier = Modifier,
     showDivider: Boolean = true,
     expandedTitleSize: Float = TITLE_SIZE_EXPANDED,
+    isCollapsed: Boolean? = null,
     subtitle: @Composable (() -> Unit)? = null,
     stickyContent: @Composable (() -> Unit)? = null
 ) {
-    val collapsed by remember {
+    val listCollapsed by remember {
         derivedStateOf {
             listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
         }
     }
+    val collapsed = isCollapsed ?: listCollapsed
     val titleSize by animateFloatAsState(
         targetValue = if (collapsed) TITLE_SIZE_COLLAPSED else expandedTitleSize,
         label = "headerTitleSize"
