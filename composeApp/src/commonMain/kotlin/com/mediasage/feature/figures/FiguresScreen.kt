@@ -130,65 +130,67 @@ private fun VoicesGrid(
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = innerPadding.calculateTopPadding())
-                .pullToRefresh(
-                    isRefreshing = isRefreshing,
-                    state = pullToRefreshState,
-                    onRefresh = onRefresh
-                )
-        ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                state = gridState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    ScreenHeader(
-                        title = stringResource(Res.string.title_voices),
-                        listState = listState,
-                        isCollapsed = collapsed,
-                        modifier = Modifier.background(MaterialTheme.colorScheme.surface),
-                        expandedTitleSize = 24f,
-                        subtitle = {
-                            Text(
-                                text = stringResource(Res.string.voices_subtitle),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontStyle = FontStyle.Italic,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                        },
-                        stickyContent = {
-                            SearchBar(
-                                query = searchQuery,
-                                onQueryChanged = onSearchQueryChanged
-                            )
-                        }
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Sticky header — lives outside the grid so it never scrolls away
+            ScreenHeader(
+                title = stringResource(Res.string.title_voices),
+                listState = listState,
+                isCollapsed = collapsed,
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 16.dp),
+                expandedTitleSize = 24f,
+                subtitle = {
+                    Text(
+                        text = stringResource(Res.string.voices_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                },
+                stickyContent = {
+                    SearchBar(
+                        query = searchQuery,
+                        onQueryChanged = onSearchQueryChanged
                     )
                 }
+            )
 
-                if (figures.isEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        EmptyState()
-                    }
-                } else {
-                    items(figures, key = { it.id }) { figure ->
-                        PortraitCard(figure = figure, onClick = { onFigureClick(figure.id) })
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .pullToRefresh(
+                        isRefreshing = isRefreshing,
+                        state = pullToRefreshState,
+                        onRefresh = onRefresh
+                    )
+            ) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    state = gridState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (figures.isEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            EmptyState()
+                        }
+                    } else {
+                        items(figures, key = { it.id }) { figure ->
+                            PortraitCard(figure = figure, onClick = { onFigureClick(figure.id) })
+                        }
                     }
                 }
-            }
 
-            PullToRefreshDefaults.Indicator(
-                state = pullToRefreshState,
-                isRefreshing = isRefreshing,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
+                PullToRefreshDefaults.Indicator(
+                    state = pullToRefreshState,
+                    isRefreshing = isRefreshing,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
         }
     }
 }
