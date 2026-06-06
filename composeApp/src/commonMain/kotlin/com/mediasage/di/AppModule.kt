@@ -16,7 +16,8 @@ import com.mediasage.feature.settings.SettingsViewModel
 import com.mediasage.feature.figures.FigureDetailViewModel
 import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.history.HistoryViewModel
-import com.mediasage.feature.home.HomeViewModel
+import com.mediasage.feature.briefing.BriefingViewModel
+import com.mediasage.feature.headlines.HeadlinesViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
 import com.mediasage.feature.you.YouViewModel
 import org.koin.core.module.dsl.viewModel
@@ -24,13 +25,14 @@ import org.koin.dsl.module
 
 val appModule = module {
     viewModel { AppViewModel(get<FigureRepository>(), get<ThemePreferencesRepository>(), get<AuthRepository>()) }
-    viewModel { HomeViewModel(get<HeadlineRepository>(), get<PinnedFigureRepository>(), get<DailyReflectionRepository>(), get<FigureRepository>()) }
+    viewModel { BriefingViewModel(get<PinnedFigureRepository>(), get<DailyReflectionRepository>(), get<FigureRepository>()) }
+    viewModel { HeadlinesViewModel(get<HeadlineRepository>()) }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get()) }
     viewModel { FiguresViewModel(get<FigureRepository>(), get<EncouragementRepository>(), get<PinnedFigureRepository>()) }
     viewModel { (figureId: Long) -> FigureDetailViewModel(figureId, get<FigureRepository>(), get<EncouragementRepository>(), get<PinnedFigureRepository>()) }
     viewModel { LoginViewModel(get<AuthRepository>(), get<UserPreferencesRepository>()) }
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
-    viewModel { YouViewModel(get<AuthRepository>()) }
+    viewModel { YouViewModel() }
     viewModel { HistoryViewModel(get<EncouragementRepository>()) }
     viewModel { BookmarksViewModel(get<EncouragementRepository>()) }
 }

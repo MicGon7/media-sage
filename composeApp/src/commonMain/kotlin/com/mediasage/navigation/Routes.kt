@@ -10,7 +10,11 @@ import kotlinx.serialization.modules.subclass
 @Serializable
 sealed interface Route : NavKey {
 
-    /** Headlines feed — the main screen. */
+    /** Briefing tab — masthead, date row, and daily figure card. */
+    @Serializable
+    data object Briefing : Route
+
+    /** Headlines feed — pure news list. */
     @Serializable
     data object Home : Route
 
@@ -46,6 +50,7 @@ sealed interface Route : NavKey {
 /** Serialization config required for Nav3 on non-JVM platforms. */
 val navSerializersModule = SerializersModule {
     polymorphic(NavKey::class) {
+        subclass(Route.Briefing::class)
         subclass(Route.Home::class)
         subclass(Route.HeadlineDetail::class)
         subclass(Route.Figures::class)

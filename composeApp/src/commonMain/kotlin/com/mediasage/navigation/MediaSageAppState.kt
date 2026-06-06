@@ -58,7 +58,7 @@ fun rememberMediaSageAppState(): MediaSageAppState {
         configuration = SavedStateConfiguration {
             serializersModule = navSerializersModule
         },
-        Route.Home
+        Route.Briefing
     )
     return remember(backStack) { MediaSageAppState(backStack) }
 }

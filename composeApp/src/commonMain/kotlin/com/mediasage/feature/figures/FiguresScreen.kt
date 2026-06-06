@@ -1,7 +1,6 @@
 package com.mediasage.feature.figures
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -54,6 +53,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import com.mediasage.theme.MediaSageTheme
 import coil3.compose.AsyncImage
 import com.mediasage.ui.FigurePlaceholder
+import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.figure_detail_quotes_button
 import mediasage.composeapp.generated.resources.search_voices_hint
@@ -76,7 +76,13 @@ fun FiguresScreen(
             isRefreshing = state.isRefreshing,
             onRefresh = { onIntent(FiguresContract.Intent.Refresh) },
             searchQuery = state.searchQuery,
-            onSearchQueryChanged = { query -> onIntent(FiguresContract.Intent.SearchQueryChanged(query)) },
+            onSearchQueryChanged = { query ->
+                onIntent(
+                    FiguresContract.Intent.SearchQueryChanged(
+                        query
+                    )
+                )
+            },
             onFigureClick = { id ->
                 onIntent(FiguresContract.Intent.FigureClicked(id))
                 onNavigateToFigureDetail(id)
@@ -85,41 +91,6 @@ fun FiguresScreen(
     }
 }
 
-@Composable
-private fun VoicesHeader(collapsed: Boolean) {
-    val titleSize by animateFloatAsState(
-        targetValue = if (collapsed) 22f else 36f,
-        label = "titleSize"
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        Text(
-            text = stringResource(Res.string.title_voices),
-            fontSize = titleSize.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        AnimatedVisibility(visible = !collapsed) {
-            Column {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(Res.string.voices_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.primary,
-            thickness = 1.dp
-        )
-    }
-}
 
 @Composable
 private fun SearchBar(query: String, onQueryChanged: (String) -> Unit) {
@@ -129,7 +100,7 @@ private fun SearchBar(query: String, onQueryChanged: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .padding(vertical = 16.dp),
+            .padding(vertical = 8.dp),
         label = { Text(stringResource(Res.string.search_voices_hint)) },
         singleLine = true,
         shape = MaterialTheme.shapes.medium,
@@ -154,7 +125,6 @@ private fun VoicesList(
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
-    val headerCollapsed by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -173,10 +143,25 @@ private fun VoicesList(
                 contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
                 stickyHeader {
-                    Column {
-                        VoicesHeader(collapsed = headerCollapsed)
-                        SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged)
-                    }
+                    ScreenHeader(
+                        title = stringResource(Res.string.title_voices),
+                        listState = listState,
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.surface),
+                        expandedTitleSize = 24f,
+                        subtitle = {
+                            Text(
+                                text = stringResource(Res.string.voices_subtitle),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontStyle = FontStyle.Italic,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        },
+                        stickyContent = {
+                            SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged)
+                        }
+                    )
                 }
 
                 if (figures.isEmpty()) {
@@ -247,7 +232,11 @@ private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
 
         if (figure.quoteCount > 0) {
             Text(
-                text = pluralStringResource(Res.plurals.figure_detail_quotes_button, figure.quoteCount, figure.quoteCount),
+                text = pluralStringResource(
+                    Res.plurals.figure_detail_quotes_button,
+                    figure.quoteCount,
+                    figure.quoteCount
+                ),
                 color = MaterialTheme.colorScheme.onPrimary,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
@@ -311,14 +300,40 @@ private class FiguresStateProvider : PreviewParameterProvider<FiguresContract.Ui
         FiguresContract.UiState.Success(figures = emptyList()),
         FiguresContract.UiState.Success(
             figures = listOf(
-                VoiceFigureItem(id = 1L, name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3, isPinned = true),
-                VoiceFigureItem(id = 2L, name = "Dietrich Bonhoeffer", role = "Theologian & Martyr", imageUrl = null, quoteCount = 1),
-                VoiceFigureItem(id = 3L, name = "Martin Luther King Jr.", role = "Pastor & Civil Rights Leader", imageUrl = null, quoteCount = 0),
+                VoiceFigureItem(
+                    id = 1L,
+                    name = "C.S. Lewis",
+                    role = "Author & Apologist",
+                    imageUrl = null,
+                    quoteCount = 3,
+                    isPinned = true
+                ),
+                VoiceFigureItem(
+                    id = 2L,
+                    name = "Dietrich Bonhoeffer",
+                    role = "Theologian & Martyr",
+                    imageUrl = null,
+                    quoteCount = 1
+                ),
+                VoiceFigureItem(
+                    id = 3L,
+                    name = "Martin Luther King Jr.",
+                    role = "Pastor & Civil Rights Leader",
+                    imageUrl = null,
+                    quoteCount = 0
+                ),
             )
         ),
         FiguresContract.UiState.Success(
             figures = listOf(
-                VoiceFigureItem(id = 1L, name = "C.S. Lewis", role = "Author & Apologist", imageUrl = null, quoteCount = 3, isPinned = true),
+                VoiceFigureItem(
+                    id = 1L,
+                    name = "C.S. Lewis",
+                    role = "Author & Apologist",
+                    imageUrl = null,
+                    quoteCount = 3,
+                    isPinned = true
+                ),
             ),
             searchQuery = "lewis"
         )

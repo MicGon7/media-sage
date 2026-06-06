@@ -17,8 +17,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.mediasage.theme.MediaSageTheme
+import com.mediasage.feature.briefing.BriefingContract
+import com.mediasage.feature.briefing.BriefingScreen
+import com.mediasage.feature.briefing.BriefingViewModel
 import com.mediasage.feature.figures.FiguresContract
-import com.mediasage.feature.home.HomeContract
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import com.mediasage.feature.bookmarks.BookmarksScreen
@@ -27,10 +29,11 @@ import com.mediasage.feature.figures.FigureDetailScreen
 import com.mediasage.feature.figures.FigureDetailViewModel
 import com.mediasage.feature.figures.FiguresScreen
 import com.mediasage.feature.figures.FiguresViewModel
+import com.mediasage.feature.headlines.HeadlinesContract
+import com.mediasage.feature.headlines.HeadlinesScreen
+import com.mediasage.feature.headlines.HeadlinesViewModel
 import com.mediasage.feature.history.HistoryScreen
 import com.mediasage.feature.history.HistoryViewModel
-import com.mediasage.feature.home.HomeScreen
-import com.mediasage.feature.home.HomeViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailScreen
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
 import com.mediasage.feature.settings.SettingsContract
@@ -76,24 +79,40 @@ fun MediaSageScaffold(
             modifier = Modifier.padding(padding),
         ) { route ->
             when (route) {
-                is Route.Home -> NavEntry(route) {
-                    val vm = koinViewModel<HomeViewModel>()
+                is Route.Briefing -> NavEntry(route) {
+                    val vm = koinViewModel<BriefingViewModel>()
                     val state by vm.state.collectAsState()
                     LaunchedEffect(vm) {
                         vm.sideEffects.collect { effect ->
                             when (effect) {
-                                is HomeContract.SideEffect.ShowError ->
+                                is BriefingContract.SideEffect.ShowError ->
                                     snackbarHostState.showSnackbar(effect.message)
-                                is HomeContract.SideEffect.NavigateToDetail ->
+                            }
+                        }
+                    }
+                    BriefingScreen(
+                        state = state,
+                        onIntent = vm::onIntent,
+                        onNavigateToFigureDetail = { id -> appState.navigateToFigureDetail(id) }
+                    )
+                }
+                is Route.Home -> NavEntry(route) {
+                    val vm = koinViewModel<HeadlinesViewModel>()
+                    val state by vm.state.collectAsState()
+                    LaunchedEffect(vm) {
+                        vm.sideEffects.collect { effect ->
+                            when (effect) {
+                                is HeadlinesContract.SideEffect.ShowError ->
+                                    snackbarHostState.showSnackbar(effect.message)
+                                is HeadlinesContract.SideEffect.NavigateToDetail ->
                                     appState.navigateToHeadlineDetail(effect.articleUrl)
                             }
                         }
                     }
-                    HomeScreen(
+                    HeadlinesScreen(
                         state = state,
                         onIntent = vm::onIntent,
-                        onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) },
-                        onNavigateToFigureDetail = { id -> appState.navigateToFigureDetail(id) }
+                        onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) }
                     )
                 }
                 is Route.HeadlineDetail -> NavEntry(route) {
