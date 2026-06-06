@@ -98,11 +98,6 @@ MS-{TICKET}: Add unit tests for {ClassName}
 
 ---
 
-## Hard rules
-
-- No mocking libraries. Fakes only.
-- No `@RunWith` annotations — this is `kotlin.test`, not JUnit4.
-- No business logic in Fakes — they store and return; they do not compute.
-- Do not add production code to make tests pass unless the ticket explicitly requires it. If a gap
-  in coverage reveals a missing production behaviour, note it in the PR description.
-- All test files go in `commonTest`, not `androidTest` or `iosTest` — tests must run on all platforms.
+The unit test principles that govern this work (no mocking libraries, no `@RunWith`, Fakes only,
+`commonTest` only) are standing rules in CLAUDE.md — see the "Unit test principles" section under
+Testing Conventions.

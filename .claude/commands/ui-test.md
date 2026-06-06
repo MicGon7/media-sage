@@ -168,12 +168,6 @@ MS-{TICKET}: Add UI tests for {ScreenName}
 
 ---
 
-## Hard rules
-
-- No Espresso — that is for View-based UI, not Compose.
-- No `@RunWith(AndroidJUnit4::class)` — this is `commonTest`, not `androidTest`.
-- No ViewModel in test setup — pass state directly to the composable.
-- No Koin in test setup — no DI at all. Composables are stateless; inject nothing.
-- No hardcoded English strings in assertions — use `getString(Res.string.x)`.
-- Do not test navigation callback routing (that is integration territory) — only assert that the
-  correct intent is fired or the correct callback is invoked.
+The UI test principles that govern this work (no Espresso, no `@RunWith`, no ViewModel or Koin in
+test setup, no hardcoded strings) are standing rules in CLAUDE.md — see the "UI test principles"
+section under Testing Conventions.

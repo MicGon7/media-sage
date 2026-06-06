@@ -197,6 +197,18 @@ docker run -p 8081:8081 \
 - **PR body format**: pre-check unit test items with `[x]` (already verified before push); tests that require a live deployed system go in a separate `## Post-deploy verification` section; omit the test plan section entirely for PRs with no live smoke test
 - **Pipeline E2E scenarios** (`:pipelineScenarios`): on-demand health checks run via `./gradlew :pipelineScenarios:e2e*`. Never run in standard CI — they dispatch real Cloud Run Jobs. `e2eDedupCompleted` is the post-deploy canary (Supabase only, no Cloud Run).
 
+#### Unit test principles
+- No mocking libraries — use Fakes (lightweight in-memory implementations of the interface)
+- No `@RunWith` annotations — this project uses `kotlin.test`, not JUnit4
+- No business logic in Fakes — they store and return; they do not compute
+- All test files go in `commonTest`, not `androidTest` or `iosTest` — tests must run on all platforms
+
+#### UI test principles
+- No Espresso — that is for View-based UI, not Compose
+- No `@RunWith(AndroidJUnit4::class)` in `commonTest` — use `runComposeUiTest {}` (the Compose Multiplatform API)
+- No ViewModel or Koin in test setup — pass state directly to the composable; screens are stateless
+- No hardcoded strings in assertions — use `getString(Res.string.x)` to resolve string resources
+
 ### Quality Gates
 - **Detekt**: Runs in CI before build. `./gradlew detekt` must pass.
 - **Kover**: Coverage reports generated in CI, uploaded as artifacts. Target: 70% line coverage (Phase 2).
