@@ -3,6 +3,7 @@
     <string name="app_name">The Courage Post</string>
 
     <!-- Navigation -->
+    <string name="nav_briefing">Briefing</string>
     <string name="nav_headlines">Headlines</string>
     <string name="nav_voices">Reporters</string>
     <string name="nav_you">Reader</string>
@@ -41,12 +42,22 @@
 
     <!-- You screen -->
     <string name="you_screen_title">Reader</string>
-    <string name="you_greeting_morning">Good morning</string>
-    <string name="you_greeting_afternoon">Good afternoon</string>
-    <string name="you_greeting_evening">Good evening</string>
     <string name="you_nav_saved">Saved</string>
     <string name="you_nav_history">History</string>
     <string name="you_settings_icon_description">Settings</string>
+    <string name="you_carousel_title">YOUR REPORTERS THIS WEEK</string>
+    <string name="you_saved_section_title">FROM THE REPORTERS</string>
+    <string name="you_quote_card_header">MEMORY QUOTE</string>
+    <string name="you_saved_see_all">More from this reporter →</string>
+    <string name="you_carousel_assign_hint">Add</string>
+    <string name="you_lens_section_title">TODAY'S LENS</string>
+    <string name="you_lens_subtitle">What are you carrying into today?</string>
+    <string name="you_lens_today">News</string>
+    <string name="you_lens_hope">Hope</string>
+    <string name="you_lens_anxiety">Anxiety</string>
+    <string name="you_lens_love">Love</string>
+    <string name="you_lens_grief">Grief</string>
+    <string name="you_lens_justice">Justice</string>
 
     <!-- Settings screen -->
     <string name="title_settings">Settings</string>
@@ -79,6 +90,11 @@
     <string name="figure_detail_biography">Biography</string>
     <string name="figure_detail_wikipedia_source">Sourced from Wikipedia</string>
     <string name="figure_detail_quotes_sheet_title">Collected Quotes</string>
+
+    <plurals name="headlines_story_count">
+        <item quantity="one">%1$d story</item>
+        <item quantity="other">%1$d stories</item>
+    </plurals>
 
     <plurals name="figure_detail_quotes_button">
         <item quantity="one">%1$d Quote</item>

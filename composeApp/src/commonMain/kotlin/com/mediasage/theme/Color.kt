@@ -31,7 +31,8 @@ val Error = Color(0xFFB00020)
 val ErrorDark = Color(0xFFCF6679)
 
 // Modern palette (brand navy — matches login screen gradient NavyLight → Navy)
-val Accent = Color(0xFFD4A853)
+val BrandAmber = Color(0xFFD4A050)         // personal selection accent — pinned reporters, memory quote
+val Accent = BrandAmber
 val AccentDark = Color(0xFFB8943F)
 val ModernLightCard = Color(0xFF253B5E)    // card surface in modern light (lighter than Navy)
 val ModernDarkCard = Color(0xFF1A2D4A)    // card surface in modern dark (slightly lighter than NavyDeep)
@@ -42,4 +43,4 @@ val ModernBorderMuted = Color(0xFFB0A898)  // muted warm gray (matches login div
 // Warm palette (Kindle e-reader — warm sepia light, warm dark night mode)
 val ReaderSurface = Color(0xFFECE6D8)      // warm cream card surface (light mode)
 val ReaderPrimary = Color(0xFF5C3D2E)      // warm brown primary (light mode)
-val ReaderAmber = Color(0xFFD4A050)        // warm amber primary / accent (dark mode)
+val ReaderAmber = BrandAmber               // warm amber primary / accent (dark mode)

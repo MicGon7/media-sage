@@ -27,6 +27,8 @@ data class VoiceFigureItem(
     val id: Long,
     val name: String,
     val role: String,
+    val lifespan: String,
+    val themes: List<String> = emptyList(),
     val imageUrl: String?,
     val quoteCount: Int = 0,
     val isPinned: Boolean = false
