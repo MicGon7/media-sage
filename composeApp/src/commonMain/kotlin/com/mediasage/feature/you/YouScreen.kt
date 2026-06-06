@@ -3,53 +3,63 @@ package com.mediasage.feature.you
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalDensity
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -57,10 +67,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.mediasage.domain.model.Figure
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
 import com.mediasage.theme.MediaSageTheme
+import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.ScreenHeader
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.datetime.DayOfWeek
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
@@ -75,14 +89,19 @@ import mediasage.composeapp.generated.resources.you_lens_subtitle
 import mediasage.composeapp.generated.resources.you_lens_today
 import mediasage.composeapp.generated.resources.you_nav_history
 import mediasage.composeapp.generated.resources.you_nav_saved
+import mediasage.composeapp.generated.resources.you_picker_clear_day
+import mediasage.composeapp.generated.resources.you_picker_empty
+import mediasage.composeapp.generated.resources.you_picker_search_clear
+import mediasage.composeapp.generated.resources.you_picker_search_hint
+import mediasage.composeapp.generated.resources.you_picker_title
 import mediasage.composeapp.generated.resources.you_quote_card_header
-import mediasage.composeapp.generated.resources.you_saved_see_all
 import mediasage.composeapp.generated.resources.you_saved_section_title
-import androidx.compose.foundation.layout.Column
+import mediasage.composeapp.generated.resources.you_saved_see_all
 import mediasage.composeapp.generated.resources.you_screen_title
 import mediasage.composeapp.generated.resources.you_settings_icon_description
 import org.jetbrains.compose.resources.stringResource
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YouScreen(
     state: YouContract.UiState,
@@ -92,6 +111,29 @@ fun YouScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToFigureDetail: (figureId: Long) -> Unit = {},
 ) {
+    if (state is YouContract.UiState.Ready && state.pickerOpenForDay != null) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val isAssigned = state.weekSlots.any {
+            it.dayOfWeek.ordinal == state.pickerOpenForDay && it.assignedFigureName != null
+        }
+        ModalBottomSheet(
+            onDismissRequest = { onIntent(YouContract.Intent.PickerDismissed) },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            FigurePickerSheet(
+                figures = state.pickerFigures,
+                showClearOption = isAssigned,
+                onFigureSelected = { figure ->
+                    onIntent(YouContract.Intent.FigureAssigned(state.pickerOpenForDay, figure.id))
+                },
+                onClearDay = {
+                    onIntent(YouContract.Intent.AssignmentCleared(state.pickerOpenForDay))
+                },
+            )
+        }
+    }
+
     Surface(modifier = Modifier.fillMaxSize()) {
         val listState = rememberLazyListState()
         LazyColumn(
@@ -261,6 +303,7 @@ private fun DaySlotItem(slot: YouContract.DaySlot, onClick: () -> Unit) {
             slot = slot,
             size = 72.dp,
             primaryColor = primary,
+            todayRingColor = BrandAmber,
             surfaceVariantColor = surfaceVariant,
             onSurfaceVariantColor = onSurfaceVariant,
         )
@@ -280,6 +323,7 @@ private fun ReporterCircle(
     slot: YouContract.DaySlot,
     size: Dp,
     primaryColor: Color,
+    todayRingColor: Color,
     surfaceVariantColor: Color,
     onSurfaceVariantColor: Color,
 ) {
@@ -294,7 +338,7 @@ private fun ReporterCircle(
                     .size(size)
                     .clip(CircleShape)
                     .then(
-                        if (slot.isToday) Modifier.solidCircleBorder(primaryColor, 2.dp)
+                        if (slot.isToday) Modifier.solidCircleBorder(todayRingColor, 2.dp)
                         else Modifier
                     ),
                 contentScale = ContentScale.Crop,
@@ -309,7 +353,7 @@ private fun ReporterCircle(
                     .clip(CircleShape)
                     .background(bgColor)
                     .then(
-                        if (slot.isToday) Modifier.solidCircleBorder(primaryColor, 2.dp)
+                        if (slot.isToday) Modifier.solidCircleBorder(todayRingColor, 2.dp)
                         else Modifier
                     ),
                 contentAlignment = Alignment.Center,
@@ -322,7 +366,7 @@ private fun ReporterCircle(
             }
         }
         else -> {
-            val borderColor = if (slot.isToday) primaryColor else onSurfaceVariantColor.copy(alpha = 0.4f)
+            val borderColor = if (slot.isToday) todayRingColor else onSurfaceVariantColor.copy(alpha = 0.4f)
             Box(
                 modifier = Modifier
                     .size(size)
@@ -534,6 +578,141 @@ private fun SavedQuoteCard(
         }
     }
 
+}
+
+@Composable
+private fun FigurePickerSheet(
+    figures: List<Figure>,
+    showClearOption: Boolean,
+    onFigureSelected: (Figure) -> Unit,
+    onClearDay: () -> Unit,
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val filtered = remember(figures, query) {
+        if (query.isBlank()) figures
+        else figures.filter { it.name.contains(query.trim(), ignoreCase = true) }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Text(
+            text = stringResource(Res.string.you_picker_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = { Text(stringResource(Res.string.you_picker_search_hint)) },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { query = "" }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(Res.string.you_picker_search_clear),
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            shape = CircleShape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LazyColumn(
+            contentPadding = PaddingValues(bottom = 32.dp),
+        ) {
+            if (showClearOption) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onClearDay)
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.errorContainer),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Text(
+                            text = stringResource(Res.string.you_picker_clear_day),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                }
+            }
+
+            if (filtered.isEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(Res.string.you_picker_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 32.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            } else {
+                items(filtered, key = { it.id }) { figure ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onFigureSelected(figure) }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        if (figure.portraitUrl != null) {
+                            AsyncImage(
+                                model = figure.portraitUrl,
+                                contentDescription = figure.name,
+                                modifier = Modifier.size(40.dp).clip(CircleShape),
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                error = rememberVectorPainter(Icons.Filled.Person),
+                                fallback = rememberVectorPainter(Icons.Filled.Person),
+                            )
+                        } else {
+                            FigurePlaceholder(name = figure.name, size = 40.dp)
+                        }
+                        Column {
+                            Text(
+                                text = figure.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            if (figure.role.isNotBlank()) {
+                                Text(
+                                    text = figure.role,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 // region Previews

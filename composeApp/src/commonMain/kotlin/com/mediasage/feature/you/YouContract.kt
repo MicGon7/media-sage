@@ -1,5 +1,6 @@
 package com.mediasage.feature.you
 
+import com.mediasage.domain.model.Figure
 import kotlinx.datetime.DayOfWeek
 
 object YouContract {
@@ -26,11 +27,16 @@ object YouContract {
             val weekSlots: List<DaySlot> = emptyList(),
             val selectedLens: LensFilter = LensFilter.TODAY,
             val quoteCard: QuoteCard? = null,
+            val pickerOpenForDay: Int? = null,
+            val pickerFigures: List<Figure> = emptyList(),
         ) : UiState
     }
 
     sealed interface Intent {
         data class DaySlotTapped(val index: Int) : Intent
         data class LensSelected(val lens: LensFilter) : Intent
+        data object PickerDismissed : Intent
+        data class FigureAssigned(val dayOfWeek: Int, val figureId: Long) : Intent
+        data class AssignmentCleared(val dayOfWeek: Int) : Intent
     }
 }

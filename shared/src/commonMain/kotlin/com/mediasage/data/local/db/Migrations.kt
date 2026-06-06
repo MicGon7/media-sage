@@ -25,6 +25,15 @@ val MIGRATION_15_16 = object : Migration(15, 16) {
     }
 }
 
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS day_assignment " +
+                "(dayOfWeek INTEGER NOT NULL, figureId INTEGER NOT NULL, PRIMARY KEY(dayOfWeek))"
+        )
+    }
+}
+
 val MIGRATION_14_15 = object : Migration(14, 15) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(
