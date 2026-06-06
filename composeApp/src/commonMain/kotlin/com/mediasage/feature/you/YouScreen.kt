@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mediasage.theme.AppTheme
+import com.mediasage.theme.BrandAmber
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ScreenHeader
 import kotlinx.datetime.DayOfWeek
@@ -466,11 +468,27 @@ private fun SavedQuoteCard(
             ),
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Row {
+                // Amber bookmark ribbon — same language as pinned reporters
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .fillMaxHeight()
+                        .background(
+                            color = BrandAmber,
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                                topStart = MaterialTheme.shapes.large.topStart,
+                                bottomStart = MaterialTheme.shapes.large.bottomStart,
+                                topEnd = androidx.compose.foundation.shape.CornerSize(0.dp),
+                                bottomEnd = androidx.compose.foundation.shape.CornerSize(0.dp),
+                            )
+                        )
+                )
+                Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = stringResource(Res.string.you_quote_card_header),
                     style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    color = BrandAmber,
                 )
                 Text(
                     text = "“${quote.quoteText}”",
@@ -511,6 +529,7 @@ private fun SavedQuoteCard(
                         .padding(top = 12.dp)
                         .clickable { onViewMore(quote.figureId) },
                 )
+            }
             }
         }
     }

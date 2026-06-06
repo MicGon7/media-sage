@@ -40,6 +40,8 @@ class FiguresViewModel(
                         id = figure.id,
                         name = figure.name,
                         role = figure.role,
+                        lifespan = figure.lifespan,
+                        themes = figure.themes,
                         imageUrl = figure.portraitUrl,
                         quoteCount = counts[figure.name] ?: 0,
                         isPinned = figure.id == pinnedId
@@ -50,7 +52,9 @@ class FiguresViewModel(
                 } else {
                     items.filter { item ->
                         item.name.contains(query, ignoreCase = true) ||
-                            item.role.contains(query, ignoreCase = true)
+                            item.role.contains(query, ignoreCase = true) ||
+                            item.lifespan.contains(query, ignoreCase = true) ||
+                            item.themes.any { it.contains(query, ignoreCase = true) }
                     }
                 }
                 val sorted = filtered.sortedWith(

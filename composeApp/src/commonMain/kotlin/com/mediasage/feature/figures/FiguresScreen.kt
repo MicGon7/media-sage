@@ -1,36 +1,36 @@
 package com.mediasage.feature.figures
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
@@ -45,23 +45,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
-import com.mediasage.theme.MediaSageTheme
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.mediasage.theme.MediaSageTheme
+import com.mediasage.theme.ReaderAmber
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.figure_detail_quotes_button
 import mediasage.composeapp.generated.resources.search_voices_hint
 import mediasage.composeapp.generated.resources.title_voices
 import mediasage.composeapp.generated.resources.voices_empty_state
 import mediasage.composeapp.generated.resources.voices_subtitle
-import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
+
+private const val MAX_THEME_CHIPS = 2
 
 @Composable
 fun FiguresScreen(
@@ -71,17 +72,13 @@ fun FiguresScreen(
 ) {
     when (state) {
         is FiguresContract.UiState.Loading -> LoadingState()
-        is FiguresContract.UiState.Success -> VoicesList(
+        is FiguresContract.UiState.Success -> VoicesGrid(
             figures = state.figures,
             isRefreshing = state.isRefreshing,
             onRefresh = { onIntent(FiguresContract.Intent.Refresh) },
             searchQuery = state.searchQuery,
             onSearchQueryChanged = { query ->
-                onIntent(
-                    FiguresContract.Intent.SearchQueryChanged(
-                        query
-                    )
-                )
+                onIntent(FiguresContract.Intent.SearchQueryChanged(query))
             },
             onFigureClick = { id ->
                 onIntent(FiguresContract.Intent.FigureClicked(id))
@@ -90,7 +87,6 @@ fun FiguresScreen(
         )
     }
 }
-
 
 @Composable
 private fun SearchBar(query: String, onQueryChanged: (String) -> Unit) {
@@ -115,7 +111,7 @@ private fun SearchBar(query: String, onQueryChanged: (String) -> Unit) {
 }
 
 @Composable
-private fun VoicesList(
+private fun VoicesGrid(
     figures: List<VoiceFigureItem>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
@@ -124,7 +120,14 @@ private fun VoicesList(
     onFigureClick: (Long) -> Unit
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
+    val gridState = rememberLazyGridState()
     val listState = rememberLazyListState()
+
+    val collapsed by remember {
+        derivedStateOf {
+            gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0
+        }
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -137,17 +140,20 @@ private fun VoicesList(
                     onRefresh = onRefresh
                 )
         ) {
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                state = gridState,
                 modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding = PaddingValues(horizontal = 16.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                stickyHeader {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     ScreenHeader(
                         title = stringResource(Res.string.title_voices),
                         listState = listState,
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.surface),
+                        isCollapsed = collapsed,
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                         expandedTitleSize = 24f,
                         subtitle = {
                             Text(
@@ -159,16 +165,21 @@ private fun VoicesList(
                             )
                         },
                         stickyContent = {
-                            SearchBar(query = searchQuery, onQueryChanged = onSearchQueryChanged)
+                            SearchBar(
+                                query = searchQuery,
+                                onQueryChanged = onSearchQueryChanged
+                            )
                         }
                     )
                 }
 
                 if (figures.isEmpty()) {
-                    item { EmptyState() }
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        EmptyState()
+                    }
                 } else {
                     items(figures, key = { it.id }) { figure ->
-                        VoiceCard(figure = figure, onClick = { onFigureClick(figure.id) })
+                        PortraitCard(figure = figure, onClick = { onFigureClick(figure.id) })
                     }
                 }
             }
@@ -182,85 +193,129 @@ private fun VoicesList(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun VoiceCard(figure: VoiceFigureItem, onClick: () -> Unit) {
-    Box {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 6.dp)
-                .clickable(onClick = onClick),
-            shape = MaterialTheme.shapes.medium,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+private fun PortraitCard(figure: VoiceFigureItem, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .border(
+                width = if (figure.isPinned) 2.dp else 1.dp,
+                color = if (figure.isPinned) ReaderAmber else MaterialTheme.colorScheme.outline,
+                shape = MaterialTheme.shapes.medium
+            )
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column {
+            Box {
                 if (figure.imageUrl != null) {
                     AsyncImage(
                         model = figure.imageUrl,
                         contentDescription = figure.name,
                         modifier = Modifier
-                            .size(64.dp)
-                            .clip(CircleShape),
+                            .fillMaxWidth()
+                            .aspectRatio(3f / 4f)
+                            .then(
+                                // Gold ring inset on the portrait when pinned
+                                if (figure.isPinned) Modifier.border(
+                                    width = 3.dp,
+                                    color = ReaderAmber,
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(0.dp)
+                                ) else Modifier
+                            ),
                         contentScale = ContentScale.Crop,
                         alignment = Alignment.TopCenter
                     )
                 } else {
-                    FigurePlaceholder(name = figure.name, size = 64.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(3f / 4f)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .then(
+                                if (figure.isPinned) Modifier.border(
+                                    width = 3.dp,
+                                    color = ReaderAmber,
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(0.dp)
+                                ) else Modifier
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        FigurePlaceholder(name = figure.name, size = 72.dp)
+                    }
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
+                if (figure.quoteCount > 0) {
                     Text(
-                        text = figure.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "${figure.quoteCount}",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(6.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = MaterialTheme.shapes.small
+                            )
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
                     )
-                    if (figure.role.isNotBlank()) {
-                        Text(
-                            text = figure.role,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                }
+            }
+
+            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+                Text(
+                    text = figure.name,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                )
+                if (figure.role.isNotBlank()) {
+                    Text(
+                        text = figure.role,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontStyle = FontStyle.Italic,
+                        modifier = Modifier.padding(top = 2.dp),
+                        maxLines = 1,
+                    )
+                }
+                if (figure.lifespan.isNotBlank()) {
+                    Text(
+                        text = figure.lifespan,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 1.dp)
+                    )
+                }
+                if (figure.themes.isNotEmpty()) {
+                    FlowRow(
+                        modifier = Modifier.padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        figure.themes.take(MAX_THEME_CHIPS).forEach { theme ->
+                            SuggestionChip(
+                                onClick = {},
+                                label = {
+                                    Text(
+                                        text = theme,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 9.sp
+                                    )
+                                },
+                                colors = SuggestionChipDefaults.suggestionChipColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                ),
+                                border = null,
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                        }
                     }
                 }
             }
-        }
-
-        if (figure.quoteCount > 0) {
-            Text(
-                text = pluralStringResource(
-                    Res.plurals.figure_detail_quotes_button,
-                    figure.quoteCount,
-                    figure.quoteCount
-                ),
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = (-8).dp, y = 2.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            )
-        }
-
-        if (figure.isPinned) {
-            Icon(
-                imageVector = Icons.Filled.PushPin,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = 8.dp, y = 2.dp)
-                    .size(20.dp)
-            )
         }
     }
 }
@@ -304,6 +359,8 @@ private class FiguresStateProvider : PreviewParameterProvider<FiguresContract.Ui
                     id = 1L,
                     name = "C.S. Lewis",
                     role = "Author & Apologist",
+                    lifespan = "1898–1963",
+                    themes = listOf("Faith", "Reason"),
                     imageUrl = null,
                     quoteCount = 3,
                     isPinned = true
@@ -312,6 +369,8 @@ private class FiguresStateProvider : PreviewParameterProvider<FiguresContract.Ui
                     id = 2L,
                     name = "Dietrich Bonhoeffer",
                     role = "Theologian & Martyr",
+                    lifespan = "1898–1963",
+                    themes = listOf("Justice", "Discipleship", "Grace"),
                     imageUrl = null,
                     quoteCount = 1
                 ),
@@ -319,24 +378,22 @@ private class FiguresStateProvider : PreviewParameterProvider<FiguresContract.Ui
                     id = 3L,
                     name = "Martin Luther King Jr.",
                     role = "Pastor & Civil Rights Leader",
+                    lifespan = "1898–1963",
+                    themes = listOf("Justice", "Hope"),
                     imageUrl = null,
                     quoteCount = 0
                 ),
+                VoiceFigureItem(
+                    id = 4L,
+                    name = "Julian of Norwich",
+                    role = "Mystic & Theologian",
+                    lifespan = "1347–1380",
+                    themes = listOf("Love", "Contemplation"),
+                    imageUrl = null,
+                    quoteCount = 2
+                ),
             )
         ),
-        FiguresContract.UiState.Success(
-            figures = listOf(
-                VoiceFigureItem(
-                    id = 1L,
-                    name = "C.S. Lewis",
-                    role = "Author & Apologist",
-                    imageUrl = null,
-                    quoteCount = 3,
-                    isPinned = true
-                ),
-            ),
-            searchQuery = "lewis"
-        )
     )
 }
 
