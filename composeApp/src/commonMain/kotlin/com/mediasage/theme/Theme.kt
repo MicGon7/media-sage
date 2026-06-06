@@ -34,26 +34,26 @@ internal fun classicLightColors(): ColorScheme = lightColorScheme(
 )
 
 internal fun classicDarkColors(): ColorScheme = darkColorScheme(
-    primary = NavyMuted,
+    primary = ReaderAmber,
     onPrimary = DarkBackground,
-    primaryContainer = Navy,
+    primaryContainer = DarkSurface,
     onPrimaryContainer = InkLight,
-    secondary = NavyLight,
+    secondary = ReaderAmber,
     onSecondary = DarkBackground,
-    secondaryContainer = Navy,
+    secondaryContainer = DarkSurface,
     onSecondaryContainer = InkLight,
     tertiary = SlateLight,
     onTertiary = DarkBackground,
-    background = DarkBackground,
+    background = DarkSurface,
     onBackground = InkLight,
     surface = DarkSurface,
     onSurface = InkLight,
-    surfaceVariant = Ink,
+    surfaceVariant = DarkSurface,
     onSurfaceVariant = CharcoalLight,
     outline = RuleLineDark,
-    outlineVariant = Slate,
+    outlineVariant = RuleLineDark,
     error = ErrorDark,
-    onError = DarkBackground,
+    onError = DarkSurface,
 )
 
 internal fun classicLightAppColors() = AppColors(
@@ -63,68 +63,68 @@ internal fun classicLightAppColors() = AppColors(
 )
 
 internal fun classicDarkAppColors() = AppColors(
-    accent = NavyMuted,
+    accent = ReaderAmber,
     ruleLine = RuleLineDark,
-    cardBorder = RuleLineDark,
+    cardBorder = DarkSurface,
 )
 
-// ── Modern (brand navy — dark navy in both modes, deeper in dark) ─────────────
+// ── Modern (mockup — near-black dark with amber accent, warm cream light) ────
 
-internal fun modernLightColors(): ColorScheme = darkColorScheme(
-    primary = White,
-    onPrimary = Navy,
-    primaryContainer = NavyLight,
-    onPrimaryContainer = InkLight,
-    secondary = InkLight,
-    onSecondary = Navy,
-    secondaryContainer = Navy,
-    onSecondaryContainer = InkLight,
-    tertiary = ModernBorderMuted,
-    onTertiary = Navy,
-    background = Navy,
-    onBackground = InkLight,
+internal fun modernLightColors(): ColorScheme = lightColorScheme(
+    primary = ModernAmber,
+    onPrimary = White,
+    primaryContainer = ModernLightCard,
+    onPrimaryContainer = ModernLightText,
+    secondary = ModernAmber,
+    onSecondary = White,
+    secondaryContainer = ModernLightCard,
+    onSecondaryContainer = ModernLightText,
+    tertiary = ModernLightMuted,
+    onTertiary = White,
+    background = White,
+    onBackground = ModernLightText,
     surface = ModernLightCard,
-    onSurface = InkLight,
+    onSurface = ModernLightText,
     surfaceVariant = ModernLightCard,
-    onSurfaceVariant = CharcoalLight,
-    outline = ModernBorder,
-    outlineVariant = ModernBorderMuted,
-    error = ErrorDark,
-    onError = Navy,
+    onSurfaceVariant = ModernLightMuted,
+    outline = ModernLightBorder,
+    outlineVariant = ModernLightBorder,
+    error = Error,
+    onError = White,
 )
 
 internal fun modernDarkColors(): ColorScheme = darkColorScheme(
-    primary = White,
-    onPrimary = NavyDeep,
-    primaryContainer = Navy,
-    onPrimaryContainer = InkLight,
-    secondary = InkLight,
-    onSecondary = NavyDeep,
-    secondaryContainer = NavyDeep,
-    onSecondaryContainer = InkLight,
-    tertiary = ModernBorderMuted,
-    onTertiary = NavyDeep,
-    background = NavyDeep,
-    onBackground = InkLight,
+    primary = ModernAmber,
+    onPrimary = ModernDarkBg,
+    primaryContainer = ModernDarkCard,
+    onPrimaryContainer = ModernDarkText,
+    secondary = ModernAmber,
+    onSecondary = ModernDarkBg,
+    secondaryContainer = ModernDarkCard,
+    onSecondaryContainer = ModernDarkText,
+    tertiary = ModernDarkMuted,
+    onTertiary = ModernDarkBg,
+    background = ModernDarkBg,
+    onBackground = ModernDarkText,
     surface = ModernDarkCard,
-    onSurface = InkLight,
+    onSurface = ModernDarkText,
     surfaceVariant = ModernDarkCard,
-    onSurfaceVariant = CharcoalLight,
-    outline = ModernBorder,
-    outlineVariant = ModernBorderMuted,
+    onSurfaceVariant = ModernDarkMuted,
+    outline = ModernDarkBorder,
+    outlineVariant = ModernDarkBorder,
     error = ErrorDark,
-    onError = NavyDeep,
+    onError = ModernDarkBg,
 )
 
 internal fun modernLightAppColors() = AppColors(
-    accent = White,
-    ruleLine = ModernBorderMuted,
-    cardBorder = ModernBorder,
+    accent = ModernAmber,
+    ruleLine = ModernLightBorder,
+    cardBorder = ModernLightBorder,
 )
 
 internal fun modernDarkAppColors() = AppColors(
-    accent = InkLight,
-    ruleLine = ModernBorderMuted,
+    accent = ModernAmber,
+    ruleLine = ModernDarkBorder,
     cardBorder = ModernDarkCard,
 )
 
@@ -155,25 +155,25 @@ internal fun warmLightColors(): ColorScheme = lightColorScheme(
 
 internal fun warmDarkColors(): ColorScheme = darkColorScheme(
     primary = ReaderAmber,
-    onPrimary = DarkBackground,
-    primaryContainer = DarkSurface,
-    onPrimaryContainer = InkLight,
+    onPrimary = WarmDarkBg,
+    primaryContainer = WarmDarkSurface,
+    onPrimaryContainer = ReaderSurface,
     secondary = ReaderAmber,
-    onSecondary = DarkBackground,
-    secondaryContainer = DarkSurface,
-    onSecondaryContainer = InkLight,
-    tertiary = SlateLight,
-    onTertiary = DarkBackground,
-    background = DarkSurface,
-    onBackground = InkLight,
-    surface = DarkSurface,
-    onSurface = InkLight,
-    surfaceVariant = DarkSurface,
-    onSurfaceVariant = CharcoalLight,
-    outline = RuleLineDark,
-    outlineVariant = RuleLineDark,
+    onSecondary = WarmDarkBg,
+    secondaryContainer = WarmDarkSurface,
+    onSecondaryContainer = ReaderSurface,
+    tertiary = WarmDarkMuted,
+    onTertiary = WarmDarkBg,
+    background = WarmDarkBg,
+    onBackground = ReaderSurface,
+    surface = WarmDarkSurface,
+    onSurface = ReaderSurface,
+    surfaceVariant = WarmDarkSurface,
+    onSurfaceVariant = WarmDarkMuted,
+    outline = WarmDarkBorder,
+    outlineVariant = WarmDarkBorder,
     error = ErrorDark,
-    onError = DarkSurface,
+    onError = WarmDarkBg,
 )
 
 internal fun warmLightAppColors() = AppColors(
@@ -184,8 +184,8 @@ internal fun warmLightAppColors() = AppColors(
 
 internal fun warmDarkAppColors() = AppColors(
     accent = ReaderAmber,
-    ruleLine = RuleLineDark,
-    cardBorder = DarkSurface,
+    ruleLine = WarmDarkBorder,
+    cardBorder = WarmDarkSurface,
 )
 
 // ── Composable ────────────────────────────────────────────────────────────────
