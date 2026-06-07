@@ -3,7 +3,9 @@ package com.mediasage.feature.headlinedetail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.domain.repository.EncouragementRepository
+import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
+import com.mediasage.domain.repository.QuoteRepository
 import com.mediasage.ui.toErrorType
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +17,9 @@ import kotlinx.coroutines.launch
 class HeadlineDetailViewModel(
     private val articleUrl: String,
     private val headlineRepository: HeadlineRepository,
-    private val encouragementRepository: EncouragementRepository
+    private val encouragementRepository: EncouragementRepository,
+    private val figureRepository: FigureRepository,
+    private val quoteRepository: QuoteRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<HeadlineDetailContract.UiState>(HeadlineDetailContract.UiState.Loading)
@@ -83,6 +87,18 @@ class HeadlineDetailViewModel(
                         tone = encouragement.tone,
                     )
                 )
+
+                runCatching {
+                    val figure = figureRepository.getFigureByName(encouragement.figureName)
+                    if (figure != null) {
+                        quoteRepository.saveQuote(
+                            text = encouragement.quoteText,
+                            source = encouragement.scriptureReference,
+                            themes = encouragement.connectionThemes,
+                            figureId = figure.id,
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 _state.value = HeadlineDetailContract.UiState.Error(e.toErrorType())
             }

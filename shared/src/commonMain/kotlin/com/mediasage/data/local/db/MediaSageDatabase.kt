@@ -33,7 +33,7 @@ import com.mediasage.data.local.entity.SyncMetaEntity
         DailyReflectionEntity::class,
         DayAssignmentEntity::class,
     ],
-    version = 18,
+    version = 19,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

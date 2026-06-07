@@ -15,6 +15,9 @@ interface QuoteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(quotes: List<QuoteEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIgnore(quote: QuoteEntity): Long
+
     @Query("SELECT * FROM quotes WHERE figureId = :figureId")
     fun observeByFigure(figureId: Long): Flow<List<QuoteEntity>>
 
