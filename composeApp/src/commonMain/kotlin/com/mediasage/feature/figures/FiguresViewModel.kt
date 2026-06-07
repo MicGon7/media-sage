@@ -2,9 +2,10 @@ package com.mediasage.feature.figures
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
-import com.mediasage.domain.repository.PinnedFigureRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,11 +13,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 class FiguresViewModel(
     private val figureRepository: FigureRepository,
     private val encouragementRepository: EncouragementRepository,
-    private val pinnedFigureRepository: PinnedFigureRepository
+    private val dayAssignmentRepository: DayAssignmentRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<FiguresContract.UiState>(FiguresContract.UiState.Loading)
@@ -32,9 +36,11 @@ class FiguresViewModel(
             combine(
                 figureRepository.observeAllFigures(),
                 encouragementRepository.observeCountByFigureName(),
-                pinnedFigureRepository.observePinnedFigureId(),
+                dayAssignmentRepository.observeAssignments(),
                 _searchQuery
-            ) { figures, counts, pinnedId, query ->
+            ) { figures, counts, assignments, query ->
+                val todayOrdinal = todayDayOfWeekOrdinal()
+                val todayFigureId = assignments[todayOrdinal]
                 val items = figures.map { figure ->
                     VoiceFigureItem(
                         id = figure.id,
@@ -44,7 +50,7 @@ class FiguresViewModel(
                         themes = figure.themes,
                         imageUrl = figure.portraitUrl,
                         quoteCount = counts[figure.name] ?: 0,
-                        isPinned = figure.id == pinnedId
+                        isPinned = figure.id == todayFigureId
                     )
                 }
                 val filtered = if (query.isBlank()) {
@@ -88,4 +94,8 @@ class FiguresViewModel(
             _state.value = updated.copy(isRefreshing = false)
         }
     }
+
+    private fun todayDayOfWeekOrdinal(): Int =
+        Instant.fromEpochMilliseconds(epochMillis())
+            .toLocalDateTime(TimeZone.currentSystemDefault()).date.dayOfWeek.ordinal
 }

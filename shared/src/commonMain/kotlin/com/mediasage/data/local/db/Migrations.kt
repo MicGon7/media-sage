@@ -34,6 +34,12 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
     }
 }
 
+val MIGRATION_17_18 = object : Migration(17, 18) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("DROP TABLE IF EXISTS pinned_figure")
+    }
+}
+
 val MIGRATION_14_15 = object : Migration(14, 15) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

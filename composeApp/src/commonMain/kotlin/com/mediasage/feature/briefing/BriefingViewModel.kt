@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.repository.DailyReflectionRepository
+import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
-import com.mediasage.domain.repository.PinnedFigureRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +19,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
 class BriefingViewModel(
-    private val pinnedFigureRepository: PinnedFigureRepository,
+    private val dayAssignmentRepository: DayAssignmentRepository,
     private val dailyReflectionRepository: DailyReflectionRepository,
     private val figureRepository: FigureRepository
 ) : ViewModel() {
@@ -45,19 +45,16 @@ class BriefingViewModel(
     private fun loadCard() {
         viewModelScope.launch {
             combine(
-                pinnedFigureRepository.observePinnedFigureId(),
+                dayAssignmentRepository.observeAssignments(),
                 figureRepository.observeAllFigures()
-            ) { pinnedId, figures -> Pair(pinnedId, figures) }
+            ) { assignments, figures -> Pair(assignments, figures) }
                 .distinctUntilChanged()
-                .collect { (figureId, figures) ->
+                .collect { (assignments, figures) ->
+                    val todayOrdinal = todayDayOfWeekOrdinal()
+                    val figureId = assignments[todayOrdinal] ?: figures.firstOrNull()?.id
                     if (figureId == null) {
-                        val firstFigure = figures.firstOrNull()
-                        if (firstFigure != null) {
-                            pinnedFigureRepository.setPinnedFigureId(firstFigure.id)
-                        } else {
-                            updateCard(BriefingContract.CardState.Hidden)
-                            emitLoadingSuccess()
-                        }
+                        updateCard(BriefingContract.CardState.Hidden)
+                        emitLoadingSuccess()
                         return@collect
                     }
                     fetchAndUpdateCard(figureId)
@@ -131,4 +128,8 @@ class BriefingViewModel(
         val month = date.month.name.lowercase().replaceFirstChar { it.uppercase() }
         return "$day, $month ${date.day}, ${date.year}"
     }
+
+    private fun todayDayOfWeekOrdinal(): Int =
+        Instant.fromEpochMilliseconds(epochMillis())
+            .toLocalDateTime(TimeZone.currentSystemDefault()).date.dayOfWeek.ordinal
 }
