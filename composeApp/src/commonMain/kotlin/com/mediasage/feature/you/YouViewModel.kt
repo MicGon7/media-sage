@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
+import com.mediasage.domain.repository.QuoteRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +23,7 @@ import kotlin.time.Instant
 class YouViewModel(
     private val figureRepository: FigureRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
+    private val quoteRepository: QuoteRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<YouContract.UiState>(YouContract.UiState.Ready())
@@ -31,13 +33,27 @@ class YouViewModel(
         combine(
             figureRepository.observeAllFigures(),
             dayAssignmentRepository.observeAssignments(),
-        ) { figures, assignments ->
+            quoteRepository.observeAllQuotes(),
+        ) { figures, assignments, allQuotes ->
             val current = _state.value as? YouContract.UiState.Ready ?: YouContract.UiState.Ready()
+            val figuresById = figures.associateBy { it.id }
+            val todayOrdinal = Instant.fromEpochMilliseconds(epochMillis())
+                .toLocalDateTime(TimeZone.currentSystemDefault()).date.dayOfWeek.ordinal
+            val todayFigureId = assignments[todayOrdinal]
+            val todayFigure = todayFigureId?.let { figuresById[it] }
+            val quote = todayFigureId?.let { id -> allQuotes.lastOrNull { it.figureId == id } }
             current.copy(
-                weekSlots = buildWeekSlots(assignments, figures.associateBy { it.id }),
+                weekSlots = buildWeekSlots(assignments, figuresById),
                 pickerFigures = figures,
-                // TODO MS-315: replace with real saved quotes from QuoteRepository
-                quoteCard = current.quoteCard ?: MOCK_QUOTE_CARD,
+                quoteCard = if (quote != null && todayFigure != null) {
+                    YouContract.QuoteCard(
+                        quoteText = quote.text,
+                        figureName = todayFigure.name,
+                        figureRole = todayFigure.role,
+                        figureImageUrl = todayFigure.portraitUrl,
+                        figureId = todayFigure.id,
+                    )
+                } else null,
             )
         }.onEach { _state.value = it }.launchIn(viewModelScope)
     }
@@ -85,13 +101,4 @@ class YouViewModel(
         }
     }
 
-    companion object {
-        private val MOCK_QUOTE_CARD = YouContract.QuoteCard(
-            quoteText = "You can't go back and change the beginning, but you can start where you are and change the ending.",
-            figureName = "C.S. Lewis",
-            figureRole = "Author & Apologist",
-            figureImageUrl = null,
-            figureId = -1L,
-        )
-    }
 }

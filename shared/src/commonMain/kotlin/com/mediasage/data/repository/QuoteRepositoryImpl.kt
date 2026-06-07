@@ -21,6 +21,9 @@ class QuoteRepositoryImpl(
     override suspend fun getQuoteById(id: Long): Quote? =
         quoteDao.getById(id)?.toDomain()
 
+    override suspend fun getLatestQuoteForFigure(figureId: Long): Quote? =
+        quoteDao.getLatestByFigure(figureId)?.toDomain()
+
     override suspend fun saveQuote(text: String, source: String, themes: List<String>, figureId: Long) {
         quoteDao.insertIgnore(
             QuoteEntity(
