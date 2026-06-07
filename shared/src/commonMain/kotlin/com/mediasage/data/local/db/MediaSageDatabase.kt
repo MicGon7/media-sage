@@ -11,7 +11,6 @@ import com.mediasage.data.local.dao.EncouragementDao
 import com.mediasage.data.local.dao.FigureDao
 import com.mediasage.data.local.dao.HeadlineDao
 import com.mediasage.data.local.dao.MatchDao
-import com.mediasage.data.local.dao.PinnedFigureDao
 import com.mediasage.data.local.dao.QuoteDao
 import com.mediasage.data.local.dao.SyncMetaDao
 import com.mediasage.data.local.entity.DailyReflectionEntity
@@ -20,7 +19,6 @@ import com.mediasage.data.local.entity.EncouragementEntity
 import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.HeadlineEntity
 import com.mediasage.data.local.entity.MatchEntity
-import com.mediasage.data.local.entity.PinnedFigureEntity
 import com.mediasage.data.local.entity.QuoteEntity
 import com.mediasage.data.local.entity.SyncMetaEntity
 
@@ -33,10 +31,9 @@ import com.mediasage.data.local.entity.SyncMetaEntity
         EncouragementEntity::class,
         SyncMetaEntity::class,
         DailyReflectionEntity::class,
-        PinnedFigureEntity::class,
         DayAssignmentEntity::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -49,7 +46,6 @@ abstract class MediaSageDatabase : RoomDatabase() {
     abstract fun encouragementDao(): EncouragementDao
     abstract fun syncMetaDao(): SyncMetaDao
     abstract fun dailyReflectionDao(): DailyReflectionDao
-    abstract fun pinnedFigureDao(): PinnedFigureDao
     abstract fun dayAssignmentDao(): DayAssignmentDao
 }
 
