@@ -37,21 +37,18 @@ class YouViewModel(
         ) { figures, assignments, allQuotes ->
             val current = _state.value as? YouContract.UiState.Ready ?: YouContract.UiState.Ready()
             val figuresById = figures.associateBy { it.id }
-            val todayOrdinal = Instant.fromEpochMilliseconds(epochMillis())
-                .toLocalDateTime(TimeZone.currentSystemDefault()).date.dayOfWeek.ordinal
-            val todayFigureId = assignments[todayOrdinal]
-            val todayFigure = todayFigureId?.let { figuresById[it] }
-            val quote = todayFigureId?.let { id -> allQuotes.lastOrNull { it.figureId == id } }
+            val latestQuote = allQuotes.maxByOrNull { it.id }
+            val quoteFigure = latestQuote?.let { figuresById[it.figureId] }
             current.copy(
                 weekSlots = buildWeekSlots(assignments, figuresById),
                 pickerFigures = figures,
-                quoteCard = if (quote != null && todayFigure != null) {
+                quoteCard = if (latestQuote != null && quoteFigure != null) {
                     YouContract.QuoteCard(
-                        quoteText = quote.text,
-                        figureName = todayFigure.name,
-                        figureRole = todayFigure.role,
-                        figureImageUrl = todayFigure.portraitUrl,
-                        figureId = todayFigure.id,
+                        quoteText = latestQuote.text,
+                        figureName = quoteFigure.name,
+                        figureRole = quoteFigure.role,
+                        figureImageUrl = quoteFigure.portraitUrl,
+                        figureId = quoteFigure.id,
                     )
                 } else null,
             )

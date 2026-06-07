@@ -45,13 +45,9 @@ class YouViewModelTest {
     }
 
     @Test
-    fun quoteCardIsPopulatedWhenSavedQuoteExistsForTodaysFigure() = runTest(testDispatcher) {
+    fun quoteCardIsPopulatedWithMostRecentSavedQuote() = runTest(testDispatcher) {
         val savedQuote = Quote(id = 1L, figureId = 1L, text = "Our heart is restless.", source = "Confessions", themes = emptyList())
-        val viewModel = buildViewModel(
-            figure = testFigure,
-            todayAssignment = mapOf(0 to testFigure.id, 1 to testFigure.id, 2 to testFigure.id, 3 to testFigure.id, 4 to testFigure.id, 5 to testFigure.id, 6 to testFigure.id),
-            latestQuote = savedQuote
-        )
+        val viewModel = buildViewModel(figure = testFigure, latestQuote = savedQuote)
 
         val state = viewModel.state.value as YouContract.UiState.Ready
         assertNotNull(state.quoteCard)
@@ -60,37 +56,16 @@ class YouViewModelTest {
     }
 
     @Test
-    fun quoteCardIsNullWhenNoSavedQuoteExistsForTodaysFigure() = runTest(testDispatcher) {
-        val viewModel = buildViewModel(
-            figure = testFigure,
-            todayAssignment = mapOf(0 to testFigure.id, 1 to testFigure.id, 2 to testFigure.id, 3 to testFigure.id, 4 to testFigure.id, 5 to testFigure.id, 6 to testFigure.id),
-            latestQuote = null
-        )
+    fun quoteCardIsNullWhenNoQuotesSaved() = runTest(testDispatcher) {
+        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
 
         val state = viewModel.state.value as YouContract.UiState.Ready
         assertNull(state.quoteCard)
     }
 
-    @Test
-    fun quoteCardIsNullWhenNoFigureAssignedForToday() = runTest(testDispatcher) {
-        val savedQuote = Quote(id = 1L, figureId = 1L, text = "Our heart is restless.", source = "Confessions", themes = emptyList())
-        val viewModel = buildViewModel(
-            figure = testFigure,
-            todayAssignment = emptyMap(),
-            latestQuote = savedQuote
-        )
-
-        val state = viewModel.state.value as YouContract.UiState.Ready
-        assertNull(state.quoteCard)
-    }
-
-    private fun buildViewModel(
-        figure: Figure,
-        todayAssignment: Map<Int, Long>,
-        latestQuote: Quote?
-    ): YouViewModel = YouViewModel(
+    private fun buildViewModel(figure: Figure, latestQuote: Quote?): YouViewModel = YouViewModel(
         figureRepository = FakeFigureRepository(figure),
-        dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(todayAssignment)),
+        dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap())),
         quoteRepository = FakeQuoteRepository(latestQuote)
     )
 }
@@ -117,4 +92,5 @@ private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteReposi
     override fun observeQuotesByFigure(figureId: Long): Flow<List<Quote>> = MutableStateFlow(listOfNotNull(latestQuote))
     override suspend fun getQuoteById(id: Long): Quote? = latestQuote?.takeIf { it.id == id }
     override suspend fun getLatestQuoteForFigure(figureId: Long): Quote? = latestQuote
+    override suspend fun saveQuote(text: String, source: String, themes: List<String>, figureId: Long) = Unit
 }
