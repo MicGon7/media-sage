@@ -40,6 +40,14 @@ val MIGRATION_17_18 = object : Migration(17, 18) {
     }
 }
 
+val MIGRATION_18_19 = object : Migration(18, 19) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_quotes_figureId_text` ON `quotes` (`figureId`, `text`)"
+        )
+    }
+}
+
 val MIGRATION_14_15 = object : Migration(14, 15) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

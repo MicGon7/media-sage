@@ -15,7 +15,10 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("figureId")]
+    indices = [
+        Index("figureId"),
+        Index(value = ["figureId", "text"], unique = true)
+    ]
 )
 data class QuoteEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

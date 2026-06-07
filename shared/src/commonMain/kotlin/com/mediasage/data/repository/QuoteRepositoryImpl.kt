@@ -1,6 +1,7 @@
 package com.mediasage.data.repository
 
 import com.mediasage.data.local.dao.QuoteDao
+import com.mediasage.data.local.entity.QuoteEntity
 import com.mediasage.data.mapper.toDomain
 import com.mediasage.domain.model.Quote
 import com.mediasage.domain.repository.QuoteRepository
@@ -19,4 +20,15 @@ class QuoteRepositoryImpl(
 
     override suspend fun getQuoteById(id: Long): Quote? =
         quoteDao.getById(id)?.toDomain()
+
+    override suspend fun saveQuote(text: String, source: String, themes: List<String>, figureId: Long) {
+        quoteDao.insertIgnore(
+            QuoteEntity(
+                figureId = figureId,
+                text = text,
+                source = source,
+                themes = themes.joinToString(","),
+            )
+        )
+    }
 }
