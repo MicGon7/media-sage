@@ -22,13 +22,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
+import com.mediasage.ui.MediaSageBottomSheet
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.figure_detail_biography
 import mediasage.composeapp.generated.resources.figure_detail_pin_to_home
@@ -103,9 +103,8 @@ fun FigureDetailScreen(
                     )
 
                     if (showQuotesSheet) {
-                        ModalBottomSheet(
-                            onDismissRequest = { showQuotesSheet = false },
-                            containerColor = MaterialTheme.colorScheme.surface
+                        MediaSageBottomSheet(
+                            onDismissRequest = { showQuotesSheet = false }
                         ) {
                             QuotesSheetContent(quotes = state.quotes)
                         }
