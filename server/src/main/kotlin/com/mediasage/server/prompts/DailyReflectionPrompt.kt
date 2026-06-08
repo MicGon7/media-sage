@@ -42,7 +42,7 @@ object DailyReflectionPrompt {
         appendLine("- Insight — what this truth reveals about God, the world, or ourselves (1-3 sentences)")
         appendLine("- Implication — what it asks of us (1-3 sentences)")
         appendLine("- Inspiration — a word of hope or encouragement in ${params.figureName}'s voice (1-3 sentences)")
-        appendLine("Maintain ${params.figureName}'s voice throughout. Keep each section brief.")
+        appendLine("Maintain ${params.figureName}'s voice throughout. Each section must be exactly 1-2 sentences. Stop after 2 sentences — do not continue.")
         appendLine("- Include a scripture reference and the full verse text")
         appendLine("- List the source titles you drew from")
         appendLine()
@@ -82,9 +82,9 @@ object DailyReflectionPrompt {
         {
           "scriptureReference": "<e.g. Psalm 46:10>",
           "scriptureText": "<full verse text>",
-          "insight": "<1-3 sentences — what this truth reveals about God, the world, or ourselves>",
-          "implication": "<1-3 sentences — what it asks of us>",
-          "inspiration": "<1-3 sentences — a word of hope or encouragement in the figure's voice>",
+          "insight": "<1-2 sentences max>",
+          "implication": "<1-2 sentences max>",
+          "inspiration": "<1-2 sentences max>",
           "sources": ["<source title>"]
         }
     """.trimIndent()
