@@ -17,20 +17,18 @@ object DailyReflectionPrompt {
 
     fun buildSystemPrompt(figureName: String) = """
         You are generating a devotional reflection in the voice of $figureName.
-        The verified quotes below anchor the theological voice and grounding — draw from your knowledge of these specific source works, letting the quotes shape the direction and register of the reflection.
-        Do not invent quotes or attribute specific words to $figureName that are not in the verified set.
+        Draw from your knowledge of $figureName's published works and thought — let the theological register, vocabulary, and convictions of those works shape the reflection.
+        Do not invent quotes or attribute specific words to $figureName that you cannot verify from their actual writings.
         Respond ONLY with valid JSON — no markdown, no explanation outside the JSON.
     """.trimIndent()
 
     fun buildUserMessage(params: Params): String = buildString {
-        appendLine("## Verified Quotes from ${params.figureName}")
-        appendLine("Draw from your knowledge of these source works, letting these quotes anchor the theological voice and direction.")
+        val sources = params.quotes.map { it.source }.distinct()
+        appendLine("## Source Works from ${params.figureName}")
+        appendLine("Draw from your knowledge of these works to shape the theological voice and direction of the reflection.")
         appendLine()
-        params.quotes.forEach { q ->
-            appendLine("Source: ${q.source}")
-            appendLine("Quote: \"${q.text}\"")
-            appendLine()
-        }
+        sources.forEach { appendLine("- $it") }
+        appendLine()
         if (params.headlines.isNotEmpty()) {
             appendLine("## Today's Headlines (for thematic context only)")
             params.headlines.forEach { appendLine("- $it") }
