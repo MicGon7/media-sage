@@ -373,11 +373,14 @@ private fun BriefingCardSkeleton() {
 @Composable
 private fun ThemeChip(theme: String) {
     val color = when (theme.uppercase()) {
-        "HOPE" -> Color(0xFFE8B84B)
-        "ANXIETY" -> Color(0xFF8B7BAE)
         "LOVE" -> Color(0xFFD4687A)
-        "GRIEF" -> Color(0xFF5B7BA8)
+        "GRACE" -> Color(0xFF9B7DC8)
+        "REPENTANCE" -> Color(0xFF7A9E7E)
+        "HOPE" -> Color(0xFFE8B84B)
         "JUSTICE" -> Color(0xFF4A8C6A)
+        "GRIEF" -> Color(0xFF5B7BA8)
+        "FAITH" -> Color(0xFFB87333)
+        "PERSEVERANCE" -> Color(0xFF8B6356)
         else -> MaterialTheme.colorScheme.primary
     }
     Text(

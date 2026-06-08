@@ -1,3 +1,3 @@
 package com.mediasage.domain.model
 
-enum class LensFilter { NEWS, HOPE, ANXIETY, LOVE, GRIEF, JUSTICE }
+enum class LensFilter { NEWS, LOVE, GRACE, REPENTANCE, HOPE, JUSTICE, GRIEF, FAITH, PERSEVERANCE }

@@ -52,11 +52,14 @@
     <string name="you_carousel_assign_hint">Add</string>
     <string name="you_lens_section_title">TODAY'S LENS</string>
     <string name="you_lens_today">News</string>
-    <string name="you_lens_hope">Hope</string>
-    <string name="you_lens_anxiety">Anxiety</string>
     <string name="you_lens_love">Love</string>
-    <string name="you_lens_grief">Grief</string>
+    <string name="you_lens_grace">Grace</string>
+    <string name="you_lens_repentance">Repentance</string>
+    <string name="you_lens_hope">Hope</string>
     <string name="you_lens_justice">Justice</string>
+    <string name="you_lens_grief">Grief</string>
+    <string name="you_lens_faith">Faith</string>
+    <string name="you_lens_perseverance">Perseverance</string>
     <string name="you_picker_title">Choose a Reporter</string>
     <string name="you_picker_search_hint">Search figures…</string>
     <string name="you_picker_search_clear">Clear search</string>

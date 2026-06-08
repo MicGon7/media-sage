@@ -79,11 +79,14 @@ import kotlinx.datetime.DayOfWeek
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
 import mediasage.composeapp.generated.resources.you_carousel_title
-import mediasage.composeapp.generated.resources.you_lens_anxiety
+import mediasage.composeapp.generated.resources.you_lens_faith
+import mediasage.composeapp.generated.resources.you_lens_grace
 import mediasage.composeapp.generated.resources.you_lens_grief
 import mediasage.composeapp.generated.resources.you_lens_hope
 import mediasage.composeapp.generated.resources.you_lens_justice
 import mediasage.composeapp.generated.resources.you_lens_love
+import mediasage.composeapp.generated.resources.you_lens_perseverance
+import mediasage.composeapp.generated.resources.you_lens_repentance
 import mediasage.composeapp.generated.resources.you_lens_section_title
 
 import mediasage.composeapp.generated.resources.you_lens_today
@@ -470,21 +473,27 @@ private fun LensChip(
 
 private fun LensFilter.labelRes() = when (this) {
     LensFilter.NEWS -> Res.string.you_lens_today
-    LensFilter.HOPE -> Res.string.you_lens_hope
-    LensFilter.ANXIETY -> Res.string.you_lens_anxiety
     LensFilter.LOVE -> Res.string.you_lens_love
-    LensFilter.GRIEF -> Res.string.you_lens_grief
+    LensFilter.GRACE -> Res.string.you_lens_grace
+    LensFilter.REPENTANCE -> Res.string.you_lens_repentance
+    LensFilter.HOPE -> Res.string.you_lens_hope
     LensFilter.JUSTICE -> Res.string.you_lens_justice
+    LensFilter.GRIEF -> Res.string.you_lens_grief
+    LensFilter.FAITH -> Res.string.you_lens_faith
+    LensFilter.PERSEVERANCE -> Res.string.you_lens_perseverance
 }
 
 @Composable
 private fun LensFilter.color(): Color = when (this) {
     LensFilter.NEWS -> MaterialTheme.colorScheme.primary
-    LensFilter.HOPE -> Color(0xFFE8B84B)
-    LensFilter.ANXIETY -> Color(0xFF8B7BAE)
     LensFilter.LOVE -> Color(0xFFD4687A)
-    LensFilter.GRIEF -> Color(0xFF5B7BA8)
+    LensFilter.GRACE -> Color(0xFF9B7DC8)
+    LensFilter.REPENTANCE -> Color(0xFF7A9E7E)
+    LensFilter.HOPE -> Color(0xFFE8B84B)
     LensFilter.JUSTICE -> Color(0xFF4A8C6A)
+    LensFilter.GRIEF -> Color(0xFF5B7BA8)
+    LensFilter.FAITH -> Color(0xFFB87333)
+    LensFilter.PERSEVERANCE -> Color(0xFF8B6356)
 }
 
 @Composable
