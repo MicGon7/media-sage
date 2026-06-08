@@ -529,10 +529,11 @@ private fun SavedQuoteCard(
                         )
                 )
                 Column(modifier = Modifier.padding(16.dp)) {
+                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                 Text(
                     text = stringResource(Res.string.you_quote_card_header),
                     style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
-                    color = BrandAmber,
+                    color = if (isDark) BrandAmber else MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = "“${quote.quoteText}”",

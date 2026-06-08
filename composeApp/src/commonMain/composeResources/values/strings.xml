@@ -48,7 +48,7 @@
     <string name="you_carousel_title">YOUR REPORTERS THIS WEEK</string>
     <string name="you_saved_section_title">FROM THE REPORTERS</string>
     <string name="you_quote_card_header">MEMORY QUOTE</string>
-    <string name="you_saved_see_all">More from this reporter →</string>
+    <string name="you_saved_see_all">Select a quote to memorize →</string>
     <string name="you_carousel_assign_hint">Add</string>
     <string name="you_lens_section_title">TODAY'S LENS</string>
     <string name="you_lens_subtitle">What are you carrying into today?</string>
