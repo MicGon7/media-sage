@@ -1,12 +1,15 @@
 package com.mediasage.feature.headlines
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,11 +28,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import com.mediasage.theme.BrandAmber
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.HeadlineImage
@@ -37,11 +41,13 @@ import com.mediasage.ui.MediaSageErrorState
 import com.mediasage.ui.SepiaColorFilter
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.headline_nature_image_default
 import mediasage.composeapp.generated.resources.home_error_generic
 import mediasage.composeapp.generated.resources.home_error_network
 import mediasage.composeapp.generated.resources.home_retry
 import mediasage.composeapp.generated.resources.headlines_story_count
 import mediasage.composeapp.generated.resources.nav_headlines
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -164,31 +170,18 @@ private fun HeroPaintingPlaceholder() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
             .padding(horizontal = 16.dp, vertical = 12.dp)
-            .clip(MaterialTheme.shapes.small)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.surfaceVariant,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-                    )
-                )
-            )
+            .border(width = 4.dp, color = BrandAmber)
+            .padding(4.dp)
+            .border(width = 1.dp, color = BrandAmber.copy(alpha = 0.4f))
     ) {
-        Text(
-            text = "Today's Featured Image".uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimary,
+        Image(
+            painter = painterResource(Res.drawable.headline_nature_image_default),
+            contentDescription = null,
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(12.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = MaterialTheme.shapes.extraSmall
-                )
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .fillMaxWidth()
+                .aspectRatio(2f),
+            contentScale = ContentScale.Crop
         )
     }
 }
