@@ -37,7 +37,7 @@ import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.HeadlineImage
 import com.mediasage.ui.MediaSageErrorState
-import com.mediasage.ui.SepiaColorFilter
+import com.mediasage.ui.GrayscaleColorFilter
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.headline_nature_image_default
@@ -203,7 +203,7 @@ private fun HeadlineRow(
             contentDescription = headline.title,
             size = 72.dp,
             modifier = Modifier.clip(MaterialTheme.shapes.small),
-            colorFilter = SepiaColorFilter
+            colorFilter = GrayscaleColorFilter
         )
 
         Column(modifier = Modifier.weight(1f)) {

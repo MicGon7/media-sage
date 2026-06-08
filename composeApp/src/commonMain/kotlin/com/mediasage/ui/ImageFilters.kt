@@ -10,3 +10,7 @@ val SepiaColorFilter: ColorFilter = ColorFilter.colorMatrix(
         set(2, 0, 0.272f); set(2, 1, 0.534f); set(2, 2, 0.131f)
     }
 )
+
+val GrayscaleColorFilter: ColorFilter = ColorFilter.colorMatrix(
+    ColorMatrix().apply { setToSaturation(0f) }
+)
