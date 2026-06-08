@@ -1,22 +1,12 @@
-name: Build and Push Worker Image
+name: Build and Push Judge Image
 
 on:
   push:
     branches: [ main ]
     paths:
-      - 'Dockerfile.worker'
+      - 'Dockerfile.judge'
       - 'agent/worker-entrypoint.sh'
       - 'agent/get-github-token.py'
-      - 'gradlew'
-      - 'gradle/wrapper/**'
-      - 'gradle/libs.versions.toml'
-      - 'settings.gradle.kts'
-      - 'build.gradle.kts'
-      - 'agent/build.gradle.kts'
-      - 'server/build.gradle.kts'
-      - 'composeApp/build.gradle.kts'
-      - 'shared/build.gradle.kts'
-      - 'gradle.properties'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -39,11 +29,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build worker image
+      - name: Build judge image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.worker
+          file: Dockerfile.judge
           platforms: linux/amd64
           push: true
-          tags: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:latest
+          tags: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/judge:latest

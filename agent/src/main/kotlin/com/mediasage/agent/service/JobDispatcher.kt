@@ -16,7 +16,13 @@ interface JobDispatcher {
      *   For PR review and conflict resolution, [ticketKey] is a synthetic dedup key ("PR-200",
      *   "CONFLICT-199") and [jiraTicketKey] carries the real Jira key for comment posting.
      */
-    suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String, jiraTicketKey: String? = null): Boolean
+    suspend fun executeJob(
+        jobId: UUID,
+        ticketKey: String,
+        prompt: String,
+        jiraTicketKey: String? = null,
+        jobNameOverride: String? = null,
+    ): Boolean
 
     /**
      * Called on orchestrator startup for each RUNNING job whose LRO poll was lost.

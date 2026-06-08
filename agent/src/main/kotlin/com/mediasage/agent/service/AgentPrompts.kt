@@ -31,18 +31,28 @@ internal val prReviewPrompt = """
     PR #%d for ticket %s has a new review comment: "%s".
     Branch: %s. Reviewer: %s.
 
-    /pr-review
+    /pr-review-work
 """.trimIndent()
 
 internal val conflictResolutionPrompt = """
     PR #%d for ticket %s: branch %s was ejected from the merge queue due to a conflict with %s.
 
-    /conflict-resolution
+    /conflict-resolution-work
 """.trimIndent()
 
 internal val prCommentPrompt = """
     PR #%d for ticket %s has a new comment: "%s".
     Branch: %s.
 
-    /pr-comment
+    /pr-comment-work
+""".trimIndent()
+
+internal val judgeWorkPrompt = """
+    Your assigned ticket is %s. A worker has completed the ticket and opened a PR.
+
+    Your role is judge: evaluate the PR diff against the original ticket acceptance criteria and
+    post a structured verdict. You are a fresh context — you have no memory of the worker's decisions.
+    Independence is the source of your value.
+
+    /judge-work
 """.trimIndent()

@@ -22,6 +22,8 @@ class AgentLaunchService(
     private val jiraCommentPoster: JiraCommentPoster? = null,
     private val jiraStatusChecker: JiraTicketStatusChecker? = null,
     private val briefingService: BriefingService? = null,
+    private val judgeJobName: String? = null,
+    private val commentJobName: String? = null,
 ) : AgentLauncher {
 
     private val log = LoggerFactory.getLogger(AgentLaunchService::class.java)
@@ -69,6 +71,7 @@ class AgentLaunchService(
         dryRun: Boolean = false,
         jiraTicketKey: String? = null,
         briefingContext: BriefingContext? = null,
+        jobNameOverride: String? = null,
     ): Boolean {
         // activeKeys is the synchronous in-process gate. It prevents the TOCTOU race where
         // two concurrent webhooks both pass shouldDispatch() before either inserts a DB row.
@@ -79,7 +82,7 @@ class AgentLaunchService(
         }
         scope.launch {
             try {
-                doDispatch(ticketKey, prompt, cloudRun, dryRun, jiraTicketKey, briefingContext)
+                doDispatch(ticketKey, prompt, cloudRun, dryRun, jiraTicketKey, briefingContext, jobNameOverride)
             } finally {
                 activeKeys.remove(ticketKey)
             }
@@ -94,6 +97,7 @@ class AgentLaunchService(
         dryRun: Boolean,
         jiraTicketKey: String? = null,
         briefingContext: BriefingContext? = null,
+        jobNameOverride: String? = null,
     ) {
         if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
             log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
@@ -109,7 +113,7 @@ class AgentLaunchService(
         }
         log.info("[$ticketKey] job $jobId inserted — dispatching to Cloud Run")
         try {
-            cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt, jiraTicketKey)
+            cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt, jiraTicketKey, jobNameOverride)
         } catch (e: Exception) {
             cloudRun.jobs.markFailed(jobId)
             log.warn("[$ticketKey] dispatch error: ${e.message}")
@@ -192,7 +196,28 @@ class AgentLaunchService(
         val key = "PR-$prNumber"
         val basePrompt = prCommentPrompt.format(prNumber, ticketKey, commentBody, branchRef)
         val context = BriefingContext.CommentReview(ticketKey, prNumber, commentBody)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey, briefingContext = context)
+        return dispatchToCloudRun(
+            key, basePrompt, cloudRun,
+            jiraTicketKey = ticketKey,
+            briefingContext = context,
+            jobNameOverride = commentJobName,
+        )
+    }
+
+    /**
+     * Dispatches a Cloud Run Job to judge the PR produced by a completed ticket-work job.
+     *
+     * Uses the lightweight judge image ([judgeJobName]) — no JVM or Gradle toolchain.
+     * De-duplicates by ticket key using `JUDGE-{ticketKey}`.
+     *
+     * @param ticketKey Jira issue key of the completed ticket-work job.
+     * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
+     */
+    override fun launchForJudge(ticketKey: String): Boolean {
+        val cloudRun = cloudRun ?: return false
+        val key = "JUDGE-$ticketKey"
+        val basePrompt = judgeWorkPrompt.format(ticketKey)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, jobNameOverride = judgeJobName)
     }
 
     /**

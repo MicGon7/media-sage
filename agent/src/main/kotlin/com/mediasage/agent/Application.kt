@@ -40,7 +40,7 @@ fun Application.module() {
         webhookRoutes(config.jiraBotAccountId)
         githubWebhookRoutes(config.githubWebhookSecret, config.githubBotLogin)
         if (config.pubSubWebhookSecret.isNotBlank() && cloudRunJobsClient != null && jobRegistry != null) {
-            pubSubWebhookRoutes(config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry, scope)
+            pubSubWebhookRoutes(config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry, agentLaunchService, scope)
         }
     }
 }
@@ -63,6 +63,8 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         gcpProjectId = str("app.cloudRun.projectId"),
         gcpRegion = config.propertyOrNull("app.cloudRun.region")?.getString() ?: "us-central1",
         gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",
+        gcpJudgeJobName = config.propertyOrNull("app.cloudRun.judgeJobName")?.getString() ?: "media-sage-agent-judge",
+        gcpCommentJobName = config.propertyOrNull("app.cloudRun.commentJobName")?.getString() ?: "media-sage-agent-comment",
         googleCredentialsJson = credentialsJson,
         supabaseDbUrl = str("app.supabase.dbUrl"),
         pubSubWebhookSecret = str("app.pubSub.webhookSecret"),

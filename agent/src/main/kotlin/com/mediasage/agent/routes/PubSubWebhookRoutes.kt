@@ -1,6 +1,7 @@
 package com.mediasage.agent.routes
 
 import com.mediasage.agent.db.JobRegistry
+import com.mediasage.agent.service.AgentLauncher
 import com.mediasage.agent.service.CloudRunJobsClient
 import io.ktor.http.*
 import io.ktor.server.request.*
@@ -60,6 +61,7 @@ fun Route.pubSubWebhookRoutes(
     webhookSecret: String,
     cloudRunJobsClient: CloudRunJobsClient,
     jobRegistry: JobRegistry,
+    agentLauncher: AgentLauncher,
     scope: CoroutineScope
 ) {
     post("/webhook/pubsub") {
@@ -75,7 +77,7 @@ fun Route.pubSubWebhookRoutes(
         log.info("[${event.ticketKey}] Pub/Sub completion event: status=${event.status}, execution=${event.executionName}")
         // Acknowledge immediately — Pub/Sub retries on non-2xx. Metrics fetch (~15s) runs in background.
         call.respond(HttpStatusCode.OK)
-        scope.launch { processCompletion(event, jobRegistry, cloudRunJobsClient) }
+        scope.launch { processCompletion(event, jobRegistry, cloudRunJobsClient, agentLauncher) }
     }
 }
 
@@ -111,7 +113,8 @@ private suspend fun parsePushEvent(call: io.ktor.server.application.ApplicationC
 private suspend fun processCompletion(
     event: JobCompletionEvent,
     jobRegistry: JobRegistry,
-    cloudRunJobsClient: CloudRunJobsClient
+    cloudRunJobsClient: CloudRunJobsClient,
+    agentLauncher: AgentLauncher,
 ) {
     // Capture receipt time first — this is the closest timestamp to actual job completion.
     // Wall-clock duration = receipt time - startedAt (stored in Supabase when Cloud Run dispatch succeeded).
@@ -132,4 +135,11 @@ private suspend fun processCompletion(
         jiraTicketKey = event.jiraTicketKey,
         wallClockMs = wallClockMs
     )
+    // Dispatch judge after a successful ticket-work completion.
+    // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key).
+    // PR review and conflict jobs set jiraTicketKey to the real key and use a synthetic ticketKey.
+    if (event.jiraTicketKey == null && event.status == "success") {
+        log.info("[${event.ticketKey}] ticket-work succeeded — dispatching judge")
+        agentLauncher.launchForJudge(event.ticketKey)
+    }
 }

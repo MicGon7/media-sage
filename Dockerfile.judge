@@ -1,0 +1,28 @@
+FROM alpine:3.21
+
+SHELL ["/bin/sh", "-o", "pipefail", "-c"]
+
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    nodejs \
+    npm \
+    python3 \
+    py3-pip \
+    && pip3 install --no-cache-dir --break-system-packages mcp-atlassian==0.21.1 \
+    && npm install -g @anthropic-ai/claude-code@2.1.139 \
+    && apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community github-cli
+
+ENV DISABLE_AUTOUPDATER=1
+ENV PYTHONUNBUFFERED=1
+
+RUN adduser -D -s /bin/bash agent
+USER agent
+WORKDIR /home/agent
+
+COPY --chown=agent:agent agent/worker-entrypoint.sh entrypoint.sh
+COPY --chown=agent:agent agent/get-github-token.py get-github-token.py
+RUN chmod +x entrypoint.sh
+
+ENTRYPOINT ["./entrypoint.sh"]

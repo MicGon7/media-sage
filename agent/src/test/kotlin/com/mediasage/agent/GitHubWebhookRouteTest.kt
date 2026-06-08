@@ -395,4 +395,6 @@ private class FakeAgentLauncher : AgentLauncher {
         lastBaseBranch = baseBranch
         return true
     }
+
+    override fun launchForJudge(ticketKey: String) = false
 }
