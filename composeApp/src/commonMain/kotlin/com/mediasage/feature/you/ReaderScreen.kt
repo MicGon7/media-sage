@@ -475,11 +475,11 @@ private fun LensFilter.labelRes() = when (this) {
     LensFilter.NEWS -> Res.string.you_lens_today
     LensFilter.LOVE -> Res.string.you_lens_love
     LensFilter.GRACE -> Res.string.you_lens_grace
+    LensFilter.FAITH -> Res.string.you_lens_faith
+    LensFilter.GRIEF -> Res.string.you_lens_grief
     LensFilter.REPENTANCE -> Res.string.you_lens_repentance
     LensFilter.HOPE -> Res.string.you_lens_hope
     LensFilter.JUSTICE -> Res.string.you_lens_justice
-    LensFilter.GRIEF -> Res.string.you_lens_grief
-    LensFilter.FAITH -> Res.string.you_lens_faith
     LensFilter.PERSEVERANCE -> Res.string.you_lens_perseverance
 }
 
@@ -488,11 +488,11 @@ private fun LensFilter.color(): Color = when (this) {
     LensFilter.NEWS -> MaterialTheme.colorScheme.primary
     LensFilter.LOVE -> Color(0xFFD4687A)
     LensFilter.GRACE -> Color(0xFF9B7DC8)
+    LensFilter.FAITH -> Color(0xFFB87333)
+    LensFilter.GRIEF -> Color(0xFF5B7BA8)
     LensFilter.REPENTANCE -> Color(0xFF7A9E7E)
     LensFilter.HOPE -> Color(0xFFE8B84B)
     LensFilter.JUSTICE -> Color(0xFF4A8C6A)
-    LensFilter.GRIEF -> Color(0xFF5B7BA8)
-    LensFilter.FAITH -> Color(0xFFB87333)
     LensFilter.PERSEVERANCE -> Color(0xFF8B6356)
 }
 
