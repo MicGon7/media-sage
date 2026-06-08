@@ -16,7 +16,7 @@ class DailyReflectionService(
 
         val systemPrompt = DailyReflectionPrompt.buildSystemPrompt(request.figureName)
         val userMessage = DailyReflectionPrompt.buildUserMessage(
-            DailyReflectionPrompt.Input(
+            DailyReflectionPrompt.Params(
                 figureName = request.figureName,
                 quotes = top,
                 headlines = request.headlines,

@@ -4,7 +4,7 @@ import com.mediasage.server.repository.QuoteData
 
 object DailyReflectionPrompt {
 
-    data class Input(
+    data class Params(
         val figureName: String,
         val quotes: List<QuoteData>,
         val headlines: List<String>,
@@ -22,23 +22,23 @@ object DailyReflectionPrompt {
         Respond ONLY with valid JSON — no markdown, no explanation outside the JSON.
     """.trimIndent()
 
-    fun buildUserMessage(input: Input): String = buildString {
-        appendLine("## Verified Quotes from ${input.figureName}")
+    fun buildUserMessage(params: Params): String = buildString {
+        appendLine("## Verified Quotes from ${params.figureName}")
         appendLine("Draw from your knowledge of these source works, letting these quotes anchor the theological voice and direction.")
         appendLine()
-        input.quotes.forEach { q ->
+        params.quotes.forEach { q ->
             appendLine("Source: ${q.source}")
             appendLine("Quote: \"${q.text}\"")
             appendLine()
         }
-        if (input.headlines.isNotEmpty()) {
+        if (params.headlines.isNotEmpty()) {
             appendLine("## Today's Headlines (for thematic context only)")
-            input.headlines.forEach { appendLine("- $it") }
+            params.headlines.forEach { appendLine("- $it") }
             appendLine()
         }
-        append(buildContextBlock(input.tone, input.dayOfWeek, input.previousScriptures, input.previousReflections, input.theme))
+        append(buildContextBlock(params.tone, params.dayOfWeek, params.previousScriptures, params.previousReflections, params.theme))
         appendLine("## Instructions")
-        appendLine("Write a ${input.tone} devotional reflection in the voice of ${input.figureName}.")
+        appendLine("Write a ${params.tone} devotional reflection in the voice of ${params.figureName}.")
         appendLine("- Include a scripture reference and the full verse text")
         appendLine("- Write 2-3 sentences of reflection grounded in the source works above")
         appendLine("- List the source titles you drew from")
