@@ -46,6 +46,7 @@ import coil3.compose.AsyncImage
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
+import com.mediasage.ui.SepiaColorFilter
 import io.github.alexzhirkevich.compottie.DotLottie
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
@@ -140,6 +141,7 @@ private fun HeadlineDetailContent(
                     .fillMaxWidth()
                     .height(200.dp),
                 contentScale = ContentScale.Crop,
+                colorFilter = SepiaColorFilter
             )
         }
 

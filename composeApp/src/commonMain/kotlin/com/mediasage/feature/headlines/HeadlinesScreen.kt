@@ -1,5 +1,6 @@
 package com.mediasage.feature.headlines
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,18 +33,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
-import coil3.compose.AsyncImage
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.HeadlineImage
 import com.mediasage.ui.MediaSageErrorState
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.headline_nature_image_default
+import mediasage.composeapp.generated.resources.headlines_hero_caption
 import mediasage.composeapp.generated.resources.home_error_generic
 import mediasage.composeapp.generated.resources.home_error_network
 import mediasage.composeapp.generated.resources.home_retry
 import mediasage.composeapp.generated.resources.headlines_story_count
 import mediasage.composeapp.generated.resources.nav_headlines
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -109,18 +113,19 @@ private fun HeadlinesFeed(
                     }) else null
                 )
             }
-            itemsIndexed(state.headlines, key = { _, it -> it.id }) { index, headline ->
-                if (index == 0) {
-                    HeroHeadlineRow(
-                        headline = headline,
-                        onClick = { onHeadlineClick(headline) }
-                    )
-                } else {
-                    HeadlineRow(
-                        headline = headline,
-                        onClick = { onHeadlineClick(headline) }
-                    )
-                }
+            item {
+                HeroPaintingPlaceholder()
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 0.5.dp
+                )
+            }
+            itemsIndexed(state.headlines, key = { _, it -> it.id }) { _, headline ->
+                HeadlineRow(
+                    headline = headline,
+                    onClick = { onHeadlineClick(headline) }
+                )
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     color = MaterialTheme.colorScheme.outlineVariant,
@@ -160,69 +165,22 @@ private fun DateCountRow(todayLabel: String, storyCount: Int) {
 }
 
 @Composable
-private fun HeroHeadlineRow(headline: HeadlineItem, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Box(
+private fun HeroPaintingPlaceholder() {
+    Column {
+        Image(
+            painter = painterResource(Res.drawable.headline_nature_image_default),
+            contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
-                .clip(MaterialTheme.shapes.small)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            if (headline.imageUrl != null) {
-                AsyncImage(
-                    model = headline.imageUrl,
-                    contentDescription = headline.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-            if (headline.category.isNotBlank()) {
-                Text(
-                    text = headline.category.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(12.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = MaterialTheme.shapes.extraSmall
-                        )
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = headline.title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
+                .aspectRatio(2f),
+            contentScale = ContentScale.Crop
         )
-        if (headline.snippet.isNotBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = headline.snippet,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                fontStyle = FontStyle.Italic
-            )
-        }
-        Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = headline.source,
+            text = stringResource(Res.string.headlines_hero_caption),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
+            fontStyle = FontStyle.Italic,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
     }
 }
@@ -242,7 +200,7 @@ private fun HeadlineRow(
         HeadlineImage(
             imageUrl = headline.imageUrl,
             contentDescription = headline.title,
-            size = 80.dp,
+            size = 72.dp,
             modifier = Modifier.clip(MaterialTheme.shapes.small)
         )
 
