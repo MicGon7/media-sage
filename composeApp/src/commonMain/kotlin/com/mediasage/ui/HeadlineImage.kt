@@ -21,32 +21,30 @@ fun HeadlineImage(
     imageUrl: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    width: Dp = 96.dp,
-    height: Dp = 64.dp,
+    size: Dp = 72.dp,
     colorFilter: ColorFilter? = null
 ) {
     if (imageUrl != null) {
         AsyncImage(
             model = imageUrl,
             contentDescription = contentDescription,
-            modifier = modifier.size(width = width, height = height),
+            modifier = modifier.size(size),
             contentScale = ContentScale.Crop,
             colorFilter = colorFilter,
         )
     } else {
-        HeadlinePlaceholder(modifier = modifier, width = width, height = height)
+        HeadlinePlaceholder(modifier = modifier, size = size)
     }
 }
 
 @Composable
 private fun HeadlinePlaceholder(
     modifier: Modifier = Modifier,
-    width: Dp = 96.dp,
-    height: Dp = 64.dp
+    size: Dp = 72.dp
 ) {
     Box(
         modifier = modifier
-            .size(width = width, height = height)
+            .size(size)
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
@@ -54,7 +52,7 @@ private fun HeadlinePlaceholder(
             imageVector = Icons.AutoMirrored.Filled.Article,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(height / 2)
+            modifier = Modifier.size(size / 2)
         )
     }
 }

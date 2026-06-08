@@ -201,6 +201,7 @@ private fun HeadlineRow(
         HeadlineImage(
             imageUrl = headline.imageUrl,
             contentDescription = headline.title,
+            size = 72.dp,
             modifier = Modifier.clip(MaterialTheme.shapes.small),
             colorFilter = SepiaColorFilter
         )
