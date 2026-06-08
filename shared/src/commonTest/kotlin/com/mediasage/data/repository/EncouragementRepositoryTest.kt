@@ -286,5 +286,5 @@ private class FakeMediaSageApi(private val result: EncourageResultDto) : MediaSa
     override suspend fun getPassage(passageId: String): ScripturePassageDto =
         ScripturePassageDto(id = "", reference = "", content = "")
     override suspend fun getDailyReflection(request: DailyReflectionRequestDto): DailyReflectionResponseDto =
-        DailyReflectionResponseDto(scriptureReference = "", scriptureText = "", reflection = "", sources = emptyList(), tone = "morning")
+        DailyReflectionResponseDto(scriptureReference = "", scriptureText = "", insight = "", implication = "", inspiration = "", sources = emptyList(), tone = "morning")
 }

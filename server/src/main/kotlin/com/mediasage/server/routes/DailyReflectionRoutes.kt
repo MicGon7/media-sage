@@ -52,7 +52,9 @@ data class DailyReflectionRequest(
 data class DailyReflectionResponse(
     val scriptureReference: String,
     val scriptureText: String,
-    val reflection: String,
+    val insight: String,
+    val implication: String,
+    val inspiration: String,
     val sources: List<String>,
     val tone: String
 )
@@ -60,7 +62,9 @@ data class DailyReflectionResponse(
 private fun DailyReflectionResult.toResponse() = DailyReflectionResponse(
     scriptureReference = scriptureReference,
     scriptureText = scriptureText,
-    reflection = reflection,
+    insight = insight,
+    implication = implication,
+    inspiration = inspiration,
     sources = sources,
     tone = tone
 )

@@ -63,7 +63,9 @@ class DailyReflectionService(
 data class DailyReflectionResult(
     val scriptureReference: String,
     val scriptureText: String,
-    val reflection: String,
+    val insight: String,
+    val implication: String,
+    val inspiration: String,
     val sources: List<String>,
     val tone: String
 )

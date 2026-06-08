@@ -42,7 +42,9 @@ class MockMediaSageApi : MediaSageApi {
         DailyReflectionResponseDto(
             scriptureReference = "Psalm 46:10",
             scriptureText = "Be still, and know that I am God.",
-            reflection = "In the noise of this world, the call to stillness is a revolutionary act of faith.",
+            insight = "The invitation to stillness is not passivity but presence — a recognition that God's activity does not depend on our noise.",
+            implication = "In the noise of this world, the call to stillness is a revolutionary act of faith.",
+            inspiration = "The God who speaks in silence has not gone quiet — He is waiting for us to stop.",
             sources = emptyList(),
             tone = request.tone
         )

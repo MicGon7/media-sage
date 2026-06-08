@@ -21,6 +21,28 @@ val MIGRATION_20_21 = object : Migration(20, 21) {
     }
 }
 
+val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS daily_reflection_new " +
+                "(id TEXT NOT NULL, figureId INTEGER NOT NULL, epochDay INTEGER NOT NULL, " +
+                "tone TEXT NOT NULL, theme TEXT NOT NULL DEFAULT 'NEWS', " +
+                "scriptureReference TEXT NOT NULL, scriptureText TEXT NOT NULL, " +
+                "insight TEXT NOT NULL, implication TEXT NOT NULL, inspiration TEXT NOT NULL, " +
+                "sources TEXT NOT NULL, PRIMARY KEY(id))"
+        )
+        connection.execSQL(
+            "INSERT INTO daily_reflection_new " +
+                "(id, figureId, epochDay, tone, theme, scriptureReference, scriptureText, " +
+                "insight, implication, inspiration, sources) " +
+                "SELECT id, figureId, epochDay, tone, theme, scriptureReference, scriptureText, " +
+                "reflection, '', '', sources FROM daily_reflection"
+        )
+        connection.execSQL("DROP TABLE daily_reflection")
+        connection.execSQL("ALTER TABLE daily_reflection_new RENAME TO daily_reflection")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

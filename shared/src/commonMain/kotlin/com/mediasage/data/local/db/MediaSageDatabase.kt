@@ -36,7 +36,7 @@ import com.mediasage.data.local.entity.UserPreferencesEntity
         DayAssignmentEntity::class,
         UserPreferencesEntity::class,
     ],
-    version = 21,
+    version = 22,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
