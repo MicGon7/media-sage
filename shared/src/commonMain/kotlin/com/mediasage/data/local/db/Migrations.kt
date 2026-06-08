@@ -4,6 +4,23 @@ import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 
+val MIGRATION_19_20 = object : Migration(19, 20) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS user_preferences " +
+                "(id INTEGER NOT NULL, selected_lens TEXT NOT NULL DEFAULT 'NEWS', PRIMARY KEY(id))"
+        )
+    }
+}
+
+val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "ALTER TABLE daily_reflection ADD COLUMN theme TEXT NOT NULL DEFAULT 'NEWS'"
+        )
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

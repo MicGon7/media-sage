@@ -1,6 +1,7 @@
 package com.mediasage.feature.you
 
 import com.mediasage.domain.model.Figure
+import com.mediasage.domain.model.LensFilter
 import kotlinx.datetime.DayOfWeek
 
 object ReaderContract {
@@ -11,8 +12,6 @@ object ReaderContract {
         val assignedFigureName: String? = null,
         val assignedFigureImageUrl: String? = null,
     )
-
-    enum class LensFilter { TODAY, HOPE, ANXIETY, LOVE, GRIEF, JUSTICE }
 
     data class QuoteCard(
         val quoteText: String,
@@ -25,7 +24,7 @@ object ReaderContract {
     sealed interface UiState {
         data class Ready(
             val weekSlots: List<DaySlot> = emptyList(),
-            val selectedLens: LensFilter = LensFilter.TODAY,
+            val selectedLens: LensFilter = LensFilter.NEWS,
             val quoteCard: QuoteCard? = null,
             val pickerOpenForDay: Int? = null,
             val pickerFigures: List<Figure> = emptyList(),

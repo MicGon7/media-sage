@@ -19,10 +19,12 @@ class DailyReflectionRepositoryImpl(
         figureId: Long,
         figureName: String,
         headlines: List<String>,
-        tone: String
+        tone: String,
+        theme: String?
     ): DailyReflection {
+        val resolvedTheme = theme?.uppercase() ?: "NEWS"
         val epochDay = currentTimeMillis() / 86400000L
-        val cached = dao.get(figureId, epochDay, tone)
+        val cached = dao.get(figureId, epochDay, tone, resolvedTheme)
         if (cached != null) return cached.toDomain()
 
         val todaysEntries = dao.getAllForDay(figureId, epochDay)
@@ -43,14 +45,16 @@ class DailyReflectionRepositoryImpl(
                 tone = tone,
                 dayOfWeek = dayOfWeek,
                 previousScriptures = previousScriptures,
-                previousReflections = previousReflections
+                previousReflections = previousReflections,
+                theme = resolvedTheme.takeIf { it != "NEWS" }
             )
         )
         val entity = DailyReflectionEntity(
-            id = "${figureId}_${epochDay}_$tone",
+            id = "${figureId}_${epochDay}_${tone}_$resolvedTheme",
             figureId = figureId,
             epochDay = epochDay,
             tone = tone,
+            theme = resolvedTheme,
             scriptureReference = response.scriptureReference,
             scriptureText = response.scriptureText,
             reflection = response.reflection,

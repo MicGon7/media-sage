@@ -7,7 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
+class AuthPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
     val rememberedEmail: Flow<String> = dataStore.data.map { prefs ->
         prefs[REMEMBERED_EMAIL_KEY] ?: ""

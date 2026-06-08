@@ -2,7 +2,7 @@ package com.mediasage.feature.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mediasage.data.UserPreferencesRepository
+import com.mediasage.data.AuthPreferencesRepository
 import com.mediasage.domain.repository.AuthRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 class LoginViewModel(
     private val authRepository: AuthRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: AuthPreferencesRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginContract.UiState())
