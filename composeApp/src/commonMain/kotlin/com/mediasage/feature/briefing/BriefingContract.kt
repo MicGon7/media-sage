@@ -19,7 +19,8 @@ object BriefingContract {
         data class LoadingWithFigure(
             val figureId: Long,
             val figureName: String,
-            val figureImageUrl: String?
+            val figureImageUrl: String?,
+            val theme: String? = null
         ) : CardState
         data class Ready(
             val figureId: Long,
@@ -29,7 +30,8 @@ object BriefingContract {
             val scriptureText: String,
             val reflection: String,
             val sources: List<String>,
-            val tone: String
+            val tone: String,
+            val theme: String? = null
         ) : CardState
     }
 

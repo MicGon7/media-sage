@@ -12,15 +12,19 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -210,12 +214,18 @@ private fun BriefingCard(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            text = card.figureName,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text(
+                text = card.figureName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (card.theme != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                ThemeChip(theme = card.theme)
+            }
+        }
 
         Spacer(modifier = Modifier.height(4.dp))
 
@@ -303,12 +313,18 @@ private fun BriefingCardLoadingWithFigure(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            text = card.figureName,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text(
+                text = card.figureName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (card.theme != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                ThemeChip(theme = card.theme)
+            }
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(Res.string.briefing_card_loading).uppercase(),
@@ -365,6 +381,26 @@ private fun BriefingCardSkeleton() {
         Spacer(modifier = Modifier.height(12.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
     }
+}
+
+@Composable
+private fun ThemeChip(theme: String) {
+    val color = when (theme.uppercase()) {
+        "HOPE" -> Color(0xFFE8B84B)
+        "ANXIETY" -> Color(0xFF8B7BAE)
+        "LOVE" -> Color(0xFFD4687A)
+        "GRIEF" -> Color(0xFF5B7BA8)
+        "JUSTICE" -> Color(0xFF4A8C6A)
+        else -> MaterialTheme.colorScheme.primary
+    }
+    Text(
+        text = theme.lowercase().replaceFirstChar { it.uppercase() },
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
+        modifier = Modifier
+            .border(width = 1.dp, color = color, shape = RoundedCornerShape(50))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+    )
 }
 
 @Preview(showBackground = true)

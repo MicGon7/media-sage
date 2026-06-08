@@ -54,9 +54,9 @@ class BriefingViewModel(
                 dayAssignmentRepository.observeAssignments(),
                 figureRepository.observeAllFigures(),
                 userPreferencesRepository.observeLens(),
-            ) { assignments, figures, _ -> Pair(assignments, figures) }
+            ) { assignments, figures, lens -> Triple(assignments, figures, lens) }
                 .distinctUntilChanged()
-                .collect { (assignments, figures) ->
+                .collect { (assignments, figures, _) ->
                     val todayOrdinal = todayDayOfWeekOrdinal()
                     val figureId = assignments[todayOrdinal] ?: figures.firstOrNull()?.id
                     if (figureId == null) {
@@ -78,11 +78,13 @@ class BriefingViewModel(
         } else {
             emptyList()
         }
+        val themeLabel = lens.name.takeIf { lens != LensFilter.NEWS }
         updateCard(
             BriefingContract.CardState.LoadingWithFigure(
                 figureId = figureId,
                 figureName = figure.name,
-                figureImageUrl = figure.portraitUrl
+                figureImageUrl = figure.portraitUrl,
+                theme = themeLabel
             )
         )
         runCatching {
@@ -91,7 +93,7 @@ class BriefingViewModel(
                 figureName = figure.name,
                 headlines = headlines,
                 tone = tone,
-                theme = lens.name.takeIf { lens != LensFilter.NEWS }
+                theme = themeLabel
             )
         }.onSuccess { reflection ->
             updateCard(
@@ -103,7 +105,8 @@ class BriefingViewModel(
                     scriptureText = reflection.scriptureText,
                     reflection = reflection.reflection,
                     sources = reflection.sources,
-                    tone = reflection.tone
+                    tone = reflection.tone,
+                    theme = themeLabel
                 )
             )
         }.onFailure { e ->
