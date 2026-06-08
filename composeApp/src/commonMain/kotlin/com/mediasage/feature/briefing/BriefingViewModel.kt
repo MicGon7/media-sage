@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -56,13 +57,13 @@ class BriefingViewModel(
                 userPreferencesRepository.observeLens(),
             ) { assignments, figures, lens -> Triple(assignments, figures, lens) }
                 .distinctUntilChanged()
-                .collect { (assignments, figures, _) ->
+                .collectLatest { (assignments, figures, _) ->
                     val todayOrdinal = todayDayOfWeekOrdinal()
                     val figureId = assignments[todayOrdinal] ?: figures.firstOrNull()?.id
                     if (figureId == null) {
                         updateCard(BriefingContract.CardState.Hidden)
                         emitLoadingSuccess()
-                        return@collect
+                        return@collectLatest
                     }
                     fetchAndUpdateCard(figureId)
                 }
