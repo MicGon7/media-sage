@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -21,7 +22,8 @@ fun HeadlineImage(
     imageUrl: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    size: Dp = 80.dp
+    size: Dp = 80.dp,
+    colorFilter: ColorFilter? = null
 ) {
     if (imageUrl != null) {
         AsyncImage(
@@ -29,6 +31,7 @@ fun HeadlineImage(
             contentDescription = contentDescription,
             modifier = modifier.size(size),
             contentScale = ContentScale.Crop,
+            colorFilter = colorFilter,
         )
     } else {
         HeadlinePlaceholder(modifier = modifier, size = size)

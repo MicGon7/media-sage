@@ -36,6 +36,7 @@ import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.HeadlineImage
 import com.mediasage.ui.MediaSageErrorState
+import com.mediasage.ui.SepiaColorFilter
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.home_error_generic
@@ -179,7 +180,8 @@ private fun HeroHeadlineRow(headline: HeadlineItem, onClick: () -> Unit) {
                     model = headline.imageUrl,
                     contentDescription = headline.title,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    colorFilter = SepiaColorFilter
                 )
             }
             if (headline.category.isNotBlank()) {
@@ -243,7 +245,8 @@ private fun HeadlineRow(
             imageUrl = headline.imageUrl,
             contentDescription = headline.title,
             size = 80.dp,
-            modifier = Modifier.clip(MaterialTheme.shapes.small)
+            modifier = Modifier.clip(MaterialTheme.shapes.small),
+            colorFilter = SepiaColorFilter
         )
 
         Column(modifier = Modifier.weight(1f)) {
