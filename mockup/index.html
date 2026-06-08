@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Courage Post — Design Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #12121f;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Georgia', serif;
+    padding: 40px;
+    gap: 48px;
+  }
+
+  .row-label {
+    font-family: sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #4a4a6a;
+    align-self: flex-start;
+    margin-bottom: -36px;
+  }
+
+  .phone-row {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* ─── Phone shell ─── */
+  .phone {
+    width: 375px;
+    height: 812px;
+    border-radius: 48px;
+    border: 2px solid #2a2a4a;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 32px 64px rgba(0,0,0,0.5);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .phone.light { border-color: #d8d0c0; box-shadow: 0 32px 64px rgba(0,0,0,0.2); }
+
+  /* ─── Status bar ─── */
+  .status-bar {
+    height: 44px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    flex-shrink: 0;
+  }
+  .status-bar .time { font-size: 15px; font-weight: 600; font-family: sans-serif; }
+  .status-bar .icons { font-size: 12px; font-family: sans-serif; }
+
+  /* DARK status bar */
+  .dark .status-bar { background: #0f0f1a; color: #fff; }
+  /* LIGHT status bar */
+  .light .status-bar { background: #FFFFFF; color: #0D0D0D; }
+
+  /* ─── Screen ─── */
+  .screen { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .dark .screen { background: #0f0f1a; }
+  .light .screen { background: #FFFFFF; }
+
+  /* ─── Top bar ─── */
+  .top-bar {
+    padding: 10px 20px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .top-bar-left { font-family: sans-serif; font-size: 11px; letter-spacing: 0.5px; }
+  .top-bar-right { font-family: sans-serif; font-size: 11px; }
+  .app-name { font-size: 13px; letter-spacing: 3px; font-weight: 700; font-family: sans-serif; color: #c8a96e; text-transform: uppercase; }
+
+  .dark .top-bar-left { color: #6a6a8a; }
+  .dark .top-bar-right { color: #6a6a8a; }
+  .light .top-bar-left { color: #6a5f52; }
+  .light .top-bar-right { color: #6a5f52; }
+
+  /* ─── Page title ─── */
+  .page-title { padding: 2px 20px 14px; font-size: 30px; letter-spacing: 0.3px; }
+  .dark .page-title { color: #e8e0d0; }
+  .light .page-title { color: #1c1510; }
+
+  /* ─── Scroll content ─── */
+  .scroll-content { flex: 1; overflow-y: auto; padding-bottom: 12px; }
+  .scroll-content::-webkit-scrollbar { display: none; }
+
+  /* ─── Section label ─── */
+  .section-label {
+    font-family: sans-serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 0 20px 8px;
+  }
+  .dark .section-label { color: #5a5a7a; }
+  .light .section-label { color: #7a6a58; }
+
+  /* ─── Divider ─── */
+  .divider { height: 1px; margin: 0 20px 16px; }
+  .dark .divider { background: #1e1e35; }
+  .light .divider { background: #e8e0d0; }
+
+  /* ─── Carousel ─── */
+  .carousel { display: flex; gap: 10px; padding: 0 20px 18px; overflow-x: auto; }
+  .carousel::-webkit-scrollbar { display: none; }
+
+  .day-slot { flex-shrink: 0; width: 68px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .day-label { font-family: sans-serif; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .dark .day-label { color: #5a5a7a; }
+  .light .day-label { color: #6a5f52; }
+  .day-slot.today .day-label { color: #c8a96e !important; }
+
+  .portrait-ring {
+    width: 54px; height: 54px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; border: 2px solid;
+  }
+  .dark .portrait-ring { border-color: #2a2a4a; background: #1a1a30; }
+  .light .portrait-ring { border-color: #d8d0c0; background: #f0ebe0; }
+  .day-slot.today .portrait-ring { border-color: #c8a96e !important; }
+
+  .portrait-empty {
+    width: 54px; height: 54px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; border: 2px dashed;
+    font-family: sans-serif;
+  }
+  .dark .portrait-empty { border-color: #2a2a4a; color: #3a3a5a; }
+  .light .portrait-empty { border-color: #d0c8b8; color: #c0b8a8; }
+
+  .figure-name { font-family: sans-serif; font-size: 9px; text-align: center; line-height: 1.2; max-width: 62px; }
+  .dark .figure-name { color: #6a6a8a; }
+  .light .figure-name { color: #6a5f52; }
+  .day-slot.today .figure-name { color: #c8a96e !important; }
+
+  /* ─── Chips ─── */
+  .chip-row { display: flex; gap: 8px; padding: 0 20px 18px; overflow-x: auto; }
+  .chip-row::-webkit-scrollbar { display: none; }
+  .chip { flex-shrink: 0; padding: 5px 13px; border-radius: 20px; font-family: sans-serif; font-size: 12px; border: 1px solid; }
+  .dark .chip { border-color: #2a2a4a; color: #6a6a8a; }
+  .light .chip { border-color: #c8bfb0; color: #5a5048; }
+  .chip.active { background: #c8a96e22; border-color: #c8a96e !important; color: #c8a96e !important; }
+
+  /* ─── Reflection card ─── */
+  .reflection-card { margin: 0 20px 18px; border-radius: 16px; border: 1px solid; padding: 16px; }
+  .dark .reflection-card { background: linear-gradient(135deg, #1e1e35, #252540); border-color: #2a2a4a; }
+  .light .reflection-card { background: linear-gradient(135deg, #f0ebe0, #e8e2d5); border-color: #d8d0c0; }
+
+  .reflection-eyebrow { font-family: sans-serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #c8a96e; margin-bottom: 8px; }
+  .reflection-quote { font-size: 13px; line-height: 1.6; font-style: italic; margin-bottom: 10px; }
+  .dark .reflection-quote { color: #d8d0c0; }
+  .light .reflection-quote { color: #1e1812; }
+  .reflection-attribution { font-family: sans-serif; font-size: 11px; }
+  .dark .reflection-attribution { color: #5a5a7a; }
+  .light .reflection-attribution { color: #7a6a58; }
+  .reflection-from { margin-top: 10px; padding-top: 10px; border-top: 1px solid; font-family: sans-serif; font-size: 11px; line-height: 1.4; }
+  .dark .reflection-from { border-color: #2a2a4a; color: #4a4a6a; }
+  .light .reflection-from { border-color: #c8bfb0; color: #8a7a68; }
+
+  /* ─── Bottom nav ─── */
+  .bottom-nav {
+    height: 80px;
+    border-top: 1px solid;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 10px;
+    flex-shrink: 0;
+  }
+  .dark .bottom-nav { background: #0d0d1a; border-color: #1e1e35; }
+  .light .bottom-nav { background: #faf7f2; border-color: #e8e0d0; }
+
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .nav-icon { font-size: 20px; }
+  .nav-label { font-family: sans-serif; font-size: 10px; letter-spacing: 0.3px; }
+  .dark .nav-label { color: #3a3a5a; }
+  .light .nav-label { color: #6a5f52; }
+  .nav-item.active .nav-label { color: #c8a96e !important; }
+
+  /* ─── Headlines ─── */
+  .headline-image {
+    width: 100%; height: 120px; border-radius: 12px;
+    margin-bottom: 10px; display: flex; align-items: flex-end;
+    padding: 10px; position: relative; overflow: hidden;
+  }
+  .dark .headline-image { background: linear-gradient(135deg, #1e2535, #2a3550); }
+  .light .headline-image { background: linear-gradient(135deg, #d8e8f0, #c0d8e8); }
+  .headline-image-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.4)); }
+  .headline-image-label { font-family: sans-serif; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: #fff; background: rgba(0,0,0,0.4); padding: 3px 8px; border-radius: 6px; position: relative; z-index: 1; }
+
+  .headline-item { padding: 0 20px 14px; }
+  .headline-divider { height: 1px; margin: 0 20px 14px; }
+  .dark .headline-divider { background: #1a1a2e; }
+  .light .headline-divider { background: #ede5d8; }
+
+  .headline-category { font-family: sans-serif; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #c8a96e; margin-bottom: 4px; }
+  .headline-text { font-size: 15px; line-height: 1.4; margin-bottom: 5px; }
+  .dark .headline-text { color: #d8d0c0; }
+  .light .headline-text { color: #1c1510; }
+  .headline-meta { font-family: sans-serif; font-size: 11px; display: flex; justify-content: space-between; align-items: center; }
+  .dark .headline-meta { color: #4a4a6a; }
+  .light .headline-meta { color: #6a5f52; }
+
+  .read-badge { font-family: sans-serif; font-size: 10px; border: 1px solid; padding: 2px 8px; border-radius: 10px; letter-spacing: 1px; }
+  .dark .read-badge { color: #5a7a5a; border-color: #3a5a3a; }
+  .light .read-badge { color: #5a7a5a; border-color: #8ab88a; }
+
+  .headline-dimmed .headline-text { }
+  .dark .headline-dimmed .headline-text { color: #5a5a7a; }
+  .light .headline-dimmed .headline-text { color: #9a9080; }
+  .dark .headline-dimmed .headline-category { color: #4a4a6a; }
+  .light .headline-dimmed .headline-category { color: #a09080; }
+
+  .tap-to-read { font-size: 10px; letter-spacing: 0.5px; }
+  .dark .tap-to-read { color: #4a5a7a; }
+  .light .tap-to-read { color: #7a8a9a; }
+
+  /* ─── Reporters ─── */
+  .search-bar {
+    margin: 0 20px 14px; border-radius: 12px;
+    padding: 9px 14px; font-family: sans-serif; font-size: 13px;
+    display: flex; align-items: center; gap: 8px; border: 1px solid;
+  }
+  .dark .search-bar { background: #1a1a2e; border-color: #2a2a4a; color: #4a4a6a; }
+  .light .search-bar { background: #f0ebe0; border-color: #c8bfb0; color: #7a6a58; }
+
+  .reporter-detail {
+    margin: 0 20px 14px; border-radius: 14px; border: 1px solid; padding: 16px;
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+  .dark .reporter-detail { background: linear-gradient(135deg, #1e1e35, #252540); border-color: #c8a96e44; }
+  .light .reporter-detail { background: linear-gradient(135deg, #f0ebe0, #e8e2d5); border-color: #c8a96e88; }
+
+  .detail-portrait {
+    width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid #c8a96e;
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+  }
+  .dark .detail-portrait { background: #2a2a1e; }
+  .light .detail-portrait { background: #e8e0c8; }
+
+  .detail-name { font-size: 17px; margin-bottom: 3px; }
+  .dark .detail-name { color: #e8e0d0; }
+  .light .detail-name { color: #1a1520; }
+  .detail-era { font-family: sans-serif; font-size: 11px; color: #c8a96e; margin-bottom: 6px; letter-spacing: 1px; }
+  .detail-bio { font-size: 11px; line-height: 1.5; font-family: sans-serif; }
+  .dark .detail-bio { color: #6a6a8a; }
+  .light .detail-bio { color: #6a5f52; }
+
+  .reporters-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px 16px; }
+  .reporter-card {
+    border-radius: 14px; border: 1px solid;
+    padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    position: relative;
+  }
+  .dark .reporter-card { background: linear-gradient(135deg, #1a1a2e, #1e1e35); border-color: #2a2a4a; }
+  .light .reporter-card { background: linear-gradient(135deg, #f5f0e8, #ede8de); border-color: #d8d0c0; }
+  .reporter-card.pinned { border-color: #c8a96e66 !important; }
+
+  .reporter-portrait {
+    width: 56px; height: 56px; border-radius: 50%;
+    border: 2px solid; display: flex; align-items: center; justify-content: center; font-size: 22px;
+  }
+  .dark .reporter-portrait { border-color: #2a2a4a; }
+  .light .reporter-portrait { border-color: #d8d0c0; }
+  .reporter-card.pinned .reporter-portrait { border-color: #c8a96e !important; }
+
+  .reporter-name { font-size: 12px; text-align: center; line-height: 1.3; }
+  .dark .reporter-name { color: #d8d0c0; }
+  .light .reporter-name { color: #1c1510; }
+  .reporter-era { font-family: sans-serif; font-size: 10px; text-align: center; }
+  .dark .reporter-era { color: #4a4a6a; }
+  .light .reporter-era { color: #7a6a58; }
+
+  .reporter-themes { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+  .theme-pill { font-family: sans-serif; font-size: 9px; border: 1px solid; padding: 2px 6px; border-radius: 8px; }
+  .dark .theme-pill { color: #6a6a8a; border-color: #2a2a4a; }
+  .light .theme-pill { color: #5a5048; border-color: #c8bfb0; }
+
+  .pinned-day { position: absolute; top: 8px; right: 8px; font-family: sans-serif; font-size: 9px; color: #c8a96e; background: #c8a96e18; border: 1px solid #c8a96e44; padding: 2px 6px; border-radius: 8px; letter-spacing: 1px; }
+
+  /* ─── Reader ─── */
+  .reader-stat-row { display: flex; gap: 10px; padding: 0 20px 18px; }
+  .stat-card { flex: 1; border: 1px solid; border-radius: 12px; padding: 12px; text-align: center; }
+  .dark .stat-card { background: #1a1a2e; border-color: #2a2a4a; }
+  .light .stat-card { background: #f0ebe0; border-color: #d8d0c0; }
+  .stat-number { font-size: 22px; color: #c8a96e; font-family: sans-serif; font-weight: 700; }
+  .stat-label { font-family: sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+  .dark .stat-label { color: #4a4a6a; }
+  .light .stat-label { color: #7a6a58; }
+
+  .saved-quote-card { margin: 0 20px 10px; border: 1px solid; border-radius: 12px; padding: 12px; }
+  .dark .saved-quote-card { background: #1a1a2e; border-color: #2a2a4a; }
+  .light .saved-quote-card { background: #f0ebe0; border-color: #d8d0c0; }
+  .saved-quote-text { font-size: 12px; line-height: 1.5; font-style: italic; margin-bottom: 7px; }
+  .dark .saved-quote-text { color: #c8d0b8; }
+  .light .saved-quote-text { color: #1e1812; }
+  .saved-quote-meta { font-family: sans-serif; font-size: 10px; display: flex; justify-content: space-between; }
+  .dark .saved-quote-meta { color: #4a4a6a; }
+  .light .saved-quote-meta { color: #7a6a58; }
+
+  .see-all-row { margin: 0 20px 16px; font-family: sans-serif; font-size: 12px; color: #c8a96e; text-align: right; }
+
+  /* Settings */
+  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid; }
+  .dark .setting-row { border-color: #1a1a2e; }
+  .light .setting-row { border-color: #ede5d8; }
+  .setting-label { font-family: sans-serif; font-size: 13px; }
+  .dark .setting-label { color: #c8c0b0; }
+  .light .setting-label { color: #2a2018; }
+  .setting-value { font-family: sans-serif; font-size: 12px; }
+  .dark .setting-value { color: #5a5a7a; }
+  .light .setting-value { color: #7a6a58; }
+
+  .toggle { width: 38px; height: 22px; border-radius: 11px; position: relative; }
+  .toggle.on { background: #c8a96e; }
+  .toggle.off { background: #2a2a4a; }
+  .light .toggle.off { background: #d0c8b8; }
+  .toggle::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: white; top: 2px; }
+  .toggle.on::after { right: 2px; }
+  .toggle.off::after { left: 2px; }
+
+  /* Style + mode selectors */
+  .style-swatches { display: flex; gap: 10px; padding: 10px 20px 14px; }
+  .style-swatch { flex: 1; border-radius: 12px; padding: 10px 6px; display: flex; flex-direction: column; align-items: center; gap: 5px; border: 2px solid; cursor: pointer; }
+  .dark .style-swatch { border-color: #2a2a4a; }
+  .light .style-swatch { border-color: #d8d0c0; }
+  .style-swatch.active { border-color: #c8a96e !important; }
+  .swatch-preview { width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); }
+  .swatch-label { font-family: sans-serif; font-size: 9px; letter-spacing: 0.5px; }
+  .dark .swatch-label { color: #6a6a8a; }
+  .light .swatch-label { color: #6a5f52; }
+  .style-swatch.active .swatch-label { color: #c8a96e !important; }
+
+  .mode-row { display: flex; margin: 0 20px 4px; border: 1px solid; border-radius: 10px; overflow: hidden; }
+  .dark .mode-row { border-color: #2a2a4a; }
+  .light .mode-row { border-color: #d8d0c0; }
+  .mode-btn { flex: 1; padding: 8px; text-align: center; font-family: sans-serif; font-size: 12px; cursor: pointer; }
+  .dark .mode-btn { color: #5a5a7a; }
+  .light .mode-btn { color: #5a5048; }
+  .mode-btn.active { background: #c8a96e; color: #0f0f1a !important; font-weight: 600; }
+  .mode-btn:not(:last-child) { border-right: 1px solid; }
+  .dark .mode-btn:not(:last-child) { border-color: #2a2a4a; }
+  .light .mode-btn:not(:last-child) { border-color: #d8d0c0; }
+
+  /* ─── Nav icons (SVG line style) ─── */
+  .nav-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .nav-icon svg { width: 24px; height: 24px; }
+  .dark .nav-icon svg { stroke: #3a3a5a; }
+  .dark .nav-item.active .nav-icon svg { stroke: #c8a96e; }
+  .light .nav-icon svg { stroke: #8a8a8a; }
+  .light .nav-item.active .nav-icon svg { stroke: #c8a96e; }
+
+  /* ─── Light theme: direct color swap of dark + card elevation ─── */
+  /* Surfaces — Classic light: White (#FFFFFF) + OffWhite (#F8F8F8) */
+  .light { border-color: #E0E0E0; }
+  .light .status-bar { background: #F8F8F8; color: #1A1A1A; }
+  .light .screen { background: #F8F8F8; }
+  .light .top-bar { background: #F8F8F8; }
+  .light .page-title { color: #1A1A1A; }
+  .light .bottom-nav { background: #F8F8F8; border-color: #D0D0D0; }
+  .light .scroll-content { background: #F8F8F8; }
+
+  /* Text — Ink #1A1A1A, Slate #6B6B6B, Charcoal #2A2A2A */
+  .light .top-bar-left { color: #6B6B6B; }
+  .light .top-bar-right { color: #6B6B6B; }
+  .light .section-label { color: #6B6B6B; }
+  .light .day-label { color: #6B6B6B; }
+  .light .figure-name { color: #6B6B6B; }
+  .light .nav-label { color: #6B6B6B; }
+  .light .nav-item.active .nav-label { color: #3D5A80 !important; }
+  .light .headline-text { color: #1A1A1A; }
+  .light .headline-meta { color: #6B6B6B; }
+  .light .headline-category { color: #3D5A80; }
+  .light .tap-to-read { color: #3D5A80; }
+  .light .read-badge { color: #4A8A4A; border-color: #8ABE8A; }
+  .light .reporter-name { color: #1A1A1A; }
+  .light .reporter-era { color: #6B6B6B; }
+  .light .theme-pill { color: #6B6B6B; border-color: #E0E0E0; }
+  .light .detail-name { color: #1A1A1A; }
+  .light .detail-era { color: #3D5A80; }
+  .light .detail-bio { color: #6B6B6B; }
+  .light .stat-number { color: #1B2A4A; }
+  .light .stat-label { color: #6B6B6B; }
+  .light .saved-quote-text { color: #2A2A2A; }
+  .light .saved-quote-meta { color: #6B6B6B; }
+  .light .see-all-row { color: #3D5A80; }
+  .light .setting-label { color: #1A1A1A; }
+  .light .setting-value { color: #6B6B6B; }
+  .light .swatch-label { color: #6B6B6B; }
+  .light .mode-btn { color: #6B6B6B; }
+  .light .reflection-eyebrow { color: #3D5A80; }
+  .light .reflection-quote { color: #1A1A1A; }
+  .light .reflection-attribution { color: #6B6B6B; }
+  .light .reflection-from { border-color: #D0D0D0; color: #6B6B6B; }
+  .light .pinned-day { color: #3D5A80; background: #3D5A8018; border-color: #3D5A8044; }
+  .light .app-name { color: #1B2A4A; }
+  .light .chip { border-color: #E0E0E0; color: #2A2A2A; }
+  .light .chip.active { background: #3D5A8015; border-color: #3D5A80 !important; color: #3D5A80 !important; }
+  .light .day-slot.today .day-label { color: #1B2A4A !important; }
+  .light .day-slot.today .portrait-ring { border-color: #1B2A4A !important; }
+  .light .day-slot.today .figure-name { color: #1B2A4A !important; }
+
+  /* Cards — white #FFFFFF elevated over OffWhite #F8F8F8 */
+  .light .reflection-card { background: #FFFFFF; border-color: #E0E0E0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .light .reporter-card { background: #FFFFFF; border-color: #E0E0E0; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .light .reporter-detail { background: #FFFFFF; border-color: #E0E0E0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .light .saved-quote-card { background: #FFFFFF; border-color: #E0E0E0; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .light .stat-card { background: #FFFFFF; border-color: #E0E0E0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .light .search-bar { background: #FFFFFF; border-color: #E0E0E0; color: #6B6B6B; }
+  .light .setting-row { background: #FFFFFF; border-color: #E0E0E0; }
+  .light .style-swatch { border-color: #E0E0E0; background: #FFFFFF; }
+  .light .mode-row { border-color: #E0E0E0; background: #FFFFFF; }
+  .light .portrait-ring { border-color: #E0E0E0; background: #FFFFFF; }
+  .light .portrait-empty { border-color: #D0D0D0; color: #D0D0D0; }
+  .light .divider { background: #D0D0D0; }
+  .light .headline-divider { background: #E0E0E0; }
+  .light .headline-thumb { background: linear-gradient(135deg, #EEF2F8, #E0E8F4); }
+
+  /* Headline thumbnail — left side */
+  .headline-thumb {
+    width: 64px; height: 64px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; overflow: hidden;
+  }
+  .dark .headline-thumb { background: linear-gradient(135deg, #1e2535, #2a3550); }
+  .light .headline-thumb { background: linear-gradient(135deg, #D8E4EE, #C8D8E8); }
+  .headline-item-row { display: flex; gap: 12px; align-items: flex-start; }
+
+  /* ─── Phone label ─── */
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; }
+  .phone-label { margin-top: 12px; color: #4a4a6a; font-family: sans-serif; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .light-label { color: #9a9080; }
+</style>
+</head>
+<body>
+
+<div class="row-label">Dark Theme</div>
+
+<!-- ══════════════ DARK ROW ══════════════ -->
+<div class="phone-row">
+
+  <!-- BRIEFING DARK -->
+  <div class="phone-wrap">
+  <div class="phone dark">
+    <div class="status-bar"><span class="time">9:41</span><span class="icons">●●● WiFi 🔋</span></div>
+    <div class="screen">
+      <div class="top-bar">
+        <span class="app-name">The Courage Post</span>
+        <span class="top-bar-right">Thu, Jun 5</span>
+      </div>
+      <div class="page-title">Briefing</div>
+      <div class="scroll-content">
+        <div class="section-label">Your Reporters This Week</div>
+        <div class="carousel">
+          <div class="day-slot"><div class="day-label">Mon</div><div class="portrait-ring" style="background:#1e2a1e; color:#7aaa7a;">✝</div><div class="figure-name">Augustine</div></div>
+          <div class="day-slot"><div class="day-label">Tue</div><div class="portrait-ring" style="background:#2a1e2a; color:#aa7aaa;">✝</div><div class="figure-name">Teresa of Ávila</div></div>
+          <div class="day-slot"><div class="day-label">Wed</div><div class="portrait-empty">+</div><div class="figure-name" style="color:#2a2a3a;">Add</div></div>
+          <div class="day-slot today"><div class="day-label">Thu</div><div class="portrait-ring" style="background:#2a2a1e; color:#aaaa7a;">✝</div><div class="figure-name">C.S. Lewis</div></div>
+          <div class="day-slot"><div class="day-label">Fri</div><div class="portrait-empty">+</div><div class="figure-name" style="color:#2a2a3a;">Add</div></div>
+          <div class="day-slot"><div class="day-label">Sat</div><div class="portrait-ring" style="background:#1e2a2a; color:#7aaaaa;">✝</div><div class="figure-name">A.W. Tozer</div></div>
+          <div class="day-slot"><div class="day-label">Sun</div><div class="portrait-empty">+</div><div class="figure-name" style="color:#2a2a3a;">Add</div></div>
+        </div>
+        <div class="section-label">Today's Lens</div>
+        <div class="chip-row">
+          <div class="chip active">Today's News</div>
+          <div class="chip">Hope</div><div class="chip">Anxiety</div>
+          <div class="chip">Love</div><div class="chip">Grief</div><div class="chip">Purpose</div>
+        </div>
+        <div class="divider"></div>
+        <div class="section-label">Today's Word — C.S. Lewis</div>
+        <div class="reflection-card">
+          <div class="reflection-eyebrow">Thursday · Today's News</div>
+          <div class="reflection-quote">"You can't go back and change the beginning, but you can start where you are and change the ending."</div>
+          <div class="reflection-attribution">— C.S. Lewis, Mere Christianity</div>
+          <div class="reflection-from">from · Global ceasefire talks stall as tensions mount in Eastern Europe</div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item active"><div class="nav-icon">📖</div><div class="nav-label" style="color:#c8a96e;">Briefing</div></div>
+      <div class="nav-item"><div class="nav-icon">📰</div><div class="nav-label">Headlines</div></div>
+      <div class="nav-item"><div class="nav-icon">🎙️</div><div class="nav-label">Reporters</div></div>
+      <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">Reader</div></div>
+    </div>
+  </div>
+  <div class="phone-label">Briefing</div>
+  </div>
+
+  <!-- HEADLINES DARK -->
+  <div class="phone-wrap">
+  <div class="phone dark">
+    <div class="status-bar"><span class="time">9:41</span><span class="icons">●●● WiFi 🔋</span></div>
+    <div class="screen">
+      <div class="top-bar"><span class="top-bar-left">Thu, Jun 5</span><span class="top-bar-right">34 stories</span></div>
+      <div class="page-title">Headlines</div>
+      <div class="scroll-content">
+        <!-- Featured with full image -->
+        <div class="headline-item">
+          <div class="headline-image"><div class="headline-image-overlay"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.12;font-size:60px;">🌍</div><div class="headline-image-label">World · Featured</div></div>
+          <div class="headline-category">World</div>
+          <div class="headline-text">Global ceasefire talks stall as tensions mount in Eastern Europe</div>
+          <div class="headline-meta"><span>Reuters · 2h ago</span><span class="tap-to-read">Tap to read →</span></div>
+        </div>
+        <div class="headline-divider"></div>
+        <div class="headline-item headline-dimmed headline-item-row">
+          <div class="headline-thumb" style="opacity:0.5;">📈</div>
+          <div style="flex:1;"><div class="headline-category">Economy</div><div class="headline-text">Fed signals rate hold as inflation edges closer to target</div><div class="headline-meta"><span>WSJ · 3h ago</span><span class="read-badge">READ</span></div></div>
+        </div>
+        <div class="headline-divider"></div>
+        <div class="headline-item headline-item-row">
+          <div class="headline-thumb">🥫</div>
+          <div style="flex:1;"><div class="headline-category">Society</div><div class="headline-text">Food bank demand rises 40% in major US cities amid cost-of-living crisis</div><div class="headline-meta"><span>AP · 4h ago</span><span class="tap-to-read">Tap to read →</span></div></div>
+        </div>
+        <div class="headline-divider"></div>
+        <div class="headline-item headline-dimmed headline-item-row">
+          <div class="headline-thumb" style="opacity:0.5;">🪸</div>
+          <div style="flex:1;"><div class="headline-category">Environment</div><div class="headline-text">Scientists confirm largest coral reef restoration in history</div><div class="headline-meta"><span>Nature · 5h ago</span><span class="read-badge">READ</span></div></div>
+        </div>
+        <div class="headline-divider"></div>
+        <div class="headline-item headline-item-row">
+          <div class="headline-thumb">🏥</div>
+          <div style="flex:1;"><div class="headline-category">Health</div><div class="headline-text">WHO declares end to mpox emergency as cases plateau globally</div><div class="headline-meta"><span>BBC · 6h ago</span><span class="tap-to-read">Tap to read →</span></div></div>
+        </div>
+        <div class="headline-divider"></div>
+        <div class="headline-item headline-item-row">
+          <div class="headline-thumb">⚖️</div>
+          <div style="flex:1;"><div class="headline-category">Technology</div><div class="headline-text">AI regulation framework passes EU Parliament in landmark vote</div><div class="headline-meta"><span>Guardian · 7h ago</span><span class="tap-to-read">Tap to read →</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item"><div class="nav-icon"></div><div class="nav-label">Briefing</div></div>
+      <div class="nav-item active"><div class="nav-icon"></div><div class="nav-label" style="color:#c8a96e;">Headlines</div></div>
+      <div class="nav-item"><div class="nav-icon"></div><div class="nav-label">Reporters</div></div>
+      <div class="nav-item"><div class="nav-icon"></div><div class="nav-label">Reader</div></div>
+    </div>
+  </div>
+  <div class="phone-label">Headlines</div>
+  </div>
+
+  <!-- REPORTERS DARK -->
+  <div class="phone-wrap">
+  <div class="phone dark">
+    <div class="status-bar"><span class="time">9:41</span><span class="icons">●●● WiFi 🔋</span></div>
+    <div class="screen">
+      <div class="top-bar">
+        <span class="top-bar-left">12 reporters</span>
+        <span class="top-bar-right">5 pinned</span>
+      </div>
+      <div class="page-title">Reporters</div>
+      <div class="scroll-content">
+        <div class="search-bar">🔍 Search reporters…</div>
+        <div class="section-label">Today's Voice</div>
+        <div class="reporter-detail">
+          <div class="detail-portrait" style="color:#aaaa7a;">✝</div>
+          <div>
+            <div class="detail-name">C.S. Lewis</div>
+            <div class="detail-era">1898–1963 · Apologist</div>
+            <div class="detail-bio">Oxford scholar and author of Mere Christianity. Known for defending the faith through reason, imagination, and wit.</div>
+          </div>
+        </div>
+        <div class="section-label">All Reporters</div>
+        <div class="reporters-grid">
+          <div class="reporter-card pinned"><div class="pinned-day">MON</div><div class="reporter-portrait" style="background:#1e2a1e;color:#7aaa7a;">✝</div><div class="reporter-name">Augustine of Hippo</div><div class="reporter-era">354–430 AD</div><div class="reporter-themes"><span class="theme-pill">Grace</span><span class="theme-pill">Sin</span></div></div>
+          <div class="reporter-card"><div class="reporter-portrait" style="background:#1e2a2e;color:#7a9aaa;">✝</div><div class="reporter-name">Dietrich Bonhoeffer</div><div class="reporter-era">1906–1945</div><div class="reporter-themes"><span class="theme-pill">Courage</span><span class="theme-pill">Justice</span></div></div>
+          <div class="reporter-card pinned"><div class="pinned-day">TUE</div><div class="reporter-portrait" style="background:#2a1e2a;color:#aa7aaa;">✝</div><div class="reporter-name">Teresa of Ávila</div><div class="reporter-era">1515–1582</div><div class="reporter-themes"><span class="theme-pill">Prayer</span><span class="theme-pill">Soul</span></div></div>
+          <div class="reporter-card"><div class="reporter-portrait" style="background:#1e1e2a;color:#7a7aaa;">✝</div><div class="reporter-name">Thomas à Kempis</div><div class="reporter-era">1380–1471</div><div class="reporter-themes"><span class="theme-pill">Humility</span><span class="theme-pill">Devotion</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item"><div class="nav-icon">📖</div><div class="nav-label">Briefing</div></div>
+      <div class="nav-item"><div class="nav-icon">📰</div><div class="nav-label">Headlines</div></div>
+      <div class="nav-item active"><div class="nav-icon">🎙️</div><div class="nav-label" style="color:#c8a96e;">Reporters</div></div>
+      <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">Reader</div></div>
+    </div>
+  </div>
+  <div class="phone-label">Reporters</div>
+  </div>
+
+  <!-- READER DARK -->
+  <div class="phone-wrap">
+  <div class="phone dark">
+    <div class="status-bar"><span class="time">9:41</span><span class="icons">●●● WiFi 🔋</span></div>
+    <div class="screen">
+      <div class="top-bar">
+        <span class="top-bar-left">Michael</span>
+        <span class="top-bar-right">Since Jan 2025</span>
+      </div>
+      <div class="page-title">Reader</div>
+      <div class="scroll-content">
+        <div class="reader-stat-row">
+          <div class="stat-card"><div class="stat-number">47</div><div class="stat-label">Read</div></div>
+          <div class="stat-card"><div class="stat-number">12</div><div class="stat-label">Saved</div></div>
+          <div class="stat-card"><div class="stat-number">5</div><div class="stat-label">Pinned</div></div>
+        </div>
+        <div class="section-label">Saved Quotes</div>
+        <div class="saved-quote-card">
+          <div class="saved-quote-text">"We are not necessarily doubting that God will do the best for us; we are wondering how painful the best will turn out to be."</div>
+          <div class="saved-quote-meta"><span>C.S. Lewis</span><span>May 30</span></div>
+        </div>
+        <div class="saved-quote-card">
+          <div class="saved-quote-text">"The soul hardly ever realizes it, but his loneliness is really a homesickness for God."</div>
+          <div class="saved-quote-meta"><span>Hubert van Zeller</span><span>May 22</span></div>
+        </div>
+        <div class="see-all-row">See all 12 quotes →</div>
+        <div class="divider"></div>
+        <div class="section-label">Preferences</div>
+        <div class="setting-row"><div class="setting-label">Daily briefing notification</div><div class="toggle on"></div></div>
+        <div class="setting-row" style="border-bottom:none; padding-bottom:4px;"><div class="setting-label">Style</div></div>
+        <div class="style-swatches">
+          <div class="style-swatch active"><div class="swatch-preview" style="background:#1a1520;"></div><div class="swatch-label">Classic</div></div>
+          <div class="style-swatch"><div class="swatch-preview" style="background:#0d1520;"></div><div class="swatch-label">Modern</div></div>
+          <div class="style-swatch"><div class="swatch-preview" style="background:#1a1208;"></div><div class="swatch-label">Warm</div></div>
+        </div>
+        <div class="setting-row" style="border-bottom:none; padding-bottom:4px;"><div class="setting-label">Mode</div></div>
+        <div class="mode-row">
+          <div class="mode-btn active">Dark</div>
+          <div class="mode-btn">Light</div>
+        </div>
+        <div class="setting-row"><div class="setting-label">Default lens</div><div class="setting-value">Today's News ›</div></div>
+        <div class="setting-row"><div class="setting-label">Briefing reporter</div><div class="setting-value">By day of week ›</div></div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item"><div class="nav-icon">📖</div><div class="nav-label">Briefing</div></div>
+      <div class="nav-item"><div class="nav-icon">📰</div><div class="nav-label">Headlines</div></div>
+      <div class="nav-item"><div class="nav-icon">🎙️</div><div class="nav-label">Reporters</div></div>
+      <div class="nav-item active"><div class="nav-icon">👤</div><div class="nav-label" style="color:#c8a96e;">Reader</div></div>
+    </div>
+  </div>
+  <div class="phone-label">Reader</div>
+  </div>
+
+  <!-- REPORTER PICKER DARK -->
+  <div class="phone-wrap">
+  <div class="phone dark">
+    <div class="status-bar"><span class="time">9:41</span><span class="icons">●●● WiFi 🔋</span></div>
+    <!-- Dimmed briefing behind sheet -->
+    <div style="position:absolute;inset:0;background:#0f0f1a;z-index:1;opacity:0.6;"></div>
+    <!-- Bottom sheet -->
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#15152a;border-radius:24px 24px 0 0;border-top:1px solid #2a2a4a;z-index:2;padding:16px 0 24px;">
+      <div style="width:36px;height:4px;background:#2a2a4a;border-radius:2px;margin:0 auto 18px;"></div>
+      <div style="padding:0 20px 14px;">
+        <div style="font-size:18px;color:#e8e0d0;margin-bottom:4px;">Pin a Reporter</div>
+        <div style="font-family:sans-serif;font-size:12px;color:#5a5a7a;">Choose a voice for Wednesday</div>
+      </div>
+      <!-- Rows -->
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#1e2a1e;border:1px solid #2a4a2a;display:flex;align-items:center;justify-content:center;color:#7aaa7a;font-size:18px;flex-shrink:0;">✝</div>
+        <div><div style="color:#d8d0c0;font-size:14px;">Charles Spurgeon</div><div style="font-family:sans-serif;font-size:11px;color:#4a4a6a;">Victorian preacher · Hope · Psalms</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#2a1e1e;border:1px solid #4a2a2a;display:flex;align-items:center;justify-content:center;color:#aa7a7a;font-size:18px;flex-shrink:0;">✝</div>
+        <div><div style="color:#d8d0c0;font-size:14px;">Thomas à Kempis</div><div style="font-family:sans-serif;font-size:11px;color:#4a4a6a;">Medieval mystic · Humility · Devotion</div></div>
+      </div>
+      <!-- Selected row -->
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;background:#1a1a2e;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#2a2a1e;border:2px solid #c8a96e;display:flex;align-items:center;justify-content:center;color:#aaaa7a;font-size:18px;flex-shrink:0;">✝</div>
+        <div style="flex:1;"><div style="color:#c8a96e;font-size:14px;">C.S. Lewis</div><div style="font-family:sans-serif;font-size:11px;color:#4a4a6a;">Apologist · Reason &amp; Faith · Joy</div></div>
+        <div style="font-family:sans-serif;font-size:10px;color:#c8a96e;border:1px solid #c8a96e44;padding:3px 8px;border-radius:10px;">THU</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#1e1e2a;border:1px solid #2a2a4a;display:flex;align-items:center;justify-content:center;color:#7a7aaa;font-size:18px;flex-shrink:0;">✝</div>
+        <div><div style="color:#d8d0c0;font-size:14px;">Dietrich Bonhoeffer</div><div style="font-family:sans-serif;font-size:11px;color:#4a4a6a;">Theologian · Courage · Justice</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#1e2a2a;border:1px solid #2a4a4a;display:flex;align-items:center;justify-content:center;color:#7aaaaa;font-size:18px;flex-shrink:0;">✝</div>
+        <div><div style="color:#d8d0c0;font-size:14px;">Julian of Norwich</div><div style="font-family:sans-serif;font-size:11px;color:#4a4a6a;">Mystic · Suffering · Love</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#2a1e2a;border:1px solid #3a2a3a;display:flex;align-items:center;justify-content:center;color:#aa7aaa;font-size:18px;flex-shrink:0;">✝</div>
+        <div><div style="color:#d8d0c0;font-size:14px;">Teresa of Ávila</div><div style="font-family:sans-serif;font-size:11px;color:#4a4a6a;">Mystic · Prayer · Soul</div></div>
+      </div>
+    </div>
+    <div class="bottom-nav" style="position:relative;z-index:0;">
+      <div class="nav-item active"><div class="nav-icon">📖</div><div class="nav-label" style="color:#c8a96e;">Briefing</div></div>
+      <div class="nav-item"><div class="nav-icon">📰</div><div class="nav-label">Headlines</div></div>
+      <div class="nav-item"><div class="nav-icon">🎙️</div><div class="nav-label">Reporters</div></div>
+      <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">Reader</div></div>
+    </div>
+  </div>
+  <div class="phone-label">Reporter Picker</div>
+  </div>
+
+</div><!-- end dark row -->
+
+
+<div class="row-label" style="margin-top: 8px;">Light Theme</div>
+
+<!-- ══════════════ LIGHT ROW ══════════════ -->
+<div class="phone-row">
+
+  <!-- BRIEFING LIGHT -->
+  <div class="phone-wrap">
+  <div class="phone light">
+    <div class="status-bar"><span class="time">9:41</span><span class="icons">●●● WiFi 🔋</span></div>
+    <div class="screen">
+      <div class="top-bar">
+        <span class="app-name">The Courage Post</span>
+        <span class="top-bar-right">Thu, Jun 5</span>
+      </div>
+      <div class="page-title">Briefing</div>
+      <div class="scroll-content">
+        <div class="section-label">Your Reporters This Week</div>
+        <div class="carousel">
+          <div class="day-slot"><div class="day-label">Mon</div><div class="portrait-ring" style="background:#e0ead8;color:#5a8a5a;">✝</div><div class="figure-name">Augustine</div></div>
+          <div class="day-slot"><div class="day-label">Tue</div><div class="portrait-ring" style="background:#ead8ea;color:#8a5a8a;">✝</div><div class="figure-name">Teresa of Ávila</div></div>
+          <div class="day-slot"><div class="day-label">Wed</div><div class="portrait-empty">+</div><div class="figure-name" style="color:#c8c0b0;">Add</div></div>
+          <div class="day-slot today"><div class="day-label">Thu</div><div class="portrait-ring" style="background:#eaeac8;color:#8a8a40;">✝</div><div class="figure-name">C.S. Lewis</div></div>
+          <div class="day-slot"><div class="day-label">Fri</div><div class="portrait-empty">+</div><div class="figure-name" style="color:#c8c0b0;">Add</div></div>
+          <div class="day-slot"><div class="day-label">Sat</div><div class="portrait-ring" style="background:#d8eaea;color:#3a8a8a;">✝</div><div class="figure-name">A.W. Tozer</div></div>
+          <div class="day-slot"><div class="day-label">Sun</div><div class="portrait-empty">+</div><div class="figure-name" style="color:#c8c0b0;">Add</div></div>
+        </div>
+        <div class="section-label">Today's Lens</div>
+        <div class="chip-row">
+          <div class="chip active">Today's News</div>
+          <div class="chip">Hope</div><div class="chip">Anxiety</div>
+          <div class="chip">Love</div><div class="chip">Grief</div><div class="chip">Purpose</div>
+        </div>
+        <div class="divider"></div>
+        <div class="section-label">Today's Word — C.S. Lewis</div>
+        <div class="reflection-card">
+          <div class="reflection-eyebrow">Thursday · Today's News</div>
+          <div class="reflection-quote">"You can't go back and change the beginning, but you can start where you are and change the ending."</div>
+          <div class="reflection-attribution">— C.S. Lewis, Mere Christianity</div>
+          <div class="reflection-from">from · Global ceasefire talks stall as tensions mount in Eastern Europe</div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item active"><div class="nav-icon">📖</div><div class="nav-label" style="color:#c8a96e;">Briefing</div></div>
+      <div class="nav-item"><div class="nav-icon">📰</div><div class="nav-label">Headlines</div></div>
+      <div class="nav-item"><div class="nav-icon">🎙️</div><div class="nav-label">Reporters</div></div>
+      <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">Reader</div></div>
+    </div>
+  </div>
+  <div class="phone-label light-label">Briefing</div>
+  </div>
+
+  <!-- HEADLINES LIGHT -->
+  <div class="phone-wrap">
+  <div class="phone light">
+    <div class="status-bar"><span class="time">9:41</span><span class="icons">●●● WiFi 🔋</span></div>
+    <div class="screen">
+      <div class="top-bar"><span class="top-bar-left">Thu, Jun 5</span><span class="top-bar-right">34 stories</span></div>
+      <div class="page-title">Headlines</div>
+      <div class="scroll-content">
+        <div class="headline-item">
+          <div class="headline-image" style="background:linear-gradient(135deg,#c8dce8,#b0ccd8);">
+            <div class="headline-image-overlay"></div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.2;font-size:60px;">🌍</div>
+            <div class="headline-image-label">World · Featured</div>
+          </div>
+          <div class="headline-category">World</div>
+          <div class="headline-text">Global ceasefire talks stall as tensions mount in Eastern Europe</div>
+          <div class="headline-meta"><span>Reuters · 2h ago</span><span class="tap-to-read">Tap to read →</span></div>
+        </div>
+        <div class="headline-divider"></div>
+        <div class="headline-item headline-dimmed headline-item-row">
+          <div class="headline-thumb" style="opacity:0.5;">📈</div>
+          <div style="flex:1;"><div class="headline-category">Economy</div><div class="headline-text">Fed signals rate hold as inflation edges closer to target</div><div class="headline-meta"><span>WSJ · 3h ago</span><span class="read-badge">READ</span></div></div>
+        </div>
+        <div class="headline-divider"></div>
+        <div class="headline-item headline-item-row">
+          <div class="headline-thumb">🥫</div>
+          <div style="flex:1;"><div class="headline-category">Society</div><div class="headline-text">Food bank demand rises 40% in major US cities amid cost-of-living crisis</div><div class="headline-meta"><span>AP · 4h ago</span><span class="tap-to-read">Tap to read →</span></div></div>
+        </div>
+        <div class="headline-divider"></div>
+        <div class="headline-item headline-dimmed headline-item-row">
+          <div class="headline-thumb" style="opacity:0.5;">🪸</div>
+          <div style="flex:1;"><div class="headline-category">Environment</div><div class="headline-text">Scientists confirm largest coral reef restoration in history</div><div class="headline-meta"><span>Nature · 5h ago</span><span class="read-badge">READ</span></div></div>
+        </div>
+        <div class="headline-divider"></div>
+        <div class="headline-item headline-item-row">
+          <div class="headline-thumb">🏥</div>
+          <div style="flex:1;"><div class="headline-category">Health</div><div class="headline-text">WHO declares end to mpox emergency as cases plateau globally</div><div class="headline-meta"><span>BBC · 6h ago</span><span class="tap-to-read">Tap to read →</span></div></div>
+        </div>
+        <div class="headline-divider"></div>
+        <div class="headline-item headline-item-row">
+          <div class="headline-thumb">⚖️</div>
+          <div style="flex:1;"><div class="headline-category">Technology</div><div class="headline-text">AI regulation framework passes EU Parliament in landmark vote</div><div class="headline-meta"><span>Guardian · 7h ago</span><span class="tap-to-read">Tap to read →</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item"><div class="nav-icon"></div><div class="nav-label">Briefing</div></div>
+      <div class="nav-item active"><div class="nav-icon"></div><div class="nav-label" style="color:#c8a96e;">Headlines</div></div>
+      <div class="nav-item"><div class="nav-icon"></div><div class="nav-label">Reporters</div></div>
+      <div class="nav-item"><div class="nav-icon"></div><div class="nav-label">Reader</div></div>
+    </div>
+  </div>
+  <div class="phone-label light-label">Headlines</div>
+  </div>
+
+  <!-- REPORTERS LIGHT -->
+  <div class="phone-wrap">
+  <div class="phone light">
+    <div class="status-bar"><span class="time">9:41</span><span class="icons">●●● WiFi 🔋</span></div>
+    <div class="screen">
+      <div class="top-bar">
+        <span class="top-bar-left">12 reporters</span>
+        <span class="top-bar-right">5 pinned</span>
+      </div>
+      <div class="page-title">Reporters</div>
+      <div class="scroll-content">
+        <div class="search-bar">🔍 Search reporters…</div>
+        <div class="section-label">Today's Voice</div>
+        <div class="reporter-detail">
+          <div class="detail-portrait" style="color:#8a8a40; background:#eaeac8;">✝</div>
+          <div>
+            <div class="detail-name">C.S. Lewis</div>
+            <div class="detail-era">1898–1963 · Apologist</div>
+            <div class="detail-bio">Oxford scholar and author of Mere Christianity. Known for defending the faith through reason, imagination, and wit.</div>
+          </div>
+        </div>
+        <div class="section-label">All Reporters</div>
+        <div class="reporters-grid">
+          <div class="reporter-card pinned"><div class="pinned-day">MON</div><div class="reporter-portrait" style="background:#e0ead8;color:#5a8a5a;">✝</div><div class="reporter-name">Augustine of Hippo</div><div class="reporter-era">354–430 AD</div><div class="reporter-themes"><span class="theme-pill">Grace</span><span class="theme-pill">Sin</span></div></div>
+          <div class="reporter-card"><div class="reporter-portrait" style="background:#d8e4ea;color:#4a7a8a;">✝</div><div class="reporter-name">Dietrich Bonhoeffer</div><div class="reporter-era">1906–1945</div><div class="reporter-themes"><span class="theme-pill">Courage</span><span class="theme-pill">Justice</span></div></div>
+          <div class="reporter-card pinned"><div class="pinned-day">TUE</div><div class="reporter-portrait" style="background:#ead8ea;color:#8a5a8a;">✝</div><div class="reporter-name">Teresa of Ávila</div><div class="reporter-era">1515–1582</div><div class="reporter-themes"><span class="theme-pill">Prayer</span><span class="theme-pill">Soul</span></div></div>
+          <div class="reporter-card"><div class="reporter-portrait" style="background:#deded8;color:#6a6a8a;">✝</div><div class="reporter-name">Thomas à Kempis</div><div class="reporter-era">1380–1471</div><div class="reporter-themes"><span class="theme-pill">Humility</span><span class="theme-pill">Devotion</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item"><div class="nav-icon">📖</div><div class="nav-label">Briefing</div></div>
+      <div class="nav-item"><div class="nav-icon">📰</div><div class="nav-label">Headlines</div></div>
+      <div class="nav-item active"><div class="nav-icon">🎙️</div><div class="nav-label" style="color:#c8a96e;">Reporters</div></div>
+      <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">Reader</div></div>
+    </div>
+  </div>
+  <div class="phone-label light-label">Reporters</div>
+  </div>
+
+  <!-- READER LIGHT -->
+  <div class="phone-wrap">
+  <div class="phone light">
+    <div class="status-bar"><span class="time">9:41</span><span class="icons">●●● WiFi 🔋</span></div>
+    <div class="screen">
+      <div class="top-bar">
+        <span class="top-bar-left">Michael</span>
+        <span class="top-bar-right">Since Jan 2025</span>
+      </div>
+      <div class="page-title">Reader</div>
+      <div class="scroll-content">
+        <div class="reader-stat-row">
+          <div class="stat-card"><div class="stat-number">47</div><div class="stat-label">Read</div></div>
+          <div class="stat-card"><div class="stat-number">12</div><div class="stat-label">Saved</div></div>
+          <div class="stat-card"><div class="stat-number">5</div><div class="stat-label">Pinned</div></div>
+        </div>
+        <div class="section-label">Saved Quotes</div>
+        <div class="saved-quote-card">
+          <div class="saved-quote-text">"We are not necessarily doubting that God will do the best for us; we are wondering how painful the best will turn out to be."</div>
+          <div class="saved-quote-meta"><span>C.S. Lewis</span><span>May 30</span></div>
+        </div>
+        <div class="saved-quote-card">
+          <div class="saved-quote-text">"The soul hardly ever realizes it, but his loneliness is really a homesickness for God."</div>
+          <div class="saved-quote-meta"><span>Hubert van Zeller</span><span>May 22</span></div>
+        </div>
+        <div class="see-all-row">See all 12 quotes →</div>
+        <div class="divider"></div>
+        <div class="section-label">Preferences</div>
+        <div class="setting-row"><div class="setting-label">Daily briefing notification</div><div class="toggle on"></div></div>
+        <div class="setting-row" style="border-bottom:none; padding-bottom:4px;"><div class="setting-label">Style</div></div>
+        <div class="style-swatches">
+          <div class="style-swatch active"><div class="swatch-preview" style="background:#f5f0e8; border:1px solid #d8d0c0;"></div><div class="swatch-label">Classic</div></div>
+          <div class="style-swatch"><div class="swatch-preview" style="background:#f0f4f8; border:1px solid #d0d8e0;"></div><div class="swatch-label">Modern</div></div>
+          <div class="style-swatch"><div class="swatch-preview" style="background:#f8f0e0; border:1px solid #e0d0b0;"></div><div class="swatch-label">Warm</div></div>
+        </div>
+        <div class="setting-row" style="border-bottom:none; padding-bottom:4px;"><div class="setting-label">Mode</div></div>
+        <div class="mode-row">
+          <div class="mode-btn">Dark</div>
+          <div class="mode-btn active">Light</div>
+        </div>
+        <div class="setting-row"><div class="setting-label">Default lens</div><div class="setting-value">Today's News ›</div></div>
+        <div class="setting-row"><div class="setting-label">Briefing reporter</div><div class="setting-value">By day of week ›</div></div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item"><div class="nav-icon">📖</div><div class="nav-label">Briefing</div></div>
+      <div class="nav-item"><div class="nav-icon">📰</div><div class="nav-label">Headlines</div></div>
+      <div class="nav-item"><div class="nav-icon">🎙️</div><div class="nav-label">Reporters</div></div>
+      <div class="nav-item active"><div class="nav-icon">👤</div><div class="nav-label" style="color:#c8a96e;">Reader</div></div>
+    </div>
+  </div>
+  <div class="phone-label light-label">Reader</div>
+  </div>
+
+  <!-- REPORTER PICKER LIGHT -->
+  <div class="phone-wrap">
+  <div class="phone light">
+    <div class="status-bar"><span class="time">9:41</span><span class="icons">●●● WiFi 🔋</span></div>
+    <!-- Dimmed briefing behind sheet -->
+    <div style="position:absolute;inset:0;background:#faf7f2;z-index:1;opacity:0.6;"></div>
+    <!-- Bottom sheet -->
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#f5f0e8;border-radius:24px 24px 0 0;border-top:1px solid #d8d0c0;z-index:2;padding:16px 0 24px;">
+      <div style="width:36px;height:4px;background:#d8d0c0;border-radius:2px;margin:0 auto 18px;"></div>
+      <div style="padding:0 20px 14px;">
+        <div style="font-size:18px;color:#1c1510;margin-bottom:4px;">Pin a Reporter</div>
+        <div style="font-family:sans-serif;font-size:12px;color:#7a6a58;">Choose a voice for Wednesday</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#e0ead8;border:1px solid #c0d8b8;display:flex;align-items:center;justify-content:center;color:#5a8a5a;font-size:18px;flex-shrink:0;">✝</div>
+        <div><div style="color:#1c1510;font-size:14px;">Charles Spurgeon</div><div style="font-family:sans-serif;font-size:11px;color:#7a6a58;">Victorian preacher · Hope · Psalms</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#ead8d8;border:1px solid #d8b8b8;display:flex;align-items:center;justify-content:center;color:#8a5a5a;font-size:18px;flex-shrink:0;">✝</div>
+        <div><div style="color:#1c1510;font-size:14px;">Thomas à Kempis</div><div style="font-family:sans-serif;font-size:11px;color:#7a6a58;">Medieval mystic · Humility · Devotion</div></div>
+      </div>
+      <!-- Selected row -->
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;background:#ede8dc;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#eaeac8;border:2px solid #c8a96e;display:flex;align-items:center;justify-content:center;color:#8a8a30;font-size:18px;flex-shrink:0;">✝</div>
+        <div style="flex:1;"><div style="color:#9a7228;font-size:14px;font-weight:600;">C.S. Lewis</div><div style="font-family:sans-serif;font-size:11px;color:#7a6a58;">Apologist · Reason &amp; Faith · Joy</div></div>
+        <div style="font-family:sans-serif;font-size:10px;color:#9a7228;border:1px solid #c8a96e88;padding:3px 8px;border-radius:10px;">THU</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#d8d8ea;border:1px solid #b8b8d8;display:flex;align-items:center;justify-content:center;color:#5a5a8a;font-size:18px;flex-shrink:0;">✝</div>
+        <div><div style="color:#1c1510;font-size:14px;">Dietrich Bonhoeffer</div><div style="font-family:sans-serif;font-size:11px;color:#7a6a58;">Theologian · Courage · Justice</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 20px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#d8eaea;border:1px solid #b8d8d8;display:flex;align-items:center;justify-content:center;color:#3a8a8a;font-size:18px;flex-shrink:0;">✝</div>
+        <div><div style="color:#1c1510;font-size:14px;">Julian of Norwich</div><div style="font-family:sans-serif;font-size:11px;color:#7a6a58;">Mystic · Suffering · Love</div></div>
+      </div>
+    </div>
+    <div class="bottom-nav" style="position:relative;z-index:0;">
+      <div class="nav-item active"><div class="nav-icon">📖</div><div class="nav-label" style="color:#c8a96e;">Briefing</div></div>
+      <div class="nav-item"><div class="nav-icon">📰</div><div class="nav-label">Headlines</div></div>
+      <div class="nav-item"><div class="nav-icon">🎙️</div><div class="nav-label">Reporters</div></div>
+      <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">Reader</div></div>
+    </div>
+  </div>
+  <div class="phone-label light-label">Reporter Picker</div>
+  </div>
+
+</div><!-- end light row -->
+
+<script>
+const ICONS = {
+  briefing: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/></svg>`,
+  headlines: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h5v5H7z"/><line x1="14" y1="7" x2="17" y2="7"/><line x1="14" y1="10" x2="17" y2="10"/><line x1="7" y1="15" x2="17" y2="15"/><line x1="7" y1="18" x2="13" y2="18"/></svg>`,
+  reporters: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`,
+  reader: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
+};
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  const label = item.querySelector('.nav-label');
+  const iconDiv = item.querySelector('.nav-icon');
+  if (!label || !iconDiv) return;
+  const text = label.textContent.trim().toLowerCase();
+  const key = text === 'briefing' ? 'briefing'
+             : text === 'headlines' ? 'headlines'
+             : text === 'reporters' ? 'reporters'
+             : text === 'reader' ? 'reader' : null;
+  if (key) iconDiv.innerHTML = ICONS[key];
+});
+</script>
+</body>
+</html>

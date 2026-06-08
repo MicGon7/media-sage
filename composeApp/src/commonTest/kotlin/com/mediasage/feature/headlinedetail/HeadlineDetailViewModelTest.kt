@@ -176,6 +176,7 @@ private class FakeQuoteRepository(private val throwOnSave: Boolean = false) : Qu
     override fun observeAllQuotes(): Flow<List<com.mediasage.domain.model.Quote>> = flowOf(emptyList())
     override fun observeQuotesByFigure(figureId: Long): Flow<List<com.mediasage.domain.model.Quote>> = flowOf(emptyList())
     override suspend fun getQuoteById(id: Long): com.mediasage.domain.model.Quote? = null
+    override suspend fun getLatestQuoteForFigure(figureId: Long): com.mediasage.domain.model.Quote? = null
 
     override suspend fun saveQuote(text: String, source: String, themes: List<String>, figureId: Long) {
         if (throwOnSave) error("simulated save failure")

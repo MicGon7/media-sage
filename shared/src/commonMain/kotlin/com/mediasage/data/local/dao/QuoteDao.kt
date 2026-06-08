@@ -21,6 +21,9 @@ interface QuoteDao {
     @Query("SELECT * FROM quotes WHERE figureId = :figureId")
     fun observeByFigure(figureId: Long): Flow<List<QuoteEntity>>
 
+    @Query("SELECT * FROM quotes WHERE figureId = :figureId ORDER BY id DESC LIMIT 1")
+    suspend fun getLatestByFigure(figureId: Long): QuoteEntity?
+
     @Query("SELECT * FROM quotes WHERE id = :id")
     suspend fun getById(id: Long): QuoteEntity?
 

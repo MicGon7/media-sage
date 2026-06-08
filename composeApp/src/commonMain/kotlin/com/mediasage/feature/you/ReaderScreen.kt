@@ -103,21 +103,21 @@ import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun YouScreen(
-    state: YouContract.UiState,
-    onIntent: (YouContract.Intent) -> Unit,
+fun ReaderScreen(
+    state: ReaderContract.UiState,
+    onIntent: (ReaderContract.Intent) -> Unit,
     onNavigateToBookmarks: () -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToFigureDetail: (figureId: Long) -> Unit = {},
 ) {
-    if (state is YouContract.UiState.Ready && state.pickerOpenForDay != null) {
+    if (state is ReaderContract.UiState.Ready && state.pickerOpenForDay != null) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val isAssigned = state.weekSlots.any {
             it.dayOfWeek.ordinal == state.pickerOpenForDay && it.assignedFigureName != null
         }
         ModalBottomSheet(
-            onDismissRequest = { onIntent(YouContract.Intent.PickerDismissed) },
+            onDismissRequest = { onIntent(ReaderContract.Intent.PickerDismissed) },
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
@@ -125,10 +125,10 @@ fun YouScreen(
                 figures = state.pickerFigures,
                 showClearOption = isAssigned,
                 onFigureSelected = { figure ->
-                    onIntent(YouContract.Intent.FigureAssigned(state.pickerOpenForDay, figure.id))
+                    onIntent(ReaderContract.Intent.FigureAssigned(state.pickerOpenForDay, figure.id))
                 },
                 onClearDay = {
-                    onIntent(YouContract.Intent.AssignmentCleared(state.pickerOpenForDay))
+                    onIntent(ReaderContract.Intent.AssignmentCleared(state.pickerOpenForDay))
                 },
             )
         }
@@ -187,11 +187,11 @@ fun YouScreen(
                 }
             }
 
-            if (state is YouContract.UiState.Ready) {
+            if (state is ReaderContract.UiState.Ready) {
                 item {
                     ReporterCarousel(
                         slots = state.weekSlots,
-                        onDayTapped = { index -> onIntent(YouContract.Intent.DaySlotTapped(index)) },
+                        onDayTapped = { index -> onIntent(ReaderContract.Intent.DaySlotTapped(index)) },
                         modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
                     )
                 }
@@ -203,7 +203,7 @@ fun YouScreen(
                 item {
                     LensChipRow(
                         selectedLens = state.selectedLens,
-                        onLensSelected = { onIntent(YouContract.Intent.LensSelected(it)) },
+                        onLensSelected = { onIntent(ReaderContract.Intent.LensSelected(it)) },
                         modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
                     )
                 }
@@ -239,7 +239,7 @@ private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
 
 @Composable
 private fun ReporterCarousel(
-    slots: List<YouContract.DaySlot>,
+    slots: List<ReaderContract.DaySlot>,
     onDayTapped: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -278,7 +278,7 @@ private fun ReporterCarousel(
 }
 
 @Composable
-private fun DaySlotItem(slot: YouContract.DaySlot, onClick: () -> Unit) {
+private fun DaySlotItem(slot: ReaderContract.DaySlot, onClick: () -> Unit) {
     val primary = MaterialTheme.colorScheme.primary
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
@@ -320,7 +320,7 @@ private fun DaySlotItem(slot: YouContract.DaySlot, onClick: () -> Unit) {
 
 @Composable
 private fun ReporterCircle(
-    slot: YouContract.DaySlot,
+    slot: ReaderContract.DaySlot,
     size: Dp,
     primaryColor: Color,
     todayRingColor: Color,
@@ -406,8 +406,8 @@ private fun Modifier.solidCircleBorder(color: Color, strokeWidth: Dp): Modifier 
 
 @Composable
 private fun LensChipRow(
-    selectedLens: YouContract.LensFilter,
-    onLensSelected: (YouContract.LensFilter) -> Unit,
+    selectedLens: ReaderContract.LensFilter,
+    onLensSelected: (ReaderContract.LensFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -425,7 +425,7 @@ private fun LensChipRow(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            YouContract.LensFilter.entries.forEach { lens ->
+            ReaderContract.LensFilter.entries.forEach { lens ->
                 item(key = lens.name) {
                     LensChip(
                         lens = lens,
@@ -440,7 +440,7 @@ private fun LensChipRow(
 
 @Composable
 private fun LensChip(
-    lens: YouContract.LensFilter,
+    lens: ReaderContract.LensFilter,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -473,29 +473,29 @@ private fun LensChip(
     )
 }
 
-private fun YouContract.LensFilter.labelRes() = when (this) {
-    YouContract.LensFilter.TODAY -> Res.string.you_lens_today
-    YouContract.LensFilter.HOPE -> Res.string.you_lens_hope
-    YouContract.LensFilter.ANXIETY -> Res.string.you_lens_anxiety
-    YouContract.LensFilter.LOVE -> Res.string.you_lens_love
-    YouContract.LensFilter.GRIEF -> Res.string.you_lens_grief
-    YouContract.LensFilter.JUSTICE -> Res.string.you_lens_justice
+private fun ReaderContract.LensFilter.labelRes() = when (this) {
+    ReaderContract.LensFilter.TODAY -> Res.string.you_lens_today
+    ReaderContract.LensFilter.HOPE -> Res.string.you_lens_hope
+    ReaderContract.LensFilter.ANXIETY -> Res.string.you_lens_anxiety
+    ReaderContract.LensFilter.LOVE -> Res.string.you_lens_love
+    ReaderContract.LensFilter.GRIEF -> Res.string.you_lens_grief
+    ReaderContract.LensFilter.JUSTICE -> Res.string.you_lens_justice
 }
 
 @Composable
-private fun YouContract.LensFilter.color(): Color = when (this) {
-    YouContract.LensFilter.TODAY -> MaterialTheme.colorScheme.primary
-    YouContract.LensFilter.HOPE -> Color(0xFFE8B84B)
-    YouContract.LensFilter.ANXIETY -> Color(0xFF8B7BAE)
-    YouContract.LensFilter.LOVE -> Color(0xFFD4687A)
-    YouContract.LensFilter.GRIEF -> Color(0xFF5B7BA8)
-    YouContract.LensFilter.JUSTICE -> Color(0xFF4A8C6A)
+private fun ReaderContract.LensFilter.color(): Color = when (this) {
+    ReaderContract.LensFilter.TODAY -> MaterialTheme.colorScheme.primary
+    ReaderContract.LensFilter.HOPE -> Color(0xFFE8B84B)
+    ReaderContract.LensFilter.ANXIETY -> Color(0xFF8B7BAE)
+    ReaderContract.LensFilter.LOVE -> Color(0xFFD4687A)
+    ReaderContract.LensFilter.GRIEF -> Color(0xFF5B7BA8)
+    ReaderContract.LensFilter.JUSTICE -> Color(0xFF4A8C6A)
 }
 
 @Composable
 private fun SavedQuoteCard(
-    quote: YouContract.QuoteCard,
-    selectedLens: YouContract.LensFilter,
+    quote: ReaderContract.QuoteCard,
+    selectedLens: ReaderContract.LensFilter,
     onViewMore: (figureId: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -529,10 +529,11 @@ private fun SavedQuoteCard(
                         )
                 )
                 Column(modifier = Modifier.padding(16.dp)) {
+                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                 Text(
                     text = stringResource(Res.string.you_quote_card_header),
                     style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
-                    color = BrandAmber,
+                    color = if (isDark) BrandAmber else MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = "“${quote.quoteText}”",
@@ -719,12 +720,12 @@ private fun FigurePickerSheet(
 
 @Preview(showBackground = true)
 @Composable
-private fun YouScreenPreview() {
+private fun ReaderScreenPreview() {
     MediaSageTheme {
-        YouScreen(
-            state = YouContract.UiState.Ready(
+        ReaderScreen(
+            state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = YouContract.LensFilter.TODAY,
+                selectedLens = ReaderContract.LensFilter.TODAY,
                 quoteCard = previewQuoteCard(),
             ),
             onIntent = {},
@@ -734,12 +735,12 @@ private fun YouScreenPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun YouScreenDarkPreview() {
+private fun ReaderScreenDarkPreview() {
     MediaSageTheme(darkTheme = true) {
-        YouScreen(
-            state = YouContract.UiState.Ready(
+        ReaderScreen(
+            state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = YouContract.LensFilter.HOPE,
+                selectedLens = ReaderContract.LensFilter.HOPE,
                 quoteCard = previewQuoteCard(),
             ),
             onIntent = {},
@@ -749,12 +750,12 @@ private fun YouScreenDarkPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun YouScreenModernPreview() {
+private fun ReaderScreenModernPreview() {
     MediaSageTheme(theme = AppTheme.MODERN) {
-        YouScreen(
-            state = YouContract.UiState.Ready(
+        ReaderScreen(
+            state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = YouContract.LensFilter.TODAY,
+                selectedLens = ReaderContract.LensFilter.TODAY,
             ),
             onIntent = {},
         )
@@ -763,12 +764,12 @@ private fun YouScreenModernPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun YouScreenWarmPreview() {
+private fun ReaderScreenWarmPreview() {
     MediaSageTheme(theme = AppTheme.WARM) {
-        YouScreen(
-            state = YouContract.UiState.Ready(
+        ReaderScreen(
+            state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = YouContract.LensFilter.JUSTICE,
+                selectedLens = ReaderContract.LensFilter.JUSTICE,
             ),
             onIntent = {},
         )
@@ -784,14 +785,14 @@ private fun previewWeekSlots() = listOf(
     DayOfWeek.SATURDAY to null,
     DayOfWeek.SUNDAY to null,
 ).mapIndexed { i, (day, name) ->
-    YouContract.DaySlot(
+    ReaderContract.DaySlot(
         dayOfWeek = day,
         isToday = i == 3,
         assignedFigureName = name,
     )
 }
 
-private fun previewQuoteCard() = YouContract.QuoteCard(
+private fun previewQuoteCard() = ReaderContract.QuoteCard(
     quoteText = "You can't go back and change the beginning, but you can start where you are and change the ending.",
     figureName = "C.S. Lewis",
     figureRole = "Author & Apologist",
