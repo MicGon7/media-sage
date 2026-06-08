@@ -65,7 +65,9 @@ class JobDispatchTest {
         val prompts = mutableListOf<String>()            // prompts passed to executeJob
         val recoveries = mutableListOf<String>()         // executionNames passed to recoverJob
 
-        override suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String, jiraTicketKey: String?): Boolean {
+        override suspend fun executeJob(
+            jobId: UUID, ticketKey: String, prompt: String, jiraTicketKey: String?, jobNameOverride: String?
+        ): Boolean {
             executions.add(ticketKey)
             prompts.add(prompt)
             return true
@@ -424,7 +426,7 @@ class JobDispatchTest {
         assertTrue(prompt.contains("Needs a null check."), "Prompt must contain comment body")
         assertTrue(prompt.contains("feature/MS-42-fix"), "Prompt must contain branch")
         assertTrue(prompt.contains("jane"), "Prompt must contain reviewer login")
-        assertTrue(prompt.contains("/pr-review"), "Prompt must invoke /pr-review skill")
+        assertTrue(prompt.contains("/pr-review-work"), "Prompt must invoke /pr-review-work skill")
     }
 
     @Test
@@ -440,7 +442,7 @@ class JobDispatchTest {
         assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
         assertTrue(prompt.contains("Why this approach?"), "Prompt must contain comment body")
         assertTrue(prompt.contains("feature/MS-42-fix"), "Prompt must contain branch")
-        assertTrue(prompt.contains("/pr-comment"), "Prompt must invoke /pr-comment skill")
+        assertTrue(prompt.contains("/pr-comment-work"), "Prompt must invoke /pr-comment-work skill")
     }
 
     @Test
@@ -456,7 +458,35 @@ class JobDispatchTest {
         assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
         assertTrue(prompt.contains("feature/MS-42-fix"), "Prompt must contain branch")
         assertTrue(prompt.contains("main"), "Prompt must contain base branch")
-        assertTrue(prompt.contains("/conflict-resolution"), "Prompt must invoke /conflict-resolution skill")
+        assertTrue(prompt.contains("/conflict-resolution-work"), "Prompt must invoke /conflict-resolution-work skill")
+    }
+
+    // ── Judge: dispatch after ticket-work completion ──────────────────────────
+
+    @Test
+    fun `launchForJudge dispatches Cloud Run job with JUDGE key`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        service.launchForJudge("MS-42")
+        advanceUntilIdle()
+
+        assertEquals(listOf("JUDGE-MS-42"), registry.inserted)
+        assertEquals(listOf("JUDGE-MS-42"), dispatcher.executions)
+    }
+
+    @Test
+    fun `launchForJudge prompt contains ticket key and judge-work skill`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
+
+        service.launchForJudge("MS-42")
+        advanceUntilIdle()
+
+        val prompt = dispatcher.prompts.single()
+        assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
+        assertTrue(prompt.contains("/judge-work"), "Prompt must invoke /judge-work skill")
     }
 
     @Test

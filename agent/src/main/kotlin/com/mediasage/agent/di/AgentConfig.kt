@@ -33,8 +33,12 @@ package com.mediasage.agent.di
  *   Sourced from env var `GCP_PROJECT_ID`.
  * @property gcpRegion GCP region for Cloud Run Jobs. Defaults to `us-central1`.
  *   Sourced from env var `GCP_REGION`.
- * @property gcpJobName Cloud Run Job name for the worker image. Defaults to `media-sage-agent-worker`.
+ * @property gcpJobName Cloud Run Job name for the ticket-work and pr-review-work images. Defaults to `media-sage-agent-worker`.
  *   Sourced from env var `GCP_JOB_NAME`.
+ * @property gcpJudgeJobName Cloud Run Job name for the judge-work image. Defaults to `media-sage-agent-judge`.
+ *   Sourced from env var `GCP_JUDGE_JOB_NAME`.
+ * @property gcpCommentJobName Cloud Run Job name for the pr-comment-work image. Defaults to `media-sage-agent-comment`.
+ *   Sourced from env var `GCP_COMMENT_JOB_NAME`.
  * @property googleCredentialsJson GCP service account JSON key decoded from the base64 value in env
  *   var `GOOGLE_CREDENTIALS_BASE64`. Used to authenticate Cloud Run API calls.
  * @property supabaseDbUrl PostgreSQL connection URL for the Supabase job registry, used for
@@ -64,6 +68,8 @@ data class AgentConfig(
     val gcpProjectId: String = "",
     val gcpRegion: String = "us-central1",
     val gcpJobName: String = "media-sage-agent-worker",
+    val gcpJudgeJobName: String = "media-sage-agent-judge",
+    val gcpCommentJobName: String = "media-sage-agent-comment",
     val googleCredentialsJson: String = "",
     val supabaseDbUrl: String = "",
     val pubSubWebhookSecret: String = "",

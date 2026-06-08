@@ -83,4 +83,16 @@ interface AgentLauncher {
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
     fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String, baseBranch: String = "main"): Boolean
+
+    /**
+     * Launches a Cloud Run Job to judge the PR produced by a completed ticket-work job.
+     *
+     * The judge is a fresh context: it fetches the PR diff and the original ticket AC via API,
+     * evaluates each AC item independently, and posts a structured ✅/❌ verdict as a PR review
+     * comment. It does not approve or merge. Deduplicates by ticket key (`JUDGE-{ticketKey}`).
+     *
+     * @param ticketKey Jira issue key of the completed ticket-work job.
+     * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
+     */
+    fun launchForJudge(ticketKey: String): Boolean
 }

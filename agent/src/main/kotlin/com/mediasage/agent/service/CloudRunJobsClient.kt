@@ -99,9 +99,11 @@ class CloudRunJobsClient(
         jobId: UUID,
         ticketKey: String,
         prompt: String,
-        jiraTicketKey: String?
+        jiraTicketKey: String?,
+        jobNameOverride: String?,
     ): Boolean {
-        val url = "https://run.googleapis.com/v2/projects/$projectId/locations/$region/jobs/$jobName:run"
+        val resolvedJobName = jobNameOverride ?: jobName
+        val url = "https://run.googleapis.com/v2/projects/$projectId/locations/$region/jobs/$resolvedJobName:run"
 
         val envVars = buildList {
             add(EnvVar("PROMPT", prompt))

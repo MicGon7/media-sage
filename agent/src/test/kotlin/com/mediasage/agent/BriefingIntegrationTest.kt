@@ -38,7 +38,9 @@ class BriefingIntegrationTest {
 
     private class CapturingDispatcher : JobDispatcher {
         val prompts = mutableListOf<String>()
-        override suspend fun executeJob(jobId: UUID, ticketKey: String, prompt: String, jiraTicketKey: String?): Boolean {
+        override suspend fun executeJob(
+            jobId: UUID, ticketKey: String, prompt: String, jiraTicketKey: String?, jobNameOverride: String?
+        ): Boolean {
             prompts.add(prompt)
             return true
         }
