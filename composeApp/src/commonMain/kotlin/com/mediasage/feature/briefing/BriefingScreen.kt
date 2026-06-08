@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -42,6 +41,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import coil3.compose.AsyncImage
+import com.mediasage.theme.LensFaith
+import com.mediasage.theme.LensGrace
+import com.mediasage.theme.LensGrief
+import com.mediasage.theme.LensHope
+import com.mediasage.theme.LensJustice
+import com.mediasage.theme.LensLove
+import com.mediasage.theme.LensPerseverance
+import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
@@ -373,11 +380,14 @@ private fun BriefingCardSkeleton() {
 @Composable
 private fun ThemeChip(theme: String) {
     val color = when (theme.uppercase()) {
-        "HOPE" -> Color(0xFFE8B84B)
-        "ANXIETY" -> Color(0xFF8B7BAE)
-        "LOVE" -> Color(0xFFD4687A)
-        "GRIEF" -> Color(0xFF5B7BA8)
-        "JUSTICE" -> Color(0xFF4A8C6A)
+        "LOVE" -> LensLove
+        "GRACE" -> LensGrace
+        "FAITH" -> LensFaith
+        "GRIEF" -> LensGrief
+        "REPENTANCE" -> LensRepentance
+        "HOPE" -> LensHope
+        "JUSTICE" -> LensJustice
+        "PERSEVERANCE" -> LensPerseverance
         else -> MaterialTheme.colorScheme.primary
     }
     Text(

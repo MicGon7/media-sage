@@ -70,6 +70,14 @@ import coil3.compose.AsyncImage
 import com.mediasage.domain.model.Figure
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
+import com.mediasage.theme.LensFaith
+import com.mediasage.theme.LensGrace
+import com.mediasage.theme.LensGrief
+import com.mediasage.theme.LensHope
+import com.mediasage.theme.LensJustice
+import com.mediasage.theme.LensLove
+import com.mediasage.theme.LensPerseverance
+import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.ScreenHeader
@@ -79,11 +87,14 @@ import kotlinx.datetime.DayOfWeek
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
 import mediasage.composeapp.generated.resources.you_carousel_title
-import mediasage.composeapp.generated.resources.you_lens_anxiety
+import mediasage.composeapp.generated.resources.you_lens_faith
+import mediasage.composeapp.generated.resources.you_lens_grace
 import mediasage.composeapp.generated.resources.you_lens_grief
 import mediasage.composeapp.generated.resources.you_lens_hope
 import mediasage.composeapp.generated.resources.you_lens_justice
 import mediasage.composeapp.generated.resources.you_lens_love
+import mediasage.composeapp.generated.resources.you_lens_perseverance
+import mediasage.composeapp.generated.resources.you_lens_repentance
 import mediasage.composeapp.generated.resources.you_lens_section_title
 
 import mediasage.composeapp.generated.resources.you_lens_today
@@ -470,21 +481,27 @@ private fun LensChip(
 
 private fun LensFilter.labelRes() = when (this) {
     LensFilter.NEWS -> Res.string.you_lens_today
-    LensFilter.HOPE -> Res.string.you_lens_hope
-    LensFilter.ANXIETY -> Res.string.you_lens_anxiety
     LensFilter.LOVE -> Res.string.you_lens_love
+    LensFilter.GRACE -> Res.string.you_lens_grace
+    LensFilter.FAITH -> Res.string.you_lens_faith
     LensFilter.GRIEF -> Res.string.you_lens_grief
+    LensFilter.REPENTANCE -> Res.string.you_lens_repentance
+    LensFilter.HOPE -> Res.string.you_lens_hope
     LensFilter.JUSTICE -> Res.string.you_lens_justice
+    LensFilter.PERSEVERANCE -> Res.string.you_lens_perseverance
 }
 
 @Composable
 private fun LensFilter.color(): Color = when (this) {
     LensFilter.NEWS -> MaterialTheme.colorScheme.primary
-    LensFilter.HOPE -> Color(0xFFE8B84B)
-    LensFilter.ANXIETY -> Color(0xFF8B7BAE)
-    LensFilter.LOVE -> Color(0xFFD4687A)
-    LensFilter.GRIEF -> Color(0xFF5B7BA8)
-    LensFilter.JUSTICE -> Color(0xFF4A8C6A)
+    LensFilter.LOVE -> LensLove
+    LensFilter.GRACE -> LensGrace
+    LensFilter.FAITH -> LensFaith
+    LensFilter.GRIEF -> LensGrief
+    LensFilter.REPENTANCE -> LensRepentance
+    LensFilter.HOPE -> LensHope
+    LensFilter.JUSTICE -> LensJustice
+    LensFilter.PERSEVERANCE -> LensPerseverance
 }
 
 @Composable
