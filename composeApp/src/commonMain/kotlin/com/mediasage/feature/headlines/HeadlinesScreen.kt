@@ -25,13 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
-import coil3.compose.AsyncImage
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.HeadlineImage
@@ -173,17 +172,15 @@ private fun HeroHeadlineRow(headline: HeadlineItem, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .height(220.dp)
                 .clip(MaterialTheme.shapes.small)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            if (headline.imageUrl != null) {
-                AsyncImage(
-                    model = headline.imageUrl,
-                    contentDescription = headline.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    colorFilter = SepiaColorFilter
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                        )
+                    )
                 )
-            }
+        ) {
             if (headline.category.isNotBlank()) {
                 Text(
                     text = headline.category.uppercase(),
