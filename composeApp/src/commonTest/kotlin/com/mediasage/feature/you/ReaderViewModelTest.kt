@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
-class YouViewModelTest {
+class ReaderViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -49,7 +49,7 @@ class YouViewModelTest {
         val savedQuote = Quote(id = 1L, figureId = 1L, text = "Our heart is restless.", source = "Confessions", themes = emptyList())
         val viewModel = buildViewModel(figure = testFigure, latestQuote = savedQuote)
 
-        val state = viewModel.state.value as YouContract.UiState.Ready
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
         assertNotNull(state.quoteCard)
         assertEquals("Our heart is restless.", state.quoteCard?.quoteText)
         assertEquals("Augustine of Hippo", state.quoteCard?.figureName)
@@ -59,11 +59,11 @@ class YouViewModelTest {
     fun quoteCardIsNullWhenNoQuotesSaved() = runTest(testDispatcher) {
         val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
 
-        val state = viewModel.state.value as YouContract.UiState.Ready
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
         assertNull(state.quoteCard)
     }
 
-    private fun buildViewModel(figure: Figure, latestQuote: Quote?): YouViewModel = YouViewModel(
+    private fun buildViewModel(figure: Figure, latestQuote: Quote?): ReaderViewModel = ReaderViewModel(
         figureRepository = FakeFigureRepository(figure),
         dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap())),
         quoteRepository = FakeQuoteRepository(latestQuote)

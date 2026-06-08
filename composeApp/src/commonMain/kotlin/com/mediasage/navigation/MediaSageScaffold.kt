@@ -39,8 +39,8 @@ import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
 import com.mediasage.feature.settings.SettingsContract
 import com.mediasage.feature.settings.SettingsScreen
 import com.mediasage.feature.settings.SettingsViewModel
-import com.mediasage.feature.you.YouScreen
-import com.mediasage.feature.you.YouViewModel
+import com.mediasage.feature.you.ReaderScreen
+import com.mediasage.feature.you.ReaderViewModel
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -157,9 +157,9 @@ fun MediaSageScaffold(
                     )
                 }
                 is Route.You -> NavEntry(route) {
-                    val vm = koinViewModel<YouViewModel>()
+                    val vm = koinViewModel<ReaderViewModel>()
                     val state by vm.state.collectAsState()
-                    YouScreen(
+                    ReaderScreen(
                         state = state,
                         onIntent = vm::onIntent,
                         onNavigateToBookmarks = { appState.navigateToBookmarks() },

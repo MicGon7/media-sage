@@ -3,7 +3,7 @@ package com.mediasage.feature.you
 import com.mediasage.domain.model.Figure
 import kotlinx.datetime.DayOfWeek
 
-object YouContract {
+object ReaderContract {
 
     data class DaySlot(
         val dayOfWeek: DayOfWeek,

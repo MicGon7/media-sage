@@ -20,14 +20,14 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
-class YouViewModel(
+class ReaderViewModel(
     private val figureRepository: FigureRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val quoteRepository: QuoteRepository,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<YouContract.UiState>(YouContract.UiState.Ready())
-    val state: StateFlow<YouContract.UiState> = _state.asStateFlow()
+    private val _state = MutableStateFlow<ReaderContract.UiState>(ReaderContract.UiState.Ready())
+    val state: StateFlow<ReaderContract.UiState> = _state.asStateFlow()
 
     init {
         combine(
@@ -35,7 +35,7 @@ class YouViewModel(
             dayAssignmentRepository.observeAssignments(),
             quoteRepository.observeAllQuotes(),
         ) { figures, assignments, allQuotes ->
-            val current = _state.value as? YouContract.UiState.Ready ?: YouContract.UiState.Ready()
+            val current = _state.value as? ReaderContract.UiState.Ready ?: ReaderContract.UiState.Ready()
             val figuresById = figures.associateBy { it.id }
             val latestQuote = allQuotes.maxByOrNull { it.id }
             val quoteFigure = latestQuote?.let { figuresById[it.figureId] }
@@ -43,7 +43,7 @@ class YouViewModel(
                 weekSlots = buildWeekSlots(assignments, figuresById),
                 pickerFigures = figures,
                 quoteCard = if (latestQuote != null && quoteFigure != null) {
-                    YouContract.QuoteCard(
+                    ReaderContract.QuoteCard(
                         quoteText = latestQuote.text,
                         figureName = quoteFigure.name,
                         figureRole = quoteFigure.role,
@@ -55,24 +55,24 @@ class YouViewModel(
         }.onEach { _state.value = it }.launchIn(viewModelScope)
     }
 
-    fun onIntent(intent: YouContract.Intent) {
-        val current = _state.value as? YouContract.UiState.Ready ?: return
+    fun onIntent(intent: ReaderContract.Intent) {
+        val current = _state.value as? ReaderContract.UiState.Ready ?: return
         when (intent) {
-            is YouContract.Intent.DaySlotTapped ->
+            is ReaderContract.Intent.DaySlotTapped ->
                 _state.value = current.copy(pickerOpenForDay = current.weekSlots[intent.index].dayOfWeek.ordinal)
 
-            is YouContract.Intent.LensSelected ->
+            is ReaderContract.Intent.LensSelected ->
                 _state.value = current.copy(selectedLens = intent.lens)
 
-            is YouContract.Intent.PickerDismissed ->
+            is ReaderContract.Intent.PickerDismissed ->
                 _state.value = current.copy(pickerOpenForDay = null)
 
-            is YouContract.Intent.FigureAssigned -> viewModelScope.launch {
+            is ReaderContract.Intent.FigureAssigned -> viewModelScope.launch {
                 dayAssignmentRepository.assign(intent.dayOfWeek, intent.figureId)
                 _state.value = current.copy(pickerOpenForDay = null)
             }
 
-            is YouContract.Intent.AssignmentCleared -> viewModelScope.launch {
+            is ReaderContract.Intent.AssignmentCleared -> viewModelScope.launch {
                 dayAssignmentRepository.clear(intent.dayOfWeek)
                 _state.value = current.copy(pickerOpenForDay = null)
             }
@@ -82,14 +82,14 @@ class YouViewModel(
     private fun buildWeekSlots(
         assignments: Map<Int, Long>,
         figuresById: Map<Long, com.mediasage.domain.model.Figure>,
-    ): List<YouContract.DaySlot> {
+    ): List<ReaderContract.DaySlot> {
         val today = Instant.fromEpochMilliseconds(epochMillis())
             .toLocalDateTime(TimeZone.currentSystemDefault()).date
         val startOfWeek = today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
         return (0..6).map { i ->
             val date = startOfWeek.plus(i, DateTimeUnit.DAY)
             val figure = assignments[date.dayOfWeek.ordinal]?.let { figuresById[it] }
-            YouContract.DaySlot(
+            ReaderContract.DaySlot(
                 dayOfWeek = date.dayOfWeek,
                 isToday = date == today,
                 assignedFigureName = figure?.name,
