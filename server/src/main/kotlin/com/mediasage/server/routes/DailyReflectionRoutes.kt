@@ -1,5 +1,6 @@
 package com.mediasage.server.routes
 
+import com.mediasage.server.prompts.ReflectionTheme
 import com.mediasage.server.service.DailyReflectionResult
 import com.mediasage.server.service.DailyReflectionService
 import io.ktor.http.HttpStatusCode
@@ -28,7 +29,7 @@ fun Route.dailyReflectionRoutes() {
                 dayOfWeek = request.dayOfWeek,
                 previousScriptures = request.previousScriptures,
                 previousReflections = request.previousReflections,
-                theme = request.theme
+                theme = request.theme?.let { runCatching { ReflectionTheme.valueOf(it.uppercase()) }.getOrNull() }
             )
         )
         call.respond(HttpStatusCode.OK, result.toResponse())
