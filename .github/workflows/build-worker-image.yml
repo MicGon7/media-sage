@@ -6,6 +6,7 @@ on:
     paths:
       - 'Dockerfile.worker'
       - 'agent/worker-entrypoint.sh'
+      - 'agent/get-github-token.py'
       - 'gradlew'
       - 'gradle/wrapper/**'
       - 'gradle/libs.versions.toml'
