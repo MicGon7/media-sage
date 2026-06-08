@@ -41,7 +41,7 @@ class DayAssignmentRepositoryTest {
     @Test
     fun seedDefaultsIfEmpty_seeds7AssignmentsWhenTableEmpty() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
-        val figureDao = FakeFigureDao(allFigures)
+        val figureDao = FakeFigureDaoForSeeding(allFigures)
         val api = FakeAssignmentApi(
             defaults = listOf(
                 AssignmentDefaultDto(0, "Augustine of Hippo"),
@@ -63,7 +63,7 @@ class DayAssignmentRepositoryTest {
     @Test
     fun seedDefaultsIfEmpty_skipsWhenTableNonEmpty() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 3)
-        val figureDao = FakeFigureDao(allFigures)
+        val figureDao = FakeFigureDaoForSeeding(allFigures)
         val api = FakeAssignmentApi()
         val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
 
@@ -76,7 +76,7 @@ class DayAssignmentRepositoryTest {
     @Test
     fun seedDefaultsIfEmpty_usesFallbackOnNetworkFailure() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
-        val figureDao = FakeFigureDao(allFigures)
+        val figureDao = FakeFigureDaoForSeeding(allFigures)
         val api = FakeAssignmentApi(shouldThrow = true)
         val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
 
@@ -88,7 +88,7 @@ class DayAssignmentRepositoryTest {
     @Test
     fun seedDefaultsIfEmpty_gracefullySkipsNamesNotInLocalDb() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
-        val figureDao = FakeFigureDao(listOf(augustine))
+        val figureDao = FakeFigureDaoForSeeding(listOf(augustine))
         val api = FakeAssignmentApi(
             defaults = listOf(
                 AssignmentDefaultDto(0, "Augustine of Hippo"),
@@ -106,7 +106,7 @@ class DayAssignmentRepositoryTest {
     @Test
     fun seedDefaultsIfEmpty_isCaseInsensitiveForFigureNameLookup() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
-        val figureDao = FakeFigureDao(listOf(augustine))
+        val figureDao = FakeFigureDaoForSeeding(listOf(augustine))
         val api = FakeAssignmentApi(
             defaults = listOf(
                 AssignmentDefaultDto(0, "augustine of hippo"),
@@ -140,7 +140,7 @@ private class FakeDayAssignmentDao(private val initialCount: Int = 0) : DayAssig
     override suspend fun countAll(): Int = initialCount
 }
 
-private class FakeFigureDao(figures: List<FigureEntity> = emptyList()) : FigureDao {
+private class FakeFigureDaoForSeeding(figures: List<FigureEntity> = emptyList()) : FigureDao {
     private val store = figures.associateBy { it.id }.toMutableMap()
 
     override suspend fun insert(figure: FigureEntity): Long {
