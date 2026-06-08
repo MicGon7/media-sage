@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,6 +41,7 @@ import com.mediasage.ui.SepiaColorFilter
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.headline_nature_image_default
+import mediasage.composeapp.generated.resources.headlines_hero_caption
 import mediasage.composeapp.generated.resources.home_error_generic
 import mediasage.composeapp.generated.resources.home_error_network
 import mediasage.composeapp.generated.resources.home_retry
@@ -165,14 +167,23 @@ private fun DateCountRow(todayLabel: String, storyCount: Int) {
 
 @Composable
 private fun HeroPaintingPlaceholder() {
-    Image(
-        painter = painterResource(Res.drawable.headline_nature_image_default),
-        contentDescription = null,
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(2f),
-        contentScale = ContentScale.Crop
-    )
+    Column {
+        Image(
+            painter = painterResource(Res.drawable.headline_nature_image_default),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(2f),
+            contentScale = ContentScale.Crop
+        )
+        Text(
+            text = stringResource(Res.string.headlines_hero_caption),
+            style = MaterialTheme.typography.labelSmall,
+            fontStyle = FontStyle.Italic,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
 }
 
 @Composable

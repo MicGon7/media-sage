@@ -95,6 +95,8 @@
     <string name="figure_detail_wikipedia_source">Sourced from Wikipedia</string>
     <string name="figure_detail_quotes_sheet_title">Collected Quotes</string>
 
+    <string name="headlines_hero_caption">The heavens declare the glory of God; the skies proclaim the work of his hands. — Psalm 19:1</string>
+
     <plurals name="headlines_story_count">
         <item quantity="one">%1$d story</item>
         <item quantity="other">%1$d stories</item>
