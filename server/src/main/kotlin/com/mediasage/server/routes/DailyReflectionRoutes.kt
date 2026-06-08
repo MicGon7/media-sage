@@ -20,7 +20,7 @@ fun Route.dailyReflectionRoutes() {
             return@post
         }
         val result = service.generate(
-            DailyReflectionService.GenerateRequest(
+            DailyReflectionService.DailyReflectionRequest(
                 figureId = request.figureId,
                 figureName = request.figureName,
                 headlines = request.headlines,

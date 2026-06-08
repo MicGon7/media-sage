@@ -7,7 +7,7 @@ class DailyReflectionService(
     private val claudeApiService: ClaudeApiService,
     private val quoteRepository: QuoteRepository
 ) {
-    suspend fun generate(request: GenerateRequest): DailyReflectionResult {
+    suspend fun generate(request: DailyReflectionRequest): DailyReflectionResult {
         val allQuotes = quoteRepository.getVerifiedByFigureId(request.figureId)
         val scored = scoreByTheme(allQuotes, request.headlines)
         val top = scored.take(MAX_QUOTES)
@@ -18,7 +18,7 @@ class DailyReflectionService(
         return claudeApiService.generateDailyReflection(systemPrompt, userMessage, request.tone)
     }
 
-    data class GenerateRequest(
+    data class DailyReflectionRequest(
         val figureId: Long,
         val figureName: String,
         val headlines: List<String> = emptyList(),
@@ -49,7 +49,7 @@ class DailyReflectionService(
         Respond ONLY with valid JSON — no markdown, no explanation outside the JSON.
     """.trimIndent()
 
-    private fun buildUserMessage(request: GenerateRequest, quotes: List<QuoteData>) = buildString {
+    private fun buildUserMessage(request: DailyReflectionRequest, quotes: List<QuoteData>) = buildString {
         appendLine("## Verified Quotes from ${request.figureName}")
         appendLine("Draw from your knowledge of these source works, letting these quotes anchor the theological voice and direction.")
         appendLine()
