@@ -2,7 +2,6 @@ package com.mediasage.feature.headlines
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,7 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
-import com.mediasage.theme.BrandAmber
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.HeadlineImage
@@ -167,23 +165,14 @@ private fun DateCountRow(todayLabel: String, storyCount: Int) {
 
 @Composable
 private fun HeroPaintingPlaceholder() {
-    Box(
+    Image(
+        painter = painterResource(Res.drawable.headline_nature_image_default),
+        contentDescription = null,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .border(width = 4.dp, color = BrandAmber)
-            .padding(4.dp)
-            .border(width = 1.dp, color = BrandAmber.copy(alpha = 0.4f))
-    ) {
-        Image(
-            painter = painterResource(Res.drawable.headline_nature_image_default),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(2f),
-            contentScale = ContentScale.Crop
-        )
-    }
+            .aspectRatio(2f),
+        contentScale = ContentScale.Crop
+    )
 }
 
 @Composable
