@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -109,18 +108,19 @@ private fun HeadlinesFeed(
                     }) else null
                 )
             }
-            itemsIndexed(state.headlines, key = { _, it -> it.id }) { index, headline ->
-                if (index == 0) {
-                    HeroHeadlineRow(
-                        headline = headline,
-                        onClick = { onHeadlineClick(headline) }
-                    )
-                } else {
-                    HeadlineRow(
-                        headline = headline,
-                        onClick = { onHeadlineClick(headline) }
-                    )
-                }
+            item {
+                HeroPaintingPlaceholder()
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 0.5.dp
+                )
+            }
+            itemsIndexed(state.headlines, key = { _, it -> it.id }) { _, headline ->
+                HeadlineRow(
+                    headline = headline,
+                    onClick = { onHeadlineClick(headline) }
+                )
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     color = MaterialTheme.colorScheme.outlineVariant,
@@ -160,68 +160,35 @@ private fun DateCountRow(todayLabel: String, storyCount: Int) {
 }
 
 @Composable
-private fun HeroHeadlineRow(headline: HeadlineItem, onClick: () -> Unit) {
-    Column(
+private fun HeroPaintingPlaceholder() {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .height(220.dp)
             .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .clip(MaterialTheme.shapes.small)
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-                        )
+            .clip(MaterialTheme.shapes.small)
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
                     )
                 )
-        ) {
-            if (headline.category.isNotBlank()) {
-                Text(
-                    text = headline.category.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(12.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = MaterialTheme.shapes.extraSmall
-                        )
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = headline.title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (headline.snippet.isNotBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = headline.snippet,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                fontStyle = FontStyle.Italic
             )
-        }
-        Spacer(modifier = Modifier.height(6.dp))
+    ) {
         Text(
-            text = headline.source,
+            text = "Today's Featured Image".uppercase(),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(12.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = MaterialTheme.shapes.extraSmall
+                )
+                .padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }
 }
