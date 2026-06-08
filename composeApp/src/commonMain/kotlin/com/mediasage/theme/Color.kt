@@ -58,3 +58,13 @@ val WarmDarkBg = Color(0xFF1A1208)         // deep saturated sepia background
 val WarmDarkSurface = Color(0xFF241A0E)    // warm sepia card surface
 val WarmDarkMuted = Color(0xFF9A8A72)      // warm tan — muted secondary text
 val WarmDarkBorder = Color(0xFF3D2E1E)     // subtle warm brown border
+
+// Lens filter theme colors
+val LensLove = Color(0xFFD4687A)
+val LensGrace = Color(0xFF9B7DC8)
+val LensFaith = Color(0xFFB87333)
+val LensGrief = Color(0xFF5B7BA8)
+val LensRepentance = Color(0xFF7A9E7E)
+val LensHope = Color(0xFFE8B84B)
+val LensJustice = Color(0xFF4A8C6A)
+val LensPerseverance = Color(0xFF8B6356)

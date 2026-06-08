@@ -70,6 +70,14 @@ import coil3.compose.AsyncImage
 import com.mediasage.domain.model.Figure
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
+import com.mediasage.theme.LensFaith
+import com.mediasage.theme.LensGrace
+import com.mediasage.theme.LensGrief
+import com.mediasage.theme.LensHope
+import com.mediasage.theme.LensJustice
+import com.mediasage.theme.LensLove
+import com.mediasage.theme.LensPerseverance
+import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.ScreenHeader
@@ -486,14 +494,14 @@ private fun LensFilter.labelRes() = when (this) {
 @Composable
 private fun LensFilter.color(): Color = when (this) {
     LensFilter.NEWS -> MaterialTheme.colorScheme.primary
-    LensFilter.LOVE -> Color(0xFFD4687A)
-    LensFilter.GRACE -> Color(0xFF9B7DC8)
-    LensFilter.FAITH -> Color(0xFFB87333)
-    LensFilter.GRIEF -> Color(0xFF5B7BA8)
-    LensFilter.REPENTANCE -> Color(0xFF7A9E7E)
-    LensFilter.HOPE -> Color(0xFFE8B84B)
-    LensFilter.JUSTICE -> Color(0xFF4A8C6A)
-    LensFilter.PERSEVERANCE -> Color(0xFF8B6356)
+    LensFilter.LOVE -> LensLove
+    LensFilter.GRACE -> LensGrace
+    LensFilter.FAITH -> LensFaith
+    LensFilter.GRIEF -> LensGrief
+    LensFilter.REPENTANCE -> LensRepentance
+    LensFilter.HOPE -> LensHope
+    LensFilter.JUSTICE -> LensJustice
+    LensFilter.PERSEVERANCE -> LensPerseverance
 }
 
 @Composable
