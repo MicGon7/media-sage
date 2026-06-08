@@ -28,7 +28,7 @@ class DailyReflectionRepositoryImpl(
         if (cached != null) return cached.toDomain()
 
         val todaysEntries = dao.getAllForDay(figureId, epochDay)
-        val previousReflections = todaysEntries.map { it.reflection }
+        val previousReflections = todaysEntries.map { "${it.insight} ${it.implication} ${it.inspiration}" }
         val previousScriptures = (
             dao.getAllScripturesForDay(epochDay) +
             dao.getRecentScripturesForFigure(figureId, fromDay = epochDay - 7, today = epochDay)
@@ -57,7 +57,9 @@ class DailyReflectionRepositoryImpl(
             theme = resolvedTheme,
             scriptureReference = response.scriptureReference,
             scriptureText = response.scriptureText,
-            reflection = response.reflection,
+            insight = response.insight,
+            implication = response.implication,
+            inspiration = response.inspiration,
             sources = response.sources
         )
         dao.upsert(entity)
@@ -68,7 +70,9 @@ class DailyReflectionRepositoryImpl(
 private fun DailyReflectionEntity.toDomain() = DailyReflection(
     scriptureReference = scriptureReference,
     scriptureText = scriptureText,
-    reflection = reflection,
+    insight = insight,
+    implication = implication,
+    inspiration = inspiration,
     sources = sources,
     tone = tone
 )

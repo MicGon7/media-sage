@@ -89,7 +89,9 @@ class ClaudeApiService(
         return DailyReflectionResult(
             scriptureReference = parsed.scriptureReference,
             scriptureText = parsed.scriptureText,
-            reflection = parsed.reflection,
+            insight = parsed.insight,
+            implication = parsed.implication,
+            inspiration = parsed.inspiration,
             sources = parsed.sources,
             tone = tone
         )
@@ -160,7 +162,9 @@ class ClaudeApiService(
 data class DailyReflectionRaw(
     @SerialName("scriptureReference") val scriptureReference: String,
     @SerialName("scriptureText") val scriptureText: String,
-    val reflection: String,
+    val insight: String,
+    val implication: String,
+    val inspiration: String,
     val sources: List<String>
 )
 

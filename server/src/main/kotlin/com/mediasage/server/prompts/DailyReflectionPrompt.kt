@@ -38,10 +38,12 @@ object DailyReflectionPrompt {
         }
         append(buildContextBlock(params.tone, params.dayOfWeek, params.previousScriptures, params.previousReflections, params.theme))
         appendLine("## Instructions")
-        appendLine("Write a ${params.tone} devotional reflection in the voice of ${params.figureName}.")
+        appendLine("Write a ${params.tone} devotional reflection in the voice of ${params.figureName} structured in three sections:")
+        appendLine("- Insight — what this truth reveals about God, the world, or ourselves (1-3 sentences)")
+        appendLine("- Implication — what it asks of us (1-3 sentences)")
+        appendLine("- Inspiration — a word of hope or encouragement in ${params.figureName}'s voice (1-3 sentences)")
+        appendLine("Maintain ${params.figureName}'s voice throughout. Keep each section brief.")
         appendLine("- Include a scripture reference and the full verse text")
-        appendLine("- Write 4-6 sentences of reflection grounded in the source works above.")
-        appendLine("  Allow room for a scripture observation, a personal application, and a closing invitation.")
         appendLine("- List the source titles you drew from")
         appendLine()
         appendLine(RESPONSE_FORMAT)
@@ -80,7 +82,9 @@ object DailyReflectionPrompt {
         {
           "scriptureReference": "<e.g. Psalm 46:10>",
           "scriptureText": "<full verse text>",
-          "reflection": "<4-6 sentence reflection>",
+          "insight": "<1-3 sentences — what this truth reveals about God, the world, or ourselves>",
+          "implication": "<1-3 sentences — what it asks of us>",
+          "inspiration": "<1-3 sentences — a word of hope or encouragement in the figure's voice>",
           "sources": ["<source title>"]
         }
     """.trimIndent()

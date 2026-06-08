@@ -104,7 +104,9 @@ class BriefingViewModel(
                     figureImageUrl = figure.portraitUrl,
                     scriptureReference = reflection.scriptureReference,
                     scriptureText = reflection.scriptureText,
-                    reflection = reflection.reflection,
+                    insight = reflection.insight,
+                    implication = reflection.implication,
+                    inspiration = reflection.inspiration,
                     sources = reflection.sources,
                     tone = reflection.tone,
                     theme = themeLabel
