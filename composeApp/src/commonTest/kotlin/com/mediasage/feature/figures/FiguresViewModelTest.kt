@@ -238,6 +238,7 @@ private class FakeDayAssignmentRepository(
     override fun observeAssignments(): Flow<Map<Int, Long>> = flowOf(assignments)
     override suspend fun assign(dayOfWeek: Int, figureId: Long) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
+    override suspend fun seedDefaultsIfEmpty() = Unit
 }
 
 private class FakeFigureRepository(

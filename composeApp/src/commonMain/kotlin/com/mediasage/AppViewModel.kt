@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mediasage.data.ThemePreferencesRepository
 import com.mediasage.domain.model.UserSession
 import com.mediasage.domain.repository.AuthRepository
+import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.theme.AppTheme
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,7 @@ sealed interface AuthUiState {
 
 class AppViewModel(
     private val figureRepository: FigureRepository,
+    private val dayAssignmentRepository: DayAssignmentRepository,
     themePreferencesRepository: ThemePreferencesRepository,
     authRepository: AuthRepository,
 ) : ViewModel() {
@@ -60,6 +62,11 @@ class AppViewModel(
                 figureRepository.syncFigures()
             } catch (e: Exception) {
                 // Sync failure is non-fatal — app works offline with cached figures
+            }
+            try {
+                dayAssignmentRepository.seedDefaultsIfEmpty()
+            } catch (e: Exception) {
+                // Seeding failure is non-fatal — briefing will be empty until next launch
             }
         }
     }

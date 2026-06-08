@@ -26,7 +26,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val appModule = module {
-    viewModel { AppViewModel(get<FigureRepository>(), get<ThemePreferencesRepository>(), get<AuthRepository>()) }
+    viewModel { AppViewModel(get<FigureRepository>(), get<DayAssignmentRepository>(), get<ThemePreferencesRepository>(), get<AuthRepository>()) }
     viewModel { BriefingViewModel(get<DayAssignmentRepository>(), get<DailyReflectionRepository>(), get<FigureRepository>(), get<UserPreferencesRepository>(), get<HeadlineRepository>()) }
     viewModel { HeadlinesViewModel(get<HeadlineRepository>()) }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get(), get(), get()) }

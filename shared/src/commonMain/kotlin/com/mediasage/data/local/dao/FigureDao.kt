@@ -27,6 +27,9 @@ interface FigureDao {
     @Query("SELECT * FROM figures WHERE name = :name LIMIT 1")
     suspend fun getByName(name: String): FigureEntity?
 
+    @Query("SELECT * FROM figures WHERE LOWER(name) = LOWER(:name) LIMIT 1")
+    suspend fun getByNameIgnoreCase(name: String): FigureEntity?
+
     @Query("DELETE FROM figures WHERE id = :id")
     suspend fun deleteById(id: Long)
 

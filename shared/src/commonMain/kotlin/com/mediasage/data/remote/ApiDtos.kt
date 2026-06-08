@@ -121,6 +121,14 @@ data class DailyReflectionResponseDto(
     val tone: String
 )
 
+// ---- Assignment defaults endpoint DTOs ----
+
+@Serializable
+data class AssignmentDefaultDto(
+    val dayOrdinal: Int,
+    val figureName: String,
+)
+
 // ---- Scripture endpoint DTOs ----
 
 @Serializable

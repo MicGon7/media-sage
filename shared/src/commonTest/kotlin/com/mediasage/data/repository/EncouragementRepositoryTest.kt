@@ -9,6 +9,7 @@ import com.mediasage.data.remote.DailyReflectionRequestDto
 import com.mediasage.data.remote.DailyReflectionResponseDto
 import com.mediasage.data.remote.EncourageRequestDto
 import com.mediasage.data.remote.EncourageResultDto
+import com.mediasage.data.remote.AssignmentDefaultDto
 import com.mediasage.data.remote.FigureDto
 import com.mediasage.data.remote.FiguresResponse
 import com.mediasage.data.remote.MatchCandidateDto
@@ -259,6 +260,9 @@ private class FakeFigureDao(figures: List<FigureEntity> = emptyList()) : FigureD
 
     override suspend fun getByName(name: String): FigureEntity? = store[name]
 
+    override suspend fun getByNameIgnoreCase(name: String): FigureEntity? =
+        store.values.find { it.name.lowercase() == name.lowercase() }
+
     override suspend fun deleteById(id: Long) { store.entries.removeAll { it.value.id == id } }
 
     override suspend fun deleteAll() { store.clear() }
@@ -287,4 +291,6 @@ private class FakeMediaSageApi(private val result: EncourageResultDto) : MediaSa
         ScripturePassageDto(id = "", reference = "", content = "")
     override suspend fun getDailyReflection(request: DailyReflectionRequestDto): DailyReflectionResponseDto =
         DailyReflectionResponseDto(scriptureReference = "", scriptureText = "", insight = "", implication = "", inspiration = "", sources = emptyList(), tone = "morning")
+
+    override suspend fun getAssignmentDefaults(): List<AssignmentDefaultDto> = emptyList()
 }
