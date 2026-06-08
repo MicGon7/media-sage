@@ -106,7 +106,8 @@ data class DailyReflectionRequestDto(
     val tone: String = "morning",
     val dayOfWeek: String = "",
     val previousScriptures: List<String> = emptyList(),
-    val previousReflections: List<String> = emptyList()
+    val previousReflections: List<String> = emptyList(),
+    val theme: String? = null
 )
 
 @Serializable

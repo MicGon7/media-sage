@@ -7,6 +7,7 @@ interface DailyReflectionRepository {
         figureId: Long,
         figureName: String,
         headlines: List<String>,
-        tone: String
+        tone: String,
+        theme: String? = null
     ): DailyReflection
 }

@@ -3,15 +3,20 @@ package com.mediasage.feature.briefing
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
+import com.mediasage.domain.repository.HeadlineRepository
+import com.mediasage.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
@@ -21,7 +26,9 @@ import kotlin.time.Instant
 class BriefingViewModel(
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val dailyReflectionRepository: DailyReflectionRepository,
-    private val figureRepository: FigureRepository
+    private val figureRepository: FigureRepository,
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val headlineRepository: HeadlineRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<BriefingContract.UiState>(
@@ -46,16 +53,17 @@ class BriefingViewModel(
         viewModelScope.launch {
             combine(
                 dayAssignmentRepository.observeAssignments(),
-                figureRepository.observeAllFigures()
-            ) { assignments, figures -> Pair(assignments, figures) }
+                figureRepository.observeAllFigures(),
+                userPreferencesRepository.observeLens(),
+            ) { assignments, figures, lens -> Triple(assignments, figures, lens) }
                 .distinctUntilChanged()
-                .collect { (assignments, figures) ->
+                .collectLatest { (assignments, figures, _) ->
                     val todayOrdinal = todayDayOfWeekOrdinal()
                     val figureId = assignments[todayOrdinal] ?: figures.firstOrNull()?.id
                     if (figureId == null) {
                         updateCard(BriefingContract.CardState.Hidden)
                         emitLoadingSuccess()
-                        return@collect
+                        return@collectLatest
                     }
                     fetchAndUpdateCard(figureId)
                 }
@@ -65,19 +73,28 @@ class BriefingViewModel(
     private suspend fun fetchAndUpdateCard(figureId: Long) {
         val figure = figureRepository.getFigureById(figureId) ?: return
         val tone = currentTone()
+        val lens = userPreferencesRepository.observeLens().first()
+        val headlines = if (lens == LensFilter.NEWS) {
+            headlineRepository.observeHeadlines().first().map { it.title }
+        } else {
+            emptyList()
+        }
+        val themeLabel = lens.name.takeIf { lens != LensFilter.NEWS }
         updateCard(
             BriefingContract.CardState.LoadingWithFigure(
                 figureId = figureId,
                 figureName = figure.name,
-                figureImageUrl = figure.portraitUrl
+                figureImageUrl = figure.portraitUrl,
+                theme = themeLabel
             )
         )
         runCatching {
             dailyReflectionRepository.getOrFetch(
                 figureId = figure.serverId.takeIf { it > 0 } ?: figureId,
                 figureName = figure.name,
-                headlines = emptyList(),
-                tone = tone
+                headlines = headlines,
+                tone = tone,
+                theme = themeLabel
             )
         }.onSuccess { reflection ->
             updateCard(
@@ -89,7 +106,8 @@ class BriefingViewModel(
                     scriptureText = reflection.scriptureText,
                     reflection = reflection.reflection,
                     sources = reflection.sources,
-                    tone = reflection.tone
+                    tone = reflection.tone,
+                    theme = themeLabel
                 )
             )
         }.onFailure { e ->

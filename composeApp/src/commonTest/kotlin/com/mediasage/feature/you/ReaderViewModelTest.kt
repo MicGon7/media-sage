@@ -4,10 +4,12 @@ package com.mediasage.feature.you
 
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
+import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.model.Quote
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
+import com.mediasage.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,7 +68,8 @@ class ReaderViewModelTest {
     private fun buildViewModel(figure: Figure, latestQuote: Quote?): ReaderViewModel = ReaderViewModel(
         figureRepository = FakeFigureRepository(figure),
         dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap())),
-        quoteRepository = FakeQuoteRepository(latestQuote)
+        quoteRepository = FakeQuoteRepository(latestQuote),
+        userPreferencesRepository = FakeUserPreferencesRepository()
     )
 }
 
@@ -85,6 +88,13 @@ private class FakeDayAssignmentRepository(
     override fun observeAssignments(): Flow<Map<Int, Long>> = assignmentsFlow
     override suspend fun assign(dayOfWeek: Int, figureId: Long) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
+}
+
+private class FakeUserPreferencesRepository : UserPreferencesRepository {
+    private val flow = MutableStateFlow(LensFilter.NEWS)
+    override fun observeLens(): Flow<LensFilter> = flow
+    override suspend fun saveLens(lens: LensFilter) { flow.value = lens }
+    override suspend fun initializeIfAbsent() = Unit
 }
 
 private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteRepository {

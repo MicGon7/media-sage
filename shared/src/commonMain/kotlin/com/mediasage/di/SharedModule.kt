@@ -13,6 +13,7 @@ import com.mediasage.data.repository.WikipediaRepositoryImpl
 import com.mediasage.data.repository.HeadlineRepositoryImpl
 import com.mediasage.data.repository.MatchRepositoryImpl
 import com.mediasage.data.repository.QuoteRepositoryImpl
+import com.mediasage.data.repository.UserPreferencesRepositoryImpl
 import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
@@ -21,6 +22,7 @@ import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.MatchRepository
 import com.mediasage.domain.repository.QuoteRepository
+import com.mediasage.domain.repository.UserPreferencesRepository
 import com.mediasage.domain.repository.WikipediaRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
@@ -56,6 +58,7 @@ fun sharedModule(
     single { get<MediaSageDatabase>().syncMetaDao() }
     single { get<MediaSageDatabase>().dailyReflectionDao() }
     single { get<MediaSageDatabase>().dayAssignmentDao() }
+    single { get<MediaSageDatabase>().userPreferencesDao() }
 
     // Repositories — interface bound to implementation
     single<FigureRepository> { FigureRepositoryImpl(get(), get(), get()) }
@@ -66,5 +69,6 @@ fun sharedModule(
     single<WikipediaRepository> { WikipediaRepositoryImpl(get()) }
     single<DailyReflectionRepository> { DailyReflectionRepositoryImpl(get(), get()) }
     single<DayAssignmentRepository> { DayAssignmentRepositoryImpl(get()) }
+    single<UserPreferencesRepository> { UserPreferencesRepositoryImpl(get()) }
     single<AuthRepository> { AuthRepositoryImpl(getOrNull<SupabaseClient>()) }
 }

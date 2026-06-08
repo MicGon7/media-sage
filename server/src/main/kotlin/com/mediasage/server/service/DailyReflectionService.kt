@@ -7,24 +7,27 @@ class DailyReflectionService(
     private val claudeApiService: ClaudeApiService,
     private val quoteRepository: QuoteRepository
 ) {
-    suspend fun generate(
-        figureId: Long,
-        figureName: String,
-        headlines: List<String>,
-        tone: String,
-        dayOfWeek: String = "",
-        previousScriptures: List<String> = emptyList(),
-        previousReflections: List<String> = emptyList()
-    ): DailyReflectionResult {
-        val allQuotes = quoteRepository.getVerifiedByFigureId(figureId)
-        val scored = scoreByTheme(allQuotes, headlines)
+    suspend fun generate(request: DailyReflectionRequest): DailyReflectionResult {
+        val allQuotes = quoteRepository.getVerifiedByFigureId(request.figureId)
+        val scored = scoreByTheme(allQuotes, request.headlines)
         val top = scored.take(MAX_QUOTES)
 
-        val systemPrompt = buildSystemPrompt(figureName)
-        val userMessage = buildUserMessage(figureName, top, headlines, tone, dayOfWeek, previousScriptures, previousReflections)
+        val systemPrompt = buildSystemPrompt(request.figureName)
+        val userMessage = buildUserMessage(request, top)
 
-        return claudeApiService.generateDailyReflection(systemPrompt, userMessage, tone)
+        return claudeApiService.generateDailyReflection(systemPrompt, userMessage, request.tone)
     }
+
+    data class DailyReflectionRequest(
+        val figureId: Long,
+        val figureName: String,
+        val headlines: List<String> = emptyList(),
+        val tone: String = "morning",
+        val dayOfWeek: String = "",
+        val previousScriptures: List<String> = emptyList(),
+        val previousReflections: List<String> = emptyList(),
+        val theme: String? = null
+    )
 
     private fun scoreByTheme(quotes: List<QuoteData>, headlines: List<String>): List<QuoteData> {
         if (headlines.isEmpty()) return quotes
@@ -46,16 +49,8 @@ class DailyReflectionService(
         Respond ONLY with valid JSON — no markdown, no explanation outside the JSON.
     """.trimIndent()
 
-    private fun buildUserMessage(
-        figureName: String,
-        quotes: List<QuoteData>,
-        headlines: List<String>,
-        tone: String,
-        dayOfWeek: String = "",
-        previousScriptures: List<String> = emptyList(),
-        previousReflections: List<String> = emptyList()
-    ) = buildString {
-        appendLine("## Verified Quotes from $figureName")
+    private fun buildUserMessage(request: DailyReflectionRequest, quotes: List<QuoteData>) = buildString {
+        appendLine("## Verified Quotes from ${request.figureName}")
         appendLine("Draw from your knowledge of these source works, letting these quotes anchor the theological voice and direction.")
         appendLine()
         quotes.forEach { q ->
@@ -63,14 +58,14 @@ class DailyReflectionService(
             appendLine("Quote: \"${q.text}\"")
             appendLine()
         }
-        if (headlines.isNotEmpty()) {
+        if (request.headlines.isNotEmpty()) {
             appendLine("## Today's Headlines (for thematic context only)")
-            headlines.forEach { appendLine("- $it") }
+            request.headlines.forEach { appendLine("- $it") }
             appendLine()
         }
-        append(buildContextBlock(tone, dayOfWeek, previousScriptures, previousReflections))
+        append(buildContextBlock(request.tone, request.dayOfWeek, request.previousScriptures, request.previousReflections, request.theme))
         appendLine("## Instructions")
-        appendLine("Write a $tone devotional reflection in the voice of $figureName.")
+        appendLine("Write a ${request.tone} devotional reflection in the voice of ${request.figureName}.")
         appendLine("- Include a scripture reference and the full verse text")
         appendLine("- Write 2-3 sentences of reflection grounded in the source works above")
         appendLine("- List the source titles you drew from")
@@ -82,11 +77,15 @@ class DailyReflectionService(
         tone: String,
         dayOfWeek: String,
         previousScriptures: List<String>,
-        previousReflections: List<String>
+        previousReflections: List<String>,
+        theme: String? = null
     ) = buildString {
         val dayContext = if (dayOfWeek.isNotBlank()) "$dayOfWeek, " else ""
         appendLine("## Context")
         appendLine("Today is $dayContext$tone.")
+        if (!theme.isNullOrBlank()) {
+            appendLine("Today the reader is carrying a sense of ${theme.lowercase()} — let that shape your reflection.")
+        }
         if (previousScriptures.isNotEmpty()) {
             appendLine()
             appendLine(PREVIOUS_REFLECTION_INSTRUCTION)

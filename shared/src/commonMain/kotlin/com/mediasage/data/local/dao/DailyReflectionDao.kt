@@ -8,8 +8,8 @@ import com.mediasage.data.local.entity.DailyReflectionEntity
 
 @Dao
 interface DailyReflectionDao {
-    @Query("SELECT * FROM daily_reflection WHERE figureId = :figureId AND epochDay = :epochDay AND tone = :tone")
-    suspend fun get(figureId: Long, epochDay: Long, tone: String): DailyReflectionEntity?
+    @Query("SELECT * FROM daily_reflection WHERE figureId = :figureId AND epochDay = :epochDay AND tone = :tone AND theme = :theme")
+    suspend fun get(figureId: Long, epochDay: Long, tone: String, theme: String): DailyReflectionEntity?
 
     @Query("SELECT * FROM daily_reflection WHERE figureId = :figureId AND epochDay = :epochDay")
     suspend fun getAllForDay(figureId: Long, epochDay: Long): List<DailyReflectionEntity>

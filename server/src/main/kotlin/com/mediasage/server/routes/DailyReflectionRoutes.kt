@@ -20,13 +20,16 @@ fun Route.dailyReflectionRoutes() {
             return@post
         }
         val result = service.generate(
-            figureId = request.figureId,
-            figureName = request.figureName,
-            headlines = request.headlines,
-            tone = request.tone.ifBlank { "morning" },
-            dayOfWeek = request.dayOfWeek,
-            previousScriptures = request.previousScriptures,
-            previousReflections = request.previousReflections
+            DailyReflectionService.DailyReflectionRequest(
+                figureId = request.figureId,
+                figureName = request.figureName,
+                headlines = request.headlines,
+                tone = request.tone.ifBlank { "morning" },
+                dayOfWeek = request.dayOfWeek,
+                previousScriptures = request.previousScriptures,
+                previousReflections = request.previousReflections,
+                theme = request.theme
+            )
         )
         call.respond(HttpStatusCode.OK, result.toResponse())
     }
@@ -40,7 +43,8 @@ data class DailyReflectionRequest(
     val tone: String = "morning",
     val dayOfWeek: String = "",
     val previousScriptures: List<String> = emptyList(),
-    val previousReflections: List<String> = emptyList()
+    val previousReflections: List<String> = emptyList(),
+    val theme: String? = null
 )
 
 @Serializable

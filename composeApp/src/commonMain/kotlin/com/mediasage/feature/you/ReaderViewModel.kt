@@ -6,6 +6,7 @@ import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
+import com.mediasage.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,17 +25,20 @@ class ReaderViewModel(
     private val figureRepository: FigureRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val quoteRepository: QuoteRepository,
+    private val userPreferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ReaderContract.UiState>(ReaderContract.UiState.Ready())
     val state: StateFlow<ReaderContract.UiState> = _state.asStateFlow()
 
     init {
+        viewModelScope.launch { userPreferencesRepository.initializeIfAbsent() }
         combine(
             figureRepository.observeAllFigures(),
             dayAssignmentRepository.observeAssignments(),
             quoteRepository.observeAllQuotes(),
-        ) { figures, assignments, allQuotes ->
+            userPreferencesRepository.observeLens(),
+        ) { figures, assignments, allQuotes, lens ->
             val current = _state.value as? ReaderContract.UiState.Ready ?: ReaderContract.UiState.Ready()
             val figuresById = figures.associateBy { it.id }
             val latestQuote = allQuotes.maxByOrNull { it.id }
@@ -42,6 +46,7 @@ class ReaderViewModel(
             current.copy(
                 weekSlots = buildWeekSlots(assignments, figuresById),
                 pickerFigures = figures,
+                selectedLens = lens,
                 quoteCard = if (latestQuote != null && quoteFigure != null) {
                     ReaderContract.QuoteCard(
                         quoteText = latestQuote.text,
@@ -61,8 +66,9 @@ class ReaderViewModel(
             is ReaderContract.Intent.DaySlotTapped ->
                 _state.value = current.copy(pickerOpenForDay = current.weekSlots[intent.index].dayOfWeek.ordinal)
 
-            is ReaderContract.Intent.LensSelected ->
-                _state.value = current.copy(selectedLens = intent.lens)
+            is ReaderContract.Intent.LensSelected -> viewModelScope.launch {
+                userPreferencesRepository.saveLens(intent.lens)
+            }
 
             is ReaderContract.Intent.PickerDismissed ->
                 _state.value = current.copy(pickerOpenForDay = null)
@@ -97,5 +103,4 @@ class ReaderViewModel(
             )
         }
     }
-
 }

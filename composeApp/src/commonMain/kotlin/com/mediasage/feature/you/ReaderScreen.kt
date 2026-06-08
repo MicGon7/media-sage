@@ -85,7 +85,7 @@ import mediasage.composeapp.generated.resources.you_lens_hope
 import mediasage.composeapp.generated.resources.you_lens_justice
 import mediasage.composeapp.generated.resources.you_lens_love
 import mediasage.composeapp.generated.resources.you_lens_section_title
-import mediasage.composeapp.generated.resources.you_lens_subtitle
+
 import mediasage.composeapp.generated.resources.you_lens_today
 import mediasage.composeapp.generated.resources.you_nav_history
 import mediasage.composeapp.generated.resources.you_nav_saved
@@ -99,6 +99,7 @@ import mediasage.composeapp.generated.resources.you_saved_section_title
 import mediasage.composeapp.generated.resources.you_saved_see_all
 import mediasage.composeapp.generated.resources.you_screen_title
 import mediasage.composeapp.generated.resources.you_settings_icon_description
+import com.mediasage.domain.model.LensFilter
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -406,8 +407,8 @@ private fun Modifier.solidCircleBorder(color: Color, strokeWidth: Dp): Modifier 
 
 @Composable
 private fun LensChipRow(
-    selectedLens: ReaderContract.LensFilter,
-    onLensSelected: (ReaderContract.LensFilter) -> Unit,
+    selectedLens: LensFilter,
+    onLensSelected: (LensFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -415,17 +416,11 @@ private fun LensChipRow(
             text = stringResource(Res.string.you_lens_section_title),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         )
-        Text(
-            text = stringResource(Res.string.you_lens_subtitle),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
-        )
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            ReaderContract.LensFilter.entries.forEach { lens ->
+            LensFilter.entries.forEach { lens ->
                 item(key = lens.name) {
                     LensChip(
                         lens = lens,
@@ -440,7 +435,7 @@ private fun LensChipRow(
 
 @Composable
 private fun LensChip(
-    lens: ReaderContract.LensFilter,
+    lens: LensFilter,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -473,29 +468,29 @@ private fun LensChip(
     )
 }
 
-private fun ReaderContract.LensFilter.labelRes() = when (this) {
-    ReaderContract.LensFilter.TODAY -> Res.string.you_lens_today
-    ReaderContract.LensFilter.HOPE -> Res.string.you_lens_hope
-    ReaderContract.LensFilter.ANXIETY -> Res.string.you_lens_anxiety
-    ReaderContract.LensFilter.LOVE -> Res.string.you_lens_love
-    ReaderContract.LensFilter.GRIEF -> Res.string.you_lens_grief
-    ReaderContract.LensFilter.JUSTICE -> Res.string.you_lens_justice
+private fun LensFilter.labelRes() = when (this) {
+    LensFilter.NEWS -> Res.string.you_lens_today
+    LensFilter.HOPE -> Res.string.you_lens_hope
+    LensFilter.ANXIETY -> Res.string.you_lens_anxiety
+    LensFilter.LOVE -> Res.string.you_lens_love
+    LensFilter.GRIEF -> Res.string.you_lens_grief
+    LensFilter.JUSTICE -> Res.string.you_lens_justice
 }
 
 @Composable
-private fun ReaderContract.LensFilter.color(): Color = when (this) {
-    ReaderContract.LensFilter.TODAY -> MaterialTheme.colorScheme.primary
-    ReaderContract.LensFilter.HOPE -> Color(0xFFE8B84B)
-    ReaderContract.LensFilter.ANXIETY -> Color(0xFF8B7BAE)
-    ReaderContract.LensFilter.LOVE -> Color(0xFFD4687A)
-    ReaderContract.LensFilter.GRIEF -> Color(0xFF5B7BA8)
-    ReaderContract.LensFilter.JUSTICE -> Color(0xFF4A8C6A)
+private fun LensFilter.color(): Color = when (this) {
+    LensFilter.NEWS -> MaterialTheme.colorScheme.primary
+    LensFilter.HOPE -> Color(0xFFE8B84B)
+    LensFilter.ANXIETY -> Color(0xFF8B7BAE)
+    LensFilter.LOVE -> Color(0xFFD4687A)
+    LensFilter.GRIEF -> Color(0xFF5B7BA8)
+    LensFilter.JUSTICE -> Color(0xFF4A8C6A)
 }
 
 @Composable
 private fun SavedQuoteCard(
     quote: ReaderContract.QuoteCard,
-    selectedLens: ReaderContract.LensFilter,
+    selectedLens: LensFilter,
     onViewMore: (figureId: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -725,7 +720,7 @@ private fun ReaderScreenPreview() {
         ReaderScreen(
             state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = ReaderContract.LensFilter.TODAY,
+                selectedLens = LensFilter.NEWS,
                 quoteCard = previewQuoteCard(),
             ),
             onIntent = {},
@@ -740,7 +735,7 @@ private fun ReaderScreenDarkPreview() {
         ReaderScreen(
             state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = ReaderContract.LensFilter.HOPE,
+                selectedLens = LensFilter.HOPE,
                 quoteCard = previewQuoteCard(),
             ),
             onIntent = {},
@@ -755,7 +750,7 @@ private fun ReaderScreenModernPreview() {
         ReaderScreen(
             state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = ReaderContract.LensFilter.TODAY,
+                selectedLens = LensFilter.NEWS,
             ),
             onIntent = {},
         )
@@ -769,7 +764,7 @@ private fun ReaderScreenWarmPreview() {
         ReaderScreen(
             state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = ReaderContract.LensFilter.JUSTICE,
+                selectedLens = LensFilter.JUSTICE,
             ),
             onIntent = {},
         )
