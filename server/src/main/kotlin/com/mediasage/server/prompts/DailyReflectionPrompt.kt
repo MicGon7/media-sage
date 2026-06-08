@@ -40,7 +40,8 @@ object DailyReflectionPrompt {
         appendLine("## Instructions")
         appendLine("Write a ${params.tone} devotional reflection in the voice of ${params.figureName}.")
         appendLine("- Include a scripture reference and the full verse text")
-        appendLine("- Write 2-3 sentences of reflection grounded in the source works above")
+        appendLine("- Write 4-6 sentences of reflection grounded in the source works above.")
+        appendLine("  Allow room for a scripture observation, a personal application, and a closing invitation.")
         appendLine("- List the source titles you drew from")
         appendLine()
         appendLine(RESPONSE_FORMAT)
@@ -79,7 +80,7 @@ object DailyReflectionPrompt {
         {
           "scriptureReference": "<e.g. Psalm 46:10>",
           "scriptureText": "<full verse text>",
-          "reflection": "<2-3 sentence reflection>",
+          "reflection": "<4-6 sentence reflection>",
           "sources": ["<source title>"]
         }
     """.trimIndent()

@@ -84,7 +84,7 @@ class ClaudeApiService(
         userMessage: String,
         tone: String
     ): DailyReflectionResult {
-        val raw = callClaude(systemPrompt, userMessage, maxTokens = 512)
+        val raw = callClaude(systemPrompt, userMessage, maxTokens = 1024)
         val parsed = responseJson.decodeFromString<DailyReflectionRaw>(extractJson(raw))
         return DailyReflectionResult(
             scriptureReference = parsed.scriptureReference,
