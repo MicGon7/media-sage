@@ -5,7 +5,7 @@ enum class ReflectionTheme(val displayName: String) {
     REPENTANCE("repentance"),
     HOPE("hope"),
     JUSTICE("justice"),
-    LAMENT("lament"),
+    GRIEF("grief"),
     FAITH("faith"),
     PERSEVERANCE("perseverance")
 }
