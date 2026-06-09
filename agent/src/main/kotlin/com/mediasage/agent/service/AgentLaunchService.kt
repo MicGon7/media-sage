@@ -72,6 +72,7 @@ class AgentLaunchService(
         jiraTicketKey: String? = null,
         briefingContext: BriefingContext? = null,
         jobNameOverride: String? = null,
+        skipBriefing: Boolean = false,
     ): Boolean {
         // activeKeys is the synchronous in-process gate. It prevents the TOCTOU race where
         // two concurrent webhooks both pass shouldDispatch() before either inserts a DB row.
@@ -82,7 +83,7 @@ class AgentLaunchService(
         }
         scope.launch {
             try {
-                doDispatch(ticketKey, prompt, cloudRun, dryRun, jiraTicketKey, briefingContext, jobNameOverride)
+                doDispatch(ticketKey, prompt, cloudRun, dryRun, jiraTicketKey, briefingContext, jobNameOverride, skipBriefing)
             } finally {
                 activeKeys.remove(ticketKey)
             }
@@ -98,13 +99,18 @@ class AgentLaunchService(
         jiraTicketKey: String? = null,
         briefingContext: BriefingContext? = null,
         jobNameOverride: String? = null,
+        skipBriefing: Boolean = false,
     ) {
         if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
             log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
             return
         }
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
-        val prompt = buildPromptWithBriefing(ticketKey, basePrompt, briefingContext)
+        val prompt = if (skipBriefing) {
+            basePrompt
+        } else {
+            buildPromptWithBriefing(ticketKey, basePrompt, briefingContext)
+        }
         val jobId = cloudRun.jobs.insert(ticketKey, prompt)
         if (dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
@@ -217,7 +223,7 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "JUDGE-$ticketKey"
         val basePrompt = judgeWorkPrompt.format(ticketKey)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, jobNameOverride = judgeJobName, jiraTicketKey = ticketKey)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, jobNameOverride = judgeJobName, jiraTicketKey = ticketKey, skipBriefing = true)
     }
 
     /**

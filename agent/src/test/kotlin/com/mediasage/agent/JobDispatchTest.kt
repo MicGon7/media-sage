@@ -5,6 +5,8 @@ import com.mediasage.agent.db.JobRow
 import com.mediasage.agent.db.JobStatus
 import com.mediasage.agent.db.WorkerMetrics
 import com.mediasage.agent.service.AgentLaunchService
+import com.mediasage.agent.service.BriefingContext
+import com.mediasage.agent.service.BriefingService
 import com.mediasage.agent.service.CloudRunDispatch
 import com.mediasage.agent.service.JobDispatcher
 import com.mediasage.agent.service.JiraCommentPoster
@@ -78,6 +80,14 @@ class JobDispatchTest {
         }
     }
 
+    private class FakeBriefingService(private val briefing: String = "## Agent Briefing\nThis is a briefing.") : BriefingService {
+        var callCount = 0
+        override suspend fun brief(context: BriefingContext): String {
+            callCount++
+            return briefing
+        }
+    }
+
     private class FakeJiraCommentPoster : JiraCommentPoster {
         val comments = mutableListOf<Pair<String, String>>() // ticketKey to body
 
@@ -93,12 +103,14 @@ class JobDispatchTest {
         dispatcher: FakeJobDispatcher,
         poster: FakeJiraCommentPoster = FakeJiraCommentPoster(),
         jiraStatusChecker: JiraTicketStatusChecker? = null,
+        briefingService: BriefingService? = null,
         scope: TestScope,
     ) = AgentLaunchService(
         scope = scope,
         cloudRun = CloudRunDispatch(dispatcher, registry),
         jiraCommentPoster = poster,
-        jiraStatusChecker = jiraStatusChecker
+        jiraStatusChecker = jiraStatusChecker,
+        briefingService = briefingService,
     )
 
     // ── Dedup: RUNNING ────────────────────────────────────────────────────────
@@ -487,6 +499,19 @@ class JobDispatchTest {
         val prompt = dispatcher.prompts.single()
         assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
         assertTrue(prompt.contains("/judge-work"), "Prompt must invoke /judge-work skill")
+    }
+
+    @Test
+    fun `launchForJudge dispatches base prompt unchanged even when briefing service is wired up`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val briefingService = FakeBriefingService()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, briefingService = briefingService, scope = this)
+
+        service.launchForJudge("MS-42")
+        advanceUntilIdle()
+
+        assertEquals(0, briefingService.callCount, "BriefingService must not be called for judge dispatch")
+        assertFalse(dispatcher.prompts.single().contains("## Agent Briefing"), "Judge prompt must not contain briefing content")
     }
 
     @Test
