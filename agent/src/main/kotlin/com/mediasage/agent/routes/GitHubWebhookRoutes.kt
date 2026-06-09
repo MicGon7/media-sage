@@ -206,6 +206,7 @@ private fun parseDequeueContext(rawBody: ByteArray, botLogin: String): DequeueCo
  * - the action is not `submitted`
  * - the review state is not `changes_requested` or `commented`
  * - the PR was not authored by [botLogin]
+ * - the review was submitted by [botLogin] (prevents feedback loops where the bot responds to its own reviews)
  * - the branch ref contains no Jira ticket key matching `[A-Z]+-\d+`
  * - the review body was authored by the agent (starts with "🤖 **Agent:**")
  */
@@ -217,6 +218,11 @@ private fun parseReviewContext(rawBody: ByteArray, botLogin: String): WebhookCon
 
     if (payload.pullRequest.user.login != botLogin) {
         log.info("PR#${payload.pullRequest.number} review submitted but not bot-authored (${payload.pullRequest.user.login}), ignoring")
+        return null
+    }
+
+    if (payload.sender.login == botLogin) {
+        log.info("PR#${payload.pullRequest.number} review submitted by bot — ignoring to prevent feedback loop")
         return null
     }
 
