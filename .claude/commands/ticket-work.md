@@ -40,6 +40,8 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 **pipeline-test tasks:** Must be additive — choose work that provably does not exist yet. Never choose a task that may already be satisfied in the codebase.
 
+**Never force push.** Always use `--force-with-lease`. If it is rejected, stop immediately — post a Jira comment describing the conflict and exit. Do not retry with bare `--force`.
+
 ---
 
 1. The ticket is already In Progress — do not call jira_get_issue or transition it again. Read the ticket description and acceptance criteria from the prompt.
@@ -70,7 +72,7 @@ If the work follows an established pattern, makes a trivial change, or could hav
      "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY"
    ```
 10. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
-11. Commit all changes with prefix `MS-{TICKET_KEY}: Description` and push: `git push --force-with-lease -u origin <branch>`. Never use bare `--force` — if `--force-with-lease` is rejected, stop and post a Jira comment describing the conflict rather than overwriting remote state.
+11. Commit all changes with prefix `MS-{TICKET_KEY}: Description` and push: `git push --force-with-lease -u origin <branch>`.
 12. Open a PR with `gh pr create`. Use this body structure (do not read the PR template file — use this directly):
     ```
     ## Summary
