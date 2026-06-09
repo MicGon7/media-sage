@@ -48,7 +48,7 @@ If the work follows an established pattern, makes a trivial change, or could hav
 4. Implement the changes described in the ticket.
 5. Re-read the acceptance criteria. If any AC item requires unit tests, invoke `/unit-test` now (the branch is already checked out — skip branch creation inside that skill). If any AC item requires UI/composable tests, invoke `/ui-test` now (same — skip branch creation). Both may apply to the same ticket.
 6. Run `./scripts/run-affected-tests.sh` — never run bare `./gradlew :module:test` directly.
-7. Run `./gradlew detekt` and fix any violations.
+7. Run `./gradlew detekt` and fix any violations. If detekt fails and you cannot fix the violations, **stop immediately** — do not push, do not open a PR. Post a comment on the Jira ticket describing the exact violations, then exit.
 8. Update Jira AC checkboxes as each criterion is met. Use curl to update the issue description with the checked boxes:
    ```bash
    # Get current issue (to read the existing description ADF)
