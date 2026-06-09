@@ -104,9 +104,6 @@ abstract class FullPipelineScenarioBase {
             projectId = config.gcpProjectId,
             credentialsJson = config.googleCredentialsJson
         )
-        val noOpPoster = object : com.mediasage.agent.service.JiraCommentPoster {
-            override suspend fun addComment(ticketKey: String, body: String) = Unit
-        }
         val client = CloudRunJobsClient(
             httpClient = httpClient,
             projectId = config.gcpProjectId,
@@ -115,7 +112,6 @@ abstract class FullPipelineScenarioBase {
             credentialsJson = config.googleCredentialsJson,
             jobRepository = jobRepository,
             cloudLoggingClient = loggingClient,
-            jiraCommentPoster = noOpPoster
         )
         return CloudRunDispatch(client, jobRepository)
     }
