@@ -24,6 +24,7 @@ WORKDIR /home/agent
 
 COPY --chown=agent:agent agent/judge-entrypoint.sh entrypoint.sh
 COPY --chown=agent:agent agent/get-github-token.py get-github-token.py
+COPY --chown=agent:agent .claude/commands/ /home/agent/.claude/commands/
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]
