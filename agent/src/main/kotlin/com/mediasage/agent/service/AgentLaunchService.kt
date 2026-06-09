@@ -76,7 +76,7 @@ class AgentLaunchService(
         ticketKey: String,
         prompt: String,
         cloudRun: CloudRunDispatch,
-        opts: DispatchOptions = DispatchOptions(),
+        options: DispatchOptions = DispatchOptions(),
     ): Boolean {
         // activeKeys is the synchronous in-process gate. It prevents the TOCTOU race where
         // two concurrent webhooks both pass shouldDispatch() before either inserts a DB row.
@@ -87,7 +87,7 @@ class AgentLaunchService(
         }
         scope.launch {
             try {
-                doDispatch(ticketKey, prompt, cloudRun, opts)
+                doDispatch(ticketKey, prompt, cloudRun, options)
             } finally {
                 activeKeys.remove(ticketKey)
             }
@@ -99,27 +99,27 @@ class AgentLaunchService(
         ticketKey: String,
         basePrompt: String,
         cloudRun: CloudRunDispatch,
-        opts: DispatchOptions,
+        options: DispatchOptions,
     ) {
         if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
             log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
             return
         }
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
-        val prompt = if (opts.skipBriefing) {
+        val prompt = if (options.skipBriefing) {
             basePrompt
         } else {
-            buildPromptWithBriefing(ticketKey, basePrompt, opts.briefingContext)
+            buildPromptWithBriefing(ticketKey, basePrompt, options.briefingContext)
         }
         val jobId = cloudRun.jobs.insert(ticketKey, prompt)
-        if (opts.dryRun) {
+        if (options.dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
             cloudRun.jobs.markFailed(jobId)
             return
         }
         log.info("[$ticketKey] job $jobId inserted — dispatching to Cloud Run")
         try {
-            cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt, opts.jiraTicketKey, opts.jobNameOverride)
+            cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt, options.jiraTicketKey, options.jobNameOverride)
         } catch (e: Exception) {
             cloudRun.jobs.markFailed(jobId)
             log.warn("[$ticketKey] dispatch error: ${e.message}")
@@ -221,8 +221,8 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "JUDGE-$ticketKey"
         val basePrompt = judgeWorkPrompt.format(ticketKey)
-        val opts = DispatchOptions(jiraTicketKey = ticketKey, jobNameOverride = judgeJobName, skipBriefing = true)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, opts)
+        val options = DispatchOptions(jiraTicketKey = ticketKey, jobNameOverride = judgeJobName, skipBriefing = true)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, options)
     }
 
     /**
