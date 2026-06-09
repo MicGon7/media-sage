@@ -70,7 +70,6 @@ class CloudRunJobsClient(
     private val credentialsJson: String,
     internal val jobRepository: JobRepository,
     private val cloudLoggingClient: CloudLoggingClient,
-    private val jiraCommentPoster: JiraCommentPoster
 ) : JobDispatcher {
 
     private val log = LoggerFactory.getLogger(CloudRunJobsClient::class.java)
@@ -184,12 +183,9 @@ class CloudRunJobsClient(
         ticketKey: String,
         executionName: String,
         succeeded: Boolean,
-        commentBody: String? = null,
-        jiraTicketKey: String? = null,
-        wallClockMs: Long? = null
     ): Boolean {
         return if (succeeded) {
-            handleSuccess(jobId, ticketKey, executionName, commentBody, jiraTicketKey, wallClockMs)
+            handleSuccess(jobId, ticketKey, executionName)
         } else {
             log.warn("[$ticketKey] Worker reported failure via Pub/Sub")
             jobRepository.markFailed(jobId)
@@ -213,12 +209,8 @@ class CloudRunJobsClient(
         jobId: UUID,
         ticketKey: String,
         executionName: String?,
-        commentBody: String? = null,
-        jiraTicketKey: String? = null,
-        wallClockMs: Long? = null
     ): Boolean {
         log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
-        val effectiveJiraKey = jiraTicketKey ?: ticketKey
         val metrics = if (executionName != null) {
             cloudLoggingClient.fetchMetrics(executionName).also { m ->
                 if (m != null) {
@@ -227,7 +219,6 @@ class CloudRunJobsClient(
                             "${m.inputTokens + m.outputTokens} tokens, " +
                             "\$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}"
                     )
-                    postConsolidatedComment(effectiveJiraKey, m, commentBody, wallClockMs)
                 } else {
                     log.warn("[$ticketKey] Worker metrics unavailable — job marked complete without cost data")
                 }
@@ -266,77 +257,6 @@ class CloudRunJobsClient(
         }.getOrElse {
             log.warn("[$ticketKey] Error fetching latest execution name: ${it.message}", it)
             null
-        }
-    }
-
-    /**
-     * Posts the consolidated run metrics comment to the Jira ticket as Media Sage Bot.
-     *
-     * Combines the rich comment body written by Claude (pipeline checkpoints, PR link, quality
-     * gates, AC) with accurate metrics fetched from Cloud Logging (turns, tokens, cost, duration).
-     * If no comment body was provided (e.g. worker exited before writing the file), falls back
-     * to a plain metrics-only comment.
-     *
-     * Example comment:
-     * ```
-     * 🤖 Agent: Run metrics summary for MS-XXX
-     *
-     * Task: ...
-     * Pipeline checkpoints verified:
-     * ✅ ...
-     * PR: https://github.com/...
-     * ...
-     *
-     * Run metrics:
-     * • Turns: 47 · Duration: 1h 23m 5s
-     * • Tokens: 11,809 input · 38,211 output · 4,653,492 cached
-     * • Cost: $2.0007
-     * ```
-     */
-    private suspend fun postConsolidatedComment(
-        ticketKey: String,
-        m: com.mediasage.agent.db.WorkerMetrics,
-        commentBody: String?,
-        wallClockMs: Long? = null
-    ) {
-        // Prefer wall-clock duration (job dispatch → Pub/Sub receipt) over Claude API time.
-        // m.durationMs from Cloud Logging only measures time inside Claude API calls — it
-        // excludes container cold start, GitHub token generation, and git clone (~1-3 min overhead).
-        val durationStr = formatDuration(wallClockMs ?: m.durationMs)
-        val metricsSection = buildString {
-            appendLine("Run metrics:")
-            appendLine(
-                "• Turns: ${m.numTurns} · Duration: $durationStr"
-            )
-            appendLine(
-                "• Tokens: ${"%,d".format(m.inputTokens)} input · " +
-                    "${"%,d".format(m.outputTokens)} output · " +
-                    "${"%,d".format(m.cacheReadTokens)} cached"
-            )
-            append("• Cost: \$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}")
-        }
-        // Resolve any pending checkpoints the agent wrote before exiting — if the orchestrator
-        // is posting this comment, Pub/Sub has already fired and Supabase is already updated.
-        val resolvedBody = commentBody?.replace("⏳", "✅")
-        val comment = if (!resolvedBody.isNullOrBlank()) {
-            "${resolvedBody.trimEnd()}\n\n$metricsSection"
-        } else {
-            // Fallback: worker exited before writing the comment file
-            "🤖 Agent: Run metrics summary for $ticketKey\n\n$metricsSection"
-        }
-        runCatching { jiraCommentPoster.addComment(ticketKey, comment) }
-            .onFailure { log.warn("[$ticketKey] Failed to post consolidated comment to Jira: ${it.message}") }
-    }
-
-    private fun formatDuration(ms: Long): String {
-        val totalSeconds = ms / 1000
-        val hours = totalSeconds / 3600
-        val minutes = (totalSeconds % 3600) / 60
-        val seconds = totalSeconds % 60
-        return when {
-            hours > 0 -> "${hours}h ${minutes}m ${seconds}s"
-            minutes > 0 -> "${minutes}m ${seconds}s"
-            else -> "${seconds}s"
         }
     }
 

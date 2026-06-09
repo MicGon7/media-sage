@@ -11,7 +11,6 @@ RUN apk add --no-cache \
     openssl \
     python3 \
     py3-pip \
-    && pip3 install --no-cache-dir --break-system-packages mcp-atlassian==0.21.1 \
     && npm install -g @anthropic-ai/claude-code@2.1.139 \
     && apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community github-cli
 

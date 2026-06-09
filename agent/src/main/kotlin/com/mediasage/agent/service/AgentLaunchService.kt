@@ -7,6 +7,14 @@ import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+private data class DispatchOptions(
+    val dryRun: Boolean = false,
+    val jiraTicketKey: String? = null,
+    val briefingContext: BriefingContext? = null,
+    val jobNameOverride: String? = null,
+    val skipBriefing: Boolean = false,
+)
+
 /**
  * Dispatches autonomous Claude Code agents via Cloud Run Jobs.
  * Guards against double-firing: a second launch call for the same key is a no-op
@@ -61,18 +69,14 @@ class AgentLaunchService(
         val context = ticketContent?.let {
             BriefingContext.TicketWork(ticketKey, it)
         }
-        return dispatchToCloudRun(ticketKey, basePrompt, cloudRun, dryRun, briefingContext = context)
+        return dispatchToCloudRun(ticketKey, basePrompt, cloudRun, DispatchOptions(dryRun = dryRun, briefingContext = context))
     }
 
     private fun dispatchToCloudRun(
         ticketKey: String,
         prompt: String,
         cloudRun: CloudRunDispatch,
-        dryRun: Boolean = false,
-        jiraTicketKey: String? = null,
-        briefingContext: BriefingContext? = null,
-        jobNameOverride: String? = null,
-        skipBriefing: Boolean = false,
+        options: DispatchOptions = DispatchOptions(),
     ): Boolean {
         // activeKeys is the synchronous in-process gate. It prevents the TOCTOU race where
         // two concurrent webhooks both pass shouldDispatch() before either inserts a DB row.
@@ -83,7 +87,7 @@ class AgentLaunchService(
         }
         scope.launch {
             try {
-                doDispatch(ticketKey, prompt, cloudRun, dryRun, jiraTicketKey, briefingContext, jobNameOverride, skipBriefing)
+                doDispatch(ticketKey, prompt, cloudRun, options)
             } finally {
                 activeKeys.remove(ticketKey)
             }
@@ -95,31 +99,27 @@ class AgentLaunchService(
         ticketKey: String,
         basePrompt: String,
         cloudRun: CloudRunDispatch,
-        dryRun: Boolean,
-        jiraTicketKey: String? = null,
-        briefingContext: BriefingContext? = null,
-        jobNameOverride: String? = null,
-        skipBriefing: Boolean = false,
+        options: DispatchOptions,
     ) {
         if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
             log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
             return
         }
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
-        val prompt = if (skipBriefing) {
+        val prompt = if (options.skipBriefing) {
             basePrompt
         } else {
-            buildPromptWithBriefing(ticketKey, basePrompt, briefingContext)
+            buildPromptWithBriefing(ticketKey, basePrompt, options.briefingContext)
         }
         val jobId = cloudRun.jobs.insert(ticketKey, prompt)
-        if (dryRun) {
+        if (options.dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
             cloudRun.jobs.markFailed(jobId)
             return
         }
         log.info("[$ticketKey] job $jobId inserted — dispatching to Cloud Run")
         try {
-            cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt, jiraTicketKey, jobNameOverride)
+            cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt, options.jiraTicketKey, options.jobNameOverride)
         } catch (e: Exception) {
             cloudRun.jobs.markFailed(jobId)
             log.warn("[$ticketKey] dispatch error: ${e.message}")
@@ -177,7 +177,7 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
         val basePrompt = prReviewPrompt.format(prNumber, ticketKey, commentBody, branchRef, reviewerLogin)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, DispatchOptions(jiraTicketKey = ticketKey))
     }
 
     /**
@@ -204,9 +204,7 @@ class AgentLaunchService(
         val context = BriefingContext.CommentReview(ticketKey, prNumber, commentBody)
         return dispatchToCloudRun(
             key, basePrompt, cloudRun,
-            jiraTicketKey = ticketKey,
-            briefingContext = context,
-            jobNameOverride = commentJobName,
+            DispatchOptions(jiraTicketKey = ticketKey, briefingContext = context, jobNameOverride = commentJobName),
         )
     }
 
@@ -223,7 +221,8 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "JUDGE-$ticketKey"
         val basePrompt = judgeWorkPrompt.format(ticketKey)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, jobNameOverride = judgeJobName, jiraTicketKey = ticketKey, skipBriefing = true)
+        val options = DispatchOptions(jiraTicketKey = ticketKey, jobNameOverride = judgeJobName, skipBriefing = true)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, options)
     }
 
     /**
@@ -246,7 +245,7 @@ class AgentLaunchService(
         val key = "CONFLICT-$prNumber"
         val basePrompt = conflictResolutionPrompt.format(prNumber, ticketKey, branchRef, baseBranch)
         val context = BriefingContext.ConflictResolution(ticketKey, prNumber, branchRef, baseBranch)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, jiraTicketKey = ticketKey, briefingContext = context)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, DispatchOptions(jiraTicketKey = ticketKey, briefingContext = context))
     }
 
     /**
