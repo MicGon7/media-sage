@@ -130,7 +130,11 @@ git config --global credential.helper store
 echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
 
 # GH_REPO is required by gh CLI commands when no git repo is cloned.
-export GH_REPO="${GITHUB_OWNER:-michael-gonzalez-dev}/${GITHUB_REPO:-media-sage}"
+if [ -z "$GITHUB_OWNER" ] || [ -z "$GITHUB_REPO" ]; then
+  echo "ERROR: GITHUB_OWNER and GITHUB_REPO must be set." >&2
+  exit 1
+fi
+export GH_REPO="$GITHUB_OWNER/$GITHUB_REPO"
 
 # Log the full prompt as a single Cloud Run log entry by emitting it as a JSON object.
 # Cloud Run splits stdout on newlines — a bare printf/echo produces one entry per line of the prompt.

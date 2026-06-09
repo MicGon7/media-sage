@@ -133,8 +133,10 @@ echo "GitHub App token generated successfully"
 git config --global credential.helper store
 echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
 
-GITHUB_OWNER="${GITHUB_OWNER:-michael-gonzalez-dev}"
-GITHUB_REPO="${GITHUB_REPO:-media-sage}"
+if [ -z "$GITHUB_OWNER" ] || [ -z "$GITHUB_REPO" ]; then
+  echo "ERROR: GITHUB_OWNER and GITHUB_REPO must be set." >&2
+  exit 1
+fi
 REPO_DIR="/home/agent/${GITHUB_REPO}"
 # GitHub App installation tokens use x-access-token as the username in clone URLs
 REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git"
