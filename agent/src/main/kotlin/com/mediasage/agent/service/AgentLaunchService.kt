@@ -217,7 +217,7 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "JUDGE-$ticketKey"
         val basePrompt = judgeWorkPrompt.format(ticketKey)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, jobNameOverride = judgeJobName)
+        return dispatchToCloudRun(key, basePrompt, cloudRun, jobNameOverride = judgeJobName, jiraTicketKey = ticketKey)
     }
 
     /**
