@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 git config --global user.name "${GITHUB_BOT_NAME:-media-sage-worker}"
 # GitHub App noreply email — deterministic from the App ID, no env var needed
@@ -13,6 +13,53 @@ git config --global user.email "${GITHUB_APP_ID}+media-sage-worker[bot]@users.no
 # orchestrator's recoverInterruptedJobs() handles the rare case where the event is lost.
 publish_completion() {
   local exit_code=$1
+
+  # Parse metrics from stream-json output and append to the Jira comment file.
+  local metrics
+  metrics=$(python3 -c "
+import json
+for line in open('/tmp/claude-output.jsonl'):
+    try:
+        e = json.loads(line)
+        if e.get('type') == 'result':
+            t = e.get('num_turns', '?')
+            c = e.get('total_cost_usd', 0)
+            d = e.get('duration_ms', 0) // 1000
+            print(f'{t} turns | \${c:.4f} | {d}s')
+    except: pass
+" 2>/dev/null || echo "metrics unavailable")
+  if [ -f /tmp/jira_comment.txt ]; then
+    printf '\n---\n%s\n' "$metrics" >> /tmp/jira_comment.txt
+  fi
+
+  # Post Jira comment directly — worker owns the comment end-to-end.
+  local effective_jira_key="${JIRA_TICKET_KEY:-$TICKET_KEY}"
+  if [ -f /tmp/jira_comment.txt ] && [ -n "$JIRA_EMAIL" ] && [ -n "$JIRA_API_TOKEN" ] && [ -n "$effective_jira_key" ]; then
+    python3 - "$effective_jira_key" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
+import json, subprocess, os, sys
+ticket_key = sys.argv[1]
+comment_text = open('/tmp/jira_comment.txt').read()
+body = json.dumps({
+    'body': {
+        'type': 'doc', 'version': 1,
+        'content': [{'type': 'paragraph', 'content': [{'type': 'text', 'text': comment_text}]}]
+    }
+})
+result = subprocess.run(
+    ['curl', '-sf', '-X', 'POST',
+     '-u', f"{os.environ['JIRA_EMAIL']}:{os.environ['JIRA_API_TOKEN']}",
+     '-H', 'Content-Type: application/json',
+     '-d', body,
+     f'https://media-sage.atlassian.net/rest/api/3/issue/{ticket_key}/comment'],
+    capture_output=True, text=True
+)
+if result.returncode == 0:
+    print('Jira comment posted')
+else:
+    print(f'Warning: Jira comment post failed: {result.stderr}')
+PYEOF
+  fi
+
   if [ -z "$PUBSUB_TOPIC" ] || [ -z "$GCP_PROJECT_ID" ]; then
     echo "PUBSUB_TOPIC or GCP_PROJECT_ID not set — skipping Pub/Sub notification"
     return
@@ -40,18 +87,10 @@ payload = {
   'status': '$status'
 }
 
-# jiraTicketKey is set when TICKET_KEY is a synthetic dedup key (e.g. PR-200, CONFLICT-199).
-# The orchestrator uses it to post the Jira metrics comment on the correct issue.
+# jiraTicketKey is set when TICKET_KEY is a synthetic dedup key (e.g. JUDGE-MS-123).
 jira_key = os.environ.get('JIRA_TICKET_KEY', '').strip()
 if jira_key:
     payload['jiraTicketKey'] = jira_key
-
-# Include comment body written by Claude — orchestrator appends metrics and posts to Jira.
-# Read via Python to avoid shell quoting issues with newlines and special characters.
-comment_file = '/tmp/jira_comment.txt'
-if os.path.exists(comment_file):
-    with open(comment_file) as f:
-        payload['commentBody'] = f.read()
 
 data = base64.b64encode(json.dumps(payload).encode()).decode()
 print(json.dumps({'messages': [{'data': data}]}))
@@ -90,23 +129,8 @@ echo "GitHub App token generated successfully"
 git config --global credential.helper store
 echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
 
-cat > "/home/agent/.mcp.json" << EOF
-{
-  "mcpServers": {
-    "atlassian": {
-      "command": "mcp-atlassian",
-      "env": {
-        "JIRA_URL": "https://media-sage.atlassian.net",
-        "JIRA_USERNAME": "${JIRA_EMAIL}",
-        "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
-        "CONFLUENCE_URL": "https://media-sage.atlassian.net/wiki",
-        "CONFLUENCE_USERNAME": "${JIRA_EMAIL}",
-        "CONFLUENCE_API_TOKEN": "${JIRA_API_TOKEN}"
-      }
-    }
-  }
-}
-EOF
+# GH_REPO is required by gh CLI commands when no git repo is cloned.
+export GH_REPO="${GITHUB_OWNER:-michael-gonzalez-dev}/${GITHUB_REPO:-media-sage}"
 
 # Log the full prompt as a single Cloud Run log entry by emitting it as a JSON object.
 # Cloud Run splits stdout on newlines — a bare printf/echo produces one entry per line of the prompt.
@@ -115,7 +139,8 @@ python3 -c "import json, os; print(json.dumps({'message': '[worker] prompt', 'pr
 
 # Run Claude Code — no exec so the trap can capture the exit code for Pub/Sub.
 # --verbose is required when using --output-format=stream-json.
+# Tee to capture stream-json output for metrics parsing in publish_completion.
 claude -p "$PROMPT" \
   --dangerously-skip-permissions \
   --output-format stream-json \
-  --verbose
+  --verbose | tee /tmp/claude-output.jsonl

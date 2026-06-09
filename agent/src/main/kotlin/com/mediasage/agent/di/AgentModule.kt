@@ -56,7 +56,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     }
     single {
         val briefingService = buildBriefingService(config)
-        val cloudRun = buildCloudRunDispatch(config, get(), get())
+        val cloudRun = buildCloudRunDispatch(config, get())
         AgentLaunchService(
             scope, cloudRun, get(), get<JiraTicketStatusChecker>(), briefingService,
             judgeJobName = config.gcpJudgeJobName,
@@ -121,7 +121,6 @@ private fun initDatabase(supabaseDbUrl: String) {
 private fun buildCloudRunDispatch(
     config: AgentConfig,
     httpClient: HttpClient,
-    jiraCommentPoster: JiraCommentPoster
 ): CloudRunDispatch? {
     if (config.googleCredentialsJson.isBlank()) error("GOOGLE_CREDENTIALS_BASE64 is required — Cloud Run is the only worker dispatch path")
     initDatabase(config.supabaseDbUrl)
@@ -139,7 +138,6 @@ private fun buildCloudRunDispatch(
         credentialsJson = config.googleCredentialsJson,
         jobRepository = jobRepository,
         cloudLoggingClient = loggingClient,
-        jiraCommentPoster = jiraCommentPoster
     )
     return CloudRunDispatch(client, jobRepository)
 }

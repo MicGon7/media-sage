@@ -6,5 +6,5 @@
 4. Push the rebased branch.
 5. Find the last reviewer: `gh pr view <pr-number> --json reviews`
    Re-request review: `gh pr review-request <pr-number> --reviewer <login>`
-6. Write `/tmp/jira_comment.txt` — see the Jira comment file rule in CLAUDE.md Agent Guidelines.
+6. Write `/tmp/jira_comment.txt` — see the Jira comment file rule in CLAUDE.md Agent Guidelines. Do NOT post via the Jira REST API — the entrypoint appends metrics and posts it directly after you exit.
 

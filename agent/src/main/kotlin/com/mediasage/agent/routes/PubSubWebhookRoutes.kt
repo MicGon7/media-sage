@@ -13,7 +13,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
-import java.time.Instant
 import java.util.Base64
 
 private val log = LoggerFactory.getLogger("PubSubWebhookRoutes")
@@ -37,7 +36,6 @@ private data class JobCompletionEvent(
     @SerialName("ticketKey") val ticketKey: String,
     @SerialName("executionName") val executionName: String,
     @SerialName("status") val status: String, // "success" or "failure"
-    @SerialName("commentBody") val commentBody: String? = null,
     /**
      * The actual Jira issue key (e.g. "MS-257") when [ticketKey] is a synthetic dedup key
      * (e.g. "PR-200", "CONFLICT-199"). Set only for PR review and conflict resolution jobs.
@@ -116,24 +114,16 @@ private suspend fun processCompletion(
     cloudRunJobsClient: CloudRunJobsClient,
     agentLauncher: AgentLauncher,
 ) {
-    // Capture receipt time first — this is the closest timestamp to actual job completion.
-    // Wall-clock duration = receipt time - startedAt (stored in Supabase when Cloud Run dispatch succeeded).
-    val receiptTime = Instant.now()
     val job = jobRegistry.findRunningByTicketKey(event.ticketKey)
     if (job == null) {
         log.warn("[${event.ticketKey}] Pub/Sub webhook: no RUNNING job found — may have already been processed")
         return
     }
-    // Compute wall-clock here so CloudRunJobsClient.onJobCompleted stays under the param limit.
-    val wallClockMs = job.startedAt?.let { receiptTime.toEpochMilli() - it.toEpochMilli() }
     cloudRunJobsClient.onJobCompleted(
         jobId = job.jobId,
         ticketKey = event.ticketKey,
         executionName = event.executionName,
         succeeded = event.status == "success",
-        commentBody = event.commentBody,
-        jiraTicketKey = event.jiraTicketKey,
-        wallClockMs = wallClockMs
     )
     // Dispatch judge after a successful ticket-work completion.
     // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key).
