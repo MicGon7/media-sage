@@ -6,6 +6,7 @@ on:
     paths:
       - 'agent/**'
       - 'settings-agent.gradle.kts'
+      - '!agent/src/main/kotlin/com/mediasage/agent/smoketest/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
