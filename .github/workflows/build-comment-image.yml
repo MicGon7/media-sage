@@ -5,7 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'Dockerfile.comment'
-      - 'agent/worker-entrypoint.sh'
+      - 'agent/comment-entrypoint.sh'
       - 'agent/get-github-token.py'
 
 concurrency:
