@@ -2,17 +2,18 @@
 
 An **autonomous agent** runs the full workflow — Jira, branch, code, tests, docs, commit, PR — without human interaction. The human's only touchpoint is the GitHub PR review.
 
-## Jira labels that control agent behavior
-
-- No label — human work with no AI involvement.
-- **`assisted`** — Human and AI work together. Human stays in the loop, approves decisions, and learns the patterns. AI acts as a pair programmer. This is the default for all AI-intended tickets and the expected minimum standard for the team.
-- **`autonomous`** — Explicit upgrade from `assisted`. AI works alone end-to-end, human only reviews the PR. Only appropriate for patterns that are already proven and well-understood.
-
-`assisted` is always the starting point. Promote to `autonomous` only after the pattern has been built and validated in `assisted` mode. When in doubt, stay `assisted`.
-
 ## Trigger model (Level 2 — Autonomous)
 
-The Jira webhook fires when a ticket is **assigned to the bot account** and its status transitions to **In Progress**. The `autonomous` label is a documentation tag for filtering and reporting — it is NOT what fires the agent. The GitHub webhook fires when a `pull_request_review` or `pull_request_review_comment` event arrives for a branch whose ticket key maps to an `autonomous`-labeled issue in Jira.
+The Jira webhook fires when a ticket is **assigned to the bot account** and its status transitions to **In Progress**. That assignment is the sole trigger — labels play no role in firing the agent. The GitHub webhook fires when a `pull_request_review` or `pull_request_review_comment` event arrives for a branch whose ticket key is an open Jira issue.
+
+## Jira labels
+
+Labels are kept for historical tracking and query filtering, not to control pipeline behavior:
+
+- **`autonomous`** — historical tag indicating the agent ran the full workflow; useful for filtering reporting queries
+- **`assisted`** — tag indicating a human worked the ticket with AI assistance; the expected default for all AI-involved work, though its long-term reporting value is still being evaluated
+
+Neither label gates or triggers any pipeline action.
 
 ## Invocation
 
