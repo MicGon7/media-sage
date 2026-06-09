@@ -177,6 +177,28 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
+    fun botSubmittedReviewIsIgnoredToPreventFeedbackLoop() {
+        val tracking = FakeAgentLauncher()
+        testGitHubApp(agentService = tracking) {
+            val body = prReviewPayload(
+                prAuthorLogin = BOT_LOGIN,
+                state = "commented",
+                senderLogin = BOT_LOGIN,
+                reviewBody = "🤖 **Agent:** Judge verdict for MS-42"
+            )
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request_review")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(0, tracking.agentLaunches, "Agent must NOT fire when bot submitted the review")
+            assertEquals(0, tracking.commentReviewLaunches, "Comment agent must NOT fire when bot submitted the review")
+        }
+    }
+
+    @Test
     fun inlineCommentEditedIsIgnored() = testGitHubApp {
         val body = reviewCommentPayload(action = "edited", commentBody = "Updated: please rename this variable.")
         val response = client.post("/webhook/github") {
