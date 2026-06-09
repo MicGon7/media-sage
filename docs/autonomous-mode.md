@@ -30,13 +30,15 @@ The bootstrap command never changes — the **ticket is the prompt**. Every auto
 
 ## Job-type skills
 
-Each job type dispatched by the orchestrator ends its bootstrap prompt with a skill invocation (e.g. `/conflict-resolution`). Skills live in `.claude/commands/` and are committed to the repo — workers pick them up automatically on clone. The skill contains the imperative workflow steps for that job type; the bootstrap prompt supplies the job-specific context (branch, ticket, PR number). This separates *what the job is* (prompt) from *how to execute it* (skill), and allows workflow steps to be updated without redeploying the orchestrator image.
+Each job type dispatched by the orchestrator ends its bootstrap prompt with a skill invocation (e.g. `/conflict-resolution-work`). Skills live in `.claude/commands/` and are committed to the repo — workers pick them up automatically on clone. The skill contains the imperative workflow steps for that job type; the bootstrap prompt supplies the job-specific context (branch, ticket, PR number). This separates *what the job is* (prompt) from *how to execute it* (skill), and allows workflow steps to be updated without redeploying the orchestrator image.
 
 Current skills:
-- `/conflict-resolution` — rebase a branch ejected from the merge queue and re-request review
 - `/ticket-work` — execute the full ticket work workflow (branch, implement, test, detekt, PR, Jira comment)
-- `/pr-review` — respond to a PR review comment: fix code (or explain why not), push, re-request review
-- `/pr-comment` — answer a conversational PR comment via a reply; no code push
+- `/conflict-resolution-work` — rebase a branch ejected from the merge queue and re-request review
+- `/pr-review-work` — respond to a PR review comment: fix code (or explain why not), push, re-request review
+- `/pr-comment-work` — answer a conversational PR comment via a reply; no code push
+- `/judge-work` — review a PR's diff against its Jira AC and post a structured judgment comment
+- `/pipeline-test` — create and execute a smoke test ticket that bumps a version counter in SmokeTest.kt
 
 ## Autonomous ticket requirements
 
