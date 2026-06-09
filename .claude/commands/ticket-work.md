@@ -55,10 +55,10 @@ If the work follows an established pattern, makes a trivial change, or could hav
 8. Update Jira AC checkboxes as each criterion is met. Use curl to update the issue description with the checked boxes:
    ```bash
    # Get current issue (to read the existing description ADF)
-   curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+   curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
      "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY"
    # Update description with checkboxes checked (PUT to same endpoint with updated ADF body)
-   curl -s -X PUT -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+   curl -s -X PUT -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
      -H "Content-Type: application/json" \
      -d '{"fields":{"description":<updated-adf-body>}}' \
      "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY"
@@ -98,10 +98,10 @@ If the work follows an established pattern, makes a trivial change, or could hav
 13. Transition the Jira ticket to In Review via curl:
     ```bash
     # Get available transitions
-    curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+    curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
       "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY/transitions"
     # Transition to In Review (use the transition ID from the response above)
-    curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+    curl -s -X POST -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
       -H "Content-Type: application/json" \
       -d '{"transition":{"id":"<in-review-transition-id>"}}' \
       "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY/transitions"

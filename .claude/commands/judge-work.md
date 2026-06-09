@@ -1,6 +1,6 @@
 1. Retrieve the ticket from Jira via curl. Extract the acceptance criteria.
    ```bash
-   curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+   curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
      "https://media-sage.atlassian.net/rest/api/3/issue/$JIRA_TICKET_KEY"
    ```
 2. Find the open PR for this ticket: `gh pr list --state open --search "head:feature/{TICKET_KEY}" --json number,url,headRefName --limit 1`. If no open PR is found, post a comment on the PR or log that no PR was found and exit.
