@@ -1,3 +1,47 @@
+## Job-specific rules
+
+**Jira comment file:** Write a plain-text summary to `/tmp/jira_comment.txt` before exiting. Do NOT post via the Atlassian MCP — the orchestrator reads this file from the Pub/Sub completion event and posts it as Media Sage Bot. Use this exact format (plain text only — no `**bold**` or other markdown):
+
+```
+🤖 Agent: Run summary for {TICKET_KEY}
+
+Task: {one-line task description}
+
+Pipeline checkpoints:
+✅ Jira webhook fired when ticket moved to In Progress
+✅ Orchestrator dispatched Cloud Run Job
+✅ Worker cloned from michael-gonzalez-dev/media-sage successfully
+✅ Worker completed the task and opened a PR
+⏳ Pub/Sub completion event — fires after this comment
+⏳ Job marked COMPLETED in Supabase — pending Pub/Sub
+
+PR: {pr_url}
+
+Quality gates:
+✅ Detekt: {result}
+✅ Affected tests: {result}
+
+Diff: {summary}
+
+Acceptance criteria:
+✅ {ac_item}
+```
+
+Do not include a "Run metrics" section — the orchestrator appends that after you exit.
+
+**Graceful exit when task is already done:** If the task is already fully satisfied by the current state of the code, do not invent work. Check off the relevant AC items, write `/tmp/jira_comment.txt` stating the task was already complete and what was found, transition the ticket to In Review, and exit.
+
+**Learning doc:** Default to no learning doc. Write one only if the work meets at least one of:
+- Introduces a new pattern not previously used in the codebase
+- Makes an architectural decision with non-obvious tradeoffs
+- Integrates a new external system or API
+
+If the work follows an established pattern, makes a trivial change, or could have been completed just by reading existing code — skip the doc. When in doubt, skip. The burden of proof is on writing, not skipping.
+
+**pipeline-test tasks:** Must be additive — choose work that provably does not exist yet. Never choose a task that may already be satisfied in the codebase.
+
+---
+
 1. The ticket is already In Progress — do not call jira_get_issue or transition it again. Read the ticket description and acceptance criteria from the prompt.
 2. Create a feature branch: `git checkout -b feature/MS-{TICKET_KEY}-short-description`
 3. Read the files listed in the ticket's "Relevant files" section before writing any code. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
