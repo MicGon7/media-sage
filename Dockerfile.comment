@@ -8,6 +8,7 @@ RUN apk add --no-cache \
     git \
     nodejs \
     npm \
+    openssl \
     python3 \
     py3-pip \
     && pip3 install --no-cache-dir --break-system-packages mcp-atlassian==0.21.1 \
