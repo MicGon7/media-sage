@@ -104,7 +104,11 @@ class AgentLaunchService(
             return
         }
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
-        val prompt = buildPromptWithBriefing(ticketKey, basePrompt, briefingContext)
+        val prompt = if (jiraTicketKey != null || briefingContext != null) {
+            buildPromptWithBriefing(ticketKey, basePrompt, briefingContext)
+        } else {
+            basePrompt
+        }
         val jobId = cloudRun.jobs.insert(ticketKey, prompt)
         if (dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")

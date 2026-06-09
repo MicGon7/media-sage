@@ -47,6 +47,7 @@ Current skills:
 - Acceptance criteria: explicit checkboxes the agent checks off as it works
 - Relevant files: **mandatory** — list the 3–5 files the agent should read first, each with a one-line note on why it matters. This is the primary way context is passed to the worker; the briefing skips file enumeration entirely and relies on this section being present. A ticket without a relevant files section is not ready for autonomous mode.
 - Acceptance criteria: describe **outcomes, not commands** — Haiku reads AC as briefing input, so shell commands in AC leak into the dispatch prompt and conflict with the `/ticket-work` skill. Good: "The foo field is validated at the repository boundary." Bad: "Run `./gradlew :shared:test`."
+- Acceptance criteria: describe **diff-verifiable outcomes only** — the judge worker verdicts by reading the PR diff; it cannot observe CI results. CI gates (Detekt, tests passing, PR targeting main) are enforced automatically by CI and must never appear as AC items. Good: "The `launchForJudge` method does not call `buildPromptWithBriefing`." Bad: "Detekt passes."
 - Label: `autonomous`
 - No ambiguous requirements — if it needs clarification, use `assisted` instead
 - Tickets that touch `.github/workflows/`, `Dockerfile.worker`, or `agent/worker-entrypoint.sh` must use `assisted` — these files define the pipeline itself, the worker cannot push workflow files without elevated permissions, and mistakes here have wide blast radius
