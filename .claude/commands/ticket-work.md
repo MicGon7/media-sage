@@ -1,4 +1,4 @@
-1. Read the ticket description and acceptance criteria. If the ticket is not already In Progress in Jira, transition it now.
+1. The ticket is already In Progress — do not call jira_get_issue or transition it again. Read the ticket description and acceptance criteria from the prompt.
 2. Create a feature branch: `git checkout -b feature/MS-{TICKET_KEY}-short-description`
 3. Read the files listed in the ticket's "Relevant files" section before writing any code. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
 4. Implement the changes described in the ticket.
@@ -7,8 +7,36 @@
 7. Run `./gradlew detekt` and fix any violations.
 8. Update Jira AC checkboxes as each criterion is met.
 9. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
-10. Commit all changes with prefix `MS-{TICKET_KEY}: Description` and push: `git push -u origin <branch>`.
-11. Open a PR: `gh pr create` — fill in title and body per the PR template at `.github/pull_request_template.md`.
+10. Commit all changes with prefix `MS-{TICKET_KEY}: Description` and push: `git push --force-with-lease -u origin <branch>`.
+11. Open a PR with `gh pr create`. Use this body structure (do not read the PR template file — use this directly):
+    ```
+    ## Summary
+    <!-- 1-3 bullet points describing what this PR does -->
+
+    ## Ticket
+    <!-- Link to Jira ticket, e.g. MS-XX -->
+
+    ## Type of Change
+    - [ ] New feature
+    - [ ] Bug fix
+    - [ ] Refactor
+    - [ ] Tests
+    - [ ] CI/CD
+    - [ ] Documentation
+
+    ## Testing
+    - [ ] Unit tests added/updated
+    - [ ] Integration tests added/updated
+    - [ ] Manual testing performed
+
+    ## Author
+    - [x] Agent-authored (reviewed by human)
+
+    ## Checklist
+    - [ ] Tests pass locally (`./gradlew allTests`)
+    - [ ] No API keys or secrets in code
+    - [ ] CLAUDE.md updated (if new pattern introduced)
+    ```
 12. Write `/tmp/jira_comment.txt` — see the Jira comment file rule in CLAUDE.md Agent Guidelines.
 13. Transition the Jira ticket to In Review.
 
