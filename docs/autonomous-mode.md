@@ -4,7 +4,7 @@ An **autonomous agent** runs the full workflow — Jira, branch, code, tests, do
 
 ## Trigger model (Level 2 — Autonomous)
 
-The Jira webhook fires when a ticket is **assigned to the bot account** and its status transitions to **In Progress**. That assignment is the sole trigger — labels play no role in firing the agent. The GitHub webhook fires when a `pull_request_review` or `pull_request_review_comment` event arrives for a branch whose ticket key is an open Jira issue.
+The Jira webhook fires when a ticket is **assigned to the bot account** and its status transitions to **In Progress**. Both conditions must be true — labels play no role in firing the agent. The GitHub webhook fires when a `pull_request_review` or `pull_request_review_comment` event arrives for a branch whose ticket key is an open Jira issue.
 
 ## Jira labels
 
