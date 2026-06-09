@@ -7,6 +7,7 @@ import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ApplicationTest {
 
@@ -27,5 +28,18 @@ class ApplicationTest {
 
         val response = client.get("/nonexistent")
         assertEquals(HttpStatusCode.NotFound, response.status)
+    }
+
+    @Test
+    fun assignmentDefaultsReturns7Figures() = testApplication {
+        environment { config = MapApplicationConfig("app.db.path" to ":memory:") }
+        application { module() }
+
+        val response = client.get("/api/assignments/defaults")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("Augustine of Hippo"))
+        assertTrue(body.contains("Mother Teresa"))
+        assertTrue(body.count { it == '{' } == 7)
     }
 }

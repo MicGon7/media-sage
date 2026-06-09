@@ -62,4 +62,8 @@ class MediaSageApiImpl(
             setBody(request)
         }.body()
     }
+
+    override suspend fun getAssignmentDefaults(): List<AssignmentDefaultDto> {
+        return httpClient.get("$baseUrl/api/assignments/defaults").body()
+    }
 }

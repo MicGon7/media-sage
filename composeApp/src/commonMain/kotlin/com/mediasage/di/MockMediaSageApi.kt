@@ -1,5 +1,6 @@
 package com.mediasage.di
 
+import com.mediasage.data.remote.AssignmentDefaultDto
 import com.mediasage.data.remote.DailyReflectionRequestDto
 import com.mediasage.data.remote.DailyReflectionResponseDto
 import com.mediasage.data.remote.EncourageRequestDto
@@ -48,4 +49,6 @@ class MockMediaSageApi : MediaSageApi {
             sources = emptyList(),
             tone = request.tone
         )
+
+    override suspend fun getAssignmentDefaults(): List<AssignmentDefaultDto> = emptyList()
 }

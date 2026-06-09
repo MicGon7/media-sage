@@ -68,7 +68,7 @@ fun sharedModule(
     single<EncouragementRepository> { EncouragementRepositoryImpl(get(), get(), get()) }
     single<WikipediaRepository> { WikipediaRepositoryImpl(get()) }
     single<DailyReflectionRepository> { DailyReflectionRepositoryImpl(get(), get()) }
-    single<DayAssignmentRepository> { DayAssignmentRepositoryImpl(get()) }
+    single<DayAssignmentRepository> { DayAssignmentRepositoryImpl(get(), get(), get()) }
     single<UserPreferencesRepository> { UserPreferencesRepositoryImpl(get()) }
     single<AuthRepository> { AuthRepositoryImpl(getOrNull<SupabaseClient>()) }
 }

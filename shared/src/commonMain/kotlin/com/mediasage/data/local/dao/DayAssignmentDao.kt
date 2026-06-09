@@ -18,4 +18,7 @@ interface DayAssignmentDao {
 
     @Query("DELETE FROM day_assignment WHERE dayOfWeek = :dayOfWeek")
     suspend fun delete(dayOfWeek: Int)
+
+    @Query("SELECT COUNT(*) FROM day_assignment")
+    suspend fun countAll(): Int
 }

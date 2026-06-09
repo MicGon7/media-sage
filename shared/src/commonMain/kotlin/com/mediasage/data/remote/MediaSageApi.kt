@@ -11,4 +11,5 @@ interface MediaSageApi {
     suspend fun searchScripture(query: String, limit: Int = 10): List<ScriptureVerseDto>
     suspend fun getPassage(passageId: String): ScripturePassageDto
     suspend fun getDailyReflection(request: DailyReflectionRequestDto): DailyReflectionResponseDto
+    suspend fun getAssignmentDefaults(): List<AssignmentDefaultDto>
 }
