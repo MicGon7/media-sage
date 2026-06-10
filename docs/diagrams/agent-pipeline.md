@@ -27,11 +27,21 @@ sequenceDiagram
     Worker->>Worker: Run Claude Code<br/>(implement, test, commit)
     Worker->>GitHub: git push + gh pr create
     Worker->>Worker: Write /tmp/jira_comment.txt
-    Worker->>PubSub: trap EXIT → publish<br/>status=success|failure
+    Worker->>PubSub: trap EXIT → publish<br/>status=success|failure<br/>(includes jira_comment payload)
 
     PubSub->>Orchestrator: POST /webhook/pubsub
     Orchestrator->>Supabase: markCompleted / markFailed
-    Orchestrator->>Jira: Post metrics comment<br/>(wall-clock duration, tokens, cost)
+    Orchestrator->>Jira: Post metrics comment<br/>(from worker's jira_comment payload)
+
+    Note over Orchestrator,GitHub: Judge loop — runs automatically after PR is opened
+
+    GitHub->>Orchestrator: POST /webhook/github<br/>(pull_request: opened/synchronize)
+    Orchestrator->>Supabase: Insert job row JUDGE-{n} (PENDING)
+    Orchestrator->>Worker: Dispatch Cloud Run Job<br/>(JUDGE_PROMPT — Dockerfile.lite)
+    Worker->>GitHub: Read PR diff + post verdict comment
+    Worker->>PubSub: trap EXIT → publish
+    PubSub->>Orchestrator: POST /webhook/pubsub
+    Orchestrator->>Supabase: markCompleted
 
     Human->>GitHub: Review PR
     Human->>Jira: Ticket auto-transitions to Done on merge
@@ -42,8 +52,9 @@ sequenceDiagram
         Human->>GitHub: Submit review (changes_requested)
         GitHub->>Orchestrator: POST /webhook/github<br/>(pull_request_review)
         Orchestrator->>Supabase: Insert job row PR-{n} (PENDING)
-        Orchestrator->>Worker: Dispatch Cloud Run Job<br/>(PR_REVIEW_PROMPT)
+        Orchestrator->>Worker: Dispatch Cloud Run Job<br/>(PR_REVIEW_PROMPT — Dockerfile.lite)
         Worker->>GitHub: Fix commit + re-request review
+        Worker->>Worker: Write /tmp/jira_comment.txt
         Worker->>PubSub: trap EXIT → publish
         PubSub->>Orchestrator: POST /webhook/pubsub
         Orchestrator->>Supabase: markCompleted
@@ -52,7 +63,7 @@ sequenceDiagram
 
     alt Merge queue conflict
         GitHub->>Orchestrator: POST /webhook/github<br/>(dequeued: merge_conflict)
-        Orchestrator->>Worker: Dispatch Cloud Run Job<br/>(CONFLICT_RESOLUTION_PROMPT)
+        Orchestrator->>Worker: Dispatch Cloud Run Job<br/>(CONFLICT_RESOLUTION_PROMPT — Dockerfile.lite)
         Worker->>GitHub: git rebase + force push +<br/>re-request review
         Worker->>PubSub: trap EXIT → publish
         PubSub->>Orchestrator: POST /webhook/pubsub
@@ -73,6 +84,14 @@ observability, not control flow.
 **Synthetic dedup keys.** PR review and conflict resolution jobs use keys like `PR-{n}` and
 `CONFLICT-{n}` to deduplicate by PR, not by ticket. `JIRA_TICKET_KEY` is passed separately
 so the orchestrator can post the Jira comment to the correct issue.
+
+**Worker-owned Jira comments.** The worker writes `/tmp/jira_comment.txt` and includes the
+content in the Pub/Sub completion payload. The orchestrator forwards it to Jira as the Media
+Sage Bot identity. This keeps Jira communication coupled to the work that generated it.
+
+**Job image tiers.** The initial worker job uses `Dockerfile.worker` (full Claude Code + Android
+SDK, ~4 GiB). Judge, comment, and conflict-resolution jobs use `Dockerfile.lite` (Claude Code
+only, no SDK) — faster cold starts and lower cost for work that only needs git + gh CLI.
 
 **Wall-clock duration.** The Jira metrics comment shows `startedAt` (Supabase, set on dispatch)
 to Pub/Sub receipt time — not Claude Code API time from Cloud Logging.
