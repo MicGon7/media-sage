@@ -5,3 +5,5 @@ package com.mediasage.agent.smoketest
 // smoke-test-version-a: 3
 // smoke-test-version-b: 1
 // smoke-test-version-c: 1
+
+const val PIPELINE_VERSION = 2
