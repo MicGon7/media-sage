@@ -45,7 +45,7 @@ if [ "$PR_COUNT" -gt 0 ]; then
     echo "Existing PR found: $PR_URL"
     echo "Checking out branch: $HEAD_REF"
     git fetch origin "$HEAD_REF"
-    git checkout "$HEAD_REF"
+    git checkout -b "$HEAD_REF" origin/"$HEAD_REF"
     printf 'WORKER_BRANCH_STATUS=existing\nWORKER_PR_URL=%s\nWORKER_BRANCH_NAME=%s\n' \
         "$PR_URL" "$HEAD_REF" > /tmp/worker_init.env
     echo ""
