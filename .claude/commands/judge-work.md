@@ -25,7 +25,7 @@
    - ✅ Met — the diff clearly satisfies the criterion. Include a one-line explanation of what in the diff satisfies it.
    - ❌ Not met — the diff does not address the criterion, or introduces a regression. You MUST include a one-line explanation of what is missing or wrong. "Not met" with no reason is not a valid verdict.
    - ⚠️ Partial — the criterion is partially addressed but something is missing. Include what is present and what is missing.
-5. Fetch the worker run log in one call:
+5. Fetch the worker run log and extract metrics in one call:
    ```bash
    content_url=$(curl -sf \
      -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
@@ -41,12 +41,12 @@
    [ -n "$content_url" ] && \
    curl -sf -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" "$content_url" -o /tmp/worker-run.jsonl
    ```
-   Parse `/tmp/worker-run.jsonl` for turn efficiency data. For each tool-use turn, check whether it was judgment (reading, writing, deciding) or mechanical (could have been a script). Flag turns that:
-   - Read output of a prior bash command when the script could have returned it inline
-   - Discover files with `find` or `ls` instead of calling known paths directly
-   - Re-run commands the worker scripts already cover (tests, detekt, git operations)
-   - Narrate or announce intent before a tool call
-   If the attachment is not found, skip the turn efficiency section silently.
+   Then run `/cloud-job-breakdown` to get the metrics line (`N turns | $cost | Xm Ys`).
+   If the attachment is not found, omit the turn efficiency section silently.
+   Do NOT enumerate individual tool-use turns from the JSONL — that approach is fragile and
+   fails on thinking blocks. Write the wasted-turns narrative from contextual judgment instead:
+   look at the turn count relative to ticket complexity, and note patterns visible in the diff
+   (e.g. a trivial one-line change that took 12 turns signals a script failure or recovery loop).
 6. Post a PR review comment (NOT an approval or request-for-changes) with a structured verdict:
    ```
    gh pr review <pr-number> --comment --body "$(cat <<'EOF'

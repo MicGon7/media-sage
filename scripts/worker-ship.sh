@@ -54,7 +54,7 @@ git push --force-with-lease -u origin "$CURRENT_BRANCH"
 # ── 2. Open PR ────────────────────────────────────────────────────────────────
 
 echo "Opening PR..."
-PR_URL=$(gh pr create --title "$COMMIT_MSG" --body-file /tmp/pr_body.md 2>&1 | grep "https://github.com" | tail -1)
+PR_URL=$(gh pr create --title "$COMMIT_MSG" --body-file /tmp/pr_body.md)
 echo "PR: $PR_URL"
 
 # ── 3. Update Jira AC checkboxes ─────────────────────────────────────────────
@@ -80,9 +80,19 @@ echo "✅  AC checkboxes updated"
 # ── 4. Transition to In Review ────────────────────────────────────────────────
 
 echo "Transitioning $TICKET_KEY to In Review..."
+IN_REVIEW_ID=$(curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
+    "${JIRA_BASE}/transitions" \
+    | python3 -c "
+import sys, json
+transitions = json.load(sys.stdin)['transitions']
+match = next((t['id'] for t in transitions if t['name'].lower() == 'in review'), None)
+if not match:
+    raise SystemExit('No \"In Review\" transition found for $TICKET_KEY')
+print(match)
+")
 curl -s -X POST -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
     -H "Content-Type: application/json" \
-    -d '{"transition":{"id":"2"}}' \
+    -d "{\"transition\":{\"id\":\"$IN_REVIEW_ID\"}}" \
     "${JIRA_BASE}/transitions" > /dev/null
 echo "✅  Ticket transitioned to In Review"
 

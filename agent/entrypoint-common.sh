@@ -73,7 +73,8 @@ PYEOF
     touch /tmp/jira_comment_posted
 
     # Attach the run log to the Jira ticket so the judge can read turn data.
-    if [ -f /tmp/claude-output.jsonl ]; then
+    # Only workers upload — the judge's JSONL has no consumer.
+    if [ -f /tmp/claude-output.jsonl ] && [[ "${CLOUD_RUN_JOB:-}" != *"-judge" ]]; then
       curl -sf -X POST \
         -u "${JIRA_BOT_EMAIL}:${JIRA_BOT_API_TOKEN}" \
         -H "X-Atlassian-Token: no-check" \
