@@ -42,11 +42,7 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 **Never force push.** Always use `--force-with-lease`. If it is rejected, stop immediately — post a Jira comment describing the conflict and exit. Do not retry with bare `--force`.
 
-**Do not narrate between steps.** Execute each step directly. Do not emit explanatory text between tool calls unless a step fails or a decision requires explanation. Instead, prefix each bash command with a descriptive `echo` so intent is visible in Cloud Run logs without consuming a turn:
-```bash
-echo "Running quality gates..."
-./scripts/run-affected-tests.sh ...
-```
+**Do not narrate between steps.** Never emit a text response between tool calls — not to announce what you are about to do, not to summarise what just happened. The only allowed narration is `echo` statements inside bash commands. If a step fails or requires a decision, a text response is appropriate; otherwise, proceed directly to the next tool call.
 
 ---
 
@@ -61,12 +57,16 @@ echo "Running quality gates..."
 4. Read the files listed in the ticket's "Relevant files" section before writing any code. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
 5. Implement the changes described in the ticket.
 6. Re-read the acceptance criteria. If any AC item requires unit tests, invoke `/unit-test` now (the branch is already checked out — skip branch creation inside that skill). If any AC item requires UI/composable tests, invoke `/ui-test` now (same — skip branch creation). Both may apply to the same ticket.
-7. Run tests and detekt in parallel in a single turn:
+7. Run tests and detekt in parallel, capturing output inline so no second read turn is needed:
    ```bash
-   ./scripts/run-affected-tests.sh 2>&1 & TESTS_PID=$!
-   ./gradlew detekt 2>&1 & DETEKT_PID=$!
+   echo "Running quality gates in parallel..."
+   ./scripts/run-affected-tests.sh 2>&1 | tee /tmp/tests.log & TESTS_PID=$!
+   ./gradlew detekt 2>&1 | tee /tmp/detekt.log & DETEKT_PID=$!
    wait $TESTS_PID; TESTS_EXIT=$?
    wait $DETEKT_PID; DETEKT_EXIT=$?
+   echo "Tests exit: $TESTS_EXIT | Detekt exit: $DETEKT_EXIT"
+   tail -5 /tmp/tests.log
+   tail -5 /tmp/detekt.log
    ```
 8. If detekt failed (DETEKT_EXIT != 0):
    - Run `git stash && ./gradlew detekt; git stash pop` to check whether the same violations exist on the base branch.
@@ -94,8 +94,9 @@ echo "Running quality gates..."
     ```bash
     git add <files> && git commit -m "MS-{TICKET_KEY}: Description" && git push --force-with-lease -u origin <branch>
     ```
-12. Open a PR by writing the body to a temp file first, then passing it via `--body-file` (avoids heredoc quoting failures):
+12. Write the PR body and open the PR in a single bash block:
     ```bash
+    echo "Opening PR..."
     cat > /tmp/pr_body.md << 'PRBODY'
     ## Summary
     <!-- 1-3 bullet points describing what this PR does -->
