@@ -38,10 +38,14 @@ for line in open('/tmp/claude-output.jsonl'):
   # Post Jira comment directly — worker owns the comment end-to-end.
   # Requires bot credentials — never falls back to personal account to avoid silent misattribution.
   local effective_jira_key="${JIRA_TICKET_KEY:-$TICKET_KEY}"
-  if [ -z "$JIRA_BOT_EMAIL" ] || [ -z "$JIRA_BOT_API_TOKEN" ]; then
+  if [ -f /tmp/jira_comment_posted ]; then
+    echo "Jira comment already posted — skipping duplicate"
+    return
+  fi
+  if [ -z "$_JIRA_BOT_EMAIL" ] || [ -z "$_JIRA_BOT_API_TOKEN" ]; then
     echo "Warning: JIRA_BOT_EMAIL or JIRA_BOT_API_TOKEN not set — skipping Jira comment to avoid posting as personal account"
   elif [ -f /tmp/jira_comment.txt ] && [ -n "$effective_jira_key" ]; then
-    python3 - "$effective_jira_key" "$JIRA_BOT_EMAIL" "$JIRA_BOT_API_TOKEN" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
+    python3 - "$effective_jira_key" "$_JIRA_BOT_EMAIL" "$_JIRA_BOT_API_TOKEN" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
 import json, subprocess, sys
 ticket_key = sys.argv[1]
 jira_user = sys.argv[2]
@@ -66,11 +70,12 @@ if result.returncode == 0:
 else:
     print(f'Warning: Jira comment post failed: {result.stderr}')
 PYEOF
+    touch /tmp/jira_comment_posted
 
     # Attach the run log to the Jira ticket so the judge can read turn data.
     if [ -f /tmp/claude-output.jsonl ]; then
       curl -sf -X POST \
-        -u "${JIRA_BOT_EMAIL}:${JIRA_BOT_API_TOKEN}" \
+        -u "${_JIRA_BOT_EMAIL}:${_JIRA_BOT_API_TOKEN}" \
         -H "X-Atlassian-Token: no-check" \
         -F "file=@/tmp/claude-output.jsonl;filename=worker-run-${effective_jira_key}.jsonl" \
         "https://media-sage.atlassian.net/rest/api/3/issue/${effective_jira_key}/attachments" \
@@ -168,6 +173,13 @@ cd "$REPO_DIR"
 # Cloud Run splits stdout on newlines — a bare printf/echo produces one entry per line of the prompt.
 # Writing a single JSON line keeps the entire prompt in one entry regardless of embedded newlines.
 python3 -c "import json, os; print(json.dumps({'message': '[worker] prompt', 'prompt': os.environ.get('PROMPT', '')}))"
+
+# Stash Jira bot credentials in unexported shell variables, then remove them from
+# the exported environment so Claude's subprocess cannot access them. publish_completion
+# runs in this same bash process and reads the unexported variables directly.
+_JIRA_BOT_EMAIL="$JIRA_BOT_EMAIL"
+_JIRA_BOT_API_TOKEN="$JIRA_BOT_API_TOKEN"
+unset JIRA_BOT_EMAIL JIRA_BOT_API_TOKEN
 
 # Run Claude Code — no exec so the trap can capture the exit code for Pub/Sub.
 # --verbose is required when using --output-format=stream-json.
