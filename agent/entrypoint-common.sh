@@ -37,15 +37,15 @@ for line in open('/tmp/claude-output.jsonl'):
 
   # Post Jira comment — job owns the comment end-to-end.
   # Credentials were unset from the exported environment before Claude ran; they are
-  # available here via unexported shell variables (_JIRA_BOT_EMAIL/_JIRA_BOT_API_TOKEN)
+  # Bot credentials are exported and available throughout the process.
   # so Claude's subprocess could never access them.
   local effective_jira_key="${JIRA_TICKET_KEY:-$TICKET_KEY}"
   if [ -f /tmp/jira_comment_posted ]; then
     echo "Jira comment already posted — skipping duplicate"
-  elif [ -z "$_JIRA_BOT_EMAIL" ] || [ -z "$_JIRA_BOT_API_TOKEN" ]; then
+  elif [ -z "$JIRA_BOT_EMAIL" ] || [ -z "$JIRA_BOT_API_TOKEN" ]; then
     echo "Warning: JIRA_BOT_EMAIL or JIRA_BOT_API_TOKEN not set — skipping Jira comment to avoid posting as personal account"
   elif [ -f /tmp/jira_comment.txt ] && [ -n "$effective_jira_key" ]; then
-    python3 - "$effective_jira_key" "$_JIRA_BOT_EMAIL" "$_JIRA_BOT_API_TOKEN" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
+    python3 - "$effective_jira_key" "$JIRA_BOT_EMAIL" "$JIRA_BOT_API_TOKEN" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
 import json, subprocess, sys
 ticket_key = sys.argv[1]
 jira_user = sys.argv[2]
@@ -75,7 +75,7 @@ PYEOF
     # Attach the run log to the Jira ticket so the judge can read turn data.
     if [ -f /tmp/claude-output.jsonl ]; then
       curl -sf -X POST \
-        -u "${_JIRA_BOT_EMAIL}:${_JIRA_BOT_API_TOKEN}" \
+        -u "${JIRA_BOT_EMAIL}:${JIRA_BOT_API_TOKEN}" \
         -H "X-Atlassian-Token: no-check" \
         -F "file=@/tmp/claude-output.jsonl;filename=worker-run-${effective_jira_key}.jsonl" \
         "https://media-sage.atlassian.net/rest/api/3/issue/${effective_jira_key}/attachments" \
@@ -160,9 +160,5 @@ if [ -z "$GITHUB_OWNER" ] || [ -z "$GITHUB_REPO" ]; then
   exit 1
 fi
 
-# Stash Jira bot credentials in unexported shell variables, then remove them from
-# the exported environment so Claude's subprocess cannot access them. publish_completion
-# runs in this same bash process and reads the unexported variables directly.
-_JIRA_BOT_EMAIL="$JIRA_BOT_EMAIL"
-_JIRA_BOT_API_TOKEN="$JIRA_BOT_API_TOKEN"
-unset JIRA_BOT_EMAIL JIRA_BOT_API_TOKEN
+# JIRA_BOT_EMAIL and JIRA_BOT_API_TOKEN remain exported — the bot is the worker's
+# identity for all Jira writes (transitions, AC checkboxes, comments).
