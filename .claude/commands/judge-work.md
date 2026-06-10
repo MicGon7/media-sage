@@ -12,6 +12,8 @@
 
 **MS-357 rule:** `scripts/worker-*.sh` must never appear in a ticket's "Relevant files" section.
 
+**Never emit a text-only turn.** Each turn must contain at least one tool call. Do not announce what you are about to do — proceed directly to action.
+
 ---
 
 1. Retrieve the ticket from Jira via curl. Extract the acceptance criteria.
@@ -47,7 +49,9 @@
    fails on thinking blocks. Write the wasted-turns narrative from contextual judgment instead:
    look at the turn count relative to ticket complexity, and note patterns visible in the diff
    (e.g. a trivial one-line change that took 12 turns signals a script failure or recovery loop).
-6. Post a PR review comment (NOT an approval or request-for-changes) with a structured verdict:
+6. In a single turn, issue both of the following tool calls in parallel — they have no dependency on each other:
+
+   **a) Post a PR review comment** (NOT an approval or request-for-changes) with a structured verdict:
    ```
    gh pr review <pr-number> --comment --body "$(cat <<'EOF'
    🤖 **Agent:** Judge verdict for {TICKET_KEY}
@@ -76,5 +80,7 @@
    )"
    ```
    Omit the "Turn efficiency" section entirely if the worker run log was not found.
+
+   **b) Write `/tmp/jira_comment.txt`** — see the Jira comment file rule in CLAUDE.md Agent Guidelines. Do NOT post via curl or any Jira API — the entrypoint appends metrics and posts directly after you exit.
+
 7. Do NOT approve the PR, request changes, or merge. Post a comment only — the human reviewer acts on the verdict.
-8. Write `/tmp/jira_comment.txt` — see the Jira comment file rule in CLAUDE.md Agent Guidelines. Do NOT post via curl or any Jira API — the entrypoint appends metrics and posts directly after you exit.
