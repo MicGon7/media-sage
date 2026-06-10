@@ -41,7 +41,12 @@ private data class JobCompletionEvent(
      * (e.g. "PR-200", "CONFLICT-199"). Set only for PR review and conflict resolution jobs.
      * When present, used in place of [ticketKey] for Jira comment posting.
      */
-    @SerialName("jiraTicketKey") val jiraTicketKey: String? = null
+    @SerialName("jiraTicketKey") val jiraTicketKey: String? = null,
+    /**
+     * GitHub PR number opened by the worker. Injected into the judge prompt so the judge
+     * can skip the `gh pr list` discovery turn. Null if the worker did not publish it.
+     */
+    @SerialName("prNumber") val prNumber: Int? = null,
 )
 
 /**
@@ -129,7 +134,7 @@ private suspend fun processCompletion(
     // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key).
     // PR review and conflict jobs set jiraTicketKey to the real key and use a synthetic ticketKey.
     if (event.jiraTicketKey == null && event.status == "success") {
-        log.info("[${event.ticketKey}] ticket-work succeeded — dispatching judge")
-        agentLauncher.launchForJudge(event.ticketKey)
+        log.info("[${event.ticketKey}] ticket-work succeeded — dispatching judge (PR #${event.prNumber ?: "unknown"})")
+        agentLauncher.launchForJudge(event.ticketKey, event.prNumber)
     }
 }

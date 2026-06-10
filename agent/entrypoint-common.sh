@@ -104,7 +104,7 @@ PYEOF
 
   local message
   message=$(python3 -c "
-import json, base64, os
+import json, base64, os, re
 
 payload = {
   'ticketKey': '${TICKET_KEY}',
@@ -116,6 +116,15 @@ payload = {
 jira_key = os.environ.get('JIRA_TICKET_KEY', '').strip()
 if jira_key:
     payload['jiraTicketKey'] = jira_key
+
+# Include PR number so the judge can skip the gh pr list discovery turn.
+try:
+    pr_url = open('/tmp/worker_pr_url.txt').read().strip()
+    m = re.search(r'/pull/(\d+)', pr_url)
+    if m:
+        payload['prNumber'] = int(m.group(1))
+except Exception:
+    pass
 
 data = base64.b64encode(json.dumps(payload).encode()).decode()
 print(json.dumps({'messages': [{'data': data}]}))
