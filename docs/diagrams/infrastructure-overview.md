@@ -20,7 +20,10 @@ graph TB
 
     subgraph GCP["GCP"]
         Orchestrator["Cloud Run Service<br/>media-sage-orchestrator<br/>:agent · port 8081"]
-        Workers["Cloud Run Jobs<br/>media-sage-agent-worker<br/>Claude Code workers"]
+        subgraph Jobs["Cloud Run Jobs"]
+            WorkerJob["worker<br/>Dockerfile.worker<br/>Claude Code + Android SDK"]
+            LiteJobs["judge · comment · conflict<br/>Dockerfile.lite<br/>Claude Code only"]
+        end
         PubSub["Pub/Sub<br/>cloud-run-job-completions"]
     end
 
@@ -47,13 +50,17 @@ graph TB
     AppAPI --> Scripture
 
     agent --> Orchestrator
-    Orchestrator -->|dispatch job| Workers
+    Orchestrator -->|dispatch worker job| WorkerJob
+    Orchestrator -->|dispatch lite job| LiteJobs
     Orchestrator --> Supabase
-    Workers -->|completion event| PubSub
+    WorkerJob -->|completion event| PubSub
+    LiteJobs -->|completion event| PubSub
     PubSub -->|push webhook| Orchestrator
-    Workers --> Claude
-    Workers -->|git + gh CLI| JiraGH
-    Orchestrator --> JiraGH
+    WorkerJob --> Claude
+    LiteJobs --> Claude
+    WorkerJob -->|git + gh CLI| JiraGH
+    LiteJobs -->|git + gh CLI| JiraGH
+    Orchestrator -->|post Jira comment| JiraGH
 ```
 
 ## Module responsibilities
