@@ -13,16 +13,16 @@ The variant to bump (a, b, or c) should be provided as an argument, e.g. `/pipel
 
 2. **Create the Jira ticket**
    Use the Atlassian MCP to create a Task in project MS (cloudId: `media-sage.atlassian.net`) with:
-   - Summary: `Bump smoke-test-version-{variant} in SmokeTest.kt from {N} to {N+1}`
+   - Summary: `Increment smoke-test-version-{variant} in SmokeTest.kt by 1`
    - Label: `pipeline-test`
    - Parent (epic): `MS-4`
    - Assignee: bot account ID `712020:a3ca2e0d-e09f-4117-bf9b-dcbd095be454`
-   - Description (use this exact structure — no "why" section):
+   - Description (use this exact structure — no "why" section, no hardcoded values):
 
    ```
    ## Task
 
-   Increment the `smoke-test-version-{variant}` counter in `SmokeTest.kt` from {N} to {N+1}.
+   Increment the `smoke-test-version-{variant}` counter in `SmokeTest.kt` by 1.
 
    ## Acceptance Criteria
 
