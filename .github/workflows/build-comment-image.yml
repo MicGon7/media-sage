@@ -6,6 +6,7 @@ on:
     paths:
       - 'Dockerfile.comment'
       - 'agent/comment-entrypoint.sh'
+      - 'agent/entrypoint-common.sh'
       - 'agent/get-github-token.py'
 
 concurrency:

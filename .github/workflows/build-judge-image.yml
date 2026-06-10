@@ -6,6 +6,7 @@ on:
     paths:
       - 'Dockerfile.judge'
       - 'agent/judge-entrypoint.sh'
+      - 'agent/entrypoint-common.sh'
       - 'agent/get-github-token.py'
 
 concurrency:
