@@ -6,6 +6,7 @@ on:
     paths:
       - 'Dockerfile.worker'
       - 'agent/worker-entrypoint.sh'
+      - 'agent/entrypoint-common.sh'
       - 'agent/get-github-token.py'
       - 'scripts/**'
       - 'gradlew'

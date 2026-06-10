@@ -1,5 +1,5 @@
-#!/bin/bash
-set -eo pipefail
+# Sourced by worker-entrypoint.sh and lite-entrypoint.sh.
+# Do not run directly. Caller must set -eo pipefail before sourcing.
 
 git config --global user.name "${GITHUB_BOT_NAME:-media-sage-worker}"
 # GitHub App noreply email — deterministic from the App ID, no env var needed
@@ -35,13 +35,17 @@ for line in open('/tmp/claude-output.jsonl'):
     printf '\n---\n%s\n' "$metrics" >> /tmp/jira_comment.txt
   fi
 
-  # Post Jira comment directly — worker owns the comment end-to-end.
-  # Requires bot credentials — never falls back to personal account to avoid silent misattribution.
+  # Post Jira comment — job owns the comment end-to-end.
+  # Credentials were unset from the exported environment before Claude ran; they are
+  # available here via unexported shell variables (_JIRA_BOT_EMAIL/_JIRA_BOT_API_TOKEN)
+  # so Claude's subprocess could never access them.
   local effective_jira_key="${JIRA_TICKET_KEY:-$TICKET_KEY}"
-  if [ -z "$JIRA_BOT_EMAIL" ] || [ -z "$JIRA_BOT_API_TOKEN" ]; then
+  if [ -f /tmp/jira_comment_posted ]; then
+    echo "Jira comment already posted — skipping duplicate"
+  elif [ -z "$_JIRA_BOT_EMAIL" ] || [ -z "$_JIRA_BOT_API_TOKEN" ]; then
     echo "Warning: JIRA_BOT_EMAIL or JIRA_BOT_API_TOKEN not set — skipping Jira comment to avoid posting as personal account"
   elif [ -f /tmp/jira_comment.txt ] && [ -n "$effective_jira_key" ]; then
-    python3 - "$effective_jira_key" "$JIRA_BOT_EMAIL" "$JIRA_BOT_API_TOKEN" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
+    python3 - "$effective_jira_key" "$_JIRA_BOT_EMAIL" "$_JIRA_BOT_API_TOKEN" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
 import json, subprocess, sys
 ticket_key = sys.argv[1]
 jira_user = sys.argv[2]
@@ -66,6 +70,18 @@ if result.returncode == 0:
 else:
     print(f'Warning: Jira comment post failed: {result.stderr}')
 PYEOF
+    touch /tmp/jira_comment_posted
+
+    # Attach the run log to the Jira ticket so the judge can read turn data.
+    if [ -f /tmp/claude-output.jsonl ]; then
+      curl -sf -X POST \
+        -u "${_JIRA_BOT_EMAIL}:${_JIRA_BOT_API_TOKEN}" \
+        -H "X-Atlassian-Token: no-check" \
+        -F "file=@/tmp/claude-output.jsonl;filename=worker-run-${effective_jira_key}.jsonl" \
+        "https://media-sage.atlassian.net/rest/api/3/issue/${effective_jira_key}/attachments" \
+        && echo "Run log attached to Jira ticket" \
+        || echo "Warning: Failed to attach run log to Jira ticket"
+    fi
   fi
 
   if [ -z "$PUBSUB_TOPIC" ] || [ -z "$GCP_PROJECT_ID" ]; then
@@ -95,7 +111,7 @@ payload = {
   'status': '$status'
 }
 
-# jiraTicketKey is set when TICKET_KEY is a synthetic dedup key (e.g. JUDGE-MS-123).
+# jiraTicketKey is set when TICKET_KEY is a synthetic dedup key (e.g. PR-200, CONFLICT-199).
 jira_key = os.environ.get('JIRA_TICKET_KEY', '').strip()
 if jira_key:
     payload['jiraTicketKey'] = jira_key
@@ -112,17 +128,18 @@ print(json.dumps({'messages': [{'data': data}]}))
     && echo "Pub/Sub completion event published (status=$status)" \
     || echo "Warning: Failed to publish Pub/Sub completion event — orchestrator will recover on restart"
 }
+
 # Cloud Run sends SIGTERM when a task exceeds its timeout (default 1800s).
 # Without an explicit TERM trap, bash may exit with code 0 (the last successful
 # command's exit code), causing publish_completion to report status=success even
-# though the worker was cancelled. Exiting with 143 (128 + SIGTERM) ensures the
+# though the job was cancelled. Exiting with 143 (128 + SIGTERM) ensures the
 # EXIT trap always sees a non-zero code on cancellation or interruption.
 trap 'exit 143' TERM INT
 # Register once — fires on every exit path, including set -e early exits.
 trap 'publish_completion $?' EXIT
 
-# Generate a GitHub App installation token for gh CLI.
-# Judge jobs typically complete in under 5 minutes; the 1-hour token TTL covers this.
+# Generate a GitHub App installation token for git clone and gh CLI.
+# The 1-hour TTL covers typical job durations (workers: 10-30 min, judge/comment: <5 min).
 echo "Generating GitHub App installation token..."
 GITHUB_TOKEN=$(python3 /home/agent/get-github-token.py)
 if [ -z "$GITHUB_TOKEN" ]; then
@@ -133,26 +150,19 @@ fi
 export GH_TOKEN="$GITHUB_TOKEN"
 echo "GitHub App token generated successfully"
 
-# Configure git credential store so gh CLI operations authenticate without prompting.
+# Configure git credential store so all git and gh CLI operations authenticate
+# without prompting. Cloud Run has no TTY — credentials must be pre-configured.
 git config --global credential.helper store
 echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
 
-# GH_REPO is required by gh CLI commands when no git repo is cloned.
 if [ -z "$GITHUB_OWNER" ] || [ -z "$GITHUB_REPO" ]; then
   echo "ERROR: GITHUB_OWNER and GITHUB_REPO must be set." >&2
   exit 1
 fi
-export GH_REPO="$GITHUB_OWNER/$GITHUB_REPO"
 
-# Log the full prompt as a single Cloud Run log entry by emitting it as a JSON object.
-# Cloud Run splits stdout on newlines — a bare printf/echo produces one entry per line of the prompt.
-# Writing a single JSON line keeps the entire prompt in one entry regardless of embedded newlines.
-python3 -c "import json, os; print(json.dumps({'message': '[worker] prompt', 'prompt': os.environ.get('PROMPT', '')}))"
-
-# Run Claude Code — no exec so the trap can capture the exit code for Pub/Sub.
-# --verbose is required when using --output-format=stream-json.
-# Tee to capture stream-json output for metrics parsing in publish_completion.
-claude -p "$PROMPT" \
-  --dangerously-skip-permissions \
-  --output-format stream-json \
-  --verbose | tee /tmp/claude-output.jsonl
+# Stash Jira bot credentials in unexported shell variables, then remove them from
+# the exported environment so Claude's subprocess cannot access them. publish_completion
+# runs in this same bash process and reads the unexported variables directly.
+_JIRA_BOT_EMAIL="$JIRA_BOT_EMAIL"
+_JIRA_BOT_API_TOKEN="$JIRA_BOT_API_TOKEN"
+unset JIRA_BOT_EMAIL JIRA_BOT_API_TOKEN

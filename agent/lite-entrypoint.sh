@@ -4,13 +4,8 @@ set -eo pipefail
 # shellcheck source=entrypoint-common.sh
 source "$(dirname "$0")/entrypoint-common.sh"
 
-REPO_DIR="/home/agent/${GITHUB_REPO}"
-# GitHub App installation tokens use x-access-token as the username in clone URLs
-REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git"
-
-echo "Cloning repo..."
-git clone --depth=1 "$REPO_URL" "$REPO_DIR"
-cd "$REPO_DIR"
+# GH_REPO is required by gh CLI commands when no git repo is cloned.
+export GH_REPO="$GITHUB_OWNER/$GITHUB_REPO"
 
 # Log the full prompt as a single Cloud Run log entry by emitting it as a JSON object.
 # Cloud Run splits stdout on newlines — a bare printf/echo produces one entry per line of the prompt.
