@@ -5,7 +5,7 @@
 | curl Jira + extract AC | Mechanical | Deterministic fetch |
 | Evaluate diff against AC | Judgment | Requires reading and interpreting code |
 | Post PR review comment | Mechanical | Single gh CLI call after judgment |
-| Fetch + parse worker run log | Mechanical → `judge-fetch-runlog.sh` | Consolidated into one script call |
+| Fetch + parse worker run log | Mechanical | Inline curl — no script dependency |
 | Write /tmp/jira_comment.txt | Judgment | Summarizing the verdict |
 
 **Shared comment/curl script assessment:** The PR review comment is a single `gh pr review` call that always follows the eval step. Wrapping it in a script saves zero turns — the model still needs a turn to compose the verdict body. No consolidation opportunity.
@@ -27,7 +27,19 @@
    - ⚠️ Partial — the criterion is partially addressed but something is missing. Include what is present and what is missing.
 5. Fetch the worker run log in one call:
    ```bash
-   ./scripts/judge-fetch-runlog.sh "$JIRA_TICKET_KEY"
+   content_url=$(curl -sf \
+     -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
+     "https://media-sage.atlassian.net/rest/api/3/issue/$JIRA_TICKET_KEY?fields=attachment" \
+     | python3 -c "
+   import json, sys
+   data = json.load(sys.stdin)
+   for a in data.get('fields', {}).get('attachment', []):
+       if a['filename'].startswith('worker-run-') and a['filename'].endswith('.jsonl'):
+           print(a['content'])
+           break
+   " 2>/dev/null) && \
+   [ -n "$content_url" ] && \
+   curl -sf -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" "$content_url" -o /tmp/worker-run.jsonl
    ```
    Parse `/tmp/worker-run.jsonl` for turn efficiency data. For each tool-use turn, check whether it was judgment (reading, writing, deciding) or mechanical (could have been a script). Flag turns that:
    - Read output of a prior bash command when the script could have returned it inline

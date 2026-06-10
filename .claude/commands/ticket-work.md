@@ -29,7 +29,16 @@ Acceptance criteria:
 
 Do not include a "Run metrics" section — the entrypoint appends metrics after you exit.
 
-**Graceful exit when task is already done:** If the task is already fully satisfied by the current state of the code, do not invent work. Check off the relevant AC items, write `/tmp/jira_comment.txt` stating the task was already complete and what was found, transition the ticket to In Review, and exit.
+**Graceful exit when task is already done:** If the task is already fully satisfied by the current state of the code, do not invent work. Check off the relevant AC items, write `/tmp/jira_comment.txt` stating the task was already complete and what was found, transition the ticket to In Review using bot credentials, and exit. Transition call:
+```bash
+TRANSITION_ID=$(curl -sf -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
+  "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY/transitions" \
+  | python3 -c "import sys,json; ts=json.load(sys.stdin)['transitions']; print(next(t['id'] for t in ts if t['name']=='In Review'))")
+curl -sf -X POST -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"transition\":{\"id\":\"$TRANSITION_ID\"}}" \
+  "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY/transitions"
+```
 
 **Learning doc:** Default to no learning doc. Write one only if the work meets at least one of:
 - Introduces a new pattern not previously used in the codebase
