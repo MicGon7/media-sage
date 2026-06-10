@@ -24,8 +24,11 @@ for line in open('/tmp/claude-output.jsonl'):
         if e.get('type') == 'result':
             t = e.get('num_turns', '?')
             c = e.get('total_cost_usd', 0)
-            d = e.get('duration_ms', 0) // 1000
-            print(f'{t} turns | \${c:.4f} | {d}s')
+            d_ms = e.get('duration_ms', 0)
+            d_m = d_ms // 60000
+            d_s = (d_ms % 60000) // 1000
+            d_str = f'{d_m}m {d_s:02d}s'
+            print(f'{t} turns | \${c:.4f} | {d_str}')
     except: pass
 " 2>/dev/null || echo "metrics unavailable")
   if [ -f /tmp/jira_comment.txt ]; then

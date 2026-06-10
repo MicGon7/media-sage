@@ -38,6 +38,8 @@ Do not include a "Run metrics" section — the entrypoint appends metrics after 
 
 If the work follows an established pattern, makes a trivial change, or could have been completed just by reading existing code — skip the doc. When in doubt, skip. The burden of proof is on writing, not skipping.
 
+**Worker scripts are never "Relevant files":** `scripts/worker-*.sh` must never appear in a ticket's "Relevant files" section. They are pipeline tools to call, not implementation context to read.
+
 **pipeline-test tasks:** Must be additive — choose work that provably does not exist yet. Never choose a task that may already be satisfied in the codebase.
 
 **Never force push.** Always use `--force-with-lease`. If it is rejected, stop immediately — post a Jira comment describing the conflict and exit. Do not retry with bare `--force`.
@@ -49,8 +51,7 @@ If the work follows an established pattern, makes a trivial change, or could hav
 1. The ticket is already In Progress — do not call jira_get_issue or transition it again. Read the ticket description and acceptance criteria from the prompt.
 2. Run branch setup:
    ```bash
-   ./scripts/worker-init.sh "$TICKET_KEY" "short-description"
-   source /tmp/worker_init.env
+   ./scripts/worker-init.sh "$TICKET_KEY" "short-description" && source /tmp/worker_init.env
    ```
    - `WORKER_BRANCH_STATUS=existing` → diff the existing PR (`gh pr diff "$WORKER_PR_URL"`), check each AC item against it. If all AC items are satisfied, follow the graceful exit rule and stop. If AC is incomplete, the branch is already checked out — continue from step 4.
    - `WORKER_BRANCH_STATUS=new` → branch is ready, proceed to step 3.
