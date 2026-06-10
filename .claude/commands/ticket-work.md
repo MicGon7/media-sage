@@ -47,92 +47,57 @@ If the work follows an established pattern, makes a trivial change, or could hav
 ---
 
 1. The ticket is already In Progress — do not call jira_get_issue or transition it again. Read the ticket description and acceptance criteria from the prompt.
-2. Check whether work is already in flight:
+2. Run branch setup:
    ```bash
-   gh pr list --state open --search "head:feature/MS-$TICKET_KEY" --json number,url,headRefName --limit 1
+   ./scripts/worker-init.sh "$TICKET_KEY" "short-description"
+   source /tmp/worker_init.env
    ```
-   - **PR found** — fetch the diff (`gh pr diff <number>`), check each AC item against it. If all AC items are satisfied, follow the graceful exit rule and stop. If AC is incomplete, check out the existing branch and continue from step 4.
-   - **No PR** — proceed to step 3.
-3. Create a feature branch: `git checkout -b feature/MS-{TICKET_KEY}-short-description`
-4. Read the files listed in the ticket's "Relevant files" section before writing any code. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
-5. Implement the changes described in the ticket.
-6. Re-read the acceptance criteria. If any AC item requires unit tests, invoke `/unit-test` now (the branch is already checked out — skip branch creation inside that skill). If any AC item requires UI/composable tests, invoke `/ui-test` now (same — skip branch creation). Both may apply to the same ticket.
-7. Run tests and detekt in parallel, capturing output inline so no second read turn is needed:
+   - `WORKER_BRANCH_STATUS=existing` → diff the existing PR (`gh pr diff "$WORKER_PR_URL"`), check each AC item against it. If all AC items are satisfied, follow the graceful exit rule and stop. If AC is incomplete, the branch is already checked out — continue from step 4.
+   - `WORKER_BRANCH_STATUS=new` → branch is ready, proceed to step 3.
+3. Read the files listed in the ticket's "Relevant files" section before writing any code. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
+4. Implement the changes described in the ticket.
+5. Re-read the acceptance criteria. If any AC item requires unit tests, invoke `/unit-test` now (the branch is already checked out — skip branch creation inside that skill). If any AC item requires UI/composable tests, invoke `/ui-test` now (same — skip branch creation). Both may apply to the same ticket.
+6. Run quality gates:
    ```bash
-   echo "Running quality gates in parallel..."
-   ./scripts/run-affected-tests.sh 2>&1 | tee /tmp/tests.log & TESTS_PID=$!
-   ./gradlew detekt 2>&1 | tee /tmp/detekt.log & DETEKT_PID=$!
-   wait $TESTS_PID; TESTS_EXIT=$?
-   wait $DETEKT_PID; DETEKT_EXIT=$?
-   echo "Tests exit: $TESTS_EXIT | Detekt exit: $DETEKT_EXIT"
-   tail -5 /tmp/tests.log
-   tail -5 /tmp/detekt.log
+   ./scripts/worker-quality.sh
    ```
-8. If detekt failed (DETEKT_EXIT != 0):
-   - Run `git stash && ./gradlew detekt; git stash pop` to check whether the same violations exist on the base branch.
-   - If yes (pre-existing) — proceed. The worker is not responsible for violations it did not introduce.
-   - If no (introduced by this branch) — fix them, then re-run detekt. If you still cannot fix them, **stop immediately**: do not push, do not open a PR. Post a Jira comment listing the exact violations, then exit.
-9. Update Jira AC checkboxes in a single bash block — GET the ADF, patch the checkboxes, PUT in one call:
+   The script runs tests and detekt in parallel, checks pre-existing violations automatically, and prints a clean pass/fail summary. If it exits non-zero, follow the blocker stop rule — post a Jira comment and exit.
+7. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
+8. Write `/tmp/pr_body.md` and `/tmp/jira_comment.txt`:
    ```bash
-   DESC=$(curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
-     "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY" \
-     | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)['fields']['description']))")
-   UPDATED=$(echo "$DESC" | python3 -c "
-   import sys, json, re
-   adf = json.load(sys.stdin)
-   text = json.dumps(adf)
-   text = text.replace('[  ]', '[x]').replace('[ ]', '[x]')
-   print(text)
-   ")
-   curl -s -X PUT -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
-     -H "Content-Type: application/json" \
-     -d "{\"fields\":{\"description\":$UPDATED}}" \
-     "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY"
+   cat > /tmp/pr_body.md << 'PRBODY'
+   ## Summary
+   <!-- 1-3 bullet points describing what this PR does -->
+
+   ## Ticket
+   <!-- Link to Jira ticket, e.g. MS-XX -->
+
+   ## Type of Change
+   - [ ] New feature
+   - [ ] Bug fix
+   - [ ] Refactor
+   - [ ] Tests
+   - [ ] CI/CD
+   - [ ] Documentation
+
+   ## Testing
+   - [ ] Unit tests added/updated
+   - [ ] Integration tests added/updated
+   - [ ] Manual testing performed
+
+   ## Author
+   - [x] Agent-authored (reviewed by human)
+
+   ## Checklist
+   - [ ] Tests pass locally (`./gradlew allTests`)
+   - [ ] No API keys or secrets in code
+   - [ ] CLAUDE.md updated (if new pattern introduced)
+   PRBODY
    ```
-10. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
-11. Stage, commit, and push in a single command:
-    ```bash
-    git add <files> && git commit -m "MS-{TICKET_KEY}: Description" && git push --force-with-lease -u origin <branch>
-    ```
-12. Write the PR body and open the PR in a single bash block:
-    ```bash
-    echo "Opening PR..."
-    cat > /tmp/pr_body.md << 'PRBODY'
-    ## Summary
-    <!-- 1-3 bullet points describing what this PR does -->
-
-    ## Ticket
-    <!-- Link to Jira ticket, e.g. MS-XX -->
-
-    ## Type of Change
-    - [ ] New feature
-    - [ ] Bug fix
-    - [ ] Refactor
-    - [ ] Tests
-    - [ ] CI/CD
-    - [ ] Documentation
-
-    ## Testing
-    - [ ] Unit tests added/updated
-    - [ ] Integration tests added/updated
-    - [ ] Manual testing performed
-
-    ## Author
-    - [x] Agent-authored (reviewed by human)
-
-    ## Checklist
-    - [ ] Tests pass locally (`./gradlew allTests`)
-    - [ ] No API keys or secrets in code
-    - [ ] CLAUDE.md updated (if new pattern introduced)
-    PRBODY
-    gh pr create --title "MS-{TICKET_KEY}: Description" --body-file /tmp/pr_body.md
-    ```
-13. Write `/tmp/jira_comment.txt` — see the Jira comment file rule in CLAUDE.md Agent Guidelines.
-14. Transition the Jira ticket to In Review. The In Review transition ID for the MS project is `2` — use it directly, no GET needed:
-    ```bash
-    curl -s -X POST -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
-      -H "Content-Type: application/json" \
-      -d '{"transition":{"id":"2"}}' \
-      "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY/transitions"
-    ```
+   Write `/tmp/jira_comment.txt` per the Jira comment file rule in CLAUDE.md Agent Guidelines. Leave `{pr_url}` as a literal placeholder — `worker-ship.sh` prints the real URL to `/tmp/worker_pr_url.txt` after the PR is opened.
+9. Ship everything in one call:
+   ```bash
+   ./scripts/worker-ship.sh "$TICKET_KEY" "MS-{TICKET_KEY}: Description"
+   ```
+   This commits, pushes, opens the PR (using `/tmp/pr_body.md`), updates Jira AC checkboxes, and transitions the ticket to In Review. The PR URL is printed and written to `/tmp/worker_pr_url.txt`.
 
