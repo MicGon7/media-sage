@@ -1,6 +1,5 @@
 package com.mediasage.feature.headlines
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,8 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,14 +35,11 @@ import com.mediasage.ui.HeadlineImage
 import com.mediasage.ui.MediaSageErrorState
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.headline_nature_image_default
-import mediasage.composeapp.generated.resources.headlines_hero_caption
 import mediasage.composeapp.generated.resources.home_error_generic
 import mediasage.composeapp.generated.resources.home_error_network
 import mediasage.composeapp.generated.resources.home_retry
 import mediasage.composeapp.generated.resources.headlines_story_count
 import mediasage.composeapp.generated.resources.nav_headlines
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -113,14 +106,6 @@ private fun HeadlinesFeed(
                     }) else null
                 )
             }
-            item {
-                HeroPaintingPlaceholder()
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 0.5.dp
-                )
-            }
             itemsIndexed(state.headlines, key = { _, it -> it.id }) { _, headline ->
                 HeadlineRow(
                     headline = headline,
@@ -160,27 +145,6 @@ private fun DateCountRow(todayLabel: String, storyCount: Int) {
             text = pluralStringResource(Res.plurals.headlines_story_count, storyCount, storyCount),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun HeroPaintingPlaceholder() {
-    Column {
-        Image(
-            painter = painterResource(Res.drawable.headline_nature_image_default),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(2f),
-            contentScale = ContentScale.Crop
-        )
-        Text(
-            text = stringResource(Res.string.headlines_hero_caption),
-            style = MaterialTheme.typography.labelSmall,
-            fontStyle = FontStyle.Italic,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
     }
 }
