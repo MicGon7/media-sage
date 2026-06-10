@@ -33,11 +33,16 @@ for line in open('/tmp/claude-output.jsonl'):
   fi
 
   # Post Jira comment directly — worker owns the comment end-to-end.
+  # Requires bot credentials — never falls back to personal account to avoid silent misattribution.
   local effective_jira_key="${JIRA_TICKET_KEY:-$TICKET_KEY}"
-  if [ -f /tmp/jira_comment.txt ] && [ -n "$JIRA_EMAIL" ] && [ -n "$JIRA_API_TOKEN" ] && [ -n "$effective_jira_key" ]; then
-    python3 - "$effective_jira_key" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
-import json, subprocess, os, sys
+  if [ -z "$JIRA_BOT_EMAIL" ] || [ -z "$JIRA_BOT_API_TOKEN" ]; then
+    echo "Warning: JIRA_BOT_EMAIL or JIRA_BOT_API_TOKEN not set — skipping Jira comment to avoid posting as personal account"
+  elif [ -f /tmp/jira_comment.txt ] && [ -n "$effective_jira_key" ]; then
+    python3 - "$effective_jira_key" "$JIRA_BOT_EMAIL" "$JIRA_BOT_API_TOKEN" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
+import json, subprocess, sys
 ticket_key = sys.argv[1]
+jira_user = sys.argv[2]
+jira_token = sys.argv[3]
 comment_text = open('/tmp/jira_comment.txt').read()
 body = json.dumps({
     'body': {
@@ -47,7 +52,7 @@ body = json.dumps({
 })
 result = subprocess.run(
     ['curl', '-sf', '-X', 'POST',
-     '-u', f"{os.environ['JIRA_EMAIL']}:{os.environ['JIRA_API_TOKEN']}",
+     '-u', f"{jira_user}:{jira_token}",
      '-H', 'Content-Type: application/json',
      '-d', body,
      f'https://media-sage.atlassian.net/rest/api/3/issue/{ticket_key}/comment'],

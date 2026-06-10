@@ -42,6 +42,12 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 **Never force push.** Always use `--force-with-lease`. If it is rejected, stop immediately — post a Jira comment describing the conflict and exit. Do not retry with bare `--force`.
 
+**Do not narrate between steps.** Execute each step directly. Do not emit explanatory text between tool calls unless a step fails or a decision requires explanation. Instead, prefix each bash command with a descriptive `echo` so intent is visible in Cloud Run logs without consuming a turn:
+```bash
+echo "Running quality gates..."
+./scripts/run-affected-tests.sh ...
+```
+
 ---
 
 1. The ticket is already In Progress — do not call jira_get_issue or transition it again. Read the ticket description and acceptance criteria from the prompt.
@@ -55,26 +61,42 @@ If the work follows an established pattern, makes a trivial change, or could hav
 4. Read the files listed in the ticket's "Relevant files" section before writing any code. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
 5. Implement the changes described in the ticket.
 6. Re-read the acceptance criteria. If any AC item requires unit tests, invoke `/unit-test` now (the branch is already checked out — skip branch creation inside that skill). If any AC item requires UI/composable tests, invoke `/ui-test` now (same — skip branch creation). Both may apply to the same ticket.
-7. Run `./scripts/run-affected-tests.sh` — never run bare `./gradlew :module:test` directly.
-8. Run `./gradlew detekt`. If it fails:
+7. Run tests and detekt in parallel in a single turn:
+   ```bash
+   ./scripts/run-affected-tests.sh 2>&1 & TESTS_PID=$!
+   ./gradlew detekt 2>&1 & DETEKT_PID=$!
+   wait $TESTS_PID; TESTS_EXIT=$?
+   wait $DETEKT_PID; DETEKT_EXIT=$?
+   ```
+8. If detekt failed (DETEKT_EXIT != 0):
    - Run `git stash && ./gradlew detekt; git stash pop` to check whether the same violations exist on the base branch.
    - If yes (pre-existing) — proceed. The worker is not responsible for violations it did not introduce.
    - If no (introduced by this branch) — fix them, then re-run detekt. If you still cannot fix them, **stop immediately**: do not push, do not open a PR. Post a Jira comment listing the exact violations, then exit.
-9. Update Jira AC checkboxes as each criterion is met. Use curl to update the issue description with the checked boxes:
+9. Update Jira AC checkboxes in a single bash block — GET the ADF, patch the checkboxes, PUT in one call:
    ```bash
-   # Get current issue (to read the existing description ADF)
-   curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
-     "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY"
-   # Update description with checkboxes checked (PUT to same endpoint with updated ADF body)
+   DESC=$(curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
+     "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY" \
+     | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)['fields']['description']))")
+   UPDATED=$(echo "$DESC" | python3 -c "
+   import sys, json, re
+   adf = json.load(sys.stdin)
+   text = json.dumps(adf)
+   text = text.replace('[  ]', '[x]').replace('[ ]', '[x]')
+   print(text)
+   ")
    curl -s -X PUT -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
      -H "Content-Type: application/json" \
-     -d '{"fields":{"description":<updated-adf-body>}}' \
+     -d "{\"fields\":{\"description\":$UPDATED}}" \
      "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY"
    ```
 10. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
-11. Commit all changes with prefix `MS-{TICKET_KEY}: Description` and push: `git push --force-with-lease -u origin <branch>`.
-12. Open a PR with `gh pr create`. Use this body structure (do not read the PR template file — use this directly):
+11. Stage, commit, and push in a single command:
+    ```bash
+    git add <files> && git commit -m "MS-{TICKET_KEY}: Description" && git push --force-with-lease -u origin <branch>
     ```
+12. Open a PR by writing the body to a temp file first, then passing it via `--body-file` (avoids heredoc quoting failures):
+    ```bash
+    cat > /tmp/pr_body.md << 'PRBODY'
     ## Summary
     <!-- 1-3 bullet points describing what this PR does -->
 
@@ -101,17 +123,15 @@ If the work follows an established pattern, makes a trivial change, or could hav
     - [ ] Tests pass locally (`./gradlew allTests`)
     - [ ] No API keys or secrets in code
     - [ ] CLAUDE.md updated (if new pattern introduced)
+    PRBODY
+    gh pr create --title "MS-{TICKET_KEY}: Description" --body-file /tmp/pr_body.md
     ```
 13. Write `/tmp/jira_comment.txt` — see the Jira comment file rule in CLAUDE.md Agent Guidelines.
-14. Transition the Jira ticket to In Review via curl:
+14. Transition the Jira ticket to In Review. The In Review transition ID for the MS project is `2` — use it directly, no GET needed:
     ```bash
-    # Get available transitions
-    curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
-      "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY/transitions"
-    # Transition to In Review (use the transition ID from the response above)
     curl -s -X POST -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
       -H "Content-Type: application/json" \
-      -d '{"transition":{"id":"<in-review-transition-id>"}}' \
+      -d '{"transition":{"id":"2"}}' \
       "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY/transitions"
     ```
 
