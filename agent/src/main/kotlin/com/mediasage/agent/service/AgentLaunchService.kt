@@ -101,17 +101,19 @@ class AgentLaunchService(
         cloudRun: CloudRunDispatch,
         options: DispatchOptions,
     ) {
-        if (!cloudRun.jobs.shouldDispatch(ticketKey)) {
-            log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
-            return
-        }
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
         val prompt = if (options.skipBriefing) {
             basePrompt
         } else {
             buildPromptWithBriefing(ticketKey, basePrompt, options.briefingContext)
         }
-        val jobId = cloudRun.jobs.insert(ticketKey, prompt)
+        // tryInsertIfDispatchable atomically checks dedup status and inserts the PENDING row
+        // under a Postgres advisory lock — serializes concurrent calls across orchestrator
+        // instances and closes the TOCTOU race between shouldDispatch and insert.
+        val jobId = cloudRun.jobs.tryInsertIfDispatchable(ticketKey, prompt) ?: run {
+            log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
+            return
+        }
         if (options.dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
             cloudRun.jobs.markFailed(jobId)

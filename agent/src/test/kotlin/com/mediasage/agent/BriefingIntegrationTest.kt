@@ -48,6 +48,7 @@ class BriefingIntegrationTest {
 
     private class AlwaysDispatchRegistry : JobRegistry {
         override suspend fun shouldDispatch(ticketKey: String) = true
+        override suspend fun tryInsertIfDispatchable(ticketKey: String, prompt: String): UUID = UUID.randomUUID()
         override suspend fun insert(ticketKey: String, prompt: String): UUID = UUID.randomUUID()
         override suspend fun markRunning(jobId: UUID, executionName: String) = Unit
         override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?) = Unit

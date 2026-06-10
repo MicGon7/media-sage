@@ -3,6 +3,7 @@ package com.mediasage.agent.db
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.VarCharColumnType
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
@@ -65,6 +66,15 @@ data class JobDurationRow(
  */
 class JobRepository : JobRegistry {
 
+    companion object {
+        // Statuses that permanently or transiently block a new dispatch for the same ticket key.
+        private val DEDUP_BLOCK_STATUSES = setOf(
+            JobStatus.PENDING.name,
+            JobStatus.RUNNING.name,
+            JobStatus.COMPLETED.name,
+        )
+    }
+
     /**
      * Returns true if a job for [ticketKey] should be dispatched.
      *
@@ -103,6 +113,48 @@ class JobRepository : JobRegistry {
                 .firstOrNull()
         }
     }
+
+    /**
+     * Atomically checks whether a job should be dispatched and, if so, inserts a PENDING row.
+     *
+     * Acquires a Postgres advisory lock on [ticketKey] for the duration of the transaction,
+     * serializing concurrent calls across multiple orchestrator instances. If another instance
+     * holds the lock (e.g. is currently processing the same ticket), returns null immediately.
+     *
+     * Within the locked transaction, reads the latest job status:
+     * - PENDING / RUNNING / COMPLETED → dedup: returns null
+     * - FAILED / INTERRUPTED / no row → inserts a new PENDING row and returns its [UUID]
+     */
+    override suspend fun tryInsertIfDispatchable(ticketKey: String, prompt: String): UUID? =
+        withContext(Dispatchers.IO) {
+            transaction {
+                // pg_try_advisory_xact_lock is transaction-scoped (auto-released on commit/rollback).
+                // hashtext returns int4; using the two-int overload avoids a bigint cast.
+                val locked = exec(
+                    "SELECT pg_try_advisory_xact_lock(hashtext(?), 0)",
+                    listOf(VarCharColumnType() to ticketKey),
+                ) { rs -> rs.next() && rs.getBoolean(1) } ?: false
+                if (!locked) return@transaction null
+
+                val latest = JobsTable.selectAll()
+                    .where { JobsTable.ticketKey eq ticketKey }
+                    .orderBy(JobsTable.createdAt, SortOrder.DESC)
+                    .limit(1)
+                    .map { it[JobsTable.status] }
+                    .firstOrNull()
+                if (latest in DEDUP_BLOCK_STATUSES) return@transaction null
+
+                val id = UUID.randomUUID()
+                JobsTable.insert {
+                    it[jobId] = id
+                    it[JobsTable.ticketKey] = ticketKey
+                    it[JobsTable.prompt] = prompt
+                    it[status] = JobStatus.PENDING.name
+                    it[createdAt] = Instant.now()
+                }
+                id
+            }
+        }
 
     /**
      * Inserts a new PENDING job row for [ticketKey] with the given [prompt] and returns

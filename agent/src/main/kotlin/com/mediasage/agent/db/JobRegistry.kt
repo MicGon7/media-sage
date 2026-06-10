@@ -13,6 +13,20 @@ import java.util.UUID
  */
 interface JobRegistry {
     suspend fun shouldDispatch(ticketKey: String): Boolean
+
+    /**
+     * Atomically checks whether a job should be dispatched and, if so, inserts a PENDING row.
+     *
+     * Uses a Postgres advisory lock keyed on [ticketKey] so that concurrent calls from
+     * multiple orchestrator instances are serialized — only one instance can check-and-insert
+     * at a time. Returns the new job [UUID] if dispatch is allowed, or null if the latest
+     * job is PENDING, RUNNING, or COMPLETED (dedup).
+     *
+     * Prefer this over separate [shouldDispatch] + [insert] calls to avoid the TOCTOU race
+     * where two instances both see "no row" before either inserts.
+     */
+    suspend fun tryInsertIfDispatchable(ticketKey: String, prompt: String): UUID?
+
     suspend fun findLatestJob(ticketKey: String): JobRow?
     suspend fun insert(ticketKey: String, prompt: String): UUID
     suspend fun markRunning(jobId: UUID, executionName: String)

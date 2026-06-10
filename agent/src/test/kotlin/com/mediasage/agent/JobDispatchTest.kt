@@ -44,6 +44,11 @@ class JobDispatchTest {
         var runningJobs: List<JobRow> = emptyList()
 
         override suspend fun shouldDispatch(ticketKey: String) = shouldDispatchResult
+        override suspend fun tryInsertIfDispatchable(ticketKey: String, prompt: String): UUID? {
+            if (!shouldDispatchResult) return null
+            inserted.add(ticketKey)
+            return UUID.randomUUID()
+        }
         override suspend fun findLatestJob(ticketKey: String) = latestJob
         override suspend fun insert(ticketKey: String, prompt: String): UUID {
             inserted.add(ticketKey)
