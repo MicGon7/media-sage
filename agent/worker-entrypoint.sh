@@ -33,12 +33,12 @@ for line in open('/tmp/claude-output.jsonl'):
   fi
 
   # Post Jira comment directly — worker owns the comment end-to-end.
-  # Use bot credentials when available; fall back to personal account if not set.
+  # Requires bot credentials — never falls back to personal account to avoid silent misattribution.
   local effective_jira_key="${JIRA_TICKET_KEY:-$TICKET_KEY}"
-  local jira_user="${JIRA_BOT_EMAIL:-$JIRA_EMAIL}"
-  local jira_token="${JIRA_BOT_API_TOKEN:-$JIRA_API_TOKEN}"
-  if [ -f /tmp/jira_comment.txt ] && [ -n "$jira_user" ] && [ -n "$jira_token" ] && [ -n "$effective_jira_key" ]; then
-    python3 - "$effective_jira_key" "$jira_user" "$jira_token" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
+  if [ -z "$JIRA_BOT_EMAIL" ] || [ -z "$JIRA_BOT_API_TOKEN" ]; then
+    echo "Warning: JIRA_BOT_EMAIL or JIRA_BOT_API_TOKEN not set — skipping Jira comment to avoid posting as personal account"
+  elif [ -f /tmp/jira_comment.txt ] && [ -n "$effective_jira_key" ]; then
+    python3 - "$effective_jira_key" "$JIRA_BOT_EMAIL" "$JIRA_BOT_API_TOKEN" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
 import json, subprocess, sys
 ticket_key = sys.argv[1]
 jira_user = sys.argv[2]
