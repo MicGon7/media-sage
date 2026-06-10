@@ -9,8 +9,8 @@
 #   ./scripts/worker-ship.sh TICKET_KEY "MS-XXX: Commit message"
 #
 # Required env vars:
-#   JIRA_EMAIL        — bot Jira email
-#   JIRA_API_TOKEN    — bot Jira API token
+#   JIRA_BOT_EMAIL        — bot Jira email
+#   JIRA_BOT_API_TOKEN    — bot Jira API token
 #
 # Exit codes:
 #   0 — PR opened, Jira updated, ticket transitioned to In Review; PR URL printed
@@ -27,8 +27,8 @@ TICKET_KEY="$1"
 COMMIT_MSG="$2"
 JIRA_BASE="https://media-sage.atlassian.net/rest/api/3/issue/${TICKET_KEY}"
 
-: "${JIRA_EMAIL:?Set JIRA_EMAIL}"
-: "${JIRA_API_TOKEN:?Set JIRA_API_TOKEN}"
+: "${JIRA_BOT_EMAIL:?Set JIRA_BOT_EMAIL}"
+: "${JIRA_BOT_API_TOKEN:?Set JIRA_BOT_API_TOKEN}"
 
 if [ ! -f /tmp/pr_body.md ]; then
     echo "❌  /tmp/pr_body.md not found — write the PR body before calling worker-ship.sh" >&2
@@ -60,7 +60,7 @@ echo "PR: $PR_URL"
 # ── 3. Update Jira AC checkboxes ─────────────────────────────────────────────
 
 echo "Updating Jira AC checkboxes..."
-DESC=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" "$JIRA_BASE" \
+DESC=$(curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" "$JIRA_BASE" \
     | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)['fields']['description']))")
 
 UPDATED=$(echo "$DESC" | python3 -c "
@@ -71,7 +71,7 @@ text = text.replace('[  ]', '[x]').replace('[ ]', '[x]')
 print(text)
 ")
 
-curl -s -X PUT -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+curl -s -X PUT -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
     -H "Content-Type: application/json" \
     -d "{\"fields\":{\"description\":$UPDATED}}" \
     "$JIRA_BASE" > /dev/null
@@ -80,7 +80,7 @@ echo "✅  AC checkboxes updated"
 # ── 4. Transition to In Review ────────────────────────────────────────────────
 
 echo "Transitioning $TICKET_KEY to In Review..."
-curl -s -X POST -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+curl -s -X POST -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
     -H "Content-Type: application/json" \
     -d '{"transition":{"id":"2"}}' \
     "${JIRA_BASE}/transitions" > /dev/null
