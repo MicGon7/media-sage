@@ -40,6 +40,10 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 **Worker scripts are never "Relevant files":** `scripts/worker-*.sh` must never appear in a ticket's "Relevant files" section. They are pipeline tools to call, not implementation context to read.
 
+**Worker must not explore `scripts/`:** Never use `find` or `ls` to discover worker scripts. Call them directly by their known paths (`./scripts/worker-init.sh`, `./scripts/worker-quality.sh`, `./scripts/worker-ship.sh`). They don't move.
+
+**`worker-ship.sh` is terminal:** Once `worker-ship.sh` exits successfully, the job is done. Do not run git status, re-read the PR URL, re-check Jira, or run any command that duplicates what the script already covers.
+
 **pipeline-test tasks:** Must be additive — choose work that provably does not exist yet. Never choose a task that may already be satisfied in the codebase.
 
 **Never force push.** Always use `--force-with-lease`. If it is rejected, stop immediately — post a Jira comment describing the conflict and exit. Do not retry with bare `--force`.

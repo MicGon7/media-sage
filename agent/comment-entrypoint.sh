@@ -24,8 +24,11 @@ for line in open('/tmp/claude-output.jsonl'):
         if e.get('type') == 'result':
             t = e.get('num_turns', '?')
             c = e.get('total_cost_usd', 0)
-            d = e.get('duration_ms', 0) // 1000
-            print(f'{t} turns | \${c:.4f} | {d}s')
+            d_ms = e.get('duration_ms', 0)
+            d_m = d_ms // 60000
+            d_s = (d_ms % 60000) // 1000
+            d_str = f'{d_m}m {d_s:02d}s'
+            print(f'{t} turns | \${c:.4f} | {d_str}')
     except: pass
 " 2>/dev/null || echo "metrics unavailable")
   if [ -f /tmp/jira_comment.txt ]; then
@@ -33,11 +36,16 @@ for line in open('/tmp/claude-output.jsonl'):
   fi
 
   # Post Jira comment directly — worker owns the comment end-to-end.
+  # Requires bot credentials — never falls back to personal account to avoid silent misattribution.
   local effective_jira_key="${JIRA_TICKET_KEY:-$TICKET_KEY}"
-  if [ -f /tmp/jira_comment.txt ] && [ -n "$JIRA_EMAIL" ] && [ -n "$JIRA_API_TOKEN" ] && [ -n "$effective_jira_key" ]; then
-    python3 - "$effective_jira_key" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
-import json, subprocess, os, sys
+  if [ -z "$JIRA_BOT_EMAIL" ] || [ -z "$JIRA_BOT_API_TOKEN" ]; then
+    echo "Warning: JIRA_BOT_EMAIL or JIRA_BOT_API_TOKEN not set — skipping Jira comment to avoid posting as personal account"
+  elif [ -f /tmp/jira_comment.txt ] && [ -n "$effective_jira_key" ]; then
+    python3 - "$effective_jira_key" "$JIRA_BOT_EMAIL" "$JIRA_BOT_API_TOKEN" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
+import json, subprocess, sys
 ticket_key = sys.argv[1]
+jira_user = sys.argv[2]
+jira_token = sys.argv[3]
 comment_text = open('/tmp/jira_comment.txt').read()
 body = json.dumps({
     'body': {
@@ -47,7 +55,7 @@ body = json.dumps({
 })
 result = subprocess.run(
     ['curl', '-sf', '-X', 'POST',
-     '-u', f"{os.environ['JIRA_EMAIL']}:{os.environ['JIRA_API_TOKEN']}",
+     '-u', f"{jira_user}:{jira_token}",
      '-H', 'Content-Type: application/json',
      '-d', body,
      f'https://media-sage.atlassian.net/rest/api/3/issue/{ticket_key}/comment'],

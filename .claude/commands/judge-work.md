@@ -1,3 +1,19 @@
+## Judgment vs mechanical audit (pattern: `docs/tool-consolidation-pattern.md`)
+
+| Step | Type | Notes |
+|---|---|---|
+| curl Jira + extract AC | Mechanical | Deterministic fetch |
+| Evaluate diff against AC | Judgment | Requires reading and interpreting code |
+| Post PR review comment | Mechanical | Single gh CLI call after judgment |
+| Fetch + parse worker run log | Mechanical → `judge-fetch-runlog.sh` | Consolidated into one script call |
+| Write /tmp/jira_comment.txt | Judgment | Summarizing the verdict |
+
+**Shared comment/curl script assessment:** The PR review comment is a single `gh pr review` call that always follows the eval step. Wrapping it in a script saves zero turns — the model still needs a turn to compose the verdict body. No consolidation opportunity.
+
+**MS-357 rule:** `scripts/worker-*.sh` must never appear in a ticket's "Relevant files" section.
+
+---
+
 1. Retrieve the ticket from Jira via curl. Extract the acceptance criteria.
    ```bash
    curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
@@ -9,7 +25,17 @@
    - ✅ Met — the diff clearly satisfies the criterion. Include a one-line explanation of what in the diff satisfies it.
    - ❌ Not met — the diff does not address the criterion, or introduces a regression. You MUST include a one-line explanation of what is missing or wrong. "Not met" with no reason is not a valid verdict.
    - ⚠️ Partial — the criterion is partially addressed but something is missing. Include what is present and what is missing.
-5. Post a PR review comment (NOT an approval or request-for-changes) with a structured verdict:
+5. Fetch the worker run log in one call:
+   ```bash
+   ./scripts/judge-fetch-runlog.sh "$JIRA_TICKET_KEY"
+   ```
+   Parse `/tmp/worker-run.jsonl` for turn efficiency data. For each tool-use turn, check whether it was judgment (reading, writing, deciding) or mechanical (could have been a script). Flag turns that:
+   - Read output of a prior bash command when the script could have returned it inline
+   - Discover files with `find` or `ls` instead of calling known paths directly
+   - Re-run commands the worker scripts already cover (tests, detekt, git operations)
+   - Narrate or announce intent before a tool call
+   If the attachment is not found, skip the turn efficiency section silently.
+6. Post a PR review comment (NOT an approval or request-for-changes) with a structured verdict:
    ```
    gh pr review <pr-number> --comment --body "$(cat <<'EOF'
    🤖 **Agent:** Judge verdict for {TICKET_KEY}
@@ -23,9 +49,20 @@
 
    **Overall:** {PASS if all ✅ / FAIL if any ❌ / PARTIAL if any ⚠️}
 
+   ---
+
+   **Turn efficiency** (from worker run log):
+   {total} turns | ${cost} | {duration}
+
+   Wasted turns:
+   - Turn N: {description} — {reason it was wasted}
+
+   Recommendation: {one-line action the human or pipeline author can take}
+
    This verdict is informational. The human reviewer makes the final call.
    EOF
    )"
    ```
-6. Do NOT approve the PR, request changes, or merge. Post a comment only — the human reviewer acts on the verdict.
-7. Write `/tmp/jira_comment.txt` — see the Jira comment file rule in CLAUDE.md Agent Guidelines. Do NOT post via curl or any Jira API — the entrypoint appends metrics and posts directly after you exit.
+   Omit the "Turn efficiency" section entirely if the worker run log was not found.
+7. Do NOT approve the PR, request changes, or merge. Post a comment only — the human reviewer acts on the verdict.
+8. Write `/tmp/jira_comment.txt` — see the Jira comment file rule in CLAUDE.md Agent Guidelines. Do NOT post via curl or any Jira API — the entrypoint appends metrics and posts directly after you exit.

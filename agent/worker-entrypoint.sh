@@ -66,6 +66,17 @@ if result.returncode == 0:
 else:
     print(f'Warning: Jira comment post failed: {result.stderr}')
 PYEOF
+
+    # Attach the run log to the Jira ticket so the judge can read turn data.
+    if [ -f /tmp/claude-output.jsonl ]; then
+      curl -sf -X POST \
+        -u "${JIRA_BOT_EMAIL}:${JIRA_BOT_API_TOKEN}" \
+        -H "X-Atlassian-Token: no-check" \
+        -F "file=@/tmp/claude-output.jsonl;filename=worker-run-${effective_jira_key}.jsonl" \
+        "https://media-sage.atlassian.net/rest/api/3/issue/${effective_jira_key}/attachments" \
+        && echo "Run log attached to Jira ticket" \
+        || echo "Warning: Failed to attach run log to Jira ticket"
+    fi
   fi
 
   if [ -z "$PUBSUB_TOPIC" ] || [ -z "$GCP_PROJECT_ID" ]; then
