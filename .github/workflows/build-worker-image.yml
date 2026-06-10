@@ -7,6 +7,7 @@ on:
       - 'Dockerfile.worker'
       - 'agent/worker-entrypoint.sh'
       - 'agent/get-github-token.py'
+      - 'scripts/**'
       - 'gradlew'
       - 'gradle/wrapper/**'
       - 'gradle/libs.versions.toml'
