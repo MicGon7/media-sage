@@ -92,7 +92,9 @@ interface AgentLauncher {
      * comment. It does not approve or merge. Deduplicates by ticket key (`JUDGE-{ticketKey}`).
      *
      * @param ticketKey Jira issue key of the completed ticket-work job.
+     * @param prNumber GitHub PR number opened by the worker, if known. Injected into the judge
+     *   prompt so the judge can skip the `gh pr list` discovery turn.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    fun launchForJudge(ticketKey: String): Boolean
+    fun launchForJudge(ticketKey: String, prNumber: Int? = null): Boolean
 }

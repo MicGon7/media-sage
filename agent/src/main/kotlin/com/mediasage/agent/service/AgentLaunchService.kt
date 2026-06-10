@@ -217,10 +217,11 @@ class AgentLaunchService(
      * @param ticketKey Jira issue key of the completed ticket-work job.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    override fun launchForJudge(ticketKey: String): Boolean {
+    override fun launchForJudge(ticketKey: String, prNumber: Int?): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "JUDGE-$ticketKey"
-        val basePrompt = judgeWorkPrompt.format(ticketKey)
+        val prRef = prNumber?.toString() ?: "unknown"
+        val basePrompt = judgeWorkPrompt.format(ticketKey, prRef)
         val options = DispatchOptions(jiraTicketKey = ticketKey, jobNameOverride = judgeJobName, skipBriefing = true)
         return dispatchToCloudRun(key, basePrompt, cloudRun, options)
     }

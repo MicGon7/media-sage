@@ -48,7 +48,7 @@ internal val prCommentPrompt = """
 """.trimIndent()
 
 internal val judgeWorkPrompt = """
-    Your assigned ticket is %s. A worker has completed the ticket and opened a PR.
+    Your assigned ticket is %s. A worker has completed the ticket and opened PR #%s.
 
     Your role is judge: evaluate the PR diff against the original ticket acceptance criteria and
     post a structured verdict. You are a fresh context — you have no memory of the worker's decisions.
