@@ -89,6 +89,52 @@ A single SQL pass uses Postgres `FILTER` clauses to scope each aggregate to the 
 - The window is `now() - make_interval(days => N)`. `N` is interpolated as a validated `Int`, so
   there is no SQL-injection surface (no string input ever reaches the query).
 
+## Deployment runbook
+
+The `deploy-analyst.yml` workflow builds the image and deploys the service on merge to `main`,
+referencing a dedicated service account and two secrets. Those must exist **before** the first
+deploy, or the container crash-loops on a blank `SUPABASE_DB_URL` and the deploy fails.
+
+Secret naming follows the existing per-service convention (`orchestrator-…`, `pipe-…` →
+`analyst-…`). The Analyst reads the *same* Supabase DB as the orchestrator, so its DB-URL secret
+reuses that value; its Pub/Sub token is fresh (its own subscription).
+
+```bash
+PROJECT=media-sage-agent
+REGION=us-central1
+SA=media-sage-analyst
+
+# 1. Dedicated least-privilege service account
+gcloud iam service-accounts create "$SA" --project="$PROJECT" \
+  --display-name="Media Sage Analyst (feedback)"
+
+# 2. Secrets — DB URL copies the orchestrator's value; token is freshly generated
+gcloud secrets versions access latest --secret=orchestrator-supabase-db-url --project="$PROJECT" \
+  | gcloud secrets create analyst-supabase-db-url --project="$PROJECT" --data-file=-
+openssl rand -hex 32 \
+  | gcloud secrets create analyst-pubsub-webhook-secret --project="$PROJECT" --data-file=-
+
+# 3. Grant the SA read access to only those two secrets
+for S in analyst-supabase-db-url analyst-pubsub-webhook-secret; do
+  gcloud secrets add-iam-policy-binding "$S" --project="$PROJECT" \
+    --member="serviceAccount:${SA}@${PROJECT}.iam.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
+done
+
+# 4. Merge the PR → deploy-analyst.yml builds the image and deploys the service.
+
+# 5. Point a NEW Pub/Sub push subscription at the Analyst (the orchestrator's is untouched)
+TOKEN=$(gcloud secrets versions access latest --secret=analyst-pubsub-webhook-secret --project="$PROJECT")
+URL=$(gcloud run services describe media-sage-analyst --project="$PROJECT" --region="$REGION" --format='value(status.url)')
+gcloud pubsub subscriptions create cloud-run-job-completions-analyst --project="$PROJECT" \
+  --topic=cloud-run-job-completions \
+  --push-endpoint="${URL}/webhook/pubsub?token=${TOKEN}" \
+  --ack-deadline=60
+
+# 6. Verify end-to-end
+curl -s "${URL}/stats?days=7"
+```
+
 ## What this unblocks
 
 `/stats` is the first real read of the historical `jobs` table. It is also how we will *measure*

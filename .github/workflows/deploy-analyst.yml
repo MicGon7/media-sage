@@ -49,6 +49,13 @@ jobs:
           service: media-sage-analyst
           image: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/analyst:latest
           region: us-central1
-          # Analyst is never in the critical path — Pub/Sub push retries on cold start,
-          # so it scales to zero (unlike the orchestrator's --min-instances=1).
-          flags: '--min-instances=0'
+          # Dedicated least-privilege identity — secretAccessor on the two analyst secrets only.
+          service_account: media-sage-analyst@media-sage-agent.iam.gserviceaccount.com
+          secrets: |-
+            SUPABASE_DB_URL=analyst-supabase-db-url:latest
+            PUBSUB_WEBHOOK_SECRET=analyst-pubsub-webhook-secret:latest
+          # --min-instances=0: Analyst is never in the critical path; Pub/Sub push retries on
+          #   cold start (unlike the orchestrator's --min-instances=1).
+          # --allow-unauthenticated: Pub/Sub push + Cloud Scheduler reach it without OIDC;
+          #   the /webhook/pubsub route is guarded by the ?token= shared secret at the app layer.
+          flags: '--min-instances=0 --allow-unauthenticated'
