@@ -1,7 +1,7 @@
 package com.mediasage.agent.service
 
 import com.google.auth.oauth2.GoogleCredentials
-import com.mediasage.agent.db.WorkerMetrics
+import com.mediasage.pipeline.core.WorkerMetrics
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*

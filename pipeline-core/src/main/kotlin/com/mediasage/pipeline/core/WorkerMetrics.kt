@@ -1,4 +1,4 @@
-package com.mediasage.agent.db
+package com.mediasage.pipeline.core
 
 /**
  * Token usage and cost captured from the Claude Code `result` event at the end of a worker run.

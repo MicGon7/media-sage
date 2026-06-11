@@ -1,9 +1,9 @@
 package com.mediasage.agent
 
-import com.mediasage.agent.db.JobRegistry
-import com.mediasage.agent.db.JobRow
-import com.mediasage.agent.db.JobStatus
-import com.mediasage.agent.db.WorkerMetrics
+import com.mediasage.pipeline.core.JobRegistry
+import com.mediasage.pipeline.core.JobRow
+import com.mediasage.pipeline.core.JobStatus
+import com.mediasage.pipeline.core.WorkerMetrics
 import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.BriefingContext
 import com.mediasage.agent.service.BriefingService

@@ -1,6 +1,7 @@
 package com.mediasage.agent.routes
 
-import com.mediasage.agent.db.JobRegistry
+import com.mediasage.pipeline.core.JobCompletionEvent
+import com.mediasage.pipeline.core.JobRegistry
 import com.mediasage.agent.service.AgentLauncher
 import com.mediasage.agent.service.CloudRunJobsClient
 import io.ktor.http.*
@@ -29,24 +30,6 @@ private data class PubSubMessage(
 private data class PubSubPushRequest(
     @SerialName("message") val message: PubSubMessage,
     @SerialName("subscription") val subscription: String = ""
-)
-
-@Serializable
-private data class JobCompletionEvent(
-    @SerialName("ticketKey") val ticketKey: String,
-    @SerialName("executionName") val executionName: String,
-    @SerialName("status") val status: String, // "success" or "failure"
-    /**
-     * The actual Jira issue key (e.g. "MS-257") when [ticketKey] is a synthetic dedup key
-     * (e.g. "PR-200", "CONFLICT-199"). Set only for PR review and conflict resolution jobs.
-     * When present, used in place of [ticketKey] for Jira comment posting.
-     */
-    @SerialName("jiraTicketKey") val jiraTicketKey: String? = null,
-    /**
-     * GitHub PR number opened by the worker. Injected into the judge prompt so the judge
-     * can skip the `gh pr list` discovery turn. Null if the worker did not publish it.
-     */
-    @SerialName("prNumber") val prNumber: Int? = null,
 )
 
 /**

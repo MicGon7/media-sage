@@ -1,6 +1,6 @@
 package com.mediasage.agent.service
 
-import com.mediasage.agent.db.JobRegistry
+import com.mediasage.pipeline.core.JobRegistry
 
 /**
  * Bundles the Cloud Run job dispatcher and persistent job registry into a single optional

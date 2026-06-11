@@ -1,6 +1,6 @@
 package com.mediasage.agent.service
 
-import com.mediasage.agent.db.JobStatus
+import com.mediasage.pipeline.core.JobStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
