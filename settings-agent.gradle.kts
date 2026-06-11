@@ -1,7 +1,11 @@
 // Slim settings file used by the agent Docker build.
-// Only includes the :agent module — skips :composeApp, :shared, :server, :scripts
-// so Gradle doesn't configure Android/iOS toolchains that are unavailable in the container.
+// Includes only :agent and its :pipeline-core dependency — skips :composeApp, :shared,
+// :server, :scripts so Gradle doesn't configure Android/iOS toolchains unavailable in the
+// container. :pipeline-core is required because :agent depends on projects.pipelineCore (MS-381);
+// omitting it breaks the orchestrator image build (MS-390).
 rootProject.name = "MediaSage"
+// Required for the `projects.pipelineCore` type-safe accessor used in agent/build.gradle.kts.
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     repositories {
@@ -31,3 +35,4 @@ dependencyResolutionManagement {
 }
 
 include(":agent")
+include(":pipeline-core")
