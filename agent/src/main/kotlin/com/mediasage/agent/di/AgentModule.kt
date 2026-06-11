@@ -1,7 +1,7 @@
 package com.mediasage.agent.di
 
 import com.mediasage.agent.db.AgentDatabase
-import com.mediasage.agent.db.JobRepository
+import com.mediasage.pipeline.core.JobRepository
 import com.mediasage.agent.service.AgentLauncher
 import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.BriefingService

@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     testImplementation(project(":agent"))
+    testImplementation(project(":pipeline-core"))
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)
     testRuntimeOnly(libs.junit.platform.launcher)

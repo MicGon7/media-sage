@@ -35,6 +35,9 @@ dependencies {
     // Google Auth (Cloud Run Jobs API)
     implementation(libs.google.auth.oauth2)
 
+    // Pipeline core (job schema, registry, event models)
+    implementation(projects.pipelineCore)
+
     // Exposed + PostgreSQL (Supabase jobs table)
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)

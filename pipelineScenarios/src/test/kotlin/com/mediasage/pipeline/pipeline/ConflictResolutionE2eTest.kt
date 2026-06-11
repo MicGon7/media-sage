@@ -1,6 +1,6 @@
 package com.mediasage.pipeline.pipeline
 
-import com.mediasage.agent.db.JobStatus
+import com.mediasage.pipeline.core.JobStatus
 import com.mediasage.pipeline.support.FullPipelineScenarioBase
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach

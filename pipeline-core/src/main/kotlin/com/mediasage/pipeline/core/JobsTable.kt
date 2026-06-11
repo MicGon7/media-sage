@@ -1,4 +1,4 @@
-package com.mediasage.agent.db
+package com.mediasage.pipeline.core
 
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.javatime.timestamp

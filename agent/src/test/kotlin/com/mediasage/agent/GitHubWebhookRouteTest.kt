@@ -418,5 +418,5 @@ private class FakeAgentLauncher : AgentLauncher {
         return true
     }
 
-    override fun launchForJudge(ticketKey: String) = false
+    override fun launchForJudge(ticketKey: String, prNumber: Int?) = false
 }

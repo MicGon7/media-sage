@@ -1,4 +1,4 @@
-package com.mediasage.agent.db
+package com.mediasage.pipeline.core
 
 import java.util.UUID
 
