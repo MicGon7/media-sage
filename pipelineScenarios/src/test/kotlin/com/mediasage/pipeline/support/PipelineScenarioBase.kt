@@ -1,9 +1,9 @@
 package com.mediasage.pipeline.support
 
 import com.mediasage.agent.db.AgentDatabase
-import com.mediasage.agent.db.JobRegistry
-import com.mediasage.agent.db.JobRepository
-import com.mediasage.agent.db.JobStatus
+import com.mediasage.pipeline.core.JobRegistry
+import com.mediasage.pipeline.core.JobRepository
+import com.mediasage.pipeline.core.JobStatus
 import com.mediasage.agent.service.AgentLaunchService
 import com.mediasage.agent.service.CloudLoggingClient
 import com.mediasage.agent.service.CloudRunDispatch
