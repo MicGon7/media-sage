@@ -104,16 +104,24 @@ class CloudLoggingClient(
      * first log line is minutes old and long since ingested. Returns null (never throws) when
      * logs are unavailable or the timestamp cannot be parsed; the caller records a null column.
      *
+     * The query is bounded with `timestamp >= [since]` (MS-403). An ascending `entries:list`
+     * with no lower bound scans the whole retention window oldest-first and routinely returns an
+     * empty first page plus a continuation token; this single-page call would then see nothing
+     * and return null. Bounding the scan to the job's lifetime puts the worker's first log line
+     * on the first page. [since] is the dispatch time (`started_at`), which always precedes the
+     * container's first log.
+     *
      * @param executionName Full Cloud Run execution resource name.
+     * @param since Lower bound for the log scan — the job's dispatch timestamp.
      * @return The first log entry's [Instant], or null if unavailable.
      */
-    suspend fun fetchFirstLogTimestamp(executionName: String): Instant? {
+    suspend fun fetchFirstLogTimestamp(executionName: String, since: Instant): Instant? {
         val executionId = executionName.substringAfterLast("/")
         val response = runCatching {
             httpClient.post("https://logging.googleapis.com/v2/entries:list") {
                 header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
                 contentType(ContentType.Application.Json)
-                setBody(listEntriesBody(executionId, orderBy = "timestamp asc", pageSize = 1))
+                setBody(listEntriesBody(executionId, orderBy = "timestamp asc", pageSize = 1, since = since))
             }
         }.getOrElse {
             log.warn("[env-startup] Cloud Logging request failed: ${it.message}")
@@ -128,9 +136,15 @@ class CloudLoggingClient(
 
     /** Extracts the `timestamp` of the first entry in a Cloud Logging response, or null. */
     private fun parseFirstTimestamp(responseBody: String): Instant? = runCatching {
-        json.parseToJsonElement(responseBody).jsonObject["entries"]?.jsonArray
+        val ts = json.parseToJsonElement(responseBody).jsonObject["entries"]?.jsonArray
             ?.firstOrNull()?.jsonObject?.get("timestamp")?.jsonPrimitive?.content
-            ?.let { Instant.parse(it) }
+        if (ts == null) {
+            // Empty result — log explicitly so env startup never fails silently again (MS-403).
+            log.warn("[env-startup] No first log entry returned for the execution — env startup not recorded")
+            null
+        } else {
+            Instant.parse(ts)
+        }
     }.getOrElse {
         log.warn("[env-startup] Failed to parse first log timestamp: ${it.message}")
         null
@@ -147,9 +161,14 @@ class CloudLoggingClient(
      * [orderBy] (`timestamp desc` + [pageSize] 10) puts the `result` event — always the last
      * line Claude Code writes — on the first page. `timestamp asc` + pageSize 1 instead yields
      * the first container log line, used for environment startup timing (MS-399).
+     *
+     * [since], when set, adds a `timestamp >= <since>` lower bound. Required for ascending
+     * queries to avoid an empty first page from an unbounded oldest-first scan (MS-403).
      */
-    private fun listEntriesBody(executionId: String, orderBy: String, pageSize: Int): String {
-        val filter = """resource.type="cloud_run_job" labels."run.googleapis.com/execution_name"="$executionId""""
+    private fun listEntriesBody(executionId: String, orderBy: String, pageSize: Int, since: Instant? = null): String {
+        val timeBound = since?.let { " timestamp>=\"$it\"" } ?: ""
+        val filter =
+            """resource.type="cloud_run_job" labels."run.googleapis.com/execution_name"="$executionId"$timeBound"""
         val encodedFilter = json.encodeToString(JsonPrimitive.serializer(), JsonPrimitive(filter))
         return """{"resourceNames":["projects/$projectId"],"filter":$encodedFilter,"orderBy":"$orderBy","pageSize":$pageSize}"""
     }
