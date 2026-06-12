@@ -67,6 +67,8 @@ class CloudLoggingClientTest {
         assertEquals(1.2345, metrics?.totalCostUsd)
         assertEquals(1234567L, metrics?.durationMs)
         assertEquals(42, metrics?.numTurns)
+        // modelUsage is empty in this fixture → no model can be resolved
+        assertEquals(null, metrics?.modelVersion)
     }
 
     // ── No entries in response ────────────────────────────────────────────────
@@ -143,5 +145,7 @@ class CloudLoggingClientTest {
         assertEquals(2.0007, metrics?.totalCostUsd)
         assertEquals(1385655L, metrics?.durationMs)
         assertEquals(47, metrics?.numTurns)
+        // modelVersion is the first modelUsage key (the model that ran the session)
+        assertEquals("claude-sonnet-4", metrics?.modelVersion)
     }
 }

@@ -38,6 +38,12 @@ CREATE TABLE jobs (
 CREATE INDEX ON jobs (ticket_key, created_at DESC);
 ```
 
+Additional nullable columns are added via idempotent migrations in `AgentDatabase.migrate()`
+(never in the base `CREATE TABLE`): worker efficiency metrics (MS-210 — tokens, cost, duration,
+`num_turns`) and failure attribution + model tracking (MS-386 — `failed_gate`, `model_version`).
+`failed_gate` is reported by the worker on its completion event; `model_version` is parsed from
+the `result` event's `modelUsage` key alongside the other metrics.
+
 **Job status state machine:** `PENDING → RUNNING → COMPLETED | FAILED | INTERRUPTED`
 
 **Dedup logic:** Before dispatching, query the latest row for `ticket_key`:

@@ -232,6 +232,7 @@ Workflow steps live in skills, not here. See `.claude/commands/` for the full in
 - **Never push to main:** Always create a PR. Never merge a PR — human reviews and merges.
 - **Smoke test external APIs:** Test real API changes with live APIs before writing the learning doc or opening a PR — docs describe verified behaviour, not assumed behaviour.
 - **Jira comment file:** Every job writes `/tmp/jira_comment.txt` before exiting — see `.claude/commands/ticket-work.md` for the exact format.
+- **Failed-gate file:** If you stop because a quality gate failed and you could not resolve it, write the gate name — one of `compile`, `tests`, `detekt`, `ci` — to `/tmp/failed_gate.txt` before exiting. The worker forwards it on the completion event so the orchestrator records `jobs.failed_gate` for failure attribution (MS-386). Write nothing on success or for non-gate failures.
 
 ### After a PR is merged
 Do not include tickets labeled `pipeline-test` or `smoketest` in the Confluence impact doc — these tickets exist to exercise the pipeline, not deliver product or infrastructure value.

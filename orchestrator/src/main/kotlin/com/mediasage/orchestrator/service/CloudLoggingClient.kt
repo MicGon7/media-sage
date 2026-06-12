@@ -146,7 +146,10 @@ class CloudLoggingClient(
             cacheCreationTokens = tokenCounts.cacheCreationTokens,
             totalCostUsd = event["total_cost_usd"]?.jsonPrimitive?.double ?: 0.0,
             durationMs = event["duration_ms"]?.jsonPrimitive?.long ?: 0L,
-            numTurns = event["num_turns"]?.jsonPrimitive?.int ?: 0
+            numTurns = event["num_turns"]?.jsonPrimitive?.int ?: 0,
+            // The result event reports usage per model under `modelUsage`, keyed by model name.
+            // A worker session runs a single model, so the first key is the model that ran.
+            modelVersion = event["modelUsage"]?.jsonObject?.keys?.firstOrNull()
         )
     }
 

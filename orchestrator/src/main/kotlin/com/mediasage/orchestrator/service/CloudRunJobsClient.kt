@@ -183,12 +183,16 @@ class CloudRunJobsClient(
         ticketKey: String,
         executionName: String,
         succeeded: Boolean,
+        failedGate: String? = null,
     ): Boolean {
         return if (succeeded) {
             handleSuccess(jobId, ticketKey, executionName)
         } else {
-            log.warn("[$ticketKey] Worker reported failure via Pub/Sub")
-            jobRepository.markFailed(jobId)
+            log.warn("[$ticketKey] Worker reported failure via Pub/Sub" + (failedGate?.let { " (gate=$it)" } ?: ""))
+            // Best-effort model capture on failure — the result event is usually still present
+            // in the logs even when the worker exited non-zero (MS-386).
+            val modelVersion = cloudLoggingClient.fetchMetrics(executionName)?.modelVersion
+            jobRepository.markFailed(jobId, failedGate, modelVersion)
             false
         }
     }

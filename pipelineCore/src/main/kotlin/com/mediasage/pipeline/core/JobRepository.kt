@@ -140,9 +140,9 @@ class JobRepository : JobRegistry {
     /**
      * Transitions [jobId] to COMPLETED and stamps [JobsTable.completedAt].
      *
-     * If [metrics] is non-null, also persists token counts, cost, Claude duration, and turn
-     * count sourced from the Cloud Logging result event. These columns remain null when
-     * metrics are unavailable (e.g. Cloud Logging ingestion timeout).
+     * If [metrics] is non-null, also persists token counts, cost, Claude duration, turn
+     * count, and model version sourced from the Cloud Logging result event. These columns
+     * remain null when metrics are unavailable (e.g. Cloud Logging ingestion timeout).
      */
     override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?) = withContext(Dispatchers.IO) {
         transaction {
@@ -157,17 +157,26 @@ class JobRepository : JobRegistry {
                     it[JobsTable.totalCostUsd] = BigDecimal.valueOf(metrics.totalCostUsd)
                     it[JobsTable.claudeDurationMs] = metrics.durationMs
                     it[JobsTable.numTurns] = metrics.numTurns
+                    it[JobsTable.modelVersion] = metrics.modelVersion
                 }
             }
         }
         Unit
     }
 
-    /** Transitions [jobId] to FAILED and stamps [JobsTable.completedAt]. */
-    override suspend fun markFailed(jobId: UUID) = withContext(Dispatchers.IO) {
+    /**
+     * Transitions [jobId] to FAILED and stamps [JobsTable.completedAt].
+     *
+     * Records [failedGate] (the quality gate the worker reported as the failure cause) and
+     * [modelVersion] (best-effort from the result event) when provided; both stay null on
+     * paths with no such info, e.g. LRO/dispatch failures (MS-386).
+     */
+    override suspend fun markFailed(jobId: UUID, failedGate: String?, modelVersion: String?) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
                 it[JobsTable.status] = JobStatus.FAILED.name
+                if (failedGate != null) it[JobsTable.failedGate] = failedGate
+                if (modelVersion != null) it[JobsTable.modelVersion] = modelVersion
                 it[JobsTable.completedAt] = Instant.now()
             }
         }
