@@ -53,7 +53,12 @@ data class JobDurationRow(
     val status: JobStatus,
     val durationSeconds: Int?,
     val startedAt: Instant?,
-    val completedAt: Instant?
+    val completedAt: Instant?,
+    /**
+     * Environment startup time in milliseconds (MS-399): dispatch → the worker container's first
+     * log line (Cloud Run cold start + image pull). Null when not recorded for this job.
+     */
+    val envStartupMs: Long?
 )
 
 /**
@@ -144,25 +149,27 @@ class JobRepository : JobRegistry {
      * count, and model version sourced from the Cloud Logging result event. These columns
      * remain null when metrics are unavailable (e.g. Cloud Logging ingestion timeout).
      */
-    override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?) = withContext(Dispatchers.IO) {
-        transaction {
-            JobsTable.update({ JobsTable.jobId eq jobId }) {
-                it[JobsTable.status] = JobStatus.COMPLETED.name
-                it[JobsTable.completedAt] = Instant.now()
-                if (metrics != null) {
-                    it[JobsTable.inputTokens] = metrics.inputTokens
-                    it[JobsTable.outputTokens] = metrics.outputTokens
-                    it[JobsTable.cacheReadTokens] = metrics.cacheReadTokens
-                    it[JobsTable.cacheCreationTokens] = metrics.cacheCreationTokens
-                    it[JobsTable.totalCostUsd] = BigDecimal.valueOf(metrics.totalCostUsd)
-                    it[JobsTable.claudeDurationMs] = metrics.durationMs
-                    it[JobsTable.numTurns] = metrics.numTurns
-                    it[JobsTable.modelVersion] = metrics.modelVersion
+    override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?, envStartupMs: Long?) =
+        withContext(Dispatchers.IO) {
+            transaction {
+                JobsTable.update({ JobsTable.jobId eq jobId }) {
+                    it[JobsTable.status] = JobStatus.COMPLETED.name
+                    it[JobsTable.completedAt] = Instant.now()
+                    if (metrics != null) {
+                        it[JobsTable.inputTokens] = metrics.inputTokens
+                        it[JobsTable.outputTokens] = metrics.outputTokens
+                        it[JobsTable.cacheReadTokens] = metrics.cacheReadTokens
+                        it[JobsTable.cacheCreationTokens] = metrics.cacheCreationTokens
+                        it[JobsTable.totalCostUsd] = BigDecimal.valueOf(metrics.totalCostUsd)
+                        it[JobsTable.claudeDurationMs] = metrics.durationMs
+                        it[JobsTable.numTurns] = metrics.numTurns
+                        it[JobsTable.modelVersion] = metrics.modelVersion
+                    }
+                    if (envStartupMs != null) it[JobsTable.envStartupMs] = envStartupMs
                 }
             }
+            Unit
         }
-        Unit
-    }
 
     /**
      * Transitions [jobId] to FAILED and stamps [JobsTable.completedAt].
@@ -251,11 +258,13 @@ class JobRepository : JobRegistry {
     suspend fun getJobDurations(): List<JobDurationRow> = withContext(Dispatchers.IO) {
         transaction {
             exec(
-                "SELECT job_id, ticket_key, status, duration_seconds, started_at, completed_at FROM job_durations ORDER BY started_at DESC"
+                "SELECT job_id, ticket_key, status, duration_seconds, started_at, completed_at, env_startup_ms " +
+                    "FROM job_durations ORDER BY started_at DESC"
             ) { rs ->
                 val results = mutableListOf<JobDurationRow>()
                 while (rs.next()) {
                     val durationSeconds = rs.getInt("duration_seconds").takeIf { !rs.wasNull() }
+                    val envStartupMs = rs.getLong("env_startup_ms").takeIf { !rs.wasNull() }
                     results.add(
                         JobDurationRow(
                             jobId = rs.getObject("job_id", UUID::class.java),
@@ -263,7 +272,8 @@ class JobRepository : JobRegistry {
                             status = JobStatus.valueOf(rs.getString("status")),
                             durationSeconds = durationSeconds,
                             startedAt = rs.getTimestamp("started_at")?.toInstant(),
-                            completedAt = rs.getTimestamp("completed_at")?.toInstant()
+                            completedAt = rs.getTimestamp("completed_at")?.toInstant(),
+                            envStartupMs = envStartupMs
                         )
                     )
                 }

@@ -113,6 +113,7 @@ private suspend fun processCompletion(
         executionName = event.executionName,
         succeeded = event.status == "success",
         failedGate = event.failedGate,
+        startedAt = job.startedAt,
     )
     // Dispatch judge after a successful ticket-work completion.
     // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key).

@@ -18,6 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
+import java.time.Instant
 
 /**
  * Reads worker efficiency metrics from Cloud Logging after a Cloud Run Job execution completes.
@@ -78,7 +79,7 @@ class CloudLoggingClient(
             httpClient.post("https://logging.googleapis.com/v2/entries:list") {
                 header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
                 contentType(ContentType.Application.Json)
-                setBody(listEntriesBody(executionId))
+                setBody(listEntriesBody(executionId, orderBy = "timestamp desc", pageSize = 10))
             }
         }.getOrElse {
             log.warn("[metrics] Cloud Logging request failed: ${it.message}")
@@ -94,6 +95,48 @@ class CloudLoggingClient(
     }
 
     /**
+     * Fetches the timestamp of the FIRST log entry emitted for [executionName] — the worker
+     * container's first stdout, written before the git clone. Subtracting the job's dispatch
+     * time (`started_at`) yields the environment startup cost: Cloud Run cold start + worker
+     * image pull, the dominant overhead for short jobs (MS-399).
+     *
+     * Unlike [fetchMetrics] this needs no ingestion retry — by the time a job completes, its
+     * first log line is minutes old and long since ingested. Returns null (never throws) when
+     * logs are unavailable or the timestamp cannot be parsed; the caller records a null column.
+     *
+     * @param executionName Full Cloud Run execution resource name.
+     * @return The first log entry's [Instant], or null if unavailable.
+     */
+    suspend fun fetchFirstLogTimestamp(executionName: String): Instant? {
+        val executionId = executionName.substringAfterLast("/")
+        val response = runCatching {
+            httpClient.post("https://logging.googleapis.com/v2/entries:list") {
+                header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
+                contentType(ContentType.Application.Json)
+                setBody(listEntriesBody(executionId, orderBy = "timestamp asc", pageSize = 1))
+            }
+        }.getOrElse {
+            log.warn("[env-startup] Cloud Logging request failed: ${it.message}")
+            return null
+        }
+        if (!response.status.isSuccess()) {
+            log.warn("[env-startup] Cloud Logging returned ${response.status}")
+            return null
+        }
+        return parseFirstTimestamp(response.bodyAsText())
+    }
+
+    /** Extracts the `timestamp` of the first entry in a Cloud Logging response, or null. */
+    private fun parseFirstTimestamp(responseBody: String): Instant? = runCatching {
+        json.parseToJsonElement(responseBody).jsonObject["entries"]?.jsonArray
+            ?.firstOrNull()?.jsonObject?.get("timestamp")?.jsonPrimitive?.content
+            ?.let { Instant.parse(it) }
+    }.getOrElse {
+        log.warn("[env-startup] Failed to parse first log timestamp: ${it.message}")
+        null
+    }
+
+    /**
      * Builds the Cloud Logging entries.list request body.
      *
      * Cloud Run Jobs does not expose the execution ID in `resource.labels` — it is stored
@@ -101,13 +144,14 @@ class CloudLoggingClient(
      * (e.g. `media-sage-agent-worker-pvk42`). We extract that short name from the last
      * path segment of the full execution resource name passed by the caller.
      *
-     * `orderBy: timestamp desc` + `pageSize: 10` ensures the `result` event (always the
-     * last line written by Claude Code) is in the first page.
+     * [orderBy] (`timestamp desc` + [pageSize] 10) puts the `result` event — always the last
+     * line Claude Code writes — on the first page. `timestamp asc` + pageSize 1 instead yields
+     * the first container log line, used for environment startup timing (MS-399).
      */
-    private fun listEntriesBody(executionId: String): String {
+    private fun listEntriesBody(executionId: String, orderBy: String, pageSize: Int): String {
         val filter = """resource.type="cloud_run_job" labels."run.googleapis.com/execution_name"="$executionId""""
         val encodedFilter = json.encodeToString(JsonPrimitive.serializer(), JsonPrimitive(filter))
-        return """{"resourceNames":["projects/$projectId"],"filter":$encodedFilter,"orderBy":"timestamp desc","pageSize":10}"""
+        return """{"resourceNames":["projects/$projectId"],"filter":$encodedFilter,"orderBy":"$orderBy","pageSize":$pageSize}"""
     }
 
     /**
