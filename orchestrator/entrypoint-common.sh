@@ -126,6 +126,17 @@ try:
 except Exception:
     pass
 
+# failedGate: on a failed run the worker writes the quality gate that blocked it
+# (e.g. compile, tests, detekt, ci) to /tmp/failed_gate.txt. The orchestrator persists
+# it to jobs.failed_gate for failure attribution (MS-386). Only sent on failure.
+if '$status' == 'failure':
+    try:
+        gate = open('/tmp/failed_gate.txt').read().strip()
+        if gate:
+            payload['failedGate'] = gate
+    except Exception:
+        pass
+
 data = base64.b64encode(json.dumps(payload).encode()).decode()
 print(json.dumps({'messages': [{'data': data}]}))
 ")

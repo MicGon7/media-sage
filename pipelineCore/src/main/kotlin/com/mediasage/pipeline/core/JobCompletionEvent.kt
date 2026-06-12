@@ -30,4 +30,11 @@ data class JobCompletionEvent(
      */
     @SerialName("prNumber")
     val prNumber: Int? = null,
+    /**
+     * Quality gate the worker reported as the cause of a failed run (e.g. `compile`, `tests`,
+     * `detekt`, `ci`). Set only when [status] is `failure` and the worker wrote a gate name;
+     * null otherwise. Persisted to `jobs.failed_gate` for failure attribution (MS-386).
+     */
+    @SerialName("failedGate")
+    val failedGate: String? = null,
 )

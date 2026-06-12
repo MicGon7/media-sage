@@ -25,33 +25,47 @@ object AgentDatabase {
      * Add new ALTER TABLE / CREATE OR REPLACE statements here; never drop columns.
      */
     private fun org.jetbrains.exposed.sql.Transaction.migrate() {
-        // MS-210: Worker efficiency metric columns
-        exec(
-            """
-            ALTER TABLE jobs
-              ADD COLUMN IF NOT EXISTS input_tokens INT,
-              ADD COLUMN IF NOT EXISTS output_tokens INT,
-              ADD COLUMN IF NOT EXISTS cache_read_tokens INT,
-              ADD COLUMN IF NOT EXISTS cache_creation_tokens INT,
-              ADD COLUMN IF NOT EXISTS total_cost_usd NUMERIC(10, 6),
-              ADD COLUMN IF NOT EXISTS claude_duration_ms BIGINT,
-              ADD COLUMN IF NOT EXISTS num_turns INT
-            """.trimIndent()
-        )
-        exec(
-            """
-            CREATE OR REPLACE VIEW job_durations AS
-            SELECT
-              job_id,
-              ticket_key,
-              status,
-              EXTRACT(EPOCH FROM (completed_at - started_at))::int AS duration_seconds,
-              created_at,
-              started_at,
-              completed_at
-            FROM jobs
-            WHERE started_at IS NOT NULL
-            """.trimIndent()
-        )
+        addWorkerMetricColumns() // MS-210
+        addFailureAttributionColumns() // MS-386
+        createJobDurationsView()
     }
+
+    /** MS-210: Worker efficiency metric columns. */
+    private fun org.jetbrains.exposed.sql.Transaction.addWorkerMetricColumns() = exec(
+        """
+        ALTER TABLE jobs
+          ADD COLUMN IF NOT EXISTS input_tokens INT,
+          ADD COLUMN IF NOT EXISTS output_tokens INT,
+          ADD COLUMN IF NOT EXISTS cache_read_tokens INT,
+          ADD COLUMN IF NOT EXISTS cache_creation_tokens INT,
+          ADD COLUMN IF NOT EXISTS total_cost_usd NUMERIC(10, 6),
+          ADD COLUMN IF NOT EXISTS claude_duration_ms BIGINT,
+          ADD COLUMN IF NOT EXISTS num_turns INT
+        """.trimIndent()
+    )
+
+    /** MS-386: Failure attribution (`failed_gate`) + model tracking (`model_version`). */
+    private fun org.jetbrains.exposed.sql.Transaction.addFailureAttributionColumns() = exec(
+        """
+        ALTER TABLE jobs
+          ADD COLUMN IF NOT EXISTS failed_gate TEXT,
+          ADD COLUMN IF NOT EXISTS model_version TEXT
+        """.trimIndent()
+    )
+
+    private fun org.jetbrains.exposed.sql.Transaction.createJobDurationsView() = exec(
+        """
+        CREATE OR REPLACE VIEW job_durations AS
+        SELECT
+          job_id,
+          ticket_key,
+          status,
+          EXTRACT(EPOCH FROM (completed_at - started_at))::int AS duration_seconds,
+          created_at,
+          started_at,
+          completed_at
+        FROM jobs
+        WHERE started_at IS NOT NULL
+        """.trimIndent()
+    )
 }

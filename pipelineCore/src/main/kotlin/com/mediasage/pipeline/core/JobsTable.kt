@@ -61,5 +61,21 @@ object JobsTable : Table("jobs") {
     /** Number of agentic turns (tool-use + response cycles) in the worker session. */
     val numTurns = integer("num_turns").nullable()
 
+    // Failure attribution + model tracking (MS-386). Nullable so successful runs, pre-MS-386
+    // rows, and runs where the value is unavailable degrade gracefully.
+
+    /**
+     * Quality gate that caused a FAILED run, as reported by the worker
+     * (e.g. `compile`, `tests`, `detekt`, `ci`). Null on success or when the worker
+     * did not report a gate.
+     */
+    val failedGate = text("failed_gate").nullable()
+
+    /**
+     * Claude model that ran the worker session (e.g. `claude-sonnet-4-5-20250929`),
+     * sourced from the `modelUsage` key of the Claude Code `result` event. Null when unavailable.
+     */
+    val modelVersion = text("model_version").nullable()
+
     override val primaryKey = PrimaryKey(jobId)
 }
