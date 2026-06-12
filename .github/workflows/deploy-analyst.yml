@@ -7,6 +7,9 @@ on:
       - 'feedback/**'
       - 'settings-feedback.gradle.kts'
       - 'pipeline-core/**'
+  # Manual trigger — a workflow-only change does not match the path filters above,
+  # so this lets us re-run the deploy after editing this file (MS-391).
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -49,13 +52,15 @@ jobs:
           service: media-sage-analyst
           image: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/analyst:latest
           region: us-central1
-          # Dedicated least-privilege identity — secretAccessor on the two analyst secrets only.
-          service_account: media-sage-analyst@media-sage-agent.iam.gserviceaccount.com
           secrets: |-
             SUPABASE_DB_URL=analyst-supabase-db-url:latest
             PUBSUB_WEBHOOK_SECRET=analyst-pubsub-webhook-secret:latest
+          # --service-account: dedicated least-privilege identity (secretAccessor on the two
+          #   analyst secrets only). deploy-cloudrun@v2 has NO `service_account:` input — it
+          #   must be passed as a gcloud flag, or the revision runs as the default compute SA
+          #   and fails on secret access (MS-391).
           # --min-instances=0: Analyst is never in the critical path; Pub/Sub push retries on
           #   cold start (unlike the orchestrator's --min-instances=1).
           # --allow-unauthenticated: Pub/Sub push + Cloud Scheduler reach it without OIDC;
           #   the /webhook/pubsub route is guarded by the ?token= shared secret at the app layer.
-          flags: '--min-instances=0 --allow-unauthenticated'
+          flags: '--service-account=media-sage-analyst@media-sage-agent.iam.gserviceaccount.com --min-instances=0 --allow-unauthenticated'
