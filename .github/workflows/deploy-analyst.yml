@@ -4,9 +4,9 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'feedback/**'
-      - 'settings-feedback.gradle.kts'
-      - 'pipeline-core/**'
+      - 'analyst/**'
+      - 'settings-analyst.gradle.kts'
+      - 'pipelineCore/**'
   # Manual trigger — a workflow-only change does not match the path filters above,
   # so this lets us re-run the deploy after editing this file (MS-391).
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: feedback/Dockerfile
+          file: analyst/Dockerfile
           platforms: linux/amd64
           push: true
           tags: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/analyst:latest
