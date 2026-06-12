@@ -38,8 +38,8 @@ jobs:
       - name: Build shared module
         run: ./gradlew :shared:build
 
-      - name: Build server module
-        run: ./gradlew :server:build
+      - name: Build appServer module
+        run: ./gradlew :appServer:build
 
       - name: Build Android app
         run: ./gradlew :composeApp:assembleDebug

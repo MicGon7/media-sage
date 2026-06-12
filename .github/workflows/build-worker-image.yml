@@ -15,7 +15,7 @@ on:
       - 'settings.gradle.kts'
       - 'build.gradle.kts'
       - 'orchestrator/build.gradle.kts'
-      - 'server/build.gradle.kts'
+      - 'appServer/build.gradle.kts'
       - 'composeApp/build.gradle.kts'
       - 'shared/build.gradle.kts'
       - 'gradle.properties'

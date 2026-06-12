@@ -11,7 +11,7 @@ Five-module Gradle project (`settings.gradle.kts`):
 ```
 :composeApp   — Compose Multiplatform UI (Android + iOS)
 :shared       — KMP library (networking, database, domain models)
-:server       — Ktor app API, deployed to Railway (port 8080)
+:appServer    — Ktor app API, deployed to Railway (port 8080)
 :orchestrator — Ktor orchestration server, deployed as Cloud Run Service on GCP (port 8081)
 :scripts      — One-off batch jobs, run manually (no server, no Koin wiring)
 ```
@@ -20,7 +20,7 @@ Five-module Gradle project (`settings.gradle.kts`):
 
 - **composeApp**: UI layer only. Depends on `:shared`. Uses Compose Material3, Koin for DI, Lifecycle ViewModel, and Nav3 for navigation.
 - **shared**: Business logic, data layer, networking. Room for persistence, Ktor Client for HTTP, kotlinx-serialization for JSON. Platform engines: OkHttp (Android), Darwin (iOS).
-- **server**: JVM-only Ktor server (Netty). Calls external APIs (Claude, News, Scripture). Uses Koin for DI, CORS, StatusPages, ContentNegotiation, CallLogging. Deployed to Railway.
+- **appServer**: JVM-only Ktor server (Netty). Calls external APIs (Claude, News, Scripture). Uses Koin for DI, CORS, StatusPages, ContentNegotiation, CallLogging. Deployed to Railway.
 - **orchestrator**: JVM-only Ktor server (Netty, port 8081). Receives Jira and GitHub webhooks, dispatches Claude Code workers via Cloud Run Jobs. Uses Exposed + PostgreSQL (Supabase) for persistent job state. Deployed as a Cloud Run Service on GCP (`media-sage-orchestrator`, `us-central1`). Railway orchestrator service is kept as a manual fallback (deactivated; re-enable by redeploying and updating webhooks).
 - **scripts**: JVM-only standalone scripts. No Ktor server, no Koin. Uses Exposed + SQLite/Postgres for DB access. Run manually via Gradle tasks (e.g., `generateImages`).
 
@@ -40,7 +40,7 @@ Server JSON → Client DTO → Room Entity → Domain Model → UI
 ### Dependency Injection
 
 Koin is used across all modules. Define modules per feature, not per layer.
-- **Server**: `serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl)` — HttpClient, API services
+- **appServer**: `serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl)` — HttpClient, API services
 - **Orchestrator**: `agentModule(config, scope)` — HttpClient, AgentLaunchService, JiraApiService
 - **Shared**: `sharedModule(serverBaseUrl)` — HttpClient, MediaSageApi, repositories
 
@@ -93,7 +93,7 @@ shared/src/commonMain/kotlin/com/mediasage/
     ├── repository/      — Repository implementations
     └── mapper/          — Entity ↔ Domain mappers
 
-server/src/main/kotlin/com/mediasage/server/
+appServer/src/main/kotlin/com/mediasage/appserver/
 ├── Application.kt       — Entry point, Koin setup
 ├── plugins/             — ContentNegotiation, CORS, CallLogging, StatusPages
 ├── routes/              — Health, News, Encourage, Scripture, Figures, DailyReflection
@@ -131,7 +131,7 @@ scripts/src/main/kotlin/com/mediasage/scripts/
 ./gradlew detekt
 
 # Run app API server (port 8080 — requires API keys in ~/.zshrc)
-source ~/.zshrc && ./gradlew :server:run
+source ~/.zshrc && ./gradlew :appServer:run
 
 # Run agent orchestration server locally (port 8081 — requires Jira, GitHub env vars)
 source ~/.zshrc && ./gradlew :orchestrator:run
@@ -178,7 +178,7 @@ docker run -p 8081:8081 \
 - Kotlin code style: `official` (set in `gradle.properties`)
 - JVM target: 11
 - Use `kotlinx.serialization` for all JSON — no Gson/Moshi
-- Use Ktor client in shared, Ktor server in server — never mix
+- Use Ktor client in shared, Ktor server in appServer — never mix
 - Room schemas stored in `shared/schemas/`
 - `@SerialName` annotations on their own line above the property
 - String resources in `composeResources/values/strings.xml` — no hardcoded strings in UI

@@ -10,12 +10,12 @@ graph TB
     subgraph KMP["Kotlin Multiplatform Modules"]
         composeApp[":composeApp<br/>Compose Multiplatform UI"]
         shared[":shared<br/>Business logic · Room · Ktor Client"]
-        server[":server<br/>Ktor API Server"]
+        server[":appServer<br/>Ktor API Server"]
         agent[":orchestrator<br/>Orchestrator Server"]
     end
 
     subgraph Railway["Railway"]
-        AppAPI["App API<br/>:server · port 8080"]
+        AppAPI["App API<br/>:appServer · port 8080"]
     end
 
     subgraph GCP["GCP"]
@@ -69,7 +69,7 @@ graph TB
 |--------|---------|-------------|
 | `:composeApp` | Android + iOS | App stores |
 | `:shared` | Android + iOS | Bundled with app |
-| `:server` | JVM (Netty, port 8080) | Railway |
+| `:appServer` | JVM (Netty, port 8080) | Railway |
 | `:orchestrator` | JVM (Netty, port 8081) | GCP Cloud Run Service |
 
 ## Data flow (product)
