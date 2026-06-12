@@ -254,7 +254,7 @@ class CloudRunJobsClient(
         startedAt: Instant?,
     ): Long? {
         if (executionName == null || startedAt == null) return null
-        val firstLog = cloudLoggingClient.fetchFirstLogTimestamp(executionName) ?: return null
+        val firstLog = cloudLoggingClient.fetchFirstLogTimestamp(executionName, since = startedAt) ?: return null
         val envStartupMs = (firstLog.toEpochMilli() - startedAt.toEpochMilli()).coerceAtLeast(0)
         log.info("[$ticketKey] Environment startup: ${envStartupMs}ms (cold start + image pull)")
         return envStartupMs

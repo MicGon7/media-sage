@@ -5,12 +5,15 @@ import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * Unit tests for [CloudLoggingClient] log parsing.
@@ -34,6 +37,19 @@ class CloudLoggingClientTest {
             engine {
                 addHandler {
                     respond(responseBody, status, headersOf(HttpHeaders.ContentType, "application/json"))
+                }
+            }
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
+    }
+
+    /** Mock that records each outgoing request body so the filter/orderBy can be asserted. */
+    private fun capturingClient(responseBody: String, captured: MutableList<String>): HttpClient {
+        return HttpClient(MockEngine) {
+            engine {
+                addHandler { request ->
+                    captured.add((request.body as TextContent).text)
+                    respond(responseBody, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
                 }
             }
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
@@ -151,20 +167,22 @@ class CloudLoggingClientTest {
 
     // ── fetchFirstLogTimestamp (MS-399 environment startup) ───────────────────
 
+    private val dispatchTime = Instant.parse("2026-06-12T20:33:23.069088Z")
+
     @Test
     fun `fetchFirstLogTimestamp parses the first entry timestamp`() = runTest {
         val loggingResponse =
             """{"entries":[{"timestamp":"2026-06-12T18:54:57.710513Z","textPayload":"[worker] boot"}]}"""
         val ts = client(mockClient(loggingResponse)).fetchFirstLogTimestamp(
-            "projects/p/locations/r/jobs/j/executions/j-boot"
+            "projects/p/locations/r/jobs/j/executions/j-boot", since = dispatchTime
         )
-        assertEquals(java.time.Instant.parse("2026-06-12T18:54:57.710513Z"), ts)
+        assertEquals(Instant.parse("2026-06-12T18:54:57.710513Z"), ts)
     }
 
     @Test
     fun `fetchFirstLogTimestamp returns null when entries array is empty`() = runTest {
         val ts = client(mockClient("""{"entries":[]}""")).fetchFirstLogTimestamp(
-            "projects/p/locations/r/jobs/j/executions/j-empty"
+            "projects/p/locations/r/jobs/j/executions/j-empty", since = dispatchTime
         )
         assertNull(ts)
     }
@@ -172,7 +190,7 @@ class CloudLoggingClientTest {
     @Test
     fun `fetchFirstLogTimestamp returns null on non-2xx response`() = runTest {
         val ts = client(mockClient("{}", HttpStatusCode.Forbidden)).fetchFirstLogTimestamp(
-            "projects/p/locations/r/jobs/j/executions/j-forbidden"
+            "projects/p/locations/r/jobs/j/executions/j-forbidden", since = dispatchTime
         )
         assertNull(ts)
     }
@@ -181,8 +199,21 @@ class CloudLoggingClientTest {
     fun `fetchFirstLogTimestamp returns null when timestamp is unparseable`() = runTest {
         val loggingResponse = """{"entries":[{"timestamp":"not-a-timestamp","textPayload":"x"}]}"""
         val ts = client(mockClient(loggingResponse)).fetchFirstLogTimestamp(
-            "projects/p/locations/r/jobs/j/executions/j-badts"
+            "projects/p/locations/r/jobs/j/executions/j-badts", since = dispatchTime
         )
         assertNull(ts)
+    }
+
+    @Test
+    fun `fetchFirstLogTimestamp bounds the query with the dispatch timestamp and ascending order`() = runTest {
+        // MS-403: an unbounded ascending query returns an empty first page; the lower bound fixes it.
+        val captured = mutableListOf<String>()
+        val responseBody = """{"entries":[{"timestamp":"2026-06-12T20:35:18.437997Z"}]}"""
+        client(capturingClient(responseBody, captured)).fetchFirstLogTimestamp(
+            "projects/p/locations/r/jobs/j/executions/j-bound", since = dispatchTime
+        )
+        val body = captured.single()
+        assertTrue(body.contains(dispatchTime.toString()), "expected timestamp lower bound in request: $body")
+        assertTrue(body.contains("timestamp asc"), "expected ascending order in request: $body")
     }
 }
