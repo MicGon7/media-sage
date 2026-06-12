@@ -21,9 +21,9 @@ RUN adduser -D -s /bin/bash agent
 USER agent
 WORKDIR /home/agent
 
-COPY --chown=agent:agent agent/entrypoint-common.sh entrypoint-common.sh
-COPY --chown=agent:agent agent/lite-entrypoint.sh entrypoint.sh
-COPY --chown=agent:agent agent/get-github-token.py get-github-token.py
+COPY --chown=agent:agent orchestrator/entrypoint-common.sh entrypoint-common.sh
+COPY --chown=agent:agent orchestrator/lite-entrypoint.sh entrypoint.sh
+COPY --chown=agent:agent orchestrator/get-github-token.py get-github-token.py
 COPY --chown=agent:agent .claude/commands/ /home/agent/.claude/commands/
 RUN chmod +x entrypoint.sh
 

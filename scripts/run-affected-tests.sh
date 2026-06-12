@@ -43,16 +43,16 @@ if [ -z "$KOTLIN_CHANGED" ]; then
     exit 0
 fi
 
-RUN_AGENT=false
+RUN_ORCHESTRATOR=false
 RUN_SERVER=false
-AGENT_TEST_CLASSES=()
+ORCHESTRATOR_TEST_CLASSES=()
 SERVER_TEST_CLASSES=()
 
 # Map a changed source file to its corresponding test class name.
 # Convention: Foo.kt → FooTest.kt (standard Kotlin/Java naming).
 find_test_class() {
-    local module="$1"   # e.g. "agent"
-    local src_file="$2" # e.g. "agent/src/main/kotlin/com/mediasage/agent/service/AgentLaunchService.kt"
+    local module="$1"   # e.g. "orchestrator"
+    local src_file="$2" # e.g. "orchestrator/src/main/kotlin/com/mediasage/orchestrator/service/AgentLaunchService.kt"
     local base
     base=$(basename "$src_file" .kt)
     local test_file
@@ -68,11 +68,11 @@ find_test_class() {
 
 while IFS= read -r file; do
     case "$file" in
-        agent/src/main/*.kt)
-            RUN_AGENT=true
-            cls=$(find_test_class "agent" "$file")
+        orchestrator/src/main/*.kt)
+            RUN_ORCHESTRATOR=true
+            cls=$(find_test_class "orchestrator" "$file")
             if [ -n "$cls" ]; then
-                AGENT_TEST_CLASSES+=("$cls")
+                ORCHESTRATOR_TEST_CLASSES+=("$cls")
             fi
             ;;
         server/src/main/*.kt)
@@ -103,8 +103,8 @@ run_tests() {
 
 RAN_ANY=false
 
-if [ "$RUN_AGENT" = "true" ]; then
-    run_tests ":agent:test" "${AGENT_TEST_CLASSES[@]+"${AGENT_TEST_CLASSES[@]}"}"
+if [ "$RUN_ORCHESTRATOR" = "true" ]; then
+    run_tests ":orchestrator:test" "${ORCHESTRATOR_TEST_CLASSES[@]+"${ORCHESTRATOR_TEST_CLASSES[@]}"}"
     RAN_ANY=true
 fi
 

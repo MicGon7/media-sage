@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-    testImplementation(project(":agent"))
+    testImplementation(project(":orchestrator"))
     testImplementation(project(":pipelineCore"))
     testImplementation(libs.junit.jupiter.api)
     testRuntimeOnly(libs.junit.jupiter.engine)

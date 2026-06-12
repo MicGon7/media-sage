@@ -21,7 +21,7 @@ USER agent
 WORKDIR /home/agent
 
 # Pre-bake the Gradle distribution, internal API jars, and all module dependencies
-# into the image layer at build time. Covers :agent, :server, :composeApp, and :shared.
+# into the image layer at build time. Covers :orchestrator, :server, :composeApp, and :shared.
 #
 # Why single-stage (no Android SDK or Kotlin/Native toolchain needed):
 #   - AGP resolves :composeApp dependencies without the Android SDK at config time
@@ -38,19 +38,19 @@ COPY --chown=agent:agent gradle/ gradle/
 COPY --chown=agent:agent gradle.properties gradle.properties
 COPY --chown=agent:agent settings.gradle.kts settings.gradle.kts
 COPY --chown=agent:agent build.gradle.kts build.gradle.kts
-COPY --chown=agent:agent agent/build.gradle.kts agent/build.gradle.kts
+COPY --chown=agent:agent orchestrator/build.gradle.kts orchestrator/build.gradle.kts
 COPY --chown=agent:agent server/build.gradle.kts server/build.gradle.kts
 COPY --chown=agent:agent composeApp/build.gradle.kts composeApp/build.gradle.kts
 COPY --chown=agent:agent shared/build.gradle.kts shared/build.gradle.kts
 RUN chmod +x gradlew && \
     ./gradlew help --no-daemon && \
-    ./gradlew :agent:dependencies :server:dependencies :composeApp:dependencies :shared:dependencies \
+    ./gradlew :orchestrator:dependencies :server:dependencies :composeApp:dependencies :shared:dependencies \
         --no-daemon --configure-on-demand && \
     rm -f gradlew && rm -rf gradle
 
-COPY --chown=agent:agent agent/entrypoint-common.sh entrypoint-common.sh
-COPY --chown=agent:agent agent/worker-entrypoint.sh entrypoint.sh
-COPY --chown=agent:agent agent/get-github-token.py get-github-token.py
+COPY --chown=agent:agent orchestrator/entrypoint-common.sh entrypoint-common.sh
+COPY --chown=agent:agent orchestrator/worker-entrypoint.sh entrypoint.sh
+COPY --chown=agent:agent orchestrator/get-github-token.py get-github-token.py
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]
