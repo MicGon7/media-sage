@@ -50,7 +50,7 @@ class BriefingIntegrationTest {
         override suspend fun shouldDispatch(ticketKey: String) = true
         override suspend fun insert(ticketKey: String, prompt: String): UUID = UUID.randomUUID()
         override suspend fun markRunning(jobId: UUID, executionName: String) = Unit
-        override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?) = Unit
+        override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?, envStartupMs: Long?) = Unit
         override suspend fun markFailed(jobId: UUID, failedGate: String?, modelVersion: String?) = Unit
         override suspend fun markInterrupted(jobId: UUID) = Unit
         override suspend fun findRunningJobs(): List<JobRow> = emptyList()

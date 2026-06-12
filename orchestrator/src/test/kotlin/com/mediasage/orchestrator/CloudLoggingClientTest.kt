@@ -148,4 +148,41 @@ class CloudLoggingClientTest {
         // modelVersion is the first modelUsage key (the model that ran the session)
         assertEquals("claude-sonnet-4", metrics?.modelVersion)
     }
+
+    // ── fetchFirstLogTimestamp (MS-399 environment startup) ───────────────────
+
+    @Test
+    fun `fetchFirstLogTimestamp parses the first entry timestamp`() = runTest {
+        val loggingResponse =
+            """{"entries":[{"timestamp":"2026-06-12T18:54:57.710513Z","textPayload":"[worker] boot"}]}"""
+        val ts = client(mockClient(loggingResponse)).fetchFirstLogTimestamp(
+            "projects/p/locations/r/jobs/j/executions/j-boot"
+        )
+        assertEquals(java.time.Instant.parse("2026-06-12T18:54:57.710513Z"), ts)
+    }
+
+    @Test
+    fun `fetchFirstLogTimestamp returns null when entries array is empty`() = runTest {
+        val ts = client(mockClient("""{"entries":[]}""")).fetchFirstLogTimestamp(
+            "projects/p/locations/r/jobs/j/executions/j-empty"
+        )
+        assertNull(ts)
+    }
+
+    @Test
+    fun `fetchFirstLogTimestamp returns null on non-2xx response`() = runTest {
+        val ts = client(mockClient("{}", HttpStatusCode.Forbidden)).fetchFirstLogTimestamp(
+            "projects/p/locations/r/jobs/j/executions/j-forbidden"
+        )
+        assertNull(ts)
+    }
+
+    @Test
+    fun `fetchFirstLogTimestamp returns null when timestamp is unparseable`() = runTest {
+        val loggingResponse = """{"entries":[{"timestamp":"not-a-timestamp","textPayload":"x"}]}"""
+        val ts = client(mockClient(loggingResponse)).fetchFirstLogTimestamp(
+            "projects/p/locations/r/jobs/j/executions/j-badts"
+        )
+        assertNull(ts)
+    }
 }

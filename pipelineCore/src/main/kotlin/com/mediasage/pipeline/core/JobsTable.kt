@@ -77,5 +77,13 @@ object JobsTable : Table("jobs") {
      */
     val modelVersion = text("model_version").nullable()
 
+    /**
+     * Environment startup time in milliseconds (MS-399): wall-clock from dispatch (`startedAt`)
+     * to the worker container's first log line — i.e. Cloud Run cold start + worker image pull.
+     * Derived orchestrator-side from Cloud Logging and recorded on completion. Null on recovery
+     * paths or when the first log timestamp is unavailable.
+     */
+    val envStartupMs = long("env_startup_ms").nullable()
+
     override val primaryKey = PrimaryKey(jobId)
 }

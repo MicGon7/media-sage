@@ -13,6 +13,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.ByteArrayInputStream
+import java.time.Instant
 import java.util.UUID
 import org.slf4j.LoggerFactory
 
@@ -177,6 +178,8 @@ class CloudRunJobsClient(
      * @param executionName Short Cloud Run execution name (e.g. `media-sage-agent-worker-dtz62`),
      *   passed directly from the worker's [CLOUD_RUN_EXECUTION] env var. Used to look up metrics
      *   in Cloud Logging without an additional executions list API call.
+     * @param startedAt Dispatch timestamp from the job row, used to compute environment startup
+     *   time (MS-399). Null when unavailable (e.g. recovery path); env startup is then not recorded.
      */
     suspend fun onJobCompleted(
         jobId: UUID,
@@ -184,9 +187,10 @@ class CloudRunJobsClient(
         executionName: String,
         succeeded: Boolean,
         failedGate: String? = null,
+        startedAt: Instant? = null,
     ): Boolean {
         return if (succeeded) {
-            handleSuccess(jobId, ticketKey, executionName)
+            handleSuccess(jobId, ticketKey, executionName, startedAt)
         } else {
             log.warn("[$ticketKey] Worker reported failure via Pub/Sub" + (failedGate?.let { " (gate=$it)" } ?: ""))
             // Best-effort model capture on failure — the result event is usually still present
@@ -205,7 +209,8 @@ class CloudRunJobsClient(
         } else {
             val executionName = fetchLatestExecutionName(ticketKey)
             log.info("[$ticketKey] Latest execution name: $executionName")
-            handleSuccess(jobId, ticketKey, executionName)
+            // Recovery path has no dispatch timestamp on hand, so env startup is not recorded here.
+            handleSuccess(jobId, ticketKey, executionName, startedAt = null)
         }
     }
 
@@ -213,6 +218,7 @@ class CloudRunJobsClient(
         jobId: UUID,
         ticketKey: String,
         executionName: String?,
+        startedAt: Instant?,
     ): Boolean {
         log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
         val metrics = if (executionName != null) {
@@ -231,8 +237,27 @@ class CloudRunJobsClient(
             log.warn("[$ticketKey] Could not determine execution name — skipping metrics fetch")
             null
         }
-        jobRepository.markCompleted(jobId, metrics)
+        val envStartupMs = computeEnvStartupMs(ticketKey, executionName, startedAt)
+        jobRepository.markCompleted(jobId, metrics, envStartupMs)
         return true
+    }
+
+    /**
+     * Environment startup time in milliseconds (MS-399): the gap between dispatch ([startedAt])
+     * and the worker container's first log line in Cloud Logging — i.e. Cloud Run cold start +
+     * worker image pull. Returns null when either timestamp is unavailable (recovery path, or a
+     * missing first-log entry); the clamp guards against sub-second clock skew between hosts.
+     */
+    private suspend fun computeEnvStartupMs(
+        ticketKey: String,
+        executionName: String?,
+        startedAt: Instant?,
+    ): Long? {
+        if (executionName == null || startedAt == null) return null
+        val firstLog = cloudLoggingClient.fetchFirstLogTimestamp(executionName) ?: return null
+        val envStartupMs = (firstLog.toEpochMilli() - startedAt.toEpochMilli()).coerceAtLeast(0)
+        log.info("[$ticketKey] Environment startup: ${envStartupMs}ms (cold start + image pull)")
+        return envStartupMs
     }
 
     /**

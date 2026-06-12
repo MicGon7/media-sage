@@ -16,7 +16,13 @@ interface JobRegistry {
     suspend fun findLatestJob(ticketKey: String): JobRow?
     suspend fun insert(ticketKey: String, prompt: String): UUID
     suspend fun markRunning(jobId: UUID, executionName: String)
-    suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics? = null)
+
+    /**
+     * Marks [jobId] COMPLETED. Optionally records worker [metrics] (from the result event) and
+     * [envStartupMs] — the orchestrator-derived environment startup time in milliseconds
+     * (dispatch → the worker container's first log line; MS-399). Both are null when unavailable.
+     */
+    suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics? = null, envStartupMs: Long? = null)
 
     /**
      * Marks [jobId] FAILED, optionally recording the [failedGate] that caused the failure
