@@ -11,7 +11,7 @@ graph TB
         composeApp[":composeApp<br/>Compose Multiplatform UI"]
         shared[":shared<br/>Business logic · Room · Ktor Client"]
         server[":server<br/>Ktor API Server"]
-        agent[":agent<br/>Orchestrator Server"]
+        agent[":orchestrator<br/>Orchestrator Server"]
     end
 
     subgraph Railway["Railway"]
@@ -19,7 +19,7 @@ graph TB
     end
 
     subgraph GCP["GCP"]
-        Orchestrator["Cloud Run Service<br/>media-sage-orchestrator<br/>:agent · port 8081"]
+        Orchestrator["Cloud Run Service<br/>media-sage-orchestrator<br/>:orchestrator · port 8081"]
         subgraph Jobs["Cloud Run Jobs"]
             WorkerJob["worker<br/>Dockerfile.worker<br/>Claude Code + Android SDK"]
             LiteJobs["judge · comment · conflict<br/>Dockerfile.lite<br/>Claude Code only"]
@@ -70,7 +70,7 @@ graph TB
 | `:composeApp` | Android + iOS | App stores |
 | `:shared` | Android + iOS | Bundled with app |
 | `:server` | JVM (Netty, port 8080) | Railway |
-| `:agent` | JVM (Netty, port 8081) | GCP Cloud Run Service |
+| `:orchestrator` | JVM (Netty, port 8081) | GCP Cloud Run Service |
 
 ## Data flow (product)
 

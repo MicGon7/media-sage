@@ -5,9 +5,9 @@ on:
     branches: [ main ]
     paths:
       - 'Dockerfile.lite'
-      - 'agent/lite-entrypoint.sh'
-      - 'agent/entrypoint-common.sh'
-      - 'agent/get-github-token.py'
+      - 'orchestrator/lite-entrypoint.sh'
+      - 'orchestrator/entrypoint-common.sh'
+      - 'orchestrator/get-github-token.py'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

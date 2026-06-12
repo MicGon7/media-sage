@@ -4,11 +4,11 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'agent/Dockerfile'
+      - 'orchestrator/Dockerfile'
   pull_request:
     branches: [ main ]
     paths:
-      - 'agent/Dockerfile'
+      - 'orchestrator/Dockerfile'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,12 +23,12 @@ jobs:
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: agent/Dockerfile
+          dockerfile: orchestrator/Dockerfile
           config: .hadolint.yaml
           ignore: DL3008
 
-      - name: Build agent image
-        run: docker build -f agent/Dockerfile -t media-sage-agent-test .
+      - name: Build orchestrator image
+        run: docker build -f orchestrator/Dockerfile -t media-sage-agent-test .
 
       - name: Smoke test runtime dependencies
         run: |
