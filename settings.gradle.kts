@@ -30,7 +30,7 @@ dependencyResolutionManagement {
 
 include(":composeApp")
 include(":shared")
-include(":server")
+include(":appServer")
 include(":orchestrator")
 include(":scripts")
 include(":pipelineScenarios")

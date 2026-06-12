@@ -44,9 +44,9 @@ if [ -z "$KOTLIN_CHANGED" ]; then
 fi
 
 RUN_ORCHESTRATOR=false
-RUN_SERVER=false
+RUN_APPSERVER=false
 ORCHESTRATOR_TEST_CLASSES=()
-SERVER_TEST_CLASSES=()
+APPSERVER_TEST_CLASSES=()
 
 # Map a changed source file to its corresponding test class name.
 # Convention: Foo.kt → FooTest.kt (standard Kotlin/Java naming).
@@ -75,11 +75,11 @@ while IFS= read -r file; do
                 ORCHESTRATOR_TEST_CLASSES+=("$cls")
             fi
             ;;
-        server/src/main/*.kt)
-            RUN_SERVER=true
-            cls=$(find_test_class "server" "$file")
+        appServer/src/main/*.kt)
+            RUN_APPSERVER=true
+            cls=$(find_test_class "appServer" "$file")
             if [ -n "$cls" ]; then
-                SERVER_TEST_CLASSES+=("$cls")
+                APPSERVER_TEST_CLASSES+=("$cls")
             fi
             ;;
     esac
@@ -108,8 +108,8 @@ if [ "$RUN_ORCHESTRATOR" = "true" ]; then
     RAN_ANY=true
 fi
 
-if [ "$RUN_SERVER" = "true" ]; then
-    run_tests ":server:test" "${SERVER_TEST_CLASSES[@]+"${SERVER_TEST_CLASSES[@]}"}"
+if [ "$RUN_APPSERVER" = "true" ]; then
+    run_tests ":appServer:test" "${APPSERVER_TEST_CLASSES[@]+"${APPSERVER_TEST_CLASSES[@]}"}"
     RAN_ANY=true
 fi
 

@@ -7,7 +7,7 @@ sequenceDiagram
     actor User
     participant App as App<br/>(composeApp + shared)
     participant Room as Room DB<br/>(on-device cache)
-    participant Server as App API<br/>(Railway · :server · port 8080)
+    participant Server as App API<br/>(Railway · :appServer · port 8080)
     participant NewsAPI as The News API
     participant Claude as Anthropic Claude API<br/>(via Fuelix proxy)
     participant Scripture as Scripture API

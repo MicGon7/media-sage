@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "./gradlew :server:shadowJar"
+buildCommand = "./gradlew :appServer:shadowJar"
 
 [deploy]
-startCommand = "java $JAVA_OPTS -jar server/build/libs/server-all.jar"
+startCommand = "java $JAVA_OPTS -jar appServer/build/libs/appServer-all.jar"
 healthcheckPath = "/health"
 healthcheckTimeout = 60
 restartPolicyType = "on_failure"
