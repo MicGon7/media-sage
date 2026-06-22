@@ -29,6 +29,7 @@ object AgentDatabase {
         addFailureAttributionColumns() // MS-386
         addEnvStartupColumn() // MS-399 — must run before the view, which selects env_startup_ms
         createJobDurationsView()
+        createTranscriptsTable() // MS-387
     }
 
     /** MS-210: Worker efficiency metric columns. */
@@ -63,6 +64,16 @@ object AgentDatabase {
         """
         ALTER TABLE jobs
           ADD COLUMN IF NOT EXISTS env_startup_ms BIGINT
+        """.trimIndent()
+    )
+
+    /** MS-387: Human-readable worker transcripts, one row per job. */
+    private fun org.jetbrains.exposed.sql.Transaction.createTranscriptsTable() = exec(
+        """
+        CREATE TABLE IF NOT EXISTS transcripts (
+            job_id  UUID PRIMARY KEY REFERENCES jobs(job_id),
+            content TEXT NOT NULL
+        )
         """.trimIndent()
     )
 
