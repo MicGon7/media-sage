@@ -12,8 +12,6 @@ Pipeline checkpoints:
 ✅ Orchestrator dispatched Cloud Run Job
 ✅ Worker cloned from michael-gonzalez-dev/media-sage successfully
 ✅ Worker completed the task and opened a PR
-⏳ Pub/Sub completion event — fires after this comment
-⏳ Job marked COMPLETED in Supabase — pending Pub/Sub
 
 PR: {pr_url}
 
