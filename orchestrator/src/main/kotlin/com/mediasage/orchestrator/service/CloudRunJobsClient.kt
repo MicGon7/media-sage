@@ -108,6 +108,7 @@ class CloudRunJobsClient(
         val envVars = buildList {
             add(EnvVar("PROMPT", prompt))
             add(EnvVar("TICKET_KEY", ticketKey))
+            add(EnvVar("JOB_ID", jobId.toString()))
             if (jiraTicketKey != null) add(EnvVar("JIRA_TICKET_KEY", jiraTicketKey))
         }
 
