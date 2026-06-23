@@ -9,13 +9,14 @@ Usage:
     python scripts/generate_figure_bios.py [options]
 
 Options:
-    --limit=N            Process only the first N figures without bios
-    --figures=Name1,...  Process specific figures by name (partial match, comma-separated)
-    --force              Regenerate bios even if one already exists in the seed SQL
-    --dry-run            List figures that would be processed without making API calls
+    --limit=N              Process only the first N figures without bios
+    --figures=Name1,...    Process specific figures by name (partial match, comma-separated)
+    --exclude=Name1,...    Skip specific figures by name (partial match, comma-separated)
+    --force                Regenerate bios even if one already exists in the seed SQL
+    --dry-run              List figures that would be processed without making API calls
 
 Environment:
-    ANTHROPIC_API_KEY    Your Anthropic API key (also accepts CLAUDE_API_KEY)
+    CLAUDE_API_KEY         Your Anthropic API key
 
 Requirements:
     pip install anthropic
@@ -35,11 +36,25 @@ MODEL = "claude-sonnet-4-6"
 RATE_LIMIT_PAUSE_S = 0.5
 
 SYSTEM_PROMPT = (
-    "You are writing biographical entries for a theological reference guide called The Media Sage. "
-    "Your entries are authoritative, dignified, and spiritually rich — written for thoughtful Christian "
-    "readers who want to understand who these figures were and why they matter to the faith.\n\n"
+    "You are writing short biographies for The Media Sage, an app that introduces people to figures "
+    "of the Christian faith. Your reader is a curious teenager or everyday person — someone "
+    "who may not have much church background but is open to learning. Write like you are telling them "
+    "a story about a real human being, not writing an encyclopedia entry.\n\n"
+    "Keep the tone warm, clear, and grounded. Use simple sentences. Avoid theological jargon — if you "
+    "must use a term, explain it in plain words right away. Let the person's humanity come through: "
+    "their struggles, their turning points, the cost they paid, and why their life still matters. "
+    "Echo the spirit and tone of the figure themselves — Watchman Nee should feel different from "
+    "C.S. Lewis, and Madame Guyon different from Martin Luther.\n\n"
+    "Accuracy is paramount. Only include historically verifiable facts. If you are uncertain about a "
+    "specific date, name, place, or event, write in general terms rather than inventing or guessing. "
+    "Do not fabricate quotes, titles, or biographical details.\n\n"
+    "Do not use promotional language or superlatives. Do not call someone 'one of the greatest,' "
+    "'the most important,' or 'one of the most remarkable.' Show who they were through what they did "
+    "and what it cost them — let the reader draw their own conclusions about their significance.\n\n"
     "Write in plain prose only. No markdown headers, no bullet points, no bold text, no section labels. "
-    "Four cohesive paragraphs, approximately 200–300 words total."
+    "Four cohesive paragraphs, approximately 200–300 words total. "
+    "Enclose all book and writing titles in double quotes. "
+    "Do not repeat the figure's name mid-sentence — use pronouns after the opening paragraph."
 )
 
 
@@ -115,7 +130,21 @@ def parse_figures_from_sql(sql_path: Path) -> list:
 
 
 def escape_sql(s: str) -> str:
-    return s.replace("'", "''")
+    """Escape for use inside a PostgreSQL E'...' string literal."""
+    return s.replace("'", "''").replace("\n", "\\n")
+
+
+def read_preserved_entries(exclude_names: list) -> list:
+    """Read complete UPDATE statements for excluded figures from the existing output file."""
+    if not OUTPUT_SQL_PATH.exists():
+        return []
+    content = OUTPUT_SQL_PATH.read_text(encoding="utf-8")
+    preserved = []
+    for match in re.finditer(r"(UPDATE figures SET bio = E'.*?' WHERE id = \d+;[^\n]*)", content, re.DOTALL):
+        stmt = match.group(1)
+        if any(e in stmt.lower() for e in exclude_names):
+            preserved.append(stmt)
+    return preserved
 
 
 def generate_bio(client, name: str, role: str, century: str, lifespan: str) -> str:
@@ -132,13 +161,14 @@ def main():
     parser = argparse.ArgumentParser(description="Generate AI bios for Media Sage figures.")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--figures", type=str, default=None)
+    parser.add_argument("--exclude", type=str, default=None)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_API_KEY")
+    api_key = os.environ.get("CLAUDE_API_KEY")
     if not api_key and not args.dry_run:
-        print("Error: ANTHROPIC_API_KEY env var is not set.")
+        print("Error: CLAUDE_API_KEY env var is not set.")
         sys.exit(1)
 
     figures = parse_figures_from_sql(SEED_SQL_PATH)
@@ -150,11 +180,18 @@ def main():
         targets = [n.strip().lower() for n in args.figures.split(",")]
         figures = [f for f in figures if any(t in f["name"].lower() for t in targets)]
 
+    excluded_names = []
+    if args.exclude:
+        excluded_names = [n.strip().lower() for n in args.exclude.split(",")]
+        figures = [f for f in figures if not any(e in f["name"].lower() for e in excluded_names)]
+
     if args.limit:
         figures = figures[: args.limit]
 
     print("=== Generate Figure Bios ===")
     print(f"Figures to process : {len(figures)}")
+    if excluded_names:
+        print(f"Excluded           : {args.exclude}")
     print(f"Model              : {MODEL}")
     print(f"Output             : {OUTPUT_SQL_PATH}")
 
@@ -187,11 +224,15 @@ def main():
         if i < len(figures) - 1:
             time.sleep(RATE_LIMIT_PAUSE_S)
 
+    preserved = read_preserved_entries(excluded_names)
+
     OUTPUT_SQL_PATH.parent.mkdir(parents=True, exist_ok=True)
     with OUTPUT_SQL_PATH.open("w", encoding="utf-8") as f:
         f.write("-- Generated figure bios — apply to Supabase via psql or the SQL editor\n\n")
+        for stmt in preserved:
+            f.write(stmt + "\n\n")
         for fig_id, name, bio in results:
-            f.write(f"UPDATE figures SET bio = '{escape_sql(bio)}' WHERE id = {fig_id}; -- {name}\n\n")
+            f.write(f"UPDATE figures SET bio = E'{escape_sql(bio)}' WHERE id = {fig_id}; -- {name}\n\n")
 
     print(f"\n=== Complete ===")
     print(f"Generated : {success} / {len(figures)}")
