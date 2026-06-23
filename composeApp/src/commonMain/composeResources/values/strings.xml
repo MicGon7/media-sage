@@ -95,7 +95,6 @@
 
     <!-- Figure detail screen -->
     <string name="figure_detail_biography">Biography</string>
-    <string name="figure_detail_wikipedia_source">Sourced from Wikipedia</string>
     <string name="figure_detail_quotes_sheet_title">Collected Quotes</string>
 
     <string name="reader_hero_caption">The whole creation speaks of the wisdom and goodness of God. — John Wesley</string>
