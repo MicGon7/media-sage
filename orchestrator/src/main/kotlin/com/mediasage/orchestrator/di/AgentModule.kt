@@ -60,7 +60,6 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
         AgentLaunchService(
             scope, cloudRun, get(), get<JiraTicketStatusChecker>(), briefingService,
             judgeJobName = config.gcpJudgeJobName,
-            commentJobName = config.gcpCommentJobName,
         )
     }
     single<AgentLauncher> { get<AgentLaunchService>() }

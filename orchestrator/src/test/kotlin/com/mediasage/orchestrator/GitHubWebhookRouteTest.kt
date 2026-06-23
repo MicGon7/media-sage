@@ -140,23 +140,6 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
-    fun commentedReviewFiresCommentAgent() {
-        val tracking = FakeAgentLauncher()
-        testGitHubApp(agentService = tracking) {
-            val body = prReviewPayload(prAuthorLogin = BOT_LOGIN, state = "commented", reviewBody = "What does this function do?")
-            val response = client.post("/webhook/github") {
-                contentType(ContentType.Application.Json)
-                header("X-GitHub-Event", "pull_request_review")
-                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
-                setBody(body)
-            }
-            assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(0, tracking.agentLaunches, "Full agent must NOT fire for comment review")
-            assertEquals(1, tracking.commentReviewLaunches, "Comment agent must fire for commented review")
-        }
-    }
-
-    @Test
     fun humanAuthoredPrReturns200WithoutFiring() {
         val tracking = FakeAgentLauncher()
         testGitHubApp(agentService = tracking) {
@@ -194,7 +177,6 @@ class GitHubWebhookRouteTest {
             }
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(0, tracking.agentLaunches, "Agent must NOT fire when bot submitted the review")
-            assertEquals(0, tracking.commentReviewLaunches, "Comment agent must NOT fire when bot submitted the review")
         }
     }
 
@@ -390,7 +372,6 @@ private fun testGitHubApp(
 
 private class FakeAgentLauncher : AgentLauncher {
     var agentLaunches = 0
-    var commentReviewLaunches = 0
     var conflictResolutionLaunches = 0
     var lastReviewerLogin: String? = null
     var lastBaseBranch: String? = null
@@ -402,13 +383,6 @@ private class FakeAgentLauncher : AgentLauncher {
     ): Boolean {
         agentLaunches++
         lastReviewerLogin = reviewerLogin
-        return true
-    }
-
-    override fun launchForCommentReview(
-        ticketKey: String, prNumber: Int, branchRef: String, commentBody: String
-    ): Boolean {
-        commentReviewLaunches++
         return true
     }
 

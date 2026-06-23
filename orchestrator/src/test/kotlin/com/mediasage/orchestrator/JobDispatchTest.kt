@@ -367,19 +367,6 @@ class JobDispatchTest {
             "Prompt must include reviewer login for gh pr review-request")
     }
 
-    @Test
-    fun `launchForCommentReview dispatches Cloud Run job with PR key`() = runTest {
-        val registry = FakeJobRegistry(shouldDispatchResult = true)
-        val dispatcher = FakeJobDispatcher()
-        val service = cloudRunService(registry, dispatcher, scope = this)
-
-        service.launchForCommentReview("MS-42", 42, "feature/MS-42-some-feature", "What does this do?")
-        advanceUntilIdle()
-
-        assertEquals(listOf("PR-42"), registry.inserted)
-        assertEquals(listOf("PR-42"), dispatcher.executions)
-    }
-
     // ── Relevant files warning ────────────────────────────────────────────────
 
     @Test
@@ -439,22 +426,6 @@ class JobDispatchTest {
         assertTrue(prompt.contains("feature/MS-42-fix"), "Prompt must contain branch")
         assertTrue(prompt.contains("jane"), "Prompt must contain reviewer login")
         assertTrue(prompt.contains("/pr-review-work"), "Prompt must invoke /pr-review-work skill")
-    }
-
-    @Test
-    fun `launchForCommentReview prompt contains PR number, ticket key, comment, branch and skill`() = runTest {
-        val dispatcher = FakeJobDispatcher()
-        val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
-
-        service.launchForCommentReview("MS-42", 42, "feature/MS-42-fix", "Why this approach?")
-        advanceUntilIdle()
-
-        val prompt = dispatcher.prompts.single()
-        assertTrue(prompt.contains("42"), "Prompt must contain PR number")
-        assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
-        assertTrue(prompt.contains("Why this approach?"), "Prompt must contain comment body")
-        assertTrue(prompt.contains("feature/MS-42-fix"), "Prompt must contain branch")
-        assertTrue(prompt.contains("/pr-comment-work"), "Prompt must invoke /pr-comment-work skill")
     }
 
     @Test

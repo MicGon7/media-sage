@@ -109,11 +109,4 @@ class BriefingIntegrationTest {
         assertTrue(dispatcher.prompts.single().contains("## Agent Briefing"))
     }
 
-    @Test
-    fun `briefing appended for comment review dispatch`() = runTest {
-        val (service, dispatcher) = makeService(FakeBriefingService(briefingText), this)
-        service.launchForCommentReview("MS-1", 42, "feature/MS-1-fix", "Why suspend?")
-        advanceUntilIdle()
-        assertTrue(dispatcher.prompts.single().contains("## Agent Briefing"))
-    }
 }

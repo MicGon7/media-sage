@@ -24,20 +24,6 @@ sealed class BriefingContext {
     ) : BriefingContext()
 
     /**
-     * A PR comment review (not a formal changes-requested review).
-     * The worker answers questions but does not push code changes.
-     *
-     * @param ticketKey Jira issue key for context.
-     * @param prNumber GitHub PR number.
-     * @param commentBody Text of the reviewer's comment.
-     */
-    data class CommentReview(
-        val ticketKey: String,
-        val prNumber: Int,
-        val commentBody: String,
-    ) : BriefingContext()
-
-    /**
      * A branch ejected from the merge queue due to a conflict with the base branch.
      *
      * @param ticketKey Jira issue key for context.

@@ -31,7 +31,6 @@ class AgentLaunchService(
     private val jiraStatusChecker: JiraTicketStatusChecker? = null,
     private val briefingService: BriefingService? = null,
     private val judgeJobName: String? = null,
-    private val commentJobName: String? = null,
 ) : AgentLauncher {
 
     private val log = LoggerFactory.getLogger(AgentLaunchService::class.java)
@@ -178,34 +177,6 @@ class AgentLaunchService(
         val key = "PR-$prNumber"
         val basePrompt = prReviewPrompt.format(prNumber, ticketKey, commentBody, branchRef, reviewerLogin)
         return dispatchToCloudRun(key, basePrompt, cloudRun, DispatchOptions(jiraTicketKey = ticketKey))
-    }
-
-    /**
-     * Launches a Cloud Run Job to answer reviewer questions posted as a PR comment (not a formal
-     * changes-requested review). The worker reads the branch context and replies via `gh pr comment`
-     * but does **not** push any code changes.
-     * De-duplicates by PR number — a second call while one is running is a no-op.
-     *
-     * @param ticketKey Jira issue key for context forwarded to the worker.
-     * @param prNumber GitHub PR number.
-     * @param branchRef Branch the PR targets, checked out by the worker for context.
-     * @param commentBody Text of the reviewer's comment.
-     * @return true if a job was dispatched; false if deduplicated or Cloud Run is not configured.
-     */
-    override fun launchForCommentReview(
-        ticketKey: String,
-        prNumber: Int,
-        branchRef: String,
-        commentBody: String
-    ): Boolean {
-        val cloudRun = cloudRun ?: return false
-        val key = "PR-$prNumber"
-        val basePrompt = prCommentPrompt.format(prNumber, ticketKey, commentBody, branchRef)
-        val context = BriefingContext.CommentReview(ticketKey, prNumber, commentBody)
-        return dispatchToCloudRun(
-            key, basePrompt, cloudRun,
-            DispatchOptions(jiraTicketKey = ticketKey, briefingContext = context, jobNameOverride = commentJobName),
-        )
     }
 
     /**

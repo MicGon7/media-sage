@@ -47,9 +47,7 @@ jobs:
       - name: Update Cloud Run Jobs to lite image
         run: |
           IMAGE=us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/lite:latest
-          for JOB in media-sage-agent-judge media-sage-agent-comment; do
-            gcloud run jobs update "$JOB" \
-              --image "$IMAGE" \
-              --region us-central1 \
-              --project media-sage-agent
-          done
+          gcloud run jobs update media-sage-agent-judge \
+            --image "$IMAGE" \
+            --region us-central1 \
+            --project media-sage-agent
