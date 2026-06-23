@@ -52,8 +52,6 @@ class HttpBriefingService(
      * @param context Describes the work scenario. The concrete subtype selects the prompt template:
      *   - [BriefingContext.TicketWork] — summarises the ticket description and acceptance criteria;
      *     used when a new ticket is assigned to the bot.
-     *   - [BriefingContext.CommentReview] — frames the reviewer's question and the codebase context
-     *     needed to answer it; used for PR comments that do not request code changes.
      *   - [BriefingContext.ConflictResolution] — describes which branch conflicted and what to
      *     watch for when rebasing; used when a branch is ejected from the merge queue.
      */
@@ -77,7 +75,6 @@ class HttpBriefingService(
 
     private fun buildPrompt(context: BriefingContext): String = when (context) {
         is BriefingContext.TicketWork -> ticketWorkPrompt(context)
-        is BriefingContext.CommentReview -> commentReviewPrompt(context)
         is BriefingContext.ConflictResolution -> conflictResolutionPrompt(context)
     }
 
@@ -93,17 +90,6 @@ class HttpBriefingService(
         ${ctx.ticketContent}
     """.trimIndent()
 
-    private fun commentReviewPrompt(ctx: BriefingContext.CommentReview) = """
-        You are briefing a software engineer about to answer a question left on a PR.
-        The engineer will have full access to the PR diff and the review comment — do not restate them.
-        Explain only what codebase context is needed to answer well that is not visible in the diff.
-        The engineer will post a comment reply — no code changes. Maximum 3-5 sentences.
-
-        Ticket: ${ctx.ticketKey}
-        PR: #${ctx.prNumber}
-        Comment: ${ctx.commentBody}
-    """.trimIndent()
-
     private fun conflictResolutionPrompt(ctx: BriefingContext.ConflictResolution) = """
         You are briefing a software engineer about to resolve a merge conflict.
         Explain which branch conflicted, what the likely cause is based on the branch name, and what to watch for when rebasing.
@@ -117,7 +103,6 @@ class HttpBriefingService(
 
     private fun BriefingContext.ticketKey(): String = when (this) {
         is BriefingContext.TicketWork -> ticketKey
-        is BriefingContext.CommentReview -> ticketKey
         is BriefingContext.ConflictResolution -> ticketKey
     }
 

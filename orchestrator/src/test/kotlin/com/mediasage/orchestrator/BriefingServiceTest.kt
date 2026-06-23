@@ -54,13 +54,6 @@ class BriefingServiceTest {
     }
 
     @Test
-    fun `brief returns non-null for CommentReview context`() = runTest {
-        val service = HttpBriefingService(buildClient(successResponse), "https://api.test", "token")
-        val result = service.brief(BriefingContext.CommentReview("MS-1", 42, "Why is this a suspend fun?"))
-        assertNotNull(result)
-    }
-
-    @Test
     fun `brief returns non-null for ConflictResolution context`() = runTest {
         val service = HttpBriefingService(buildClient(successResponse), "https://api.test", "token")
         val result = service.brief(

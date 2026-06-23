@@ -64,7 +64,6 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         gcpRegion = config.propertyOrNull("app.cloudRun.region")?.getString() ?: "us-central1",
         gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",
         gcpJudgeJobName = config.propertyOrNull("app.cloudRun.judgeJobName")?.getString() ?: "media-sage-agent-judge",
-        gcpCommentJobName = config.propertyOrNull("app.cloudRun.commentJobName")?.getString() ?: "media-sage-agent-comment",
         googleCredentialsJson = credentialsJson,
         supabaseDbUrl = str("app.supabase.dbUrl"),
         pubSubWebhookSecret = str("app.pubSub.webhookSecret"),

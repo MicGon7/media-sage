@@ -123,7 +123,7 @@ Register the Jira webhook at **media-sage.atlassian.net → Settings → System 
 
 Register the GitHub webhook in repo **Settings → Webhooks**:
 - Content type: `application/json`
-- Events: `Pull request reviews`, `Pull request review comments`
+- Events: `Pull request reviews`
 
 ## Cloud Run Logs Explorer Queries
 

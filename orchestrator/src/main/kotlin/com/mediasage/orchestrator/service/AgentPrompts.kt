@@ -40,13 +40,6 @@ internal val conflictResolutionPrompt = """
     /conflict-resolution-work
 """.trimIndent()
 
-internal val prCommentPrompt = """
-    PR #%d for ticket %s has a new comment: "%s".
-    Branch: %s.
-
-    /pr-comment-work
-""".trimIndent()
-
 internal val judgeWorkPrompt = """
     Your assigned ticket is %s. A worker has completed the ticket and opened PR #%s.
 

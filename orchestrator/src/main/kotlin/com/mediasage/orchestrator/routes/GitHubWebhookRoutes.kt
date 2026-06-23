@@ -133,9 +133,8 @@ fun Route.githubWebhookRoutes(webhookSecret: String, botLogin: String) {
  * - `pull_request` with `action: dequeued` and `reason: merge_conflict`: if the PR was authored
  *   by [botLogin], dispatches a conflict-resolution Cloud Run Job via [AgentLauncher.launchForConflictResolution].
  *   CI-failure and other non-conflict dequeue reasons are silently ignored.
- * - `pull_request_review`: if the PR was authored by [botLogin], launches the agent via
- *   [AgentLauncher.launchForPrReview] for `changes_requested` reviews or
- *   [AgentLauncher.launchForCommentReview] for `commented` reviews. Ignores agent-authored reviews
+ * - `pull_request_review` with `state: changes_requested`: if the PR was authored by [botLogin],
+ *   launches the agent via [AgentLauncher.launchForPrReview]. Ignores agent-authored reviews
  *   (body starts with "🤖 **Agent:**") and all other review states.
  * - All other event types: silently ignored, returns `200 OK`.
  */
@@ -169,14 +168,9 @@ private suspend fun handleReviewEvent(
 ) {
     val context = parseReviewContext(rawBody, botLogin) ?: return
     log.info("GitHub review submitted: ticketKey=${context.ticketKey} PR#${context.prNumber} state=${context.reviewState}")
-    when (context.reviewState) {
-        "changes_requested" -> agentService.launchForPrReview(
-            context.ticketKey, context.prNumber, context.branchRef, context.commentBody, context.reviewerLogin
-        )
-        "commented" -> agentService.launchForCommentReview(
-            context.ticketKey, context.prNumber, context.branchRef, context.commentBody
-        )
-    }
+    agentService.launchForPrReview(
+        context.ticketKey, context.prNumber, context.branchRef, context.commentBody, context.reviewerLogin
+    )
 }
 
 /**
@@ -228,7 +222,7 @@ private fun parseReviewContext(rawBody: ByteArray, botLogin: String): WebhookCon
 
     return ticketKey
         ?.takeIf { payload.action == "submitted" }
-        ?.takeIf { state == "changes_requested" || state == "commented" }
+        ?.takeIf { state == "changes_requested" }
         ?.takeIf { !reviewBody.startsWith("🤖 **Agent:**") }
         ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, reviewBody, state, payload.sender.login) }
 }

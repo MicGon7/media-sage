@@ -48,25 +48,6 @@ interface AgentLauncher {
     ): Boolean
 
     /**
-     * Launches a Cloud Run Job to answer a PR comment review (not a formal changes-requested review).
-     *
-     * Unlike [launchForPrReview], the worker posts a reply comment only — it does **not** push
-     * code changes or re-request review. Deduplicates by [prNumber].
-     *
-     * @param ticketKey Jira issue key included in the agent prompt for context.
-     * @param prNumber GitHub PR number. Used as the dedup key and passed to `gh pr comment`.
-     * @param branchRef Branch the worker reads for context (no commits are pushed).
-     * @param commentBody Text of the review comment the agent should respond to.
-     * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
-     */
-    fun launchForCommentReview(
-        ticketKey: String,
-        prNumber: Int,
-        branchRef: String,
-        commentBody: String
-    ): Boolean
-
-    /**
      * Launches a Cloud Run Job to rebase [branchRef] after it was ejected from the merge queue
      * due to a conflict with main.
      *
