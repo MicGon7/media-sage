@@ -5,7 +5,6 @@ import com.mediasage.pipeline.core.JobRegistry
 import com.mediasage.pipeline.core.JobRepository
 import com.mediasage.pipeline.core.JobStatus
 import com.mediasage.orchestrator.service.AgentLaunchService
-import com.mediasage.orchestrator.service.CloudLoggingClient
 import com.mediasage.orchestrator.service.CloudRunDispatch
 import com.mediasage.orchestrator.service.CloudRunJobsClient
 import io.ktor.client.*
@@ -99,11 +98,6 @@ abstract class FullPipelineScenarioBase {
     }
 
     private fun buildCloudRunDispatch(jobRepository: JobRepository): CloudRunDispatch {
-        val loggingClient = CloudLoggingClient(
-            httpClient = httpClient,
-            projectId = config.gcpProjectId,
-            credentialsJson = config.googleCredentialsJson
-        )
         val client = CloudRunJobsClient(
             httpClient = httpClient,
             projectId = config.gcpProjectId,
@@ -111,7 +105,6 @@ abstract class FullPipelineScenarioBase {
             jobName = config.gcpJobName,
             credentialsJson = config.googleCredentialsJson,
             jobRepository = jobRepository,
-            cloudLoggingClient = loggingClient,
         )
         return CloudRunDispatch(client, jobRepository)
     }
