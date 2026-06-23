@@ -108,12 +108,16 @@ private suspend fun processCompletion(
         log.warn("[${event.ticketKey}] Pub/Sub webhook: no RUNNING job found — may have already been processed")
         return
     }
+    val envStartupMs = event.containerStartedAtMs?.let { startedMs ->
+        job.startedAt?.let { startedAt -> startedMs - startedAt.toEpochMilli() }
+    }
     cloudRunJobsClient.onJobCompleted(
         jobId = job.jobId,
         ticketKey = event.ticketKey,
         succeeded = event.status == "success",
         failedGate = event.failedGate,
         metrics = event.toWorkerMetrics(),
+        envStartupMs = envStartupMs,
     )
     // Dispatch judge after a successful ticket-work completion.
     // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key).

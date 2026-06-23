@@ -71,4 +71,22 @@ class JobCompletionEventTest {
         assertNull(event.cacheReadTokens)
         assertNull(event.cacheCreationTokens)
     }
+
+    @Test
+    fun `containerStartedAtMs round-trips when worker includes it`() {
+        val event = json.decodeFromString(
+            JobCompletionEvent.serializer(),
+            """{"ticketKey":"MS-1","executionName":"exec-1","status":"success","containerStartedAtMs":1750000000000}"""
+        )
+        assertEquals(1750000000000L, event.containerStartedAtMs)
+    }
+
+    @Test
+    fun `containerStartedAtMs defaults to null when absent (pre-MS-414 worker)`() {
+        val event = json.decodeFromString(
+            JobCompletionEvent.serializer(),
+            """{"ticketKey":"MS-1","executionName":"exec-1","status":"success"}"""
+        )
+        assertNull(event.containerStartedAtMs)
+    }
 }

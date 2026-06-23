@@ -58,4 +58,11 @@ data class JobCompletionEvent(
     val cacheReadTokens: Int? = null,
     @SerialName("cacheCreationTokens")
     val cacheCreationTokens: Int? = null,
+    /**
+     * Unix epoch milliseconds captured at container start in `entrypoint-common.sh` (MS-414).
+     * Used by the orchestrator to compute `env_startup_ms` = this value minus `jobs.started_at`.
+     * Null when published by an older worker that did not include this field.
+     */
+    @SerialName("containerStartedAtMs")
+    val containerStartedAtMs: Long? = null,
 )
