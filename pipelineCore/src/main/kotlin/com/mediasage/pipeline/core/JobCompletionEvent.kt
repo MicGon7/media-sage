@@ -37,4 +37,25 @@ data class JobCompletionEvent(
      */
     @SerialName("failedGate")
     val failedGate: String? = null,
+    /**
+     * Worker efficiency metrics parsed from the Claude Code `result` event and embedded in
+     * the payload by the worker (MS-412). All null when the event was published by an older
+     * worker that did not include metrics.
+     */
+    @SerialName("numTurns")
+    val numTurns: Int? = null,
+    @SerialName("totalCostUsd")
+    val totalCostUsd: Double? = null,
+    @SerialName("durationMs")
+    val durationMs: Long? = null,
+    @SerialName("modelVersion")
+    val modelVersion: String? = null,
+    @SerialName("inputTokens")
+    val inputTokens: Int? = null,
+    @SerialName("outputTokens")
+    val outputTokens: Int? = null,
+    @SerialName("cacheReadTokens")
+    val cacheReadTokens: Int? = null,
+    @SerialName("cacheCreationTokens")
+    val cacheCreationTokens: Int? = null,
 )

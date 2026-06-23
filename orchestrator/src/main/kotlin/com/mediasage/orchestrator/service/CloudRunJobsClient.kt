@@ -2,6 +2,7 @@ package com.mediasage.orchestrator.service
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.mediasage.pipeline.core.JobRepository
+import com.mediasage.pipeline.core.WorkerMetrics
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -9,11 +10,7 @@ import io.ktor.http.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import java.io.ByteArrayInputStream
-import java.time.Instant
 import java.util.UUID
 import org.slf4j.LoggerFactory
 
@@ -58,7 +55,7 @@ private data class OperationError(
  *
  * Dispatches the job and marks it RUNNING, then returns immediately. Completion is signalled
  * by the worker itself via a Pub/Sub push event to [POST /webhook/pubsub], which calls
- * [onJobCompleted] to fetch metrics and update the job row.
+ * [onJobCompleted] with metrics already embedded in the event payload (MS-412).
  *
  * [recoverJob] is the startup safety net: on restart it checks RUNNING jobs whose Pub/Sub
  * event may have been missed while the orchestrator was down.
@@ -70,7 +67,6 @@ class CloudRunJobsClient(
     private val jobName: String,
     private val credentialsJson: String,
     internal val jobRepository: JobRepository,
-    private val cloudLoggingClient: CloudLoggingClient,
 ) : JobDispatcher {
 
     private val log = LoggerFactory.getLogger(CloudRunJobsClient::class.java)
@@ -146,7 +142,7 @@ class CloudRunJobsClient(
      * Outcomes:
      * - Execution not found (404) → job marked INTERRUPTED, returns false.
      * - Execution done with error → job marked FAILED, returns false.
-     * - Execution done successfully → delegates to [handleDone] (marks COMPLETED, fetches metrics), returns true.
+     * - Execution done successfully → delegates to [handleDone] (marks COMPLETED), returns true.
      * - Execution still running → no-op; Pub/Sub will fire [onJobCompleted] on completion, returns false.
      *
      * @param executionName Full Cloud Run execution resource name, e.g.
@@ -176,28 +172,24 @@ class CloudRunJobsClient(
     /**
      * Called by the Pub/Sub webhook route when the worker signals completion.
      *
-     * @param executionName Short Cloud Run execution name (e.g. `media-sage-agent-worker-dtz62`),
-     *   passed directly from the worker's [CLOUD_RUN_EXECUTION] env var. Used to look up metrics
-     *   in Cloud Logging without an additional executions list API call.
-     * @param startedAt Dispatch timestamp from the job row, used to compute environment startup
-     *   time (MS-399). Null when unavailable (e.g. recovery path); env startup is then not recorded.
+     * Worker metrics are read directly from [metrics] (embedded in the Pub/Sub payload by
+     * the worker, MS-412) and passed to [JobRepository.markCompleted]. No Cloud Logging fetch.
+     *
+     * @param metrics Parsed from the worker's Pub/Sub event payload. Null for old workers or
+     *   the recovery path; the job row is still marked COMPLETED with null metric columns.
      */
     suspend fun onJobCompleted(
         jobId: UUID,
         ticketKey: String,
-        executionName: String,
         succeeded: Boolean,
         failedGate: String? = null,
-        startedAt: Instant? = null,
+        metrics: WorkerMetrics? = null,
     ): Boolean {
         return if (succeeded) {
-            handleSuccess(jobId, ticketKey, executionName, startedAt)
+            handleSuccess(jobId, ticketKey, metrics)
         } else {
             log.warn("[$ticketKey] Worker reported failure via Pub/Sub" + (failedGate?.let { " (gate=$it)" } ?: ""))
-            // Best-effort model capture on failure — the result event is usually still present
-            // in the logs even when the worker exited non-zero (MS-386).
-            val modelVersion = cloudLoggingClient.fetchMetrics(executionName)?.modelVersion
-            jobRepository.markFailed(jobId, failedGate, modelVersion)
+            jobRepository.markFailed(jobId, failedGate, metrics?.modelVersion)
             false
         }
     }
@@ -208,86 +200,27 @@ class CloudRunJobsClient(
             jobRepository.markFailed(jobId)
             false
         } else {
-            val executionName = fetchLatestExecutionName(ticketKey)
-            log.info("[$ticketKey] Latest execution name: $executionName")
-            // Recovery path has no dispatch timestamp on hand, so env startup is not recorded here.
-            handleSuccess(jobId, ticketKey, executionName, startedAt = null)
+            // Recovery path: no event metrics available; job is still marked COMPLETED.
+            handleSuccess(jobId, ticketKey, metrics = null)
         }
     }
 
     private suspend fun handleSuccess(
         jobId: UUID,
         ticketKey: String,
-        executionName: String?,
-        startedAt: Instant?,
+        metrics: WorkerMetrics?,
     ): Boolean {
-        log.info("[$ticketKey] Cloud Run job completed successfully — fetching worker metrics")
-        val metrics = if (executionName != null) {
-            cloudLoggingClient.fetchMetrics(executionName).also { m ->
-                if (m != null) {
-                    log.info(
-                        "[$ticketKey] Metrics: ${m.numTurns} turns, " +
-                            "${m.inputTokens + m.outputTokens} tokens, " +
-                            "\$${String.format(java.util.Locale.US, "%.4f", m.totalCostUsd)}"
-                    )
-                } else {
-                    log.warn("[$ticketKey] Worker metrics unavailable — job marked complete without cost data")
-                }
-            }
+        if (metrics != null) {
+            log.info(
+                "[$ticketKey] Cloud Run job completed — ${metrics.numTurns} turns, " +
+                    "${metrics.inputTokens + metrics.outputTokens} tokens, " +
+                    "\$${String.format(java.util.Locale.US, "%.4f", metrics.totalCostUsd)}"
+            )
         } else {
-            log.warn("[$ticketKey] Could not determine execution name — skipping metrics fetch")
-            null
+            log.warn("[$ticketKey] Cloud Run job completed — no metrics in event (old worker or recovery path)")
         }
-        val envStartupMs = computeEnvStartupMs(ticketKey, executionName, startedAt)
-        jobRepository.markCompleted(jobId, metrics, envStartupMs)
+        jobRepository.markCompleted(jobId, metrics, envStartupMs = null)
         return true
-    }
-
-    /**
-     * Environment startup time in milliseconds (MS-399): the gap between dispatch ([startedAt])
-     * and the worker container's first log line in Cloud Logging — i.e. Cloud Run cold start +
-     * worker image pull. Returns null when either timestamp is unavailable (recovery path, or a
-     * missing first-log entry); the clamp guards against sub-second clock skew between hosts.
-     */
-    private suspend fun computeEnvStartupMs(
-        ticketKey: String,
-        executionName: String?,
-        startedAt: Instant?,
-    ): Long? {
-        if (executionName == null || startedAt == null) return null
-        val firstLog = cloudLoggingClient.fetchFirstLogTimestamp(executionName, since = startedAt) ?: return null
-        val envStartupMs = (firstLog.toEpochMilli() - startedAt.toEpochMilli()).coerceAtLeast(0)
-        log.info("[$ticketKey] Environment startup: ${envStartupMs}ms (cold start + image pull)")
-        return envStartupMs
-    }
-
-    /**
-     * Lists executions for the job and returns the name of the most recent one.
-     * Used only in the recovery path when the execution name is not available from a Pub/Sub event.
-     */
-    private suspend fun fetchLatestExecutionName(ticketKey: String): String? {
-        val url = "https://run.googleapis.com/v2/projects/$projectId/locations/$region/jobs/$jobName/executions" +
-            "?pageSize=1"
-        return runCatching {
-            val httpResponse = httpClient.get(url) {
-                header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
-            }
-            if (!httpResponse.status.isSuccess()) {
-                log.warn("[$ticketKey] Failed to list executions: ${httpResponse.status}")
-                return@runCatching null
-            }
-            json.parseToJsonElement(httpResponse.bodyAsText())
-                .jsonObject["executions"]
-                ?.jsonArray
-                ?.firstOrNull()
-                ?.jsonObject
-                ?.get("name")
-                ?.jsonPrimitive
-                ?.content
-        }.getOrElse {
-            log.warn("[$ticketKey] Error fetching latest execution name: ${it.message}", it)
-            null
-        }
     }
 
     private fun accessToken(): String {

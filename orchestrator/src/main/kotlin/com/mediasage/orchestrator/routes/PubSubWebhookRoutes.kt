@@ -2,6 +2,7 @@ package com.mediasage.orchestrator.routes
 
 import com.mediasage.pipeline.core.JobCompletionEvent
 import com.mediasage.pipeline.core.JobRegistry
+import com.mediasage.pipeline.core.WorkerMetrics
 import com.mediasage.orchestrator.service.AgentLauncher
 import com.mediasage.orchestrator.service.CloudRunJobsClient
 import io.ktor.http.*
@@ -110,10 +111,9 @@ private suspend fun processCompletion(
     cloudRunJobsClient.onJobCompleted(
         jobId = job.jobId,
         ticketKey = event.ticketKey,
-        executionName = event.executionName,
         succeeded = event.status == "success",
         failedGate = event.failedGate,
-        startedAt = job.startedAt,
+        metrics = event.toWorkerMetrics(),
     )
     // Dispatch judge after a successful ticket-work completion.
     // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key).
@@ -122,4 +122,25 @@ private suspend fun processCompletion(
         log.info("[${event.ticketKey}] ticket-work succeeded — dispatching judge (PR #${event.prNumber ?: "unknown"})")
         agentLauncher.launchForJudge(event.ticketKey, event.prNumber)
     }
+}
+
+/**
+ * Builds [WorkerMetrics] from the nullable fields embedded in the worker's Pub/Sub payload
+ * (MS-412). Returns null when the core fields are absent — old workers or failure runs where
+ * the result event was never written. Token fields default to 0 when missing.
+ */
+private fun JobCompletionEvent.toWorkerMetrics(): WorkerMetrics? {
+    val numTurns = numTurns ?: return null
+    val totalCostUsd = totalCostUsd ?: return null
+    val durationMs = durationMs ?: return null
+    return WorkerMetrics(
+        numTurns = numTurns,
+        totalCostUsd = totalCostUsd,
+        durationMs = durationMs,
+        modelVersion = modelVersion,
+        inputTokens = inputTokens ?: 0,
+        outputTokens = outputTokens ?: 0,
+        cacheReadTokens = cacheReadTokens ?: 0,
+        cacheCreationTokens = cacheCreationTokens ?: 0,
+    )
 }
