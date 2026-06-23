@@ -53,7 +53,6 @@ import mediasage.composeapp.generated.resources.figure_detail_pin_to_home
 import mediasage.composeapp.generated.resources.figure_detail_pinned_to_home
 import mediasage.composeapp.generated.resources.figure_detail_quotes_button
 import mediasage.composeapp.generated.resources.figure_detail_quotes_sheet_title
-import mediasage.composeapp.generated.resources.figure_detail_wikipedia_source
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -203,12 +202,6 @@ private fun FigureDetailContent(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 24.sp,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(Res.string.figure_detail_wikipedia_source),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
