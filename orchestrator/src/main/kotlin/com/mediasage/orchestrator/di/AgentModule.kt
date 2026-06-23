@@ -4,8 +4,6 @@ import com.mediasage.orchestrator.db.AgentDatabase
 import com.mediasage.pipeline.core.JobRepository
 import com.mediasage.orchestrator.service.AgentLauncher
 import com.mediasage.orchestrator.service.AgentLaunchService
-import com.mediasage.orchestrator.service.BriefingService
-import com.mediasage.orchestrator.service.HttpBriefingService
 import com.mediasage.orchestrator.service.CloudLoggingClient
 import com.mediasage.orchestrator.service.CloudRunDispatch
 import com.mediasage.orchestrator.service.CloudRunJobsClient
@@ -55,41 +53,13 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
         }
     }
     single {
-        val briefingService = buildBriefingService(config)
         val cloudRun = buildCloudRunDispatch(config, get())
         AgentLaunchService(
-            scope, cloudRun, get(), get<JiraTicketStatusChecker>(), briefingService,
+            scope, cloudRun, get(), get<JiraTicketStatusChecker>(),
             judgeJobName = config.gcpJudgeJobName,
         )
     }
     single<AgentLauncher> { get<AgentLaunchService>() }
-}
-
-private fun buildBriefingService(config: AgentConfig): HttpBriefingService? {
-    if (config.intelligentDispatchEnabled && config.anthropicAuthToken.isNotBlank()) {
-        log.info("Intelligent dispatch enabled — BriefingService active (base: ${config.anthropicBaseUrl})")
-        return HttpBriefingService(buildBriefingHttpClient(), config.anthropicBaseUrl, config.anthropicAuthToken)
-    }
-    log.warn(
-        "Intelligent dispatch disabled — BriefingService not active " +
-        "(intelligentDispatchEnabled=${config.intelligentDispatchEnabled}, " +
-        "anthropicAuthToken=${if (config.anthropicAuthToken.isBlank()) "BLANK" else "set"})"
-    )
-    return null
-}
-
-// Dedicated client for briefing calls — 15s timeout gives Haiku room to process
-// large diffs without blocking dispatch indefinitely. The webhook has already
-// returned 200 by this point, so this only affects time-to-dispatch, not latency.
-private fun buildBriefingHttpClient() = HttpClient(OkHttp) {
-    install(ContentNegotiation) {
-        json(Json { prettyPrint = false; ignoreUnknownKeys = true })
-    }
-    install(HttpTimeout) {
-        requestTimeoutMillis = 15_000
-        connectTimeoutMillis = 5_000
-        socketTimeoutMillis = 15_000
-    }
 }
 
 private fun buildHttpClient() = HttpClient(OkHttp) {
