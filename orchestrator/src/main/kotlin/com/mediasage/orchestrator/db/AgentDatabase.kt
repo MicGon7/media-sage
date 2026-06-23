@@ -28,7 +28,7 @@ object AgentDatabase {
         addWorkerMetricColumns() // MS-210
         addFailureAttributionColumns() // MS-386
         addEnvStartupColumn() // MS-399 — must run before the view, which selects env_startup_ms
-        renamePromptToPayload() // MS-410
+        renamePromptToPayload()
         createJobDurationsView()
         createTranscriptsTable() // MS-387
     }
@@ -68,7 +68,7 @@ object AgentDatabase {
         """.trimIndent()
     )
 
-    /** MS-410: Rename the `prompt` column to `payload` — idempotent via existence check. */
+    /** Renames the `prompt` column to `payload` — idempotent via existence check. */
     private fun org.jetbrains.exposed.sql.Transaction.renamePromptToPayload() = exec(
         """
         DO ${'$'}${'$'}

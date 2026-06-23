@@ -40,7 +40,7 @@ CREATE INDEX ON jobs (ticket_key, created_at DESC);
 
 `payload` stores a compact JSON object of the identifiers dispatched to the worker
 (e.g. `{"ticketKey":"MS-123"}` for ticket-work, `{"prNumber":"456"}` for PR jobs).
-The `prompt` column was renamed to `payload` in MS-410; the migration runs idempotently
+The `prompt` column was renamed to `payload`; the migration runs idempotently
 in `AgentDatabase.migrate()`.
 
 Additional nullable columns are added via idempotent migrations in `AgentDatabase.migrate()`
@@ -63,7 +63,7 @@ the `result` event's `modelUsage` key alongside the other metrics.
 
 **Env var overrides append, not replace.** When dispatching a Cloud Run Job with per-run env var overrides (`containerOverrides.env`), the values are appended to the job's existing env vars — they do NOT replace them. If the same key exists in both the static job definition and the per-run override, the static value takes precedence. Rule: never set per-target or per-run values as static env vars on the job definition. Inject them exclusively at dispatch time via `DispatchConfig`. The job definition should only hold env vars that are truly static across all runs (e.g. `ANTHROPIC_BASE_URL`, `GCP_PROJECT_ID`).
 
-**Dispatch model (MS-410):** The orchestrator is a pure dispatcher — it passes only the minimum job identifiers as env vars. No prompt strings are constructed in the orchestrator. Per-run env vars at dispatch time:
+**Dispatch model:** The orchestrator is a pure dispatcher — it passes only the minimum job identifiers as env vars. No prompt strings are constructed in the orchestrator. Per-run env vars at dispatch time:
 
 | Job type | Env vars passed |
 |---|---|
