@@ -63,23 +63,15 @@ data class GitHubReview(
 )
 
 private data class WebhookContext(
-    val ticketKey: String,
     val prNumber: Int,
-    val branchRef: String,
-    val commentBody: String,
     val reviewState: String,
-    val reviewerLogin: String
 )
 
 private data class DequeueContext(
-    val ticketKey: String,
     val prNumber: Int,
-    val branchRef: String,
-    val baseBranch: String
 )
 
 private val log = LoggerFactory.getLogger("GitHubWebhookRoutes")
-private val ticketKeyRegex = Regex("[A-Z]+-\\d+")
 private val webhookJson = Json { ignoreUnknownKeys = true }
 
 /**
@@ -156,9 +148,8 @@ private suspend fun handleDequeueEvent(
     botLogin: String
 ) {
     val context = parseDequeueContext(rawBody, botLogin) ?: return
-    log.info("[${context.ticketKey}] PR#${context.prNumber} dequeued (merge_conflict) — " +
-        "bot-authored PR, dispatching conflict resolver (base: ${context.baseBranch})")
-    agentService.launchForConflictResolution(context.ticketKey, context.prNumber, context.branchRef, context.baseBranch)
+    log.info("PR#${context.prNumber} dequeued (merge_conflict) — bot-authored, dispatching conflict resolver")
+    agentService.launchForConflictResolution(context.prNumber)
 }
 
 private suspend fun handleReviewEvent(
@@ -167,10 +158,8 @@ private suspend fun handleReviewEvent(
     botLogin: String
 ) {
     val context = parseReviewContext(rawBody, botLogin) ?: return
-    log.info("GitHub review submitted: ticketKey=${context.ticketKey} PR#${context.prNumber} state=${context.reviewState}")
-    agentService.launchForPrReview(
-        context.ticketKey, context.prNumber, context.branchRef, context.commentBody, context.reviewerLogin
-    )
+    log.info("PR#${context.prNumber} review submitted (state=${context.reviewState}) — dispatching PR review worker")
+    agentService.launchForPrReview(context.prNumber)
 }
 
 /**
@@ -180,7 +169,6 @@ private suspend fun handleReviewEvent(
  * - the action is not `dequeued`
  * - the reason is not `merge_conflict` (e.g. CI failure, queue cleared — ignored)
  * - the PR was not authored by [botLogin]
- * - the branch ref contains no Jira ticket key matching `[A-Z]+-\d+`
  */
 private fun parseDequeueContext(rawBody: ByteArray, botLogin: String): DequeueContext? {
     val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
@@ -189,8 +177,7 @@ private fun parseDequeueContext(rawBody: ByteArray, botLogin: String): DequeueCo
         log.info("PR#${payload.pullRequest.number} dequeued but not bot-authored (${payload.pullRequest.user.login}), ignoring")
         return null
     }
-    val ticketKey = ticketKeyRegex.find(payload.pullRequest.head.ref)?.value ?: return null
-    return DequeueContext(ticketKey, payload.pullRequest.number, payload.pullRequest.head.ref, payload.pullRequest.base.ref)
+    return DequeueContext(payload.pullRequest.number)
 }
 
 /**
@@ -198,33 +185,28 @@ private fun parseDequeueContext(rawBody: ByteArray, botLogin: String): DequeueCo
  *
  * Returns `null` if:
  * - the action is not `submitted`
- * - the review state is not `changes_requested` or `commented`
+ * - the review state is not `changes_requested`
  * - the PR was not authored by [botLogin]
- * - the review was submitted by [botLogin] (prevents feedback loops where the bot responds to its own reviews)
- * - the branch ref contains no Jira ticket key matching `[A-Z]+-\d+`
+ * - the review was submitted by [botLogin] (prevents feedback loops)
  * - the review body was authored by the agent (starts with "🤖 **Agent:**")
  */
 private fun parseReviewContext(rawBody: ByteArray, botLogin: String): WebhookContext? {
     val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
     val reviewBody = payload.review?.body.orEmpty()
-    val ticketKey = ticketKeyRegex.find(payload.pullRequest.head.ref)?.value
     val state = payload.review?.state?.lowercase() ?: return null
+    val prNumber = payload.pullRequest.number
 
     if (payload.pullRequest.user.login != botLogin) {
-        log.info("PR#${payload.pullRequest.number} review submitted but not bot-authored (${payload.pullRequest.user.login}), ignoring")
+        log.info("PR#$prNumber review submitted but not bot-authored (${payload.pullRequest.user.login}), ignoring")
         return null
     }
-
     if (payload.sender.login == botLogin) {
-        log.info("PR#${payload.pullRequest.number} review submitted by bot — ignoring to prevent feedback loop")
+        log.info("PR#$prNumber review submitted by bot — ignoring to prevent feedback loop")
         return null
     }
 
-    return ticketKey
-        ?.takeIf { payload.action == "submitted" }
-        ?.takeIf { state == "changes_requested" }
-        ?.takeIf { !reviewBody.startsWith("🤖 **Agent:**") }
-        ?.let { WebhookContext(it, payload.pullRequest.number, payload.pullRequest.head.ref, reviewBody, state, payload.sender.login) }
+    val valid = payload.action == "submitted" && state == "changes_requested" && !reviewBody.startsWith("🤖 **Agent:**")
+    return if (valid) WebhookContext(prNumber, state) else null
 }
 
 /**

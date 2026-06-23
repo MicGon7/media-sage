@@ -11,16 +11,19 @@ import java.util.UUID
  */
 interface JobDispatcher {
     /**
-     * @param jiraTicketKey The actual Jira issue key (e.g. "MS-257") when it differs from [ticketKey].
-     *   For standard autonomous launches [ticketKey] IS the Jira key, so this is null.
-     *   For PR review and conflict resolution, [ticketKey] is a synthetic dedup key ("PR-200",
-     *   "CONFLICT-199") and [jiraTicketKey] carries the real Jira key for comment posting.
+     * Dispatches a job to the execution backend.
+     *
+     * @param ticketKey Dedup key used for logging (e.g. "MS-123", "PR-456", "CONFLICT-456").
+     * @param jobType Skill name the worker entrypoint will invoke (e.g. "ticket-work").
+     * @param identifiers Minimum job identifiers passed as env vars to the worker
+     *   (e.g. `{"TICKET_KEY" to "MS-123"}`). The worker fetches all other context at runtime.
+     * @param jobNameOverride Overrides the default Cloud Run job name (used for the judge job).
      */
     suspend fun executeJob(
         jobId: UUID,
         ticketKey: String,
-        prompt: String,
-        jiraTicketKey: String? = null,
+        jobType: String,
+        identifiers: Map<String, String>,
         jobNameOverride: String? = null,
     ): Boolean
 

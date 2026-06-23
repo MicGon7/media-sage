@@ -19,8 +19,8 @@ object JobsTable : Table("jobs") {
     /** Jira ticket key (e.g. `MS-123`) that triggered this job. */
     val ticketKey = text("ticket_key")
 
-    /** Bootstrap prompt passed to the Claude Code worker at dispatch time. */
-    val prompt = text("prompt")
+    /** Compact JSON of the job identifiers dispatched to the worker (e.g. `{"ticketKey":"MS-123"}`). */
+    val payload = text("payload")
 
     /** Current lifecycle status. Defaults to `PENDING`; see the state machine above. */
     val status = text("status").default("PENDING")

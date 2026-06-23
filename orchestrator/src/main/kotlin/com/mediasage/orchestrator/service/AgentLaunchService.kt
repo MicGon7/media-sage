@@ -3,13 +3,14 @@ package com.mediasage.orchestrator.service
 import com.mediasage.pipeline.core.JobStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 private data class DispatchOptions(
     val dryRun: Boolean = false,
-    val jiraTicketKey: String? = null,
     val jobNameOverride: String? = null,
 )
 
@@ -18,9 +19,9 @@ private data class DispatchOptions(
  * Guards against double-firing: a second launch call for the same key is a no-op
  * until the first dispatch coroutine completes.
  *
- * All agent work — ticket implementation and PR review — is dispatched as Cloud Run Jobs.
- * The orchestrator is a pure event router: it receives webhooks, builds prompts, and
- * dispatches jobs. No agent processes run locally.
+ * The orchestrator is a pure dispatcher: each launch method passes only the minimum
+ * job identifiers as env vars. The worker and its skills own all framing and context
+ * fetching. No prompt strings are constructed here.
  */
 class AgentLaunchService(
     private val scope: CoroutineScope,
@@ -36,6 +37,8 @@ class AgentLaunchService(
     // This prevents the TOCTOU race condition that ConcurrentHashMap.containsKey() + put() would have.
     private val activeKeys: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
+    private val json = Json { encodeDefaults = false }
+
     /**
      * Launches an autonomous Claude Code agent for [ticketKey] via Cloud Run Jobs.
      *
@@ -46,28 +49,23 @@ class AgentLaunchService(
      * The in-process [activeKeys] gate is always evaluated first to prevent the TOCTOU race
      * between reading and writing the persistent DB row.
      *
-     * @param ticketKey Jira issue key (e.g. "MS-123"). Used as the dedup key and forwarded to the agent.
-     * @param ticketContent Raw ticket text from Jira used to build the bootstrap prompt.
-     *   Pass null to fall back to a prompt that instructs the agent to fetch the ticket itself.
+     * @param ticketKey Jira issue key (e.g. "MS-123"). Used as the dedup key and forwarded as
+     *   `TICKET_KEY`. The worker fetches ticket content from Jira at runtime.
      * @param dryRun If true, inserts a job row but skips execution dispatch.
      * @return true if an agent was dispatched; false if the call was deduplicated or Cloud Run is not configured.
      */
-    override fun launch(ticketKey: String, ticketContent: String?, dryRun: Boolean): Boolean {
+    override fun launch(ticketKey: String, dryRun: Boolean): Boolean {
         val cloudRun = cloudRun ?: return false
-        if (ticketContent != null && !ticketContent.contains("relevant files", ignoreCase = true)) {
-            log.warn("[$ticketKey] ticket is missing a Relevant files section — worker will start without file guidance")
-        }
-        val basePrompt = if (ticketContent != null) {
-            ticketWorkPrompt.format(ticketKey, ticketContent)
-        } else {
-            ticketWorkFallbackPrompt.format(ticketKey)
-        }
-        return dispatchToCloudRun(ticketKey, basePrompt, cloudRun, DispatchOptions(dryRun = dryRun))
+        val payload = json.encodeToString(mapOf("ticketKey" to ticketKey))
+        val identifiers = mapOf("TICKET_KEY" to ticketKey)
+        return dispatchToCloudRun(ticketKey, "ticket-work", payload, identifiers, cloudRun, DispatchOptions(dryRun = dryRun))
     }
 
     private fun dispatchToCloudRun(
         ticketKey: String,
-        prompt: String,
+        jobType: String,
+        payload: String,
+        identifiers: Map<String, String>,
         cloudRun: CloudRunDispatch,
         options: DispatchOptions = DispatchOptions(),
     ): Boolean {
@@ -80,7 +78,7 @@ class AgentLaunchService(
         }
         scope.launch {
             try {
-                doDispatch(ticketKey, prompt, cloudRun, options)
+                doDispatch(ticketKey, jobType, payload, identifiers, cloudRun, options)
             } finally {
                 activeKeys.remove(ticketKey)
             }
@@ -90,7 +88,9 @@ class AgentLaunchService(
 
     private suspend fun doDispatch(
         ticketKey: String,
-        basePrompt: String,
+        jobType: String,
+        payload: String,
+        identifiers: Map<String, String>,
         cloudRun: CloudRunDispatch,
         options: DispatchOptions,
     ) {
@@ -99,8 +99,7 @@ class AgentLaunchService(
             return
         }
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
-        val prompt = basePrompt
-        val jobId = cloudRun.jobs.insert(ticketKey, prompt)
+        val jobId = cloudRun.jobs.insert(ticketKey, payload)
         if (options.dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
             cloudRun.jobs.markFailed(jobId)
@@ -108,7 +107,7 @@ class AgentLaunchService(
         }
         log.info("[$ticketKey] job $jobId inserted — dispatching to Cloud Run")
         try {
-            cloudRun.dispatcher.executeJob(jobId, ticketKey, prompt, options.jiraTicketKey, options.jobNameOverride)
+            cloudRun.dispatcher.executeJob(jobId, ticketKey, jobType, identifiers, options.jobNameOverride)
         } catch (e: Exception) {
             cloudRun.jobs.markFailed(jobId)
             log.warn("[$ticketKey] dispatch error: ${e.message}")
@@ -144,69 +143,63 @@ class AgentLaunchService(
     }
 
     /**
-     * Launches a Cloud Run Job to respond to a PR review comment for [ticketKey].
-     * The worker checks out [branchRef], makes the necessary change, pushes a fix commit,
-     * then re-requests review from [reviewerLogin] via `gh pr review-request`.
-     * De-duplicates by PR number — a second call while one is running is a no-op.
+     * Launches a Cloud Run Job to respond to a PR review comment.
      *
-     * @param ticketKey Jira issue key forwarded to the worker for context (e.g. "MS-123").
-     * @param prNumber GitHub PR number used as the dedup key and for `gh pr` commands.
-     * @param branchRef Branch the PR targets; checked out by the worker to make the fix.
-     * @param commentBody Text of the reviewer's comment forwarded verbatim to the worker prompt.
-     * @param reviewerLogin GitHub login of the reviewer to re-request review from after the fix.
-     * @return true if a job was dispatched; false if deduplicated or Cloud Run is not configured.
+     * Deduplicates by [prNumber] (`PR-{prNumber}`). The worker derives branch ref, reviewer
+     * login, and ticket key from `gh pr view $PR_NUMBER` at runtime.
+     *
+     * @param prNumber GitHub PR number. Used as the dedup key and passed as `PR_NUMBER`.
+     * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    override fun launchForPrReview(
-        ticketKey: String,
-        prNumber: Int,
-        branchRef: String,
-        commentBody: String,
-        reviewerLogin: String
-    ): Boolean {
+    override fun launchForPrReview(prNumber: Int): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
-        val basePrompt = prReviewPrompt.format(prNumber, ticketKey, commentBody, branchRef, reviewerLogin)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, DispatchOptions(jiraTicketKey = ticketKey))
+        val payload = json.encodeToString(mapOf("prNumber" to prNumber.toString()))
+        val identifiers = mapOf("PR_NUMBER" to prNumber.toString())
+        return dispatchToCloudRun(key, "pr-review-work", payload, identifiers, cloudRun)
     }
 
     /**
      * Dispatches a Cloud Run Job to judge the PR produced by a completed ticket-work job.
      *
      * Uses the lightweight judge image ([judgeJobName]) — no JVM or Gradle toolchain.
-     * De-duplicates by ticket key using `JUDGE-{ticketKey}`.
+     * Deduplicates by ticket key using `JUDGE-{ticketKey}`.
      *
      * @param ticketKey Jira issue key of the completed ticket-work job.
+     * @param prNumber GitHub PR number opened by the worker, passed as `PR_NUMBER`.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
     override fun launchForJudge(ticketKey: String, prNumber: Int?): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "JUDGE-$ticketKey"
-        val prRef = prNumber?.toString() ?: "unknown"
-        val basePrompt = judgeWorkPrompt.format(ticketKey, prRef)
-        val options = DispatchOptions(jiraTicketKey = ticketKey, jobNameOverride = judgeJobName)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, options)
+        val identifiers = buildMap {
+            put("TICKET_KEY", ticketKey)
+            if (prNumber != null) put("PR_NUMBER", prNumber.toString())
+        }
+        val payloadMap = buildMap {
+            put("ticketKey", ticketKey)
+            if (prNumber != null) put("prNumber", prNumber.toString())
+        }
+        val payload = json.encodeToString(payloadMap)
+        val options = DispatchOptions(jobNameOverride = judgeJobName)
+        return dispatchToCloudRun(key, "judge-work", payload, identifiers, cloudRun, options)
     }
 
     /**
      * Launches a Cloud Run Job to rebase a branch ejected from the merge queue due to a conflict.
-     * De-duplicates by PR number using the key `CONFLICT-{prNumber}`.
      *
-     * @param ticketKey Jira issue key forwarded to the worker for context (e.g. "MS-123").
-     * @param prNumber GitHub PR number used as the dedup key.
-     * @param branchRef The feature branch that was ejected from the merge queue.
-     * @param baseBranch The base branch the feature branch conflicted with (e.g. "main").
-     * @return true if a job was dispatched; false if deduplicated or Cloud Run is not configured.
+     * Deduplicates by [prNumber] using the key `CONFLICT-{prNumber}`. The worker derives
+     * branch ref and base branch from `gh pr view $PR_NUMBER` at runtime.
+     *
+     * @param prNumber GitHub PR number. Used as the dedup key and passed as `PR_NUMBER`.
+     * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    override fun launchForConflictResolution(
-        ticketKey: String,
-        prNumber: Int,
-        branchRef: String,
-        baseBranch: String
-    ): Boolean {
+    override fun launchForConflictResolution(prNumber: Int): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "CONFLICT-$prNumber"
-        val basePrompt = conflictResolutionPrompt.format(prNumber, ticketKey, branchRef, baseBranch)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, DispatchOptions(jiraTicketKey = ticketKey))
+        val payload = json.encodeToString(mapOf("prNumber" to prNumber.toString()))
+        val identifiers = mapOf("PR_NUMBER" to prNumber.toString())
+        return dispatchToCloudRun(key, "conflict-resolution-work", payload, identifiers, cloudRun)
     }
 
     /**

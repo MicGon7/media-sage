@@ -5,6 +5,10 @@ package com.mediasage.orchestrator.service
  *
  * Implemented by [AgentLaunchService], which routes each call to a Cloud Run Job.
  * All methods are synchronous: they enqueue a coroutine and return immediately.
+ *
+ * The orchestrator is a pure dispatcher: it passes only the minimum job identifiers
+ * as env vars. The worker's skill fetches all context (ticket content, PR diff, review
+ * comments) at runtime — no framing lives in the orchestrator.
  */
 interface AgentLauncher {
 
@@ -14,67 +18,43 @@ interface AgentLauncher {
      * Deduplicates by ticket key: a second call while a job is already RUNNING or COMPLETED
      * is a no-op. A FAILED or INTERRUPTED job is re-dispatched.
      *
-     * @param ticketKey Jira issue key (e.g. "MS-123"). Used as the dedup key and injected into
-     *   the agent bootstrap prompt.
-     * @param ticketContent Raw ticket text used to build the bootstrap prompt. Pass null to
-     *   fall back to a prompt that instructs the agent to fetch the ticket from Jira itself.
-     * @param dryRun When true, inserts a job row but skips Cloud Run dispatch. Useful for
-     *   testing the dedup and DB path without incurring compute cost.
-     * @return true if an agent was dispatched; false if the call was deduplicated or Cloud Run
-     *   is not configured.
+     * @param ticketKey Jira issue key (e.g. "MS-123"). Used as the dedup key and passed to
+     *   the worker as `TICKET_KEY`. The worker fetches the ticket content from Jira at runtime.
+     * @param dryRun When true, inserts a job row but skips Cloud Run dispatch.
+     * @return true if an agent was dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    fun launch(ticketKey: String, ticketContent: String? = null, dryRun: Boolean = false): Boolean
+    fun launch(ticketKey: String, dryRun: Boolean = false): Boolean
 
     /**
-     * Launches a Cloud Run Job to respond to a formal PR review ([reviewerLogin] requested changes).
+     * Launches a Cloud Run Job to respond to a PR review.
      *
-     * The worker checks out [branchRef], applies the fix, pushes a commit, and then calls
-     * `gh pr review-request` to re-request review from [reviewerLogin]. Deduplicates by
-     * [prNumber] — a second call while one job is running is a no-op.
+     * Deduplicates by [prNumber] (`PR-{prNumber}`). The worker derives branch ref,
+     * reviewer login, and ticket key from `gh pr view $PR_NUMBER` at runtime.
      *
-     * @param ticketKey Jira issue key included in the agent prompt for context.
-     * @param prNumber GitHub PR number. Used as the dedup key and passed to `gh` CLI commands.
-     * @param branchRef Branch the worker should check out (e.g. "feature/MS-123-...").
-     * @param commentBody Text of the review comment forwarded to the agent as context.
-     * @param reviewerLogin GitHub login of the reviewer to re-request once the fix is pushed.
+     * @param prNumber GitHub PR number. Used as the dedup key and passed as `PR_NUMBER`.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    fun launchForPrReview(
-        ticketKey: String,
-        prNumber: Int,
-        branchRef: String,
-        commentBody: String,
-        reviewerLogin: String
-    ): Boolean
+    fun launchForPrReview(prNumber: Int): Boolean
 
     /**
-     * Launches a Cloud Run Job to rebase [branchRef] after it was ejected from the merge queue
-     * due to a conflict with main.
+     * Launches a Cloud Run Job to rebase a branch ejected from the merge queue due to a conflict.
      *
-     * The worker fetches, rebases onto `origin/main`, resolves conflicts, pushes the rebased branch,
-     * then re-requests review from the last reviewer. Deduplicates by [prNumber] (`CONFLICT-{prNumber}`)
-     * — a second ejection event for the same PR while a resolver is running is a no-op.
+     * Deduplicates by [prNumber] (`CONFLICT-{prNumber}`). The worker derives branch ref
+     * and base branch from `gh pr view $PR_NUMBER` at runtime.
      *
-     * Only dispatched for `autonomous`-labeled tickets — conflict resolution on `assisted` tickets
-     * requires human intervention.
-     *
-     * @param ticketKey Jira issue key included in the agent prompt for context.
-     * @param prNumber GitHub PR number. Used as the dedup key and passed to `gh` CLI commands.
-     * @param branchRef Branch that was ejected (e.g. "feature/MS-123-...").
+     * @param prNumber GitHub PR number. Used as the dedup key and passed as `PR_NUMBER`.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String, baseBranch: String = "main"): Boolean
+    fun launchForConflictResolution(prNumber: Int): Boolean
 
     /**
      * Launches a Cloud Run Job to judge the PR produced by a completed ticket-work job.
      *
-     * The judge is a fresh context: it fetches the PR diff and the original ticket AC via API,
-     * evaluates each AC item independently, and posts a structured ✅/❌ verdict as a PR review
-     * comment. It does not approve or merge. Deduplicates by ticket key (`JUDGE-{ticketKey}`).
+     * Deduplicates by ticket key (`JUDGE-{ticketKey}`). The worker fetches the PR diff and
+     * ticket AC from GitHub/Jira at runtime.
      *
      * @param ticketKey Jira issue key of the completed ticket-work job.
-     * @param prNumber GitHub PR number opened by the worker, if known. Injected into the judge
-     *   prompt so the judge can skip the `gh pr list` discovery turn.
+     * @param prNumber GitHub PR number opened by the worker, passed as `PR_NUMBER`.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
     fun launchForJudge(ticketKey: String, prNumber: Int? = null): Boolean

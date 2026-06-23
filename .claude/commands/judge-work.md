@@ -15,9 +15,9 @@
 
 ---
 
-1. The PR number is injected into your prompt (e.g. "PR #312"). Use it directly — do NOT call `gh pr list`. If the prompt says "unknown", fall back to: `gh pr list --state open --search "head:feature/{TICKET_KEY}" --json number,url,headRefName --limit 1`.
+1. Read `$PR_NUMBER` and `$TICKET_KEY` from env. If `$PR_NUMBER` is unset or empty, fall back to: `gh pr list --state open --search "head:feature/$TICKET_KEY" --json number,url,headRefName --limit 1`.
 2. In a single parallel turn, issue both of the following tool calls:
-   - **Fetch Jira AC:** `curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" "https://media-sage.atlassian.net/rest/api/3/issue/$JIRA_TICKET_KEY"`
+   - **Fetch Jira AC:** `curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY"`
    - **Fetch PR diff:** `gh pr diff <pr-number>`
 3. Evaluate the diff against each acceptance criteria item independently. Only verdict on items that are verifiable from the diff or codebase state — skip any AC items that are CI gates (e.g. "Detekt passes", "tests pass", "PR targets main"). For each diff-verifiable item, determine:
    - ✅ Met — the diff clearly satisfies the criterion. Include a one-line explanation of what in the diff satisfies it.
@@ -28,7 +28,7 @@
    **a) Post a PR review comment** (NOT an approval or request-for-changes) with a structured verdict:
    ```
    gh pr review <pr-number> --comment --body "$(cat <<'EOF'
-   🤖 **Agent:** Judge verdict for {TICKET_KEY}
+   🤖 **Agent:** Judge verdict for $TICKET_KEY
 
    Evaluated PR diff against acceptance criteria from the original Jira ticket.
 

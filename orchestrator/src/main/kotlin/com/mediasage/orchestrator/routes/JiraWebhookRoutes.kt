@@ -1,7 +1,6 @@
 package com.mediasage.orchestrator.routes
 
 import com.mediasage.orchestrator.service.AgentLauncher
-import com.mediasage.orchestrator.service.JiraTicketFetcher
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -71,8 +70,8 @@ private val relevantEvents = setOf("jira:issue_created", "jira:issue_updated")
  * 2. The issue assignee matches [botAccountId] (the autonomous bot account).
  * 3. The issue status is `"In Progress"`.
  *
- * When dispatched, the route fetches full ticket content via [JiraTicketFetcher], then
- * calls [AgentLauncher.launch] with the ticket key and content. The response is always
+ * When dispatched, the route calls [AgentLauncher.launch] with the ticket key. The worker
+ * fetches all ticket content from Jira at runtime. The response is always
  * `200 OK` — failures surface via logs and dedup state in Supabase rather than HTTP
  * error codes, preventing Jira from retrying on transient errors.
  *
@@ -85,7 +84,6 @@ private val relevantEvents = setOf("jira:issue_created", "jira:issue_updated")
 fun Route.webhookRoutes(botAccountId: String) {
     val log = LoggerFactory.getLogger("JiraWebhookRoutes")
     val agentService by inject<AgentLauncher>()
-    val jiraFetcher by inject<JiraTicketFetcher>()
 
     post("/webhook/jira") {
         val payload = call.receive<JiraWebhookPayload>()
@@ -103,13 +101,7 @@ fun Route.webhookRoutes(botAccountId: String) {
         if (shouldFire) {
             val dryRun = call.request.headers["X-Dry-Run"]?.lowercase() == "true"
             if (dryRun) log.info("Dry-run mode — dedup check and row insert only, Cloud Run dispatch skipped")
-            val ticketContent = jiraFetcher.getTicketContent(payload.issue.key)
-            if (ticketContent != null) {
-                log.info("[${payload.issue.key}] ticket content fetched (${ticketContent.length} chars)")
-            } else {
-                log.warn("[${payload.issue.key}] ticket content fetch returned null — dispatching on fallback prompt")
-            }
-            agentService.launch(payload.issue.key, ticketContent, dryRun)
+            agentService.launch(payload.issue.key, dryRun)
         }
 
         call.respond(HttpStatusCode.OK)
