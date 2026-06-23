@@ -82,8 +82,8 @@ class CloudRunJobsClient(
      * Dispatches a Cloud Run Job execution via the Admin API and marks the job RUNNING.
      *
      * Posts to `v2/projects/{project}/locations/{region}/jobs/{jobName}:run` with per-run env var
-     * overrides: `PROMPT`, `TICKET_KEY`, and optionally `JIRA_TICKET_KEY` (when [jiraTicketKey]
-     * differs from [ticketKey], e.g. for PR reviews where [ticketKey] is `PR-{prNumber}`).
+     * overrides: `JOB_TYPE`, `JOB_ID`, and one entry per [identifiers] key. The worker entrypoint
+     * runs `claude -p "/$JOB_TYPE"` — the skill owns all framing and context fetching.
      *
      * The API response includes an operation name used as the execution name — saved via
      * [JobRepository.markRunning] so [recoverJob] can look it up after a restart. Returns
@@ -94,18 +94,17 @@ class CloudRunJobsClient(
     override suspend fun executeJob(
         jobId: UUID,
         ticketKey: String,
-        prompt: String,
-        jiraTicketKey: String?,
+        jobType: String,
+        identifiers: Map<String, String>,
         jobNameOverride: String?,
     ): Boolean {
         val resolvedJobName = jobNameOverride ?: jobName
         val url = "https://run.googleapis.com/v2/projects/$projectId/locations/$region/jobs/$resolvedJobName:run"
 
         val envVars = buildList {
-            add(EnvVar("PROMPT", prompt))
-            add(EnvVar("TICKET_KEY", ticketKey))
+            add(EnvVar("JOB_TYPE", jobType))
             add(EnvVar("JOB_ID", jobId.toString()))
-            if (jiraTicketKey != null) add(EnvVar("JIRA_TICKET_KEY", jiraTicketKey))
+            identifiers.forEach { (k, v) -> add(EnvVar(k, v)) }
         }
 
         val body = json.encodeToString(

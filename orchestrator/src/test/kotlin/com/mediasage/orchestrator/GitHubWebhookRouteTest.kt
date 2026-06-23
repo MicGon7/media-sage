@@ -119,7 +119,7 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
-    fun changesRequestedPassesReviewerLogin() {
+    fun changesRequestedPassesPrNumber() {
         val tracking = FakeAgentLauncher()
         testGitHubApp(agentService = tracking) {
             val body = prReviewPayload(
@@ -135,7 +135,7 @@ class GitHubWebhookRouteTest {
                 setBody(body)
             }
             assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals("jane-reviewer", tracking.lastReviewerLogin, "reviewerLogin must be passed from sender.login")
+            assertEquals(42, tracking.lastPrNumber, "PR number must be passed to launchForPrReview")
         }
     }
 
@@ -193,18 +193,6 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
-    fun branchWithNoTicketKeyReturns200WithoutFiring() = testGitHubApp {
-        val body = prReviewPayload(prAuthorLogin = BOT_LOGIN, branchRef = "main", state = "changes_requested", reviewBody = "Fix this.")
-        val response = client.post("/webhook/github") {
-            contentType(ContentType.Application.Json)
-            header("X-GitHub-Event", "pull_request_review")
-            header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
-            setBody(body)
-        }
-        assertEquals(HttpStatusCode.OK, response.status)
-    }
-
-    @Test
     fun mergeConflictDequeueFiresConflictResolver() {
         val tracking = FakeAgentLauncher()
         testGitHubApp(agentService = tracking) {
@@ -218,8 +206,8 @@ class GitHubWebhookRouteTest {
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals(1, tracking.conflictResolutionLaunches,
                 "Conflict resolver must fire for bot-authored PR with merge_conflict dequeue")
-            assertEquals("release/1.0", tracking.lastBaseBranch,
-                "Base branch from payload must be passed to launchForConflictResolution")
+            assertEquals(42, tracking.lastPrNumber,
+                "PR number must be passed to launchForConflictResolution")
         }
     }
 
@@ -255,21 +243,6 @@ class GitHubWebhookRouteTest {
         }
     }
 
-    @Test
-    fun dequeueWithNoTicketKeyIsIgnored() {
-        val tracking = FakeAgentLauncher()
-        testGitHubApp(agentService = tracking) {
-            val body = dequeuePayload(prAuthorLogin = BOT_LOGIN, reason = "merge_conflict", branchRef = "hotfix/no-ticket-here")
-            val response = client.post("/webhook/github") {
-                contentType(ContentType.Application.Json)
-                header("X-GitHub-Event", "pull_request")
-                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
-                setBody(body)
-            }
-            assertEquals(HttpStatusCode.OK, response.status)
-            assertEquals(0, tracking.conflictResolutionLaunches, "Conflict resolver must NOT fire when branch has no ticket key")
-        }
-    }
 }
 
 // ---- Payload builders ----
@@ -373,22 +346,19 @@ private fun testGitHubApp(
 private class FakeAgentLauncher : AgentLauncher {
     var agentLaunches = 0
     var conflictResolutionLaunches = 0
-    var lastReviewerLogin: String? = null
-    var lastBaseBranch: String? = null
+    var lastPrNumber: Int? = null
 
-    override fun launch(ticketKey: String, ticketContent: String?, dryRun: Boolean) = false
+    override fun launch(ticketKey: String, dryRun: Boolean) = false
 
-    override fun launchForPrReview(
-        ticketKey: String, prNumber: Int, branchRef: String, commentBody: String, reviewerLogin: String
-    ): Boolean {
+    override fun launchForPrReview(prNumber: Int): Boolean {
         agentLaunches++
-        lastReviewerLogin = reviewerLogin
+        lastPrNumber = prNumber
         return true
     }
 
-    override fun launchForConflictResolution(ticketKey: String, prNumber: Int, branchRef: String, baseBranch: String): Boolean {
+    override fun launchForConflictResolution(prNumber: Int): Boolean {
         conflictResolutionLaunches++
-        lastBaseBranch = baseBranch
+        lastPrNumber = prNumber
         return true
     }
 

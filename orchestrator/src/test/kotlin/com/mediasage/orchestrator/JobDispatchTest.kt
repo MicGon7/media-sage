@@ -43,7 +43,7 @@ class JobDispatchTest {
 
         override suspend fun shouldDispatch(ticketKey: String) = shouldDispatchResult
         override suspend fun findLatestJob(ticketKey: String) = latestJob
-        override suspend fun insert(ticketKey: String, prompt: String): UUID {
+        override suspend fun insert(ticketKey: String, payload: String): UUID {
             inserted.add(ticketKey)
             return UUID.randomUUID()
         }
@@ -61,15 +61,17 @@ class JobDispatchTest {
     }
 
     private class FakeJobDispatcher(private val recoverResult: Boolean = true) : JobDispatcher {
-        val executions = mutableListOf<String>()         // ticket keys passed to executeJob
-        val prompts = mutableListOf<String>()            // prompts passed to executeJob
-        val recoveries = mutableListOf<String>()         // executionNames passed to recoverJob
+        val executions = mutableListOf<String>()
+        val jobTypes = mutableListOf<String>()
+        var lastIdentifiers: Map<String, String> = emptyMap()
+        val recoveries = mutableListOf<String>()
 
         override suspend fun executeJob(
-            jobId: UUID, ticketKey: String, prompt: String, jiraTicketKey: String?, jobNameOverride: String?
+            jobId: UUID, ticketKey: String, jobType: String, identifiers: Map<String, String>, jobNameOverride: String?
         ): Boolean {
             executions.add(ticketKey)
-            prompts.add(prompt)
+            jobTypes.add(jobType)
+            lastIdentifiers = identifiers
             return true
         }
         override suspend fun recoverJob(jobId: UUID, ticketKey: String, executionName: String): Boolean {
@@ -335,7 +337,7 @@ class JobDispatchTest {
         val dispatcher = FakeJobDispatcher()
         val service = cloudRunService(registry, dispatcher, scope = this)
 
-        service.launchForPrReview("MS-42", 42, "feature/MS-42-some-feature", "Please fix this.", "jane-reviewer")
+        service.launchForPrReview(42)
         advanceUntilIdle()
 
         assertEquals(listOf("PR-42"), registry.inserted)
@@ -343,93 +345,42 @@ class JobDispatchTest {
     }
 
     @Test
-    fun `launchForPrReview prompt includes reviewer login for re-request`() = runTest {
+    fun `launchForPrReview dispatches with pr-review-work jobType and PR_NUMBER identifier`() = runTest {
         val registry = FakeJobRegistry(shouldDispatchResult = true)
         val dispatcher = FakeJobDispatcher()
         val service = cloudRunService(registry, dispatcher, scope = this)
 
-        service.launchForPrReview("MS-42", 42, "feature/MS-42-some-feature", "Please fix this.", "jane-reviewer")
+        service.launchForPrReview(42)
         advanceUntilIdle()
 
-        assertTrue(dispatcher.prompts.single().contains("jane-reviewer"),
-            "Prompt must include reviewer login for gh pr review-request")
+        assertEquals("pr-review-work", dispatcher.jobTypes.single())
+        assertEquals("42", dispatcher.lastIdentifiers["PR_NUMBER"])
     }
 
-    // ── Relevant files warning ────────────────────────────────────────────────
+    // ── Dispatch identifiers ──────────────────────────────────────────────────
 
     @Test
-    fun `launch dispatches when ticket content is missing Relevant files section`() = runTest {
-        val registry = FakeJobRegistry(shouldDispatchResult = true)
-        val dispatcher = FakeJobDispatcher()
-        val service = cloudRunService(registry, dispatcher, scope = this)
-
-        // Dispatch must not be blocked — warning is advisory only
-        service.launch("MS-99", ticketContent = "## Description\nDo the thing.\n\n## Acceptance criteria\n- [ ] Done")
-        advanceUntilIdle()
-
-        assertEquals(listOf("MS-99"), registry.inserted, "Dispatch must proceed despite missing Relevant files")
-        assertEquals(listOf("MS-99"), dispatcher.executions)
-    }
-
-    @Test
-    fun `launch dispatches normally when ticket content contains Relevant files section`() = runTest {
-        val registry = FakeJobRegistry(shouldDispatchResult = true)
-        val dispatcher = FakeJobDispatcher()
-        val service = cloudRunService(registry, dispatcher, scope = this)
-
-        service.launch("MS-99", ticketContent = "## Relevant files\n* foo.kt — entry point\n")
-        advanceUntilIdle()
-
-        assertEquals(listOf("MS-99"), registry.inserted)
-        assertEquals(listOf("MS-99"), dispatcher.executions)
-    }
-
-    @Test
-    fun `launch dispatches normally when ticket content is null`() = runTest {
-        val registry = FakeJobRegistry(shouldDispatchResult = true)
-        val dispatcher = FakeJobDispatcher()
-        val service = cloudRunService(registry, dispatcher, scope = this)
-
-        service.launch("MS-99", ticketContent = null)
-        advanceUntilIdle()
-
-        assertEquals(listOf("MS-99"), registry.inserted)
-        assertEquals(listOf("MS-99"), dispatcher.executions)
-    }
-
-    // ── Prompt content ────────────────────────────────────────────────────────
-
-    @Test
-    fun `launchForPrReview prompt contains PR number, ticket key, comment, branch, reviewer and skill`() = runTest {
+    fun `launchForPrReview passes pr-review-work jobType and PR_NUMBER identifier`() = runTest {
         val dispatcher = FakeJobDispatcher()
         val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
 
-        service.launchForPrReview("MS-42", 42, "feature/MS-42-fix", "Needs a null check.", "jane")
+        service.launchForPrReview(42)
         advanceUntilIdle()
 
-        val prompt = dispatcher.prompts.single()
-        assertTrue(prompt.contains("42"), "Prompt must contain PR number")
-        assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
-        assertTrue(prompt.contains("Needs a null check."), "Prompt must contain comment body")
-        assertTrue(prompt.contains("feature/MS-42-fix"), "Prompt must contain branch")
-        assertTrue(prompt.contains("jane"), "Prompt must contain reviewer login")
-        assertTrue(prompt.contains("/pr-review-work"), "Prompt must invoke /pr-review-work skill")
+        assertEquals("pr-review-work", dispatcher.jobTypes.single())
+        assertEquals("42", dispatcher.lastIdentifiers["PR_NUMBER"])
     }
 
     @Test
-    fun `launchForConflictResolution prompt contains PR number, ticket key, branch, base branch and skill`() = runTest {
+    fun `launchForConflictResolution passes conflict-resolution-work jobType and PR_NUMBER identifier`() = runTest {
         val dispatcher = FakeJobDispatcher()
         val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
 
-        service.launchForConflictResolution("MS-42", 42, "feature/MS-42-fix", "main")
+        service.launchForConflictResolution(42)
         advanceUntilIdle()
 
-        val prompt = dispatcher.prompts.single()
-        assertTrue(prompt.contains("42"), "Prompt must contain PR number")
-        assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
-        assertTrue(prompt.contains("feature/MS-42-fix"), "Prompt must contain branch")
-        assertTrue(prompt.contains("main"), "Prompt must contain base branch")
-        assertTrue(prompt.contains("/conflict-resolution-work"), "Prompt must invoke /conflict-resolution-work skill")
+        assertEquals("conflict-resolution-work", dispatcher.jobTypes.single())
+        assertEquals("42", dispatcher.lastIdentifiers["PR_NUMBER"])
     }
 
     // ── Judge: dispatch after ticket-work completion ──────────────────────────
@@ -448,16 +399,15 @@ class JobDispatchTest {
     }
 
     @Test
-    fun `launchForJudge prompt contains ticket key and judge-work skill`() = runTest {
+    fun `launchForJudge passes judge-work jobType and TICKET_KEY identifier`() = runTest {
         val dispatcher = FakeJobDispatcher()
         val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
 
         service.launchForJudge("MS-42")
         advanceUntilIdle()
 
-        val prompt = dispatcher.prompts.single()
-        assertTrue(prompt.contains("MS-42"), "Prompt must contain ticket key")
-        assertTrue(prompt.contains("/judge-work"), "Prompt must invoke /judge-work skill")
+        assertEquals("judge-work", dispatcher.jobTypes.single())
+        assertEquals("MS-42", dispatcher.lastIdentifiers["TICKET_KEY"])
     }
 
     @Test
@@ -466,8 +416,8 @@ class JobDispatchTest {
         val dispatcher = FakeJobDispatcher()
         val service = cloudRunService(registry, dispatcher, scope = this)
 
-        val first = service.launchForPrReview("MS-42", 42, "feature/MS-42", "Fix this.", "jane")
-        val second = service.launchForPrReview("MS-42", 42, "feature/MS-42", "Fix this too.", "jane")
+        val first = service.launchForPrReview(42)
+        val second = service.launchForPrReview(42)
         advanceUntilIdle()
 
         assertTrue(first, "First launch must return true")

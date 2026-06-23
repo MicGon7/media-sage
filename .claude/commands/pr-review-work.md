@@ -16,7 +16,11 @@
 
 ---
 
-1. Check out the branch specified in the prompt.
+1. Derive all PR context from `$PR_NUMBER`:
+   ```bash
+   gh pr view "$PR_NUMBER" --json headRefName,baseRefName,reviews,number
+   ```
+   From the response: check out `headRefName`, identify the most recent `changes_requested` review (reviewer login + body), and derive the ticket key from the branch name (`[A-Z]+-\d+` pattern).
 2. Read the review comment carefully, then read the relevant source files to understand the context.
 3. If a code change is needed: make the fix, then run quality gates:
    ```bash

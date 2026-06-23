@@ -28,6 +28,7 @@ object AgentDatabase {
         addWorkerMetricColumns() // MS-210
         addFailureAttributionColumns() // MS-386
         addEnvStartupColumn() // MS-399 — must run before the view, which selects env_startup_ms
+        renamePromptToPayload()
         createJobDurationsView()
         createTranscriptsTable() // MS-387
     }
@@ -64,6 +65,21 @@ object AgentDatabase {
         """
         ALTER TABLE jobs
           ADD COLUMN IF NOT EXISTS env_startup_ms BIGINT
+        """.trimIndent()
+    )
+
+    /** Renames the `prompt` column to `payload` — idempotent via existence check. */
+    private fun org.jetbrains.exposed.sql.Transaction.renamePromptToPayload() = exec(
+        """
+        DO ${'$'}${'$'}
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'jobs' AND column_name = 'prompt'
+          ) THEN
+            ALTER TABLE jobs RENAME COLUMN prompt TO payload;
+          END IF;
+        END ${'$'}${'$'};
         """.trimIndent()
     )
 

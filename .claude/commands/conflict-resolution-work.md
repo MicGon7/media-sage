@@ -11,7 +11,11 @@
 
 ---
 
-1. Run: `git fetch origin && git rebase origin/<base-branch>`
+1. Derive branch and base branch from `$PR_NUMBER`:
+   ```bash
+   gh pr view "$PR_NUMBER" --json headRefName,baseRefName
+   ```
+   Check out `headRefName`, then run: `git fetch origin && git rebase origin/<baseRefName>`
 2. If the rebase produces no changes (branch already up-to-date), write exactly this to `/tmp/jira_comment.txt`:
    `Rebase was a no-op — branch is already up-to-date with <base-branch>.`
    Then exit immediately. Do not investigate further, do not open a PR.

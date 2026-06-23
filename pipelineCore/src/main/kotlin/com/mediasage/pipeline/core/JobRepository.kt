@@ -110,16 +110,16 @@ class JobRepository : JobRegistry {
     }
 
     /**
-     * Inserts a new PENDING job row for [ticketKey] with the given [prompt] and returns
-     * the generated [UUID] that identifies the job throughout its lifecycle.
+     * Inserts a new PENDING job row for [ticketKey] with the given [payload] (compact JSON of
+     * dispatched identifiers) and returns the generated [UUID] that identifies the job.
      */
-    override suspend fun insert(ticketKey: String, prompt: String): UUID = withContext(Dispatchers.IO) {
+    override suspend fun insert(ticketKey: String, payload: String): UUID = withContext(Dispatchers.IO) {
         val id = UUID.randomUUID()
         transaction {
             JobsTable.insert {
                 it[jobId] = id
                 it[JobsTable.ticketKey] = ticketKey
-                it[JobsTable.prompt] = prompt
+                it[JobsTable.payload] = payload
                 it[status] = JobStatus.PENDING.name
                 it[createdAt] = Instant.now()
             }

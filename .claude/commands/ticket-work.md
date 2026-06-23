@@ -59,7 +59,11 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 ---
 
-1. The ticket is already In Progress — do not call jira_get_issue or transition it again. Read the ticket description and acceptance criteria from the prompt.
+1. The ticket is already In Progress — do not transition it again. Fetch the ticket description and acceptance criteria from Jira:
+   ```bash
+   curl -sf -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
+     "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY"
+   ```
 2. Run branch setup:
    ```bash
    ./scripts/worker-init.sh "$TICKET_KEY" "short-description" && source /tmp/worker_init.env

@@ -28,7 +28,7 @@ The orchestrator maintains a persistent `jobs` table in Supabase Postgres. This 
 CREATE TABLE jobs (
   job_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_key     TEXT NOT NULL,
-  prompt         TEXT NOT NULL,
+  payload        TEXT NOT NULL,
   status         TEXT NOT NULL DEFAULT 'PENDING',
   execution_name TEXT,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -37,6 +37,11 @@ CREATE TABLE jobs (
 );
 CREATE INDEX ON jobs (ticket_key, created_at DESC);
 ```
+
+`payload` stores a compact JSON object of the identifiers dispatched to the worker
+(e.g. `{"ticketKey":"MS-123"}` for ticket-work, `{"prNumber":"456"}` for PR jobs).
+The `prompt` column was renamed to `payload`; the migration runs idempotently
+in `AgentDatabase.migrate()`.
 
 Additional nullable columns are added via idempotent migrations in `AgentDatabase.migrate()`
 (never in the base `CREATE TABLE`): worker efficiency metrics (MS-210 — tokens, cost, duration,
@@ -57,6 +62,17 @@ the `result` event's `modelUsage` key alongside the other metrics.
 ## Cloud Run Dispatch
 
 **Env var overrides append, not replace.** When dispatching a Cloud Run Job with per-run env var overrides (`containerOverrides.env`), the values are appended to the job's existing env vars — they do NOT replace them. If the same key exists in both the static job definition and the per-run override, the static value takes precedence. Rule: never set per-target or per-run values as static env vars on the job definition. Inject them exclusively at dispatch time via `DispatchConfig`. The job definition should only hold env vars that are truly static across all runs (e.g. `ANTHROPIC_BASE_URL`, `GCP_PROJECT_ID`).
+
+**Dispatch model:** The orchestrator is a pure dispatcher — it passes only the minimum job identifiers as env vars. No prompt strings are constructed in the orchestrator. Per-run env vars at dispatch time:
+
+| Job type | Env vars passed |
+|---|---|
+| `ticket-work` | `JOB_TYPE`, `JOB_ID`, `TICKET_KEY` |
+| `pr-review-work` | `JOB_TYPE`, `JOB_ID`, `PR_NUMBER` |
+| `conflict-resolution-work` | `JOB_TYPE`, `JOB_ID`, `PR_NUMBER` |
+| `judge-work` | `JOB_TYPE`, `JOB_ID`, `TICKET_KEY`, `PR_NUMBER` |
+
+The worker entrypoint runs `claude -p "/$JOB_TYPE"` — the skill is the entry point and owns all framing and context fetching.
 
 ## Deployment (Container — Production)
 
