@@ -10,9 +10,7 @@ import org.slf4j.LoggerFactory
 private data class DispatchOptions(
     val dryRun: Boolean = false,
     val jiraTicketKey: String? = null,
-    val briefingContext: BriefingContext? = null,
     val jobNameOverride: String? = null,
-    val skipBriefing: Boolean = false,
 )
 
 /**
@@ -29,7 +27,6 @@ class AgentLaunchService(
     internal val cloudRun: CloudRunDispatch? = null,
     private val jiraCommentPoster: JiraCommentPoster? = null,
     private val jiraStatusChecker: JiraTicketStatusChecker? = null,
-    private val briefingService: BriefingService? = null,
     private val judgeJobName: String? = null,
 ) : AgentLauncher {
 
@@ -65,10 +62,7 @@ class AgentLaunchService(
         } else {
             ticketWorkFallbackPrompt.format(ticketKey)
         }
-        val context = ticketContent?.let {
-            BriefingContext.TicketWork(ticketKey, it)
-        }
-        return dispatchToCloudRun(ticketKey, basePrompt, cloudRun, DispatchOptions(dryRun = dryRun, briefingContext = context))
+        return dispatchToCloudRun(ticketKey, basePrompt, cloudRun, DispatchOptions(dryRun = dryRun))
     }
 
     private fun dispatchToCloudRun(
@@ -105,11 +99,7 @@ class AgentLaunchService(
             return
         }
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
-        val prompt = if (options.skipBriefing) {
-            basePrompt
-        } else {
-            buildPromptWithBriefing(ticketKey, basePrompt, options.briefingContext)
-        }
+        val prompt = basePrompt
         val jobId = cloudRun.jobs.insert(ticketKey, prompt)
         if (options.dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
@@ -193,7 +183,7 @@ class AgentLaunchService(
         val key = "JUDGE-$ticketKey"
         val prRef = prNumber?.toString() ?: "unknown"
         val basePrompt = judgeWorkPrompt.format(ticketKey, prRef)
-        val options = DispatchOptions(jiraTicketKey = ticketKey, jobNameOverride = judgeJobName, skipBriefing = true)
+        val options = DispatchOptions(jiraTicketKey = ticketKey, jobNameOverride = judgeJobName)
         return dispatchToCloudRun(key, basePrompt, cloudRun, options)
     }
 
@@ -216,8 +206,7 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "CONFLICT-$prNumber"
         val basePrompt = conflictResolutionPrompt.format(prNumber, ticketKey, branchRef, baseBranch)
-        val context = BriefingContext.ConflictResolution(ticketKey, prNumber, branchRef, baseBranch)
-        return dispatchToCloudRun(key, basePrompt, cloudRun, DispatchOptions(jiraTicketKey = ticketKey, briefingContext = context))
+        return dispatchToCloudRun(key, basePrompt, cloudRun, DispatchOptions(jiraTicketKey = ticketKey))
     }
 
     /**
@@ -228,27 +217,6 @@ class AgentLaunchService(
      *   or a derived key like "PR-456" or "CONFLICT-456" for PR-driven launches.
      */
     fun isActive(key: String): Boolean = key in activeKeys
-
-    private suspend fun buildPromptWithBriefing(
-        ticketKey: String,
-        basePrompt: String,
-        briefingContext: BriefingContext?,
-    ): String {
-        if (briefingContext == null) {
-            log.warn("[$ticketKey] no ticket content — briefing skipped, dispatching on fallback prompt")
-            return basePrompt
-        }
-        val briefing = briefingService?.brief(briefingContext)
-        return if (briefing != null) {
-            log.info("[$ticketKey] briefing generated (${briefing.length} chars) — appending to prompt")
-            "$basePrompt\n\n## Agent Briefing\n$briefing"
-        } else {
-            if (briefingService != null) {
-                log.warn("[$ticketKey] briefing returned null — dispatching without briefing")
-            }
-            basePrompt
-        }
-    }
 
 }
 

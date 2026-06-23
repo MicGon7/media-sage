@@ -44,15 +44,6 @@ package com.mediasage.orchestrator.di
  *@property pubSubWebhookSecret Shared secret token appended as `?token=` to the Pub/Sub push
  *   subscription URL. The orchestrator verifies this on every push delivery to reject spoofed
  *   requests. Sourced from env var `PUBSUB_WEBHOOK_SECRET`.
- * @property intelligentDispatchEnabled When true, [com.mediasage.orchestrator.service.BriefingService]
- *   generates a pre-dispatch briefing for every worker launch via the Claude Messages API,
- *   eliminating discovery turns and reducing cached token cost (~8x ROI per run). When false,
- *   the orchestrator acts as a pure dispatcher.
- *   Sourced from env var `INTELLIGENT_DISPATCH_ENABLED`; defaults to true.
- * @property anthropicBaseUrl Base URL for the Claude API used by [com.mediasage.orchestrator.service.BriefingService].
- *   Sourced from env var `ANTHROPIC_BASE_URL`; defaults to the Fuelix proxy.
- * @property anthropicAuthToken Bearer token for the Claude API used by [com.mediasage.orchestrator.service.BriefingService].
- *   Sourced from env var `ANTHROPIC_AUTH_TOKEN`.
  */
 data class AgentConfig(
     val githubWebhookSecret: String,
@@ -70,7 +61,4 @@ data class AgentConfig(
     val googleCredentialsJson: String = "",
     val supabaseDbUrl: String = "",
     val pubSubWebhookSecret: String = "",
-    val intelligentDispatchEnabled: Boolean = true,
-    val anthropicBaseUrl: String = "https://api.fuelix.ai",
-    val anthropicAuthToken: String = "",
 )

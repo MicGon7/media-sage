@@ -9,13 +9,13 @@ orchestrator/src/main/kotlin/com/mediasage/orchestrator/
 ├── db/                  — AgentDatabase, JobsTable, JobRepository (Supabase Postgres)
 ├── plugins/             — ContentNegotiation, CallLogging, StatusPages
 ├── routes/              — JiraWebhookRoutes, GitHubWebhookRoutes
-├── service/             — AgentLaunchService, BriefingService, CloudRunDispatch, CloudRunJobsClient, JiraApiService
+├── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiService
 └── tools/               — ToolDefinitions (Anthropic orchestrator-worker pattern)
 ```
 
 ## Dependency Injection
 
-`agentModule(config, scope)` wires HttpClient, AgentLaunchService, BriefingService, JiraApiService, and CloudRunJobsClient via Koin. Define modules per feature, not per layer.
+`agentModule(config, scope)` wires HttpClient, AgentLaunchService, JiraApiService, and CloudRunJobsClient via Koin. Define modules per feature, not per layer.
 
 **Interface bindings in tests:** When a route resolves a type via `inject<SomeInterface>()`, every test Koin module that exercises that route must include `single<SomeInterface> { get<ConcreteImpl>() }`. Missing this binding causes the inject to fail at the call site — not at startup — so tests that never reach the inject (e.g. early-return paths) pass silently while tests that do reach it return 500 instead of the expected status. After introducing a new interface in `AgentModule`, search all `*RouteTest.kt` files for manual Koin `module { }` blocks and add the interface binding to each.
 
