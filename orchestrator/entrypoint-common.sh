@@ -224,6 +224,35 @@ if '$status' == 'failure':
     except Exception:
         pass
 
+# Worker metrics from the Claude Code result event (MS-412).
+# Embedded here so the orchestrator can persist them without a Cloud Logging fetch.
+try:
+    for line in open('/tmp/claude-output.jsonl'):
+        try:
+            e = json.loads(line)
+            if e.get('type') == 'result':
+                payload['numTurns'] = e.get('num_turns', 0)
+                payload['totalCostUsd'] = e.get('total_cost_usd', 0.0)
+                payload['durationMs'] = e.get('duration_ms', 0)
+                usage = e.get('usage') or {}
+                model_usage = e.get('modelUsage') or {}
+                def resolve_token(usage_key, model_key):
+                    val = usage.get(usage_key, 0)
+                    if val and val > 0:
+                        return val
+                    return sum((v or {}).get(model_key, 0) for v in model_usage.values())
+                payload['inputTokens'] = resolve_token('input_tokens', 'inputTokens')
+                payload['outputTokens'] = resolve_token('output_tokens', 'outputTokens')
+                payload['cacheReadTokens'] = resolve_token('cache_read_input_tokens', 'cacheReadInputTokens')
+                payload['cacheCreationTokens'] = resolve_token('cache_creation_input_tokens', 'cacheCreationInputTokens')
+                if model_usage:
+                    payload['modelVersion'] = next(iter(model_usage))
+                break
+        except Exception:
+            pass
+except Exception:
+    pass
+
 data = base64.b64encode(json.dumps(payload).encode()).decode()
 print(json.dumps({'messages': [{'data': data}]}))
 ")

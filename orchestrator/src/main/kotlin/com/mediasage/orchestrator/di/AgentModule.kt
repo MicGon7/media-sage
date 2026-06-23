@@ -4,7 +4,6 @@ import com.mediasage.orchestrator.db.AgentDatabase
 import com.mediasage.pipeline.core.JobRepository
 import com.mediasage.orchestrator.service.AgentLauncher
 import com.mediasage.orchestrator.service.AgentLaunchService
-import com.mediasage.orchestrator.service.CloudLoggingClient
 import com.mediasage.orchestrator.service.CloudRunDispatch
 import com.mediasage.orchestrator.service.CloudRunJobsClient
 import com.mediasage.orchestrator.service.JiraApiService
@@ -94,11 +93,6 @@ private fun buildCloudRunDispatch(
     if (config.googleCredentialsJson.isBlank()) error("GOOGLE_CREDENTIALS_BASE64 is required — Cloud Run is the only worker dispatch path")
     initDatabase(config.supabaseDbUrl)
     val jobRepository = JobRepository()
-    val loggingClient = CloudLoggingClient(
-        httpClient = httpClient,
-        projectId = config.gcpProjectId,
-        credentialsJson = config.googleCredentialsJson
-    )
     val client = CloudRunJobsClient(
         httpClient = httpClient,
         projectId = config.gcpProjectId,
@@ -106,7 +100,6 @@ private fun buildCloudRunDispatch(
         jobName = config.gcpJobName,
         credentialsJson = config.googleCredentialsJson,
         jobRepository = jobRepository,
-        cloudLoggingClient = loggingClient,
     )
     return CloudRunDispatch(client, jobRepository)
 }
