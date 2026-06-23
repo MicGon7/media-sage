@@ -1,5 +1,6 @@
 package com.mediasage.feature.settings
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,6 +43,7 @@ import mediasage.composeapp.generated.resources.settings_section_account
 import mediasage.composeapp.generated.resources.settings_section_appearance
 import mediasage.composeapp.generated.resources.settings_section_support
 import mediasage.composeapp.generated.resources.settings_send_feedback
+import mediasage.composeapp.generated.resources.settings_developer_credit
 import mediasage.composeapp.generated.resources.settings_sign_out
 import mediasage.composeapp.generated.resources.settings_terms_of_service
 import mediasage.composeapp.generated.resources.settings_theme_label
@@ -188,6 +190,19 @@ fun SettingsScreen(
                 Text(
                     text = stringResource(Res.string.settings_sign_out),
                     fontWeight = FontWeight.SemiBold,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp, end = 16.dp),
+                contentAlignment = Alignment.BottomEnd,
+            ) {
+                Text(
+                    text = stringResource(Res.string.settings_developer_credit),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 )
             }
         }

@@ -130,4 +130,5 @@
     <string name="login_bypass">Continue without signing in</string>
 
     <string name="settings_sign_out">Sign Out</string>
+    <string name="settings_developer_credit">M.A. Gonzalez</string>
 </resources>

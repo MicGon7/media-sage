@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -201,7 +203,6 @@ fun ReaderScreen(
                             }
                         }
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
                 }
             }
 
@@ -447,6 +448,7 @@ private fun Modifier.solidCircleBorder(color: Color, strokeWidth: Dp): Modifier 
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LensChipRow(
     selectedLens: LensFilter,
@@ -458,18 +460,17 @@ private fun LensChipRow(
             text = stringResource(Res.string.you_lens_section_title),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         )
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        FlowRow(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             LensFilter.entries.forEach { lens ->
-                item(key = lens.name) {
-                    LensChip(
-                        lens = lens,
-                        selected = selectedLens == lens,
-                        onClick = { onLensSelected(lens) },
-                    )
-                }
+                LensChip(
+                    lens = lens,
+                    selected = selectedLens == lens,
+                    onClick = { onLensSelected(lens) },
+                )
             }
         }
     }
