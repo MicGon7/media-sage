@@ -16,6 +16,12 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -30,6 +36,40 @@ private const val CLAUDE_MODEL = "claude-sonnet-4-6"
 private const val MAX_TOKENS = 1024
 
 private val responseJson = Json { ignoreUnknownKeys = true }
+
+private val SCORING_SCHEMA: JsonObject = buildJsonObject {
+    put("type", "object")
+    putJsonObject("properties") {
+        putJsonObject("scores") {
+            put("type", "array")
+            putJsonObject("items") {
+                put("type", "object")
+                putJsonObject("properties") {
+                    putJsonObject("criterion") { put("type", "string") }
+                    putJsonObject("score") {
+                        put("type", "integer")
+                        put("minimum", 1)
+                        put("maximum", 5)
+                    }
+                    putJsonObject("rationale") { put("type", "string") }
+                }
+                putJsonArray("required") {
+                    add("criterion")
+                    add("score")
+                    add("rationale")
+                }
+            }
+        }
+    }
+    putJsonArray("required") { add("scores") }
+}
+
+private val SCORING_OUTPUT_CONFIG = OutputConfig(
+    format = OutputFormat(
+        type = "json_schema",
+        jsonSchema = JsonSchemaSpec(name = "decision_scoring", schema = SCORING_SCHEMA),
+    )
+)
 
 /**
  * Scores a completed worker session against the decision-scoring rubric using Claude as a judge.
@@ -78,12 +118,12 @@ class ClaudeDecisionScorer(
     }
 
     private suspend fun callClaude(transcript: String): List<DecisionScoreResult> {
-        val userMessage = buildUserMessage(transcript)
         val request = ClaudeRequest(
             model = CLAUDE_MODEL,
             maxTokens = MAX_TOKENS,
             system = SYSTEM_PROMPT,
-            messages = listOf(ClaudeMessage(role = "user", content = userMessage)),
+            messages = listOf(ClaudeMessage(role = "user", content = buildUserMessage(transcript))),
+            outputConfig = SCORING_OUTPUT_CONFIG,
         )
         val httpResponse = httpClient.post(CLAUDE_API_URL) {
             contentType(ContentType.Application.Json)
@@ -98,7 +138,7 @@ class ClaudeDecisionScorer(
         val claudeResponse = httpResponse.body<ClaudeResponse>()
         val text = claudeResponse.content.firstOrNull()?.text
             ?: error("Empty response from Claude")
-        return responseJson.decodeFromString<ScoringResponse>(extractJson(text)).scores
+        return responseJson.decodeFromString<ScoringResponse>(text).scores
     }
 
     private suspend fun persistScores(jobId: UUID, scores: List<DecisionScoreResult>) =
@@ -125,19 +165,12 @@ class ClaudeDecisionScorer(
 
         $transcript
 
-        Score the session against each rubric criterion. Return a JSON object with this exact shape — no markdown, no extra keys:
-        {"scores":[{"criterion":"tool_choice","score":4,"rationale":"one sentence"},{"criterion":"retry_recovery","score":3,"rationale":"one sentence"},{"criterion":"context_management","score":5,"rationale":"one sentence"}]}
+        Score the session against each rubric criterion.
     """.trimIndent()
-
-    private fun extractJson(text: String): String {
-        val jsonBlock = Regex("```json?\\s*\\n?(.*?)\\n?```", RegexOption.DOT_MATCHES_ALL).find(text)
-        return jsonBlock?.groupValues?.get(1)?.trim() ?: text.trim()
-    }
 
     companion object {
         private const val SYSTEM_PROMPT =
-            "You are a code-review judge evaluating AI agent sessions. " +
-                "Be concise and objective. Return only valid JSON — no explanation outside the JSON."
+            "You are a code-review judge evaluating AI agent sessions. Be concise and objective."
     }
 }
 
@@ -149,6 +182,22 @@ private data class ClaudeRequest(
     @SerialName("max_tokens") val maxTokens: Int,
     val system: String,
     val messages: List<ClaudeMessage>,
+    @SerialName("output_config") val outputConfig: OutputConfig,
+)
+
+@Serializable
+private data class OutputConfig(val format: OutputFormat)
+
+@Serializable
+private data class OutputFormat(
+    val type: String,
+    @SerialName("json_schema") val jsonSchema: JsonSchemaSpec,
+)
+
+@Serializable
+private data class JsonSchemaSpec(
+    val name: String,
+    val schema: JsonObject,
 )
 
 @Serializable

@@ -15,8 +15,9 @@ blocking delivery). The scorer:
 1. Reads the worker session transcript from the `transcripts` table (MS-387).
 2. Loads `analyst/src/main/resources/rubrics/decision-scoring.md` from the classpath — a
    versioned Markdown file defining three criteria.
-3. Calls Claude (`claude-sonnet-4-6`) as a judge with the transcript and rubric.
-4. Parses the structured JSON response and persists one row per criterion to `decision_scores`.
+3. Calls Claude (`claude-sonnet-4-6`) as a judge with the transcript and rubric, using
+   `output_config.format` with a JSON schema to guarantee valid structured output without parsing.
+4. Deserialises the response directly and persists one row per criterion to `decision_scores`.
 
 `GET /stats` now surfaces low-scoring patterns (criteria averaging below 3.5) alongside existing
 pass/cost/time metrics. When no scores exist yet for the window, `lowScorePatterns` is null rather
@@ -40,7 +41,14 @@ criteria only requires a PR to that file — no code change needed.
 The Pub/Sub handler must return 200 quickly — GCP will retry on any non-2xx. Scoring is kicked
 off with `call.application.launch { decisionScorer.score(...) }` which runs in the application's
 coroutine scope, outliving the request coroutine. A `NoOpDecisionScorer` stands in when
-`CLAUDE_API_KEY` is not set so no code path fails on missing config.
+`ANTHROPIC_API_KEY` is not set so no code path fails on missing config.
+
+### `output_config.format` eliminates JSON parsing risk
+
+The scorer passes `output_config: {format: {type: "json_schema", ...}}` in the API request. Claude
+returns raw JSON matching the schema — no markdown fences, no extra keys, no parsing gamble.
+The `extractJson()` fallback and the explicit JSON-format instruction in the prompt are gone; the
+contract is enforced at the API layer instead.
 
 ### `decision_index = 0` for session-level scores
 
@@ -70,4 +78,4 @@ scoring is disabled, but will fail at runtime if `CLAUDE_API_KEY` is set and the
 
 | Variable | Module | Purpose |
 |---|---|---|
-| `CLAUDE_API_KEY` | `:analyst` | Anthropic API key for ClaudeDecisionScorer. Absent = scoring disabled. |
+| `ANTHROPIC_API_KEY` | `:analyst` | Anthropic API key for ClaudeDecisionScorer. Absent = scoring disabled. Intentionally distinct from `CLAUDE_API_KEY` used in `:appServer` (personal account key) — this key sources from the work/research subscription. |
