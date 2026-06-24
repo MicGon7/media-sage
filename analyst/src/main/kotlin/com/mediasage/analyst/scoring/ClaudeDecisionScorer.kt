@@ -130,7 +130,7 @@ class ClaudeDecisionScorer(
         )
         val httpResponse = httpClient.post(messagesUrl) {
             contentType(ContentType.Application.Json)
-            header("x-api-key", authToken)
+            header("Authorization", "Bearer $authToken")
             header("anthropic-version", CLAUDE_API_VERSION)
             setBody(request)
         }
