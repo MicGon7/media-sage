@@ -56,6 +56,8 @@ git push --force-with-lease -u origin "$CURRENT_BRANCH"
 echo "Opening PR..."
 PR_URL=$(gh pr create --title "$COMMIT_MSG" --body-file /tmp/pr_body.md)
 echo "PR: $PR_URL"
+# Write immediately so publish_completion can embed prNumber even if a later Jira step fails.
+echo "$PR_URL" > /tmp/worker_pr_url.txt
 
 # ── 3. Update Jira AC checkboxes ─────────────────────────────────────────────
 
@@ -106,6 +108,3 @@ echo "    Branch: $CURRENT_BRANCH"
 echo "    Jira:   $TICKET_KEY → In Review"
 echo "═══════════════════════════════════════════"
 echo ""
-
-# Write PR URL to a temp file so the caller can embed it in /tmp/jira_comment.txt.
-echo "$PR_URL" > /tmp/worker_pr_url.txt
