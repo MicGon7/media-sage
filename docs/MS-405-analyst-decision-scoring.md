@@ -74,8 +74,13 @@ Run `analyst/migrations/001_create_decision_scores.sql` in Supabase SQL Editor b
 the Analyst with `CLAUDE_API_KEY` set. The Analyst will operate normally without the table if
 scoring is disabled, but will fail at runtime if `CLAUDE_API_KEY` is set and the table is absent.
 
-## Environment variable added
+## Environment variables added
 
 | Variable | Module | Purpose |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | `:analyst` | Anthropic API key for ClaudeDecisionScorer. Absent = scoring disabled. Intentionally distinct from `CLAUDE_API_KEY` used in `:appServer` (personal account key) — this key sources from the work/research subscription. |
+| `ANTHROPIC_AUTH_TOKEN` | `:analyst` | Auth token for ClaudeDecisionScorer. Reuses the existing `anthropic-auth-token` Secret Manager secret — same token used by worker jobs via the Fuelix proxy. Absent = scoring disabled. |
+| `ANTHROPIC_BASE_URL` | `:analyst` | Anthropic API base URL. Set to `https://api.fuelix.ai` on Cloud Run. Defaults to `https://api.anthropic.com` when absent, so local dev works without a proxy. |
+
+The analyst service account (`media-sage-analyst@media-sage-agent.iam.gserviceaccount.com`) was
+granted `roles/secretmanager.secretAccessor` on the `anthropic-auth-token` secret to enable
+mounting it on the Cloud Run service.
