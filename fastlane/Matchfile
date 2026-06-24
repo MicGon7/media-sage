@@ -1,4 +1,4 @@
-git_url("https://github.com/MicGon7/media-sage-certificates.git")
+git_url("https://github.com/michael-gonzalez-dev/media-sage-certificates.git")
 
 storage_mode("git")
 
