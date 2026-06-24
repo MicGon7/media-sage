@@ -3,6 +3,7 @@ package com.mediasage.analyst
 import com.mediasage.analyst.plugins.configureContentNegotiation
 import com.mediasage.analyst.plugins.configureStatusPages
 import com.mediasage.analyst.routes.pubSubCompletionRoutes
+import com.mediasage.analyst.scoring.DecisionScorer
 import com.mediasage.pipeline.core.JobRegistry
 import com.mediasage.pipeline.core.JobRow
 import com.mediasage.pipeline.core.JobStatus
@@ -15,6 +16,7 @@ import java.util.Base64
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 private const val TEST_TOKEN = "test-pubsub-secret"
 
@@ -72,6 +74,34 @@ class PubSubCompletionRoutesTest {
             assertEquals("MS-99", registry.lastLookupTicketKey)
         }
     }
+
+    @Test
+    fun completionFiresScorerWithCorrectJobId() {
+        val jobId = UUID.randomUUID()
+        val registry = FakeJobRegistry(latest = jobRow("MS-55", JobStatus.COMPLETED, jobId))
+        val scorer = FakeDecisionScorer()
+        testPubSubApp(registry, scorer) {
+            client.post("/webhook/pubsub?token=$TEST_TOKEN") {
+                contentType(ContentType.Application.Json)
+                setBody(pushEnvelope(completionEventJson("MS-55")))
+            }
+            assertNotNull(scorer.lastScoredJobId, "Scorer must be invoked on a matched completion event")
+            assertEquals(jobId, scorer.lastScoredJobId, "Scorer must receive the job's UUID")
+        }
+    }
+
+    @Test
+    fun completionWithNoJobRowDoesNotFireScorer() {
+        val registry = FakeJobRegistry(latest = null)
+        val scorer = FakeDecisionScorer()
+        testPubSubApp(registry, scorer) {
+            client.post("/webhook/pubsub?token=$TEST_TOKEN") {
+                contentType(ContentType.Application.Json)
+                setBody(pushEnvelope(completionEventJson("MS-99")))
+            }
+            assertEquals(null, scorer.lastScoredJobId, "Scorer must not be invoked when no job row is found")
+        }
+    }
 }
 
 // ---- Payload builders ----
@@ -84,19 +114,20 @@ private fun pushEnvelope(eventJson: String): String {
     return """{"message":{"data":"$data","messageId":"1"},"subscription":"projects/x/subscriptions/y"}"""
 }
 
-private fun jobRow(ticketKey: String, status: JobStatus) =
-    JobRow(jobId = UUID.randomUUID(), ticketKey = ticketKey, status = status, executionName = "exec")
+private fun jobRow(ticketKey: String, status: JobStatus, jobId: UUID = UUID.randomUUID()) =
+    JobRow(jobId = jobId, ticketKey = ticketKey, status = status, executionName = "exec")
 
 // ---- Test harness ----
 
 private fun testPubSubApp(
     registry: JobRegistry = FakeJobRegistry(),
+    scorer: DecisionScorer = FakeDecisionScorer(),
     block: suspend ApplicationTestBuilder.() -> Unit
 ) = testApplication {
     application {
         configureContentNegotiation()
         configureStatusPages()
-        routing { pubSubCompletionRoutes(TEST_TOKEN, registry) }
+        routing { pubSubCompletionRoutes(TEST_TOKEN, registry, scorer) }
     }
     block()
 }
@@ -117,4 +148,12 @@ private class FakeJobRegistry(private val latest: JobRow? = null) : JobRegistry 
     override suspend fun markInterrupted(jobId: UUID) = Unit
     override suspend fun findRunningJobs(): List<JobRow> = emptyList()
     override suspend fun findRunningByTicketKey(ticketKey: String): JobRow? = null
+}
+
+private class FakeDecisionScorer : DecisionScorer {
+    var lastScoredJobId: UUID? = null
+
+    override suspend fun score(jobId: UUID) {
+        lastScoredJobId = jobId
+    }
 }

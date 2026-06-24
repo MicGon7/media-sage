@@ -16,8 +16,11 @@ package com.mediasage.analyst.di
  * @property pubSubWebhookSecret Shared secret token appended as `?token=` to the Analyst's Pub/Sub
  *   push subscription URL. Verified on every push delivery to reject spoofed requests. Sourced from
  *   env var `PUBSUB_WEBHOOK_SECRET`. When blank, the Pub/Sub route is not registered.
+ * @property claudeApiKey Anthropic API key used by [ClaudeDecisionScorer] to score worker
+ *   transcripts. Sourced from env var `CLAUDE_API_KEY`. When blank, decision scoring is disabled.
  */
 data class AnalystConfig(
     val supabaseDbUrl: String = "",
     val pubSubWebhookSecret: String = "",
+    val claudeApiKey: String = "",
 )

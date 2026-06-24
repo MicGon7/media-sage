@@ -7,6 +7,7 @@ import com.mediasage.analyst.plugins.configureContentNegotiation
 import com.mediasage.analyst.plugins.configureStatusPages
 import com.mediasage.analyst.routes.pubSubCompletionRoutes
 import com.mediasage.analyst.routes.statsRoutes
+import com.mediasage.analyst.scoring.DecisionScorer
 import com.mediasage.analyst.stats.PipelineStatsReader
 import com.mediasage.pipeline.core.JobRegistry
 import io.ktor.http.HttpStatusCode
@@ -27,6 +28,7 @@ fun Application.module() {
     install(Koin) { modules(analystModule(config)) }
     val statsReader = get<PipelineStatsReader>()
     val jobRegistry = get<JobRegistry>()
+    val decisionScorer = get<DecisionScorer>()
     configureContentNegotiation()
     configureCallLogging()
     configureStatusPages()
@@ -34,7 +36,7 @@ fun Application.module() {
         get("/health") { call.respond(HttpStatusCode.OK, "OK") }
         statsRoutes(statsReader)
         if (config.pubSubWebhookSecret.isNotBlank()) {
-            pubSubCompletionRoutes(config.pubSubWebhookSecret, jobRegistry)
+            pubSubCompletionRoutes(config.pubSubWebhookSecret, jobRegistry, decisionScorer)
         }
     }
 }
@@ -44,5 +46,6 @@ private fun buildAnalystConfig(config: io.ktor.server.config.ApplicationConfig):
     return AnalystConfig(
         supabaseDbUrl = str("app.supabase.dbUrl"),
         pubSubWebhookSecret = str("app.pubSub.webhookSecret"),
+        claudeApiKey = str("app.claude.apiKey"),
     )
 }
