@@ -12,6 +12,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -34,6 +35,8 @@ private const val ANTHROPIC_API_DEFAULT_BASE_URL = "https://api.anthropic.com"
 private const val CLAUDE_API_VERSION = "2023-06-01"
 private const val CLAUDE_MODEL = "claude-sonnet-4-6"
 private const val MAX_TOKENS = 2048
+private const val MAX_ATTEMPTS = 3
+private val RETRY_DELAYS_MS = listOf(1_000L, 2_000L)
 
 private val responseJson = Json { ignoreUnknownKeys = true }
 
@@ -104,17 +107,35 @@ class ClaudeDecisionScorer(
     }
 
     override suspend fun score(jobId: UUID) {
-        val transcript = readTranscript(jobId)
-        if (transcript == null) {
+        val transcript = readTranscript(jobId) ?: run {
             log.info("[{}] no transcript found — skipping decision scoring", jobId)
             return
         }
-        val scores = runCatching { callClaude(transcript) }.getOrElse { e ->
-            log.warn("[{}] Claude scoring failed: {}", jobId, e.message)
-            return
+        runCatching { callClaudeWithRetry(transcript) }
+            .onSuccess { scores ->
+                persistScores(jobId, scores)
+                log.info("[{}] decision scoring complete — {} criteria scored", jobId, scores.size)
+            }
+            .onFailure { e ->
+                log.error(
+                    "[{}] Claude scoring failed after {} attempts — last error: {}",
+                    jobId, MAX_ATTEMPTS, e.message,
+                )
+            }
+    }
+
+    internal suspend fun callClaudeWithRetry(transcript: String): List<DecisionScoreResult> {
+        var lastError: Throwable? = null
+        for (attempt in 1..MAX_ATTEMPTS) {
+            if (attempt > 1) delay(RETRY_DELAYS_MS[attempt - 2])
+            runCatching { callClaude(transcript) }
+                .onSuccess { return it }
+                .onFailure { e ->
+                    lastError = e
+                    log.warn("Claude scoring attempt {}/{} failed: {}", attempt, MAX_ATTEMPTS, e.message)
+                }
         }
-        persistScores(jobId, scores)
-        log.info("[{}] decision scoring complete — {} criteria scored", jobId, scores.size)
+        throw lastError!!
     }
 
     private suspend fun readTranscript(jobId: UUID): String? = withContext(Dispatchers.IO) {

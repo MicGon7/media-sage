@@ -10,6 +10,7 @@ import com.mediasage.pipeline.core.JobRegistry
 import com.mediasage.pipeline.core.JobRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -38,6 +39,7 @@ fun analystModule(config: AnalystConfig) = module {
     single<DecisionScorer> {
         if (config.claudeAuthToken.isNotBlank()) {
             val httpClient = HttpClient(OkHttp) {
+                install(HttpTimeout) { requestTimeoutMillis = 60_000; socketTimeoutMillis = 60_000 }
                 install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             }
             log.info("Decision scoring enabled (ClaudeDecisionScorer) — baseUrl={}", config.claudeBaseUrl)
