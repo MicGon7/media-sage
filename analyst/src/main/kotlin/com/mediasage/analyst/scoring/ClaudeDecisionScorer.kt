@@ -33,7 +33,7 @@ private val log = LoggerFactory.getLogger(ClaudeDecisionScorer::class.java)
 private const val ANTHROPIC_API_DEFAULT_BASE_URL = "https://api.anthropic.com"
 private const val CLAUDE_API_VERSION = "2023-06-01"
 private const val CLAUDE_MODEL = "claude-sonnet-4-6"
-private const val MAX_TOKENS = 1024
+private const val MAX_TOKENS = 2048
 
 private val responseJson = Json { ignoreUnknownKeys = true }
 
@@ -64,12 +64,18 @@ private val SCORING_SCHEMA: JsonObject = buildJsonObject {
     putJsonArray("required") { add("scores") }
 }
 
-private val SCORING_OUTPUT_CONFIG = OutputConfig(
-    format = OutputFormat(
-        type = "json_schema",
-        jsonSchema = JsonSchemaSpec(name = "decision_scoring", schema = SCORING_SCHEMA),
-    )
-)
+// Tool calling forces structured JSON output — more reliable than output_config which the
+// Fuelix proxy silently ignores, causing Claude to fall back to unstructured markdown.
+private val SCORING_TOOL: JsonObject = buildJsonObject {
+    put("name", "record_scores")
+    put("description", "Record the rubric scores for this worker session")
+    put("input_schema", SCORING_SCHEMA)
+}
+
+private val TOOL_CHOICE: JsonObject = buildJsonObject {
+    put("type", "tool")
+    put("name", "record_scores")
+}
 
 /**
  * Scores a completed worker session against the decision-scoring rubric using Claude as a judge.
@@ -126,7 +132,8 @@ class ClaudeDecisionScorer(
             maxTokens = MAX_TOKENS,
             system = SYSTEM_PROMPT,
             messages = listOf(ClaudeMessage(role = "user", content = buildUserMessage(transcript))),
-            outputConfig = SCORING_OUTPUT_CONFIG,
+            tools = listOf(SCORING_TOOL),
+            toolChoice = TOOL_CHOICE,
         )
         val httpResponse = httpClient.post(messagesUrl) {
             contentType(ContentType.Application.Json)
@@ -139,9 +146,11 @@ class ClaudeDecisionScorer(
             error("Claude API error (${httpResponse.status}): $body")
         }
         val claudeResponse = httpResponse.body<ClaudeResponse>()
-        val text = claudeResponse.content.firstOrNull()?.text
-            ?: error("Empty response from Claude")
-        return responseJson.decodeFromString<ScoringResponse>(text).scores
+        val toolUseBlock = claudeResponse.content.firstOrNull { it.type == "tool_use" }
+            ?: error("No tool_use block in Claude response")
+        val input = toolUseBlock.input
+            ?: error("No input in tool_use block")
+        return responseJson.decodeFromString<ScoringResponse>(input.toString()).scores
     }
 
     private suspend fun persistScores(jobId: UUID, scores: List<DecisionScoreResult>) =
@@ -185,22 +194,8 @@ private data class ClaudeRequest(
     @SerialName("max_tokens") val maxTokens: Int,
     val system: String,
     val messages: List<ClaudeMessage>,
-    @SerialName("output_config") val outputConfig: OutputConfig,
-)
-
-@Serializable
-private data class OutputConfig(val format: OutputFormat)
-
-@Serializable
-private data class OutputFormat(
-    val type: String,
-    @SerialName("json_schema") val jsonSchema: JsonSchemaSpec,
-)
-
-@Serializable
-private data class JsonSchemaSpec(
-    val name: String,
-    val schema: JsonObject,
+    val tools: List<JsonObject>,
+    @SerialName("tool_choice") val toolChoice: JsonObject,
 )
 
 @Serializable
@@ -210,7 +205,11 @@ private data class ClaudeMessage(val role: String, val content: String)
 private data class ClaudeResponse(val content: List<ContentBlock>)
 
 @Serializable
-private data class ContentBlock(val type: String = "", val text: String = "")
+private data class ContentBlock(
+    val type: String = "",
+    val text: String = "",
+    val input: JsonObject? = null,
+)
 
 @Serializable
 private data class ScoringResponse(val scores: List<DecisionScoreResult>)
