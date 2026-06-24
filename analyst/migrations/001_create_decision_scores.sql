@@ -1,5 +1,4 @@
--- MS-405: decision_scores table
--- Run once in Supabase SQL Editor before deploying the Analyst with CLAUDE_API_KEY set.
+-- Run once in Supabase SQL Editor before deploying the Analyst with ANTHROPIC_API_KEY set.
 -- Schema is owned by the Analyst; the orchestrator never reads or writes this table.
 
 CREATE TABLE IF NOT EXISTS decision_scores (

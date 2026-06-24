@@ -4,8 +4,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * A rubric criterion that scores below threshold across multiple recent runs, indicating a
- * recurring pattern worth surfacing in the `GET /stats` response and citing in auto-PR rationale
- * (MS-389).
+ * recurring pattern worth surfacing in the `GET /stats` response and citing in auto-PR rationale.
  *
  * @property criterion Rubric criterion key (e.g. `tool_choice`, `retry_recovery`).
  * @property avgScore Average score (1–5) across [runCount] recent runs. Values below 3.5 are

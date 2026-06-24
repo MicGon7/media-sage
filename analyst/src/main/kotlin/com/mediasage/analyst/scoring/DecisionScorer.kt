@@ -13,7 +13,7 @@ interface DecisionScorer {
     /**
      * Score the transcript for [jobId] against all rubric criteria and persist the results.
      *
-     * Returns silently if no transcript exists for the job (e.g. a pre-MS-387 run). Does not
+     * Returns silently if no transcript exists for the job. Does not
      * throw — caller fire-and-forgets this from the Pub/Sub handler.
      */
     suspend fun score(jobId: UUID)
