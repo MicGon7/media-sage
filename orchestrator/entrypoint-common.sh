@@ -54,6 +54,11 @@ ticket_key = sys.argv[1]
 jira_user = sys.argv[2]
 jira_token = sys.argv[3]
 comment_text = open('/tmp/jira_comment.txt').read()
+try:
+    pr_url = open('/tmp/worker_pr_url.txt').read().strip()
+    comment_text = comment_text.replace('{pr_url}', pr_url)
+except FileNotFoundError:
+    pass
 body = json.dumps({
     'body': {
         'type': 'doc', 'version': 1,
