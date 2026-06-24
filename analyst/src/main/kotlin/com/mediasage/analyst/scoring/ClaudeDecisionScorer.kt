@@ -30,7 +30,7 @@ import java.util.UUID
 
 private val log = LoggerFactory.getLogger(ClaudeDecisionScorer::class.java)
 
-private const val CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
+private const val ANTHROPIC_API_DEFAULT_BASE_URL = "https://api.anthropic.com"
 private const val CLAUDE_API_VERSION = "2023-06-01"
 private const val CLAUDE_MODEL = "claude-sonnet-4-6"
 private const val MAX_TOKENS = 1024
@@ -83,8 +83,11 @@ private val SCORING_OUTPUT_CONFIG = OutputConfig(
  */
 class ClaudeDecisionScorer(
     private val httpClient: HttpClient,
-    private val apiKey: String,
+    private val authToken: String,
+    baseUrl: String = ANTHROPIC_API_DEFAULT_BASE_URL,
 ) : DecisionScorer {
+
+    private val messagesUrl = "${baseUrl.trimEnd('/')}/v1/messages"
 
     private val rubric: String by lazy {
         ClaudeDecisionScorer::class.java
@@ -125,9 +128,9 @@ class ClaudeDecisionScorer(
             messages = listOf(ClaudeMessage(role = "user", content = buildUserMessage(transcript))),
             outputConfig = SCORING_OUTPUT_CONFIG,
         )
-        val httpResponse = httpClient.post(CLAUDE_API_URL) {
+        val httpResponse = httpClient.post(messagesUrl) {
             contentType(ContentType.Application.Json)
-            header("x-api-key", apiKey)
+            header("x-api-key", authToken)
             header("anthropic-version", CLAUDE_API_VERSION)
             setBody(request)
         }

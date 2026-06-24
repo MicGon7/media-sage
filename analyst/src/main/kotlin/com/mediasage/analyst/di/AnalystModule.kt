@@ -26,8 +26,8 @@ private val log = LoggerFactory.getLogger("AnalystModule")
  * - [JobRegistry] — the `:pipelineCore` repository, used by the Pub/Sub route to look up the
  *   job row for an incoming completion event.
  * - [PipelineStatsReader] — backs `GET /stats` with a real Supabase aggregation query.
- * - [DecisionScorer] — [ClaudeDecisionScorer] when `CLAUDE_API_KEY` is set; [NoOpDecisionScorer]
- *   otherwise (safe for environments without the API key configured).
+ * - [DecisionScorer] — [ClaudeDecisionScorer] when `ANTHROPIC_AUTH_TOKEN` is set; [NoOpDecisionScorer]
+ *   otherwise (safe for environments without the token configured).
  *
  * @param config Runtime configuration sourced from environment variables. See [AnalystConfig].
  */
@@ -36,14 +36,14 @@ fun analystModule(config: AnalystConfig) = module {
     single<JobRegistry> { JobRepository() }
     single<PipelineStatsReader> { JobsTableStatsReader() }
     single<DecisionScorer> {
-        if (config.claudeApiKey.isNotBlank()) {
+        if (config.claudeAuthToken.isNotBlank()) {
             val httpClient = HttpClient(OkHttp) {
                 install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             }
-            log.info("Decision scoring enabled (ClaudeDecisionScorer)")
-            ClaudeDecisionScorer(httpClient, config.claudeApiKey)
+            log.info("Decision scoring enabled (ClaudeDecisionScorer) — baseUrl={}", config.claudeBaseUrl)
+            ClaudeDecisionScorer(httpClient, config.claudeAuthToken, config.claudeBaseUrl)
         } else {
-            log.info("Decision scoring disabled — CLAUDE_API_KEY not set")
+            log.info("Decision scoring disabled — ANTHROPIC_AUTH_TOKEN not set")
             NoOpDecisionScorer()
         }
     }

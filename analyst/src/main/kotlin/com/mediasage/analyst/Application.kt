@@ -46,6 +46,7 @@ private fun buildAnalystConfig(config: io.ktor.server.config.ApplicationConfig):
     return AnalystConfig(
         supabaseDbUrl = str("app.supabase.dbUrl"),
         pubSubWebhookSecret = str("app.pubSub.webhookSecret"),
-        claudeApiKey = str("app.claude.apiKey"),
+        claudeAuthToken = str("app.claude.authToken"),
+        claudeBaseUrl = str("app.claude.baseUrl").ifBlank { "https://api.anthropic.com" },
     )
 }
