@@ -16,8 +16,15 @@ package com.mediasage.analyst.di
  * @property pubSubWebhookSecret Shared secret token appended as `?token=` to the Analyst's Pub/Sub
  *   push subscription URL. Verified on every push delivery to reject spoofed requests. Sourced from
  *   env var `PUBSUB_WEBHOOK_SECRET`. When blank, the Pub/Sub route is not registered.
+ * @property claudeAuthToken Auth token for [ClaudeDecisionScorer]. Sourced from env var
+ *   `ANTHROPIC_AUTH_TOKEN` — same token used by worker jobs via the Fuelix proxy. When blank,
+ *   decision scoring is disabled.
+ * @property claudeBaseUrl Anthropic API base URL. Sourced from env var `ANTHROPIC_BASE_URL`.
+ *   Defaults to `https://api.anthropic.com`. Set to the Fuelix proxy URL on Cloud Run.
  */
 data class AnalystConfig(
     val supabaseDbUrl: String = "",
     val pubSubWebhookSecret: String = "",
+    val claudeAuthToken: String = "",
+    val claudeBaseUrl: String = "https://api.anthropic.com",
 )

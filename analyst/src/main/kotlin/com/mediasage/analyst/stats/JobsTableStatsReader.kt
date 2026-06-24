@@ -9,21 +9,27 @@ import java.sql.ResultSet
 /**
  * Supabase Postgres implementation of [PipelineStatsReader].
  *
- * Aggregates the shared `jobs` table (schema owned by `:pipelineCore`) in a single SQL pass.
- * Postgres `FILTER` clauses scope each aggregate to the right subset of rows — pass rate over
- * terminal runs, average cost over completed runs — so the whole summary is one round trip.
+ * Aggregates the shared `jobs` table (schema owned by `:pipelineCore`) plus the `decision_scores`
+ * table (schema owned by `:analyst`) in two queries per window. Postgres `FILTER` clauses scope
+ * each aggregate to the right subset of rows.
  *
  * [windowDays] is interpolated directly into the SQL. This is injection-safe because the route
  * validates it as a positive `Int` before this method is reached; no string input is ever
  * concatenated into the query.
  *
- * Runs on [Dispatchers.IO] with a blocking Exposed transaction, matching the pattern in
+ * Runs on [Dispatchers.IO] with blocking Exposed transactions, matching the pattern in
  * `JobRepository` — Exposed's transaction DSL is synchronous and must not run on the default
  * coroutine dispatcher.
  */
 class JobsTableStatsReader : PipelineStatsReader {
 
     override suspend fun stats(windowDays: Int): RunStats = withContext(Dispatchers.IO) {
+        val base = queryBaseStats(windowDays)
+        val patterns = queryLowScorePatterns(windowDays)
+        base.copy(lowScorePatterns = patterns.ifEmpty { null })
+    }
+
+    private fun queryBaseStats(windowDays: Int): RunStats {
         val sql = """
             SELECT
               COUNT(*) AS total_runs,
@@ -36,15 +42,33 @@ class JobsTableStatsReader : PipelineStatsReader {
             FROM ${JobsTable.tableName}
             WHERE created_at >= now() - make_interval(days => $windowDays)
         """.trimIndent()
-        transaction {
+        return transaction {
             exec(sql) { rs ->
-                if (rs.next()) mapRow(rs, windowDays) else RunStats.empty(windowDays)
+                if (rs.next()) mapBaseRow(rs, windowDays) else RunStats.empty(windowDays)
             } ?: RunStats.empty(windowDays)
         }
     }
 
-    /** Maps the single aggregate row returned by the stats query into a [RunStats]. */
-    private fun mapRow(rs: ResultSet, windowDays: Int): RunStats {
+    private fun queryLowScorePatterns(windowDays: Int): List<LowScorePattern> {
+        val sql = """
+            SELECT ds.criterion, AVG(ds.score) AS avg_score, COUNT(DISTINCT ds.job_id) AS run_count
+            FROM decision_scores ds
+            JOIN ${JobsTable.tableName} j ON ds.job_id = j.job_id
+            WHERE j.created_at >= now() - make_interval(days => $windowDays)
+            GROUP BY ds.criterion
+            HAVING AVG(ds.score) < 3.5
+            ORDER BY avg_score ASC
+        """.trimIndent()
+        return transaction {
+            exec(sql) { rs ->
+                val results = mutableListOf<LowScorePattern>()
+                while (rs.next()) results.add(mapPatternRow(rs))
+                results
+            } ?: emptyList()
+        }
+    }
+
+    private fun mapBaseRow(rs: ResultSet, windowDays: Int): RunStats {
         val completed = rs.getInt("completed_runs")
         val terminal = rs.getInt("terminal_runs")
         return RunStats(
@@ -58,4 +82,10 @@ class JobsTableStatsReader : PipelineStatsReader {
             avgTurns = rs.getDouble("avg_turns").takeIf { !rs.wasNull() },
         )
     }
+
+    private fun mapPatternRow(rs: ResultSet) = LowScorePattern(
+        criterion = rs.getString("criterion"),
+        avgScore = rs.getDouble("avg_score"),
+        runCount = rs.getInt("run_count"),
+    )
 }

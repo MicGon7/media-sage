@@ -30,6 +30,11 @@ dependencies {
     // Pipeline core (jobs table, JobRegistry, JobCompletionEvent)
     implementation(projects.pipelineCore)
 
+    // Ktor Client (ClaudeDecisionScorer — Claude-as-judge calls)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+
     // Exposed + PostgreSQL (reads the existing Supabase jobs table)
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)

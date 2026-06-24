@@ -13,7 +13,7 @@ private const val DEFAULT_WINDOW_DAYS = 7
  * Exposes `GET /stats[?days=N]` — a cross-run health summary over the last N days (default 7).
  *
  * The window is parameterised from the start so downstream consumers can ask for the slice they
- * need: the daily Slack digest (MS-388) will request `?days=1`, a weekly review `?days=7`.
+ * need: a daily digest will request `?days=1`, a weekly review `?days=7`.
  *
  * Invalid `days` (non-numeric or non-positive) returns 400 rather than silently falling back to a
  * default, so a malformed automation request surfaces as an error instead of wrong data.

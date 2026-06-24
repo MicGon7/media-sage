@@ -21,6 +21,8 @@ import kotlinx.serialization.Serializable
  *   runs with both timestamps, or null if none.
  * @property avgTurns Average number of agentic turns across runs that reported a turn count, or
  *   null if none.
+ * @property lowScorePatterns Rubric criteria averaging below 3.5 across runs in the window, ordered
+ *   by [LowScorePattern.avgScore] ascending. Null when no decision scores exist for the window yet.
  */
 @Serializable
 data class RunStats(
@@ -32,6 +34,7 @@ data class RunStats(
     val avgCostUsd: Double? = null,
     val avgWallClockSeconds: Double? = null,
     val avgTurns: Double? = null,
+    val lowScorePatterns: List<LowScorePattern>? = null,
 ) {
     companion object {
         /** A zeroed summary for a window with no job rows. */
