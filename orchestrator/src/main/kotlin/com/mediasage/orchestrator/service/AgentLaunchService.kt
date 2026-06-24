@@ -173,7 +173,8 @@ class AgentLaunchService(
         val cloudRun = cloudRun ?: return false
         val key = "JUDGE-$ticketKey"
         val identifiers = buildMap {
-            put("TICKET_KEY", ticketKey)
+            put("TICKET_KEY", key)
+            put("JIRA_TICKET_KEY", ticketKey)
             if (prNumber != null) put("PR_NUMBER", prNumber.toString())
         }
         val payloadMap = buildMap {

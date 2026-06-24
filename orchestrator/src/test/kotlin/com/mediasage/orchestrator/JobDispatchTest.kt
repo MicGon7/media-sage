@@ -407,7 +407,8 @@ class JobDispatchTest {
         advanceUntilIdle()
 
         assertEquals("judge-work", dispatcher.jobTypes.single())
-        assertEquals("MS-42", dispatcher.lastIdentifiers["TICKET_KEY"])
+        assertEquals("JUDGE-MS-42", dispatcher.lastIdentifiers["TICKET_KEY"])
+        assertEquals("MS-42", dispatcher.lastIdentifiers["JIRA_TICKET_KEY"])
     }
 
     @Test
