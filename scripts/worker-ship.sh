@@ -54,7 +54,7 @@ git push --force-with-lease -u origin "$CURRENT_BRANCH"
 # ── 2. Open PR ────────────────────────────────────────────────────────────────
 
 echo "Opening PR..."
-PR_URL=$(gh pr create --title "$COMMIT_MSG" --body-file /tmp/pr_body.md)
+PR_URL=$(gh pr create --title "$COMMIT_MSG" --body-file /tmp/pr_body.md --head "$CURRENT_BRANCH")
 echo "PR: $PR_URL"
 # Write immediately so publish_completion can embed prNumber even if a later Jira step fails.
 echo "$PR_URL" > /tmp/worker_pr_url.txt
@@ -62,37 +62,54 @@ echo "$PR_URL" > /tmp/worker_pr_url.txt
 # ── 3. Update Jira AC checkboxes ─────────────────────────────────────────────
 
 echo "Updating Jira AC checkboxes..."
-DESC=$(curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" "$JIRA_BASE" \
-    | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)['fields']['description']))")
+curl -sf -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" "$JIRA_BASE" -o /tmp/jira_issue.json || {
+    echo "⚠️  Could not fetch Jira issue — skipping AC checkbox update"
+    rm -f /tmp/jira_issue.json
+}
 
-UPDATED=$(echo "$DESC" | python3 -c "
-import sys, json
-adf = json.load(sys.stdin)
+if [ -f /tmp/jira_issue.json ]; then
+    python3 << 'PYEOF'
+import json, sys
+with open('/tmp/jira_issue.json') as f:
+    data = json.load(f)
+adf = data['fields'].get('description')
+if not adf:
+    sys.exit(0)
 text = json.dumps(adf)
 text = text.replace('[  ]', '[x]').replace('[ ]', '[x]')
-print(text)
-")
+with open('/tmp/jira_desc_updated.json', 'w') as f:
+    f.write('{"fields":{"description":' + text + '}}')
+PYEOF
 
-curl -s -X PUT -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "{\"fields\":{\"description\":$UPDATED}}" \
-    "$JIRA_BASE" > /dev/null
-echo "✅  AC checkboxes updated"
+    if [ -f /tmp/jira_desc_updated.json ]; then
+        curl -sf -X PUT -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/jira_desc_updated.json \
+            "$JIRA_BASE" > /dev/null
+        echo "✅  AC checkboxes updated"
+    fi
+fi
 
 # ── 4. Transition to In Review ────────────────────────────────────────────────
 
 echo "Transitioning $TICKET_KEY to In Review..."
-IN_REVIEW_ID=$(curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
-    "${JIRA_BASE}/transitions" \
-    | python3 -c "
-import sys, json
-transitions = json.load(sys.stdin)['transitions']
+curl -sf -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
+    "${JIRA_BASE}/transitions" -o /tmp/jira_transitions.json || {
+    echo "⚠️  Could not fetch transitions — skipping In Review transition"
+    exit 0
+}
+IN_REVIEW_ID=$(python3 << 'PYEOF'
+import json, sys
+with open('/tmp/jira_transitions.json') as f:
+    transitions = json.load(f)['transitions']
 match = next((t['id'] for t in transitions if t['name'].lower() == 'in review'), None)
 if not match:
-    raise SystemExit('No \"In Review\" transition found for $TICKET_KEY')
+    print('No "In Review" transition found', file=sys.stderr)
+    sys.exit(1)
 print(match)
-")
-curl -s -X POST -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
+PYEOF
+)
+curl -sf -X POST -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
     -H "Content-Type: application/json" \
     -d "{\"transition\":{\"id\":\"$IN_REVIEW_ID\"}}" \
     "${JIRA_BASE}/transitions" > /dev/null
