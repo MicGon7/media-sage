@@ -1,6 +1,10 @@
 package com.mediasage.analyst.di
 
 import com.mediasage.analyst.db.FeedbackDatabase
+import com.mediasage.analyst.detector.DatabasePatternDetector
+import com.mediasage.analyst.detector.PatternDetector
+import com.mediasage.analyst.github.GitHubAppClient
+import com.mediasage.analyst.pr.SkillPrService
 import com.mediasage.analyst.scoring.ClaudeDecisionScorer
 import com.mediasage.analyst.scoring.DecisionScorer
 import com.mediasage.analyst.scoring.NoOpDecisionScorer
@@ -22,34 +26,70 @@ private val log = LoggerFactory.getLogger("AnalystModule")
 /**
  * Koin module for the Analyst feedback server.
  *
- * Wires the dependency graph for the reactive spine and decision-scoring layer:
+ * Wires the dependency graph for the reactive spine, decision-scoring, and auto-PR layers:
  * - Verifies Supabase connectivity at startup (fail-fast on a bad `SUPABASE_DB_URL`).
- * - [JobRegistry] — the `:pipelineCore` repository, used by the Pub/Sub route to look up the
- *   job row for an incoming completion event.
- * - [PipelineStatsReader] — backs `GET /stats` with a real Supabase aggregation query.
+ * - [JobRegistry] — the `:pipelineCore` repository for Pub/Sub job lookups.
+ * - [PipelineStatsReader] — backs `GET /stats` with Supabase aggregation queries.
  * - [DecisionScorer] — [ClaudeDecisionScorer] when `ANTHROPIC_AUTH_TOKEN` is set; [NoOpDecisionScorer]
- *   otherwise (safe for environments without the token configured).
+ *   otherwise.
+ * - [PatternDetector] — [DatabasePatternDetector] backed by Supabase.
+ * - [SkillPrService] — wired when all five `GITHUB_*` env vars are present; null otherwise
+ *   (auto-PR feature silently disabled).
  *
  * @param config Runtime configuration sourced from environment variables. See [AnalystConfig].
  */
+@Suppress("LongMethod")
 fun analystModule(config: AnalystConfig) = module {
     initDatabase(config.supabaseDbUrl)
+
+    single<HttpClient> {
+        HttpClient(OkHttp) {
+            install(HttpTimeout) { requestTimeoutMillis = 60_000; socketTimeoutMillis = 60_000 }
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
+    }
+
     single<JobRegistry> { JobRepository() }
     single<PipelineStatsReader> { JobsTableStatsReader() }
+
     single<DecisionScorer> {
         if (config.claudeAuthToken.isNotBlank()) {
-            val httpClient = HttpClient(OkHttp) {
-                install(HttpTimeout) { requestTimeoutMillis = 60_000; socketTimeoutMillis = 60_000 }
-                install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-            }
             log.info("Decision scoring enabled (ClaudeDecisionScorer) — baseUrl={}", config.claudeBaseUrl)
-            ClaudeDecisionScorer(httpClient, config.claudeAuthToken, config.claudeBaseUrl)
+            ClaudeDecisionScorer(get(), config.claudeAuthToken, config.claudeBaseUrl)
         } else {
             log.info("Decision scoring disabled — ANTHROPIC_AUTH_TOKEN not set")
             NoOpDecisionScorer()
         }
     }
+
+    single<PatternDetector> { DatabasePatternDetector() }
+
+    if (isGithubConfigured(config)) {
+        log.info("Auto-PR enabled (SkillPrService) — repo={}/{}", config.githubRepoOwner, config.githubRepoName)
+        single<SkillPrService> {
+            SkillPrService(
+                detector = get(),
+                githubClient = GitHubAppClient(
+                    httpClient = get(),
+                    appId = config.githubAppId,
+                    privateKeyPem = config.githubPrivateKey,
+                    installationId = config.githubInstallationId,
+                ),
+                httpClient = get(),
+                authToken = config.claudeAuthToken,
+                claudeBaseUrl = config.claudeBaseUrl,
+                repoOwner = config.githubRepoOwner,
+                repoName = config.githubRepoName,
+            )
+        }
+    } else {
+        log.info("Auto-PR disabled — GITHUB_* env vars or ANTHROPIC_AUTH_TOKEN not fully configured")
+    }
 }
+
+private fun isGithubConfigured(config: AnalystConfig): Boolean =
+    listOf(config.githubAppId, config.githubPrivateKey, config.githubInstallationId, config.githubRepoOwner, config.githubRepoName)
+        .all { it.isNotBlank() } && config.claudeAuthToken.isNotBlank()
 
 private fun initDatabase(supabaseDbUrl: String) {
     if (supabaseDbUrl.isBlank()) {

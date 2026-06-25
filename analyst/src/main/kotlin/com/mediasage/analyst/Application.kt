@@ -5,6 +5,7 @@ import com.mediasage.analyst.di.analystModule
 import com.mediasage.analyst.plugins.configureCallLogging
 import com.mediasage.analyst.plugins.configureContentNegotiation
 import com.mediasage.analyst.plugins.configureStatusPages
+import com.mediasage.analyst.pr.SkillPrService
 import com.mediasage.analyst.routes.pubSubCompletionRoutes
 import com.mediasage.analyst.routes.statsRoutes
 import com.mediasage.analyst.scoring.DecisionScorer
@@ -17,6 +18,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import org.koin.ktor.ext.get
+import org.koin.ktor.ext.getKoin
 import org.koin.ktor.plugin.Koin
 
 fun main(args: Array<String>) {
@@ -29,6 +31,7 @@ fun Application.module() {
     val statsReader = get<PipelineStatsReader>()
     val jobRegistry = get<JobRegistry>()
     val decisionScorer = get<DecisionScorer>()
+    val skillPrService: SkillPrService? = getKoin().getOrNull()
     configureContentNegotiation()
     configureCallLogging()
     configureStatusPages()
@@ -36,7 +39,7 @@ fun Application.module() {
         get("/health") { call.respond(HttpStatusCode.OK, "OK") }
         statsRoutes(statsReader)
         if (config.pubSubWebhookSecret.isNotBlank()) {
-            pubSubCompletionRoutes(config.pubSubWebhookSecret, jobRegistry, decisionScorer)
+            pubSubCompletionRoutes(config.pubSubWebhookSecret, jobRegistry, decisionScorer, skillPrService)
         }
     }
 }
@@ -48,5 +51,10 @@ private fun buildAnalystConfig(config: io.ktor.server.config.ApplicationConfig):
         pubSubWebhookSecret = str("app.pubSub.webhookSecret"),
         claudeAuthToken = str("app.claude.authToken"),
         claudeBaseUrl = str("app.claude.baseUrl").ifBlank { "https://api.anthropic.com" },
+        githubAppId = str("app.github.appId"),
+        githubPrivateKey = str("app.github.privateKey"),
+        githubInstallationId = str("app.github.installationId"),
+        githubRepoOwner = str("app.github.repoOwner"),
+        githubRepoName = str("app.github.repoName"),
     )
 }
