@@ -4,9 +4,9 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
-import io.ktor.client.request.get
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -21,7 +21,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.security.KeyFactory
 import java.security.interfaces.RSAPrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
@@ -149,31 +148,21 @@ class GitHubAppClient(
             .jsonObject["html_url"]!!.jsonPrimitive.content
     }
 
-    // Minted fresh per call — 10-min JWT expiry is plenty for a single PR flow.
-    // Retried up to 3× with a 15s per-attempt ceiling: the endpoint normally responds in <1s,
-    // so a timeout indicates a transient network hiccup rather than an auth problem.
+    // Global requestTimeoutMillis is 60s, but this call fires after ~4–5 min of DB work on a cold
+    // instance. Override to 15s — the endpoint normally responds in <1s.
     private suspend fun installationToken(): String {
         val jwt = buildJwt()
-        var lastException: IOException? = null
-        repeat(3) { attempt ->
-            try {
-                val response = httpClient.post("$GITHUB_API/app/installations/$installationId/access_tokens") {
-                    header("Authorization", "Bearer $jwt")
-                    header("Accept", GH_ACCEPT)
-                    header("X-GitHub-Api-Version", GH_API_VERSION)
-                    timeout { requestTimeoutMillis = 15_000 }
-                }
-                check(response.status.isSuccess()) {
-                    "GitHub installationToken failed (${response.status}): ${response.bodyAsText()}"
-                }
-                return json.parseToJsonElement(response.bodyAsText())
-                    .jsonObject["token"]!!.jsonPrimitive.content
-            } catch (e: IOException) {
-                lastException = e
-                if (attempt < 2) log.warn("installationToken attempt {} timed out — retrying: {}", attempt + 1, e.message)
-            }
+        val response = httpClient.post("$GITHUB_API/app/installations/$installationId/access_tokens") {
+            header("Authorization", "Bearer $jwt")
+            header("Accept", GH_ACCEPT)
+            header("X-GitHub-Api-Version", GH_API_VERSION)
+            timeout { requestTimeoutMillis = 15_000 }
         }
-        error("GitHub installationToken failed after 3 attempts: ${lastException?.message}")
+        check(response.status.isSuccess()) {
+            "GitHub installationToken failed (${response.status}): ${response.bodyAsText()}"
+        }
+        return json.parseToJsonElement(response.bodyAsText())
+            .jsonObject["token"]!!.jsonPrimitive.content
     }
 
     private fun buildJwt(): String {

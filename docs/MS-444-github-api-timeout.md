@@ -8,9 +8,8 @@
 Diagnosed and fixed a `HttpRequestTimeoutException` that consistently prevented the analyst's auto-PR feature from opening PRs. Added retry logic with per-attempt timeouts to `GitHubAppClient.installationToken()` and graceful error handling in `SkillPrService.maybeOpenPr()`.
 
 ### Files changed
-- **`analyst/.../github/GitHubAppClient.kt`** — `installationToken()` retries up to 3× with a 15s per-attempt ceiling; `IOException` triggers a retry; non-2xx responses propagate immediately
-- **`analyst/.../pr/SkillPrService.kt`** — `hasOpenAnalystPr()` call wrapped with separate `CancellationException` re-throw + broad `Exception` catch to prevent a GitHub failure from killing the background coroutine
-- **`analyst/.../GitHubAppClientJwtTest.kt`** — two new tests: retry-on-failure-then-succeed, exhaust-all-retries-throws
+- **`analyst/.../github/GitHubAppClient.kt`** — `installationToken()` adds `timeout { requestTimeoutMillis = 15_000 }` to override the global 60s ceiling for this one call
+- **`analyst/.../pr/SkillPrService.kt`** — `hasOpenAnalystPr()` wrapped with `runCatching`, consistent with the existing `runCatching { openPr(...) }` pattern already in the file
 - **`analyst/.../SkillPrServiceTest.kt`** — new test for GitHub check throwing; `FakeGitHubApiClient` gains `throwOnHasOpenPr` flag
 
 ## Root cause
@@ -28,16 +27,11 @@ call.application.launch {
 
 ## Key decisions & why
 
-- **Per-request timeout override (`timeout { requestTimeoutMillis = 15_000 }`) instead of raising the global timeout**: The global timeout protects all other calls. GitHub's access-token endpoint responds in <1s under normal conditions — a timeout there indicates a transient network hiccup, not a slow server. 15s is generous; 60s was just wrong for a post-DB-query context.
-- **Retry only on `IOException`**: `HttpRequestTimeoutException` extends `IOException` in Ktor 3.x, so the catch clause covers it without special-casing. Non-2xx responses throw `IllegalStateException` (via `check()`) and propagate immediately — retrying a 401 would be pointless.
-- **3 attempts, warn on attempts 1 and 2**: One retry absorbs a single transient hiccup; a second gives confidence before giving up. Logging the attempt number makes the retry sequence visible in Cloud Run logs without being noisy on success.
-- **`error(...)` after all retries exhausted**: Surfaces as `IllegalStateException` with a clear message. The `runCatching { openPr(...) }` in `maybeOpenPr()` catches it and logs `.onFailure` — the background coroutine does not crash.
-- **Separate `CancellationException` catch block in `SkillPrService`**: Detekt's `InstanceOfCheckForException` rule requires separate catch clauses instead of `if (e is CancellationException) throw e` inside a broad catch. More importantly: swallowing `CancellationException` breaks coroutine cooperative cancellation — the re-throw is correctness, not style.
+- **Per-request timeout override, not a retry loop**: The root cause was a misconfigured timeout, not an unreliable endpoint. GitHub's access-token endpoint responds in <1s — if it times out, there's no reason to believe a second attempt will behave differently. One line (`timeout { requestTimeoutMillis = 15_000 }`) fixes the problem without adding retry infrastructure.
+- **`runCatching` for `hasOpenAnalystPr()`**: Consistent with `runCatching { openPr(...) }` already used below in the same function. If the GitHub check fails, the right behavior is to skip — the same as if an open PR already existed.
 
 ## Concepts learned
 
-- **`HttpRequestTimeoutException` is an `IOException`** in Ktor 3.x. You can catch `IOException` to handle both socket errors and Ktor coroutine-level timeouts uniformly.
-- **Per-request timeout override**: `timeout { requestTimeoutMillis = N }` inside a request builder overrides the plugin-level default for that single call. Use it when one call in a flow has meaningfully different latency characteristics from the others.
-- **Background coroutines and wall-clock time**: A `launch {}` that fires after a long-running suspend (DB queries, Claude calls) may encounter a different network budget than the code assumes. Consider the total elapsed time before any network call, not just the call itself.
-- **`CancellationException` must be re-thrown**: Catching `Exception` without re-throwing `CancellationException` breaks coroutine cancellation. Always handle it in its own `catch` block before the broad handler.
-- **Ktor `MockEngine` and `IOException`**: A `MockEngine` handler can `throw IOException(...)` directly — no `respondError()` needed — to simulate a timeout or connection reset in tests.
+- **Per-request timeout override**: `timeout { requestTimeoutMillis = N }` inside a request builder overrides the plugin-level default for that single call. Use it when one call in a long-running flow has meaningfully different timing constraints than the others.
+- **Background coroutines and wall-clock time**: A `launch {}` that fires after a long-running suspend (DB queries, Claude calls) may have exhausted the HTTP client's timeout budget before it even starts. Consider total elapsed time, not just the time for the call itself.
+- **Fix the root cause, not the symptom**: The instinct to add retries was treating the timeout as an unreliable endpoint problem. The real problem was a misconfigured timeout. Match the fix to the actual failure mode.
