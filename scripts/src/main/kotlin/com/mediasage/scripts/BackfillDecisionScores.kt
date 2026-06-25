@@ -11,6 +11,8 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.UUID
@@ -49,7 +51,10 @@ private fun runScoring(jobIds: List<UUID>, scorer: ClaudeDecisionScorer): Pair<I
     var failureCount = 0
     runBlocking {
         jobIds.forEach { jobId ->
-            runCatching { scorer.score(jobId) }
+            runCatching {
+                deleteScores(jobId)
+                scorer.score(jobId)
+            }
                 .onSuccess { successCount++ }
                 .onFailure { e -> failureCount++; println("ERROR [$jobId]: ${e.message}") }
         }
@@ -62,14 +67,19 @@ private fun buildHttpClient() = HttpClient(OkHttp) {
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
 }
 
+private fun deleteScores(jobId: UUID) = transaction {
+    DecisionScoresTable.deleteWhere { DecisionScoresTable.jobId eq jobId }
+}
+
 private fun findScorableJobs(): List<UUID> = transaction {
-    val scoredJobIds = DecisionScoresTable
+    val scoredWithV2JobIds = DecisionScoresTable
         .selectAll()
+        .where { DecisionScoresTable.recommendation neq "" }
         .map { it[DecisionScoresTable.jobId] }
         .toSet()
 
     TranscriptsTable
         .selectAll()
         .map { it[TranscriptsTable.jobId] }
-        .filter { it !in scoredJobIds }
+        .filter { it !in scoredWithV2JobIds }
 }
