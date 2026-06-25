@@ -33,6 +33,7 @@ tasks.register<JavaExec>("generateImages") {
 
 dependencies {
     implementation(projects.analyst)
+    implementation(projects.pipelineCore)
 
     // Ktor Client (for calling OpenAI image API)
     implementation(libs.ktor.client.core)

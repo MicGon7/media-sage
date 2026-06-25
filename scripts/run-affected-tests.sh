@@ -12,7 +12,8 @@
 #   No .kt files changed            → skip entirely, delegate to CI
 #   .kt changed, test class found   → ./gradlew :module:test --tests "X" --no-daemon
 #   .kt changed, no test mapping    → skip, delegate to CI
-#   shared/composeApp/scripts       → always skipped (requires SDK or has no tests)
+#   shared/composeApp               → always skipped (requires SDK or has no tests)
+#   scripts                         → :scripts:compileKotlin (no tests, but compile verifies imports)
 #
 # Usage:
 #   ./scripts/run-affected-tests.sh
@@ -45,6 +46,7 @@ fi
 
 RUN_ORCHESTRATOR=false
 RUN_APPSERVER=false
+RUN_SCRIPTS_COMPILE=false
 ORCHESTRATOR_TEST_CLASSES=()
 APPSERVER_TEST_CLASSES=()
 
@@ -82,6 +84,9 @@ while IFS= read -r file; do
                 APPSERVER_TEST_CLASSES+=("$cls")
             fi
             ;;
+        scripts/src/main/*.kt)
+            RUN_SCRIPTS_COMPILE=true
+            ;;
     esac
 done <<< "$KOTLIN_CHANGED"
 
@@ -110,6 +115,12 @@ fi
 
 if [ "$RUN_APPSERVER" = "true" ]; then
     run_tests ":appServer:test" "${APPSERVER_TEST_CLASSES[@]+"${APPSERVER_TEST_CLASSES[@]}"}"
+    RAN_ANY=true
+fi
+
+if [ "$RUN_SCRIPTS_COMPILE" = "true" ]; then
+    echo "Compiling :scripts to verify imports resolve..."
+    ./gradlew :scripts:compileKotlin --no-daemon
     RAN_ANY=true
 fi
 
