@@ -120,12 +120,16 @@ val skillPrService: SkillPrService? = getKoin().getOrNull()
 
 ## Env vars added to Cloud Run (analyst service)
 
+Names match the worker job exactly so the same secrets can be reused.
+`GITHUB_APP_PRIVATE_KEY_BASE64` stores base64(PEM) — `loadPrivateKey` detects this and decodes
+transparently when the input doesn't start with a PEM header.
+
 ```
-GITHUB_APP_ID          — integer string, e.g. "123456"
-GITHUB_PRIVATE_KEY     — PEM-encoded RSA key (PKCS#1 or PKCS#8)
-GITHUB_INSTALLATION_ID — e.g. "135953548"
-GITHUB_REPO_OWNER      — e.g. "michael-gonzalez-dev"
-GITHUB_REPO_NAME       — e.g. "media-sage"
+GITHUB_APP_ID                  = "3848870"  (plain value)
+GITHUB_APP_PRIVATE_KEY_BASE64  → secret: github-app-private-key-base64:latest
+GITHUB_APP_INSTALLATION_ID     = "135953548"  (plain value)
+GITHUB_OWNER                   = "michael-gonzalez-dev"  (plain value)
+GITHUB_REPO                    = "media-sage"  (plain value)
 ```
 
 ## Testing strategy

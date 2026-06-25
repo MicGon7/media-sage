@@ -182,10 +182,12 @@ class GitHubAppClient(
     }
 }
 
+// Workers store the key as base64(PEM). If the input has no PEM header, decode it first.
 internal fun loadPrivateKey(pem: String): java.security.PrivateKey {
-    val clean = pem.lines().filter { !it.startsWith("-----") }.joinToString("")
+    val pemStr = if (pem.startsWith("-----")) pem else String(Base64.getDecoder().decode(pem))
+    val clean = pemStr.lines().filter { !it.startsWith("-----") }.joinToString("")
     val bytes = Base64.getDecoder().decode(clean)
-    val pkcs8Bytes = if (pem.contains("BEGIN RSA PRIVATE KEY")) wrapPkcs1(bytes) else bytes
+    val pkcs8Bytes = if (pemStr.contains("BEGIN RSA PRIVATE KEY")) wrapPkcs1(bytes) else bytes
     return KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(pkcs8Bytes))
 }
 
