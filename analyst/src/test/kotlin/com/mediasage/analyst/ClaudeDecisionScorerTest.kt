@@ -41,9 +41,12 @@ class ClaudeDecisionScorerTest {
         val scores = scorer.callClaudeWithRetry("some transcript")
 
         assertEquals(3, callCount, "Expected exactly 3 HTTP calls (2 failures + 1 success)")
-        assertEquals(1, scores.size)
-        assertEquals("tool_choice", scores[0].criterion)
-        assertEquals(4, scores[0].score)
+        assertEquals(3, scores.size)
+        val toolChoice = scores.first { it.criterion == "tool_choice" }
+        assertEquals(4, toolChoice.score)
+        assertEquals("Prefer targeted path reads over grep-from-root.", toolChoice.recommendation)
+        assertEquals(3, scores.first { it.criterion == "tool_efficiency" }.score)
+        assertEquals(5, scores.first { it.criterion == "scope_adherence" }.score)
     }
 
     @Test
@@ -82,7 +85,24 @@ private val SCORING_SUCCESS_RESPONSE = """
       "name": "record_scores",
       "input": {
         "scores": [
-          {"criterion": "tool_choice", "score": 4, "rationale": "Good tool selection"}
+          {
+            "criterion": "tool_choice",
+            "score": 4,
+            "rationale": "Good tool selection with one minor extra read.",
+            "recommendation": "Prefer targeted path reads over grep-from-root."
+          },
+          {
+            "criterion": "tool_efficiency",
+            "score": 3,
+            "rationale": "Several redundant calls but no wasted turns.",
+            "recommendation": "Cache file contents across turns instead of re-reading."
+          },
+          {
+            "criterion": "scope_adherence",
+            "score": 5,
+            "rationale": "Only ticket-specified files were touched.",
+            "recommendation": "No changes needed."
+          }
         ]
       }
     }

@@ -55,11 +55,13 @@ private val SCORING_SCHEMA: JsonObject = buildJsonObject {
                         put("maximum", 5)
                     }
                     putJsonObject("rationale") { put("type", "string") }
+                    putJsonObject("recommendation") { put("type", "string") }
                 }
                 putJsonArray("required") {
                     add("criterion")
                     add("score")
                     add("rationale")
+                    add("recommendation")
                 }
             }
         }
@@ -184,6 +186,7 @@ class ClaudeDecisionScorer(
                         it[criterion] = score.criterion
                         it[DecisionScoresTable.score] = score.score.coerceIn(1, 5)
                         it[rationale] = score.rationale
+                        it[recommendation] = score.recommendation
                     }
                 }
             }
@@ -240,4 +243,5 @@ data class DecisionScoreResult(
     val criterion: String,
     val score: Int,
     val rationale: String,
+    val recommendation: String,
 )

@@ -27,5 +27,8 @@ object DecisionScoresTable : Table("decision_scores") {
     /** One-sentence explanation of the score from the Claude-as-judge call. */
     val rationale = text("rationale")
 
+    /** One-sentence actionable recommendation for improving the scored criterion. */
+    val recommendation = text("recommendation")
+
     override val primaryKey = PrimaryKey(jobId, decisionIndex, criterion)
 }
