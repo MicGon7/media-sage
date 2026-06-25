@@ -13,6 +13,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -53,7 +54,15 @@ class SkillPrService(
             return
         }
 
-        if (githubClient.hasOpenAnalystPr(repoOwner, repoName)) {
+        val hasOpenPr = try {
+            githubClient.hasOpenAnalystPr(repoOwner, repoName)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("GitHub check for open PRs failed — skipping auto-PR: {}", e.message)
+            return
+        }
+        if (hasOpenPr) {
             log.info("Open Analyst PR already exists — skipping to avoid flooding")
             return
         }

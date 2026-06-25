@@ -32,6 +32,17 @@ class SkillPrServiceTest {
     }
 
     @Test
+    fun skipsWhenGitHubCheckThrows() = runTest {
+        val github = FakeGitHubApiClient(throwOnHasOpenPr = true)
+        val service = buildService(
+            detector = FakePatternDetector(listOf(DetectedPattern.GateFailure("tests", 3, 7))),
+            githubClient = github,
+        )
+        service.maybeOpenPr() // must not throw
+        assertTrue(github.createPrCalls.isEmpty(), "No PR should be opened when the GitHub check throws")
+    }
+
+    @Test
     fun skipsWhenOpenAnalystPrAlreadyExists() = runTest {
         val github = FakeGitHubApiClient(openPrExists = true)
         val service = buildService(
@@ -145,13 +156,17 @@ private class FakePatternDetector(
 
 private class FakeGitHubApiClient(
     private val openPrExists: Boolean = false,
+    private val throwOnHasOpenPr: Boolean = false,
     private val fileContents: FileContents = FileContents("original skill content", "sha-abc"),
     private val prUrl: String = "https://github.com/test-owner/test-repo/pull/1",
 ) : GitHubApiClient {
     val createPrCalls = mutableListOf<Triple<String, String, String>>()
     var lastUpdatedContent: String? = null
 
-    override suspend fun hasOpenAnalystPr(owner: String, repo: String) = openPrExists
+    override suspend fun hasOpenAnalystPr(owner: String, repo: String): Boolean {
+        if (throwOnHasOpenPr) error("GitHub installationToken failed after 3 attempts: simulated timeout")
+        return openPrExists
+    }
     override suspend fun getFileContents(owner: String, repo: String, path: String) = fileContents
     override suspend fun getBranchSha(owner: String, repo: String, branch: String) = "sha-of-main"
     override suspend fun createBranch(owner: String, repo: String, name: String, sha: String) = Unit
