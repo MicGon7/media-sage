@@ -8,6 +8,17 @@ application {
     mainClass.set("com.mediasage.scripts.GenerateFigureImagesKt")
 }
 
+tasks.register<JavaExec>("backfillScores") {
+    group = "scripts"
+    description = "Backfill decision scores for jobs that have a transcript but no existing scores. Pass --dry-run via -PscriptArgs=\"--dry-run\""
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.mediasage.scripts.BackfillDecisionScoresKt")
+    args = (project.findProperty("scriptArgs") as String? ?: "").split(" ").filter { it.isNotEmpty() }
+    environment("SUPABASE_DB_URL", System.getenv("SUPABASE_DB_URL") ?: "")
+    environment("ANTHROPIC_AUTH_TOKEN", System.getenv("ANTHROPIC_AUTH_TOKEN") ?: "")
+    environment("ANTHROPIC_BASE_URL", System.getenv("ANTHROPIC_BASE_URL") ?: "")
+}
+
 tasks.register<JavaExec>("generateImages") {
     group = "scripts"
     description = "Generate figure portraits using gpt-image-2. Pass args via -PscriptArgs=\"--batch-size=5 --quality=low --dry-run\""
@@ -21,6 +32,9 @@ tasks.register<JavaExec>("generateImages") {
 }
 
 dependencies {
+    implementation(projects.analyst)
+    implementation(projects.pipelineCore)
+
     // Ktor Client (for calling OpenAI image API)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
