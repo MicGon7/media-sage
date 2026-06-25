@@ -41,6 +41,9 @@ dependencies {
     implementation(libs.exposed.java.time)
     implementation(libs.postgresql.jdbc)
 
+    // GitHub App JWT signing
+    implementation(libs.auth0.java.jwt)
+
     // Testing
     testImplementation(libs.kotlin.test)
     testImplementation(libs.ktor.server.tests)

@@ -1,5 +1,6 @@
 package com.mediasage.analyst.routes
 
+import com.mediasage.analyst.pr.SkillPrService
 import com.mediasage.analyst.scoring.DecisionScorer
 import com.mediasage.pipeline.core.JobCompletionEvent
 import com.mediasage.pipeline.core.JobRegistry
@@ -40,9 +41,9 @@ private data class PubSubPushRequest(
  * table (written by the orchestrator via `:pipelineCore`) and records the outcome. It never
  * mutates the row — the orchestrator owns job-state transitions.
  *
- * After responding 200, the handler fires [DecisionScorer.score] in the application scope so
- * scoring never blocks delivery acknowledgement. Pub/Sub retries on any non-2xx, so a cold
- * start or transient blip is harmless.
+ * After responding 200, the handler fires [DecisionScorer.score] then [SkillPrService.maybeOpenPr]
+ * in the application scope so neither blocks Pub/Sub acknowledgement. Pub/Sub retries on any
+ * non-2xx, so a cold start or transient blip is harmless.
  *
  * Authentication mirrors the orchestrator: the push URL carries `?token=<secret>`, verified on
  * every delivery. A missing or wrong token is rejected with 401.
@@ -51,6 +52,7 @@ fun Route.pubSubCompletionRoutes(
     webhookSecret: String,
     jobRegistry: JobRegistry,
     decisionScorer: DecisionScorer,
+    skillPrService: SkillPrService? = null,
 ) {
     post("/webhook/pubsub") {
         if (call.request.queryParameters["token"] != webhookSecret) {
@@ -70,7 +72,10 @@ fun Route.pubSubCompletionRoutes(
                 "[${event.ticketKey}] completion recorded: event=${event.status}, " +
                     "dbStatus=${job.status}, execution=${event.executionName}"
             )
-            call.application.launch { decisionScorer.score(job.jobId) }
+            call.application.launch {
+                decisionScorer.score(job.jobId)
+                skillPrService?.maybeOpenPr()
+            }
         }
         call.respond(HttpStatusCode.OK)
     }

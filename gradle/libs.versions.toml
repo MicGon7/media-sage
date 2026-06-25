@@ -39,6 +39,7 @@ datastore = "1.1.2"
 supabase = "3.6.0"
 android-desugar-jdk = "2.1.4"
 google-auth = "1.23.0"
+auth0-java-jwt = "4.5.2"
 
 [libraries]
 # Coil (KMP image loading)
@@ -127,6 +128,9 @@ google-auth-oauth2 = { module = "com.google.auth:google-auth-library-oauth2-http
 
 # Android desugaring (Java 8+ API support on API < 26)
 android-desugar-jdk = { module = "com.android.tools:desugar_jdk_libs", version.ref = "android-desugar-jdk" }
+
+# GitHub App JWT signing
+auth0-java-jwt = { module = "com.auth0:java-jwt", version.ref = "auth0-java-jwt" }
 
 # Compottie (Lottie for Compose Multiplatform)
 compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }
