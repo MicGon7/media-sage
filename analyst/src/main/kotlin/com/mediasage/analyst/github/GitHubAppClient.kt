@@ -1,5 +1,7 @@
 package com.mediasage.analyst.github
 
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -19,9 +21,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 import java.security.KeyFactory
-import java.security.Signature
+import java.security.interfaces.RSAPrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Base64
+import java.util.Date
 
 private val log = LoggerFactory.getLogger(GitHubAppClient::class.java)
 private val json = Json { ignoreUnknownKeys = true }
@@ -159,20 +162,13 @@ class GitHubAppClient(
             .jsonObject["token"]!!.jsonPrimitive.content
     }
 
-    internal fun buildJwt(): String {
-        val nowSecs = System.currentTimeMillis() / 1000
-        val encoder = Base64.getUrlEncoder().withoutPadding()
-        val header = encoder.encodeToString("""{"alg":"RS256","typ":"JWT"}""".toByteArray())
-        val payload = encoder.encodeToString(
-            """{"iat":${nowSecs - 60},"exp":${nowSecs + 540},"iss":"$appId"}""".toByteArray()
-        )
-        val signingInput = "$header.$payload"
-        val privateKey = loadPrivateKey(privateKeyPem)
-        val sig = Signature.getInstance("SHA256withRSA").apply {
-            initSign(privateKey)
-            update(signingInput.toByteArray())
-        }.sign()
-        return "$signingInput.${encoder.encodeToString(sig)}"
+    private fun buildJwt(): String {
+        val nowMs = System.currentTimeMillis()
+        return JWT.create()
+            .withIssuedAt(Date(nowMs - 60_000))
+            .withExpiresAt(Date(nowMs + 540_000))
+            .withIssuer(appId)
+            .sign(Algorithm.RSA256(null, loadPrivateKey(privateKeyPem)))
     }
 
     private fun io.ktor.client.request.HttpRequestBuilder.ghAuth(token: String) {
@@ -183,35 +179,11 @@ class GitHubAppClient(
 }
 
 // Workers store the key as base64(PEM). If the input has no PEM header, decode it first.
-internal fun loadPrivateKey(pem: String): java.security.PrivateKey {
+internal fun loadPrivateKey(pem: String): RSAPrivateKey {
     val pemStr = if (pem.startsWith("-----")) pem else String(Base64.getDecoder().decode(pem))
     val clean = pemStr.lines().filter { !it.startsWith("-----") }.joinToString("")
     val bytes = Base64.getDecoder().decode(clean)
-    val pkcs8Bytes = if (pemStr.contains("BEGIN RSA PRIVATE KEY")) wrapPkcs1(bytes) else bytes
-    return KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(pkcs8Bytes))
-}
-
-// Wraps a PKCS#1 RSAPrivateKey DER blob in a PKCS#8 PrivateKeyInfo envelope so
-// Java's KeyFactory can consume it. No Bouncy Castle needed — pure DER encoding.
-private fun wrapPkcs1(pkcs1: ByteArray): ByteArray {
-    // AlgorithmIdentifier for RSA: SEQUENCE { OID 1.2.840.113549.1.1.1, NULL }
-    val algId = byteArrayOf(
-        0x30, 0x0d,
-        0x06, 0x09, 0x2a, 0x86.toByte(), 0x48, 0x86.toByte(), 0xf7.toByte(), 0x0d, 0x01, 0x01, 0x01,
-        0x05, 0x00,
-    )
-    val version = byteArrayOf(0x02, 0x01, 0x00) // INTEGER 0
-    val inner = version + algId + derTlv(0x04, pkcs1)
-    return derTlv(0x30, inner)
-}
-
-private fun derTlv(tag: Int, data: ByteArray): ByteArray {
-    val len = when {
-        data.size < 0x80 -> byteArrayOf(data.size.toByte())
-        data.size < 0x100 -> byteArrayOf(0x81.toByte(), data.size.toByte())
-        else -> byteArrayOf(0x82.toByte(), (data.size shr 8).toByte(), (data.size and 0xff).toByte())
-    }
-    return byteArrayOf(tag.toByte()) + len + data
+    return KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(bytes)) as RSAPrivateKey
 }
 
 @Serializable
