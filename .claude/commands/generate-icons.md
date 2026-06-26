@@ -1,12 +1,12 @@
 # /generate-icons — Resize a reference image into iOS and Android icon assets
 
-Accepts a source image — either as a file path argument or as an image pasted directly into
-the Claude Code session — and generates all required sizes using ImageMagick.
+Accepts a source image path and generates all required sizes using ImageMagick.
 No Gradle task or compilation required.
 
-**Invocation options:**
-- `/generate-icons /absolute/path/to/icon.png` — provide a file path
-- `/generate-icons` then paste an image in the chat — Claude saves it to a temp file first
+**Invocation:** `/generate-icons /absolute/path/to/icon.png`
+
+If you want to use a pasted/clipboard image, save it to disk first (e.g. right-click → Save Image
+in your browser, or use Preview → Export), then provide that path.
 
 ---
 
@@ -14,22 +14,14 @@ No Gradle task or compilation required.
 
 ### 1. Identify the source image
 
-Two cases:
+The argument passed after the skill name is the source image path.
 
-**A — file path provided as argument:** The text after the skill name is the path. Store it as
-`SOURCE` and skip to step 2.
+If the user pasted an image in the chat instead of providing a path, check whether the image
+source path is shown in the ARGUMENTS (e.g. `[Image: source: /path/to/file.png]`). If it is,
+use that path. If no path is available, stop and tell the user:
+"Please save the image to disk and re-invoke: `/generate-icons /path/to/image.png`"
 
-**B — image pasted in the chat (no path argument):** The image arrives as vision input. Decode
-it from the conversation and write it to a temp file using the Write tool:
-
-```
-/tmp/icon-source.png  (base64-decoded bytes from the pasted image)
-```
-
-Set `SOURCE=/tmp/icon-source.png`.
-
-If neither a path nor a pasted image is present, ask the user:
-"Please provide a file path or paste the source image."
+Store the resolved path as `SOURCE`.
 
 ### 2. Validate prerequisites
 
