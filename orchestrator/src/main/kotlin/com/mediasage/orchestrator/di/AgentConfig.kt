@@ -50,10 +50,6 @@ package com.mediasage.orchestrator.di
  *   Sourced from env var `ANTHROPIC_BASE_URL`. Set to the Fuelix proxy URL on Cloud Run.
  * @property claudeModel Model ID for Claude calls. Defaults to `claude-sonnet-4-6`.
  *   Sourced from env var `ANTHROPIC_MODEL`.
- * @property claudeApiVersion Anthropic API version header value. Defaults to `2023-06-01`.
- *   Sourced from `app.claude.apiVersion` in application.conf.
- * @property claudeMaxTokensSynthesis Max tokens for the feedback PR synthesis call. Defaults to 4096.
- * @property claudeMaxTokensScoring Max tokens for the decision scoring call. Defaults to 2048.
  * @property githubAppId GitHub App ID for the feedback-scan auto-PR feature. Sourced from
  *   `GITHUB_APP_ID`. When blank, the auto-PR feature is disabled.
  * @property githubAppPrivateKey PEM-encoded RSA private key for the GitHub App. Sourced from
@@ -82,9 +78,6 @@ data class AgentConfig(
     val claudeAuthToken: String = "",
     val claudeBaseUrl: String = "https://api.anthropic.com",
     val claudeModel: String = "claude-sonnet-4-6",
-    val claudeApiVersion: String = "2023-06-01",
-    val claudeMaxTokensSynthesis: Int = 4096,
-    val claudeMaxTokensScoring: Int = 2048,
     val githubAppId: String = "",
     val githubAppPrivateKey: String = "",
     val githubAppInstallationId: String = "",

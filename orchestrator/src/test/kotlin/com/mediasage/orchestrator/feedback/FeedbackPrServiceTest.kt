@@ -4,7 +4,6 @@ import com.mediasage.orchestrator.feedback.detector.DetectedPattern
 import com.mediasage.orchestrator.feedback.detector.PatternDetector
 import com.mediasage.orchestrator.feedback.github.FileContents
 import com.mediasage.orchestrator.feedback.github.GitHubApiClient
-import com.mediasage.orchestrator.feedback.pr.ClaudeCallParams
 import com.mediasage.orchestrator.feedback.pr.FeedbackPrService
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -142,7 +141,7 @@ class FeedbackPrServiceTest {
             claudeBaseUrl = "https://api.anthropic.com",
             repoOwner = "test-owner",
             repoName = "test-repo",
-            claude = ClaudeCallParams("claude-sonnet-4-6", "2023-06-01", 4096),
+            model = "claude-sonnet-4-6",
         )
     }
 }

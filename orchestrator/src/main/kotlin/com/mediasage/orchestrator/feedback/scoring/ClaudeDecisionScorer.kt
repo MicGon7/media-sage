@@ -1,5 +1,6 @@
 package com.mediasage.orchestrator.feedback.scoring
 
+import com.mediasage.orchestrator.AnthropicApi
 import com.mediasage.pipeline.core.DecisionScoresTable
 import com.mediasage.pipeline.core.TranscriptsTable
 import io.ktor.client.HttpClient
@@ -84,8 +85,6 @@ class ClaudeDecisionScorer(
     private val authToken: String,
     baseUrl: String = ANTHROPIC_API_DEFAULT_BASE_URL,
     private val model: String = "claude-sonnet-4-6",
-    private val apiVersion: String = "2023-06-01",
-    private val maxTokens: Int = 2048,
 ) : DecisionScorer {
 
     private val messagesUrl = "${baseUrl.trimEnd('/')}/v1/messages"
@@ -142,7 +141,7 @@ class ClaudeDecisionScorer(
     private suspend fun callClaude(transcript: String): List<DecisionScoreResult> {
         val request = ClaudeRequest(
             model = model,
-            maxTokens = maxTokens,
+            maxTokens = AnthropicApi.TokenBudget.COMPACT,
             system = SYSTEM_PROMPT,
             messages = listOf(ClaudeMessage(role = "user", content = buildUserMessage(transcript))),
             tools = listOf(SCORING_TOOL),
@@ -151,7 +150,7 @@ class ClaudeDecisionScorer(
         val httpResponse = httpClient.post(messagesUrl) {
             contentType(ContentType.Application.Json)
             header("Authorization", "Bearer $authToken")
-            header("anthropic-version", apiVersion)
+            header("anthropic-version", AnthropicApi.VERSION)
             setBody(request)
         }
         if (!httpResponse.status.isSuccess()) {

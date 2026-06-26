@@ -4,7 +4,6 @@ import com.mediasage.orchestrator.db.AgentDatabase
 import com.mediasage.orchestrator.feedback.detector.DatabasePatternDetector
 import com.mediasage.orchestrator.feedback.detector.PatternDetector
 import com.mediasage.orchestrator.feedback.github.GitHubAppClient
-import com.mediasage.orchestrator.feedback.pr.ClaudeCallParams
 import com.mediasage.orchestrator.feedback.pr.FeedbackPrService
 import com.mediasage.orchestrator.feedback.scoring.ClaudeDecisionScorer
 import com.mediasage.orchestrator.feedback.scoring.DecisionScorer
@@ -87,8 +86,6 @@ private fun buildDecisionScorer(config: AgentConfig, httpClient: HttpClient): De
             authToken = config.claudeAuthToken,
             baseUrl = config.claudeBaseUrl,
             model = config.claudeModel,
-            apiVersion = config.claudeApiVersion,
-            maxTokens = config.claudeMaxTokensScoring,
         )
     } else {
         log.info("Decision scoring disabled — ANTHROPIC_AUTH_TOKEN not set")
@@ -109,7 +106,7 @@ private fun buildFeedbackPrService(config: AgentConfig, httpClient: HttpClient, 
         claudeBaseUrl = config.claudeBaseUrl,
         repoOwner = config.githubRepoOwner,
         repoName = config.githubRepoName,
-        claude = ClaudeCallParams(config.claudeModel, config.claudeApiVersion, config.claudeMaxTokensSynthesis),
+        model = config.claudeModel,
     )
 
 private fun isFeedbackEnabled(config: AgentConfig): Boolean =

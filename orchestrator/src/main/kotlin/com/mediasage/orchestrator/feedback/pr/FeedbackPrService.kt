@@ -1,5 +1,6 @@
 package com.mediasage.orchestrator.feedback.pr
 
+import com.mediasage.orchestrator.AnthropicApi
 import com.mediasage.orchestrator.feedback.detector.DetectedPattern
 import com.mediasage.orchestrator.feedback.detector.PatternDetector
 import com.mediasage.orchestrator.feedback.detector.label
@@ -30,8 +31,6 @@ import java.time.LocalDate
 private val log = LoggerFactory.getLogger(FeedbackPrService::class.java)
 private val json = Json { ignoreUnknownKeys = true }
 
-data class ClaudeCallParams(val model: String, val apiVersion: String, val maxTokens: Int)
-
 class FeedbackPrService(
     private val detector: PatternDetector,
     private val githubClient: GitHubApiClient,
@@ -40,7 +39,7 @@ class FeedbackPrService(
     private val claudeBaseUrl: String,
     private val repoOwner: String,
     private val repoName: String,
-    private val claude: ClaudeCallParams,
+    private val model: String,
 ) {
     private val patchProposalPrompt: String by lazy {
         FeedbackPrService::class.java
@@ -97,8 +96,8 @@ class FeedbackPrService(
         skillPath: String,
     ): String {
         val request = ClaudeRequest(
-            model = claude.model,
-            maxTokens = claude.maxTokens,
+            model = model,
+            maxTokens = AnthropicApi.TokenBudget.STANDARD,
             system = patchProposalPrompt,
             messages = listOf(ClaudeMessage("user", buildUserMessage(patterns, currentContent, skillPath))),
             tools = listOf(buildPatchTool()),
@@ -107,7 +106,7 @@ class FeedbackPrService(
         val response = httpClient.post("${claudeBaseUrl.trimEnd('/')}/v1/messages") {
             contentType(ContentType.Application.Json)
             header("Authorization", "Bearer $authToken")
-            header("anthropic-version", claude.apiVersion)
+            header("anthropic-version", AnthropicApi.VERSION)
             setBody(request)
         }
         check(response.status.isSuccess()) {
