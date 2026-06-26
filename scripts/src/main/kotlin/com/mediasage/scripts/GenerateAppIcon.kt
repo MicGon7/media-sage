@@ -44,35 +44,31 @@ fun main(args: Array<String>) {
 
     println("=== Generate App Icon ===")
     if (sourcePath.isNotEmpty()) println("Source  : $sourcePath") else println("Quality : $quality")
-    if (dryRun) println("--- DRY RUN — no files written ---")
+    if (dryRun) { println("--- DRY RUN — no files written ---\n"); printTargetPaths(); return }
 
-    if (dryRun) {
-        println("\nWould write to:")
-        printTargetPaths()
-        return
-    }
-
-    val master: BufferedImage = if (sourcePath.isNotEmpty()) {
-        val file = java.io.File(sourcePath)
-        require(file.exists()) { "Source file not found: $sourcePath" }
-        ImageIO.read(file) ?: error("Could not decode image: $sourcePath")
-    } else {
-        val apiKey = System.getenv("OPENAI_API_KEY") ?: error("OPENAI_API_KEY env var is not set.")
-        val client = buildIconHttpClient()
-        val imageBytes = runBlocking {
-            println("\nCalling gpt-image-2 …")
-            val bytes = generateIconPng(client, apiKey, quality)
-            client.close()
-            bytes
-        }
-        println("Generated ${imageBytes.size / 1024}KB")
-        ImageIO.read(ByteArrayInputStream(imageBytes)) ?: error("Failed to decode image response as PNG")
-    }
-
+    val master = loadMasterImage(sourcePath, quality)
     println("Writing assets …")
     writeIosIcon(master)
     writeAndroidAssets(master)
     println("\nDone. Next step: build the app and verify the icon on device/emulator.")
+}
+
+private fun loadMasterImage(sourcePath: String, quality: String): BufferedImage {
+    if (sourcePath.isNotEmpty()) {
+        val file = File(sourcePath)
+        require(file.exists()) { "Source file not found: $sourcePath" }
+        return ImageIO.read(file) ?: error("Could not decode image: $sourcePath")
+    }
+    val apiKey = System.getenv("OPENAI_API_KEY") ?: error("OPENAI_API_KEY env var is not set.")
+    val client = buildIconHttpClient()
+    val imageBytes = runBlocking {
+        println("\nCalling gpt-image-2 …")
+        val bytes = generateIconPng(client, apiKey, quality)
+        client.close()
+        bytes
+    }
+    println("Generated ${imageBytes.size / 1024}KB")
+    return ImageIO.read(ByteArrayInputStream(imageBytes)) ?: error("Failed to decode image response as PNG")
 }
 
 // ---- iOS ----------------------------------------------------------------
