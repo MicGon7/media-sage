@@ -1,9 +1,12 @@
 # /generate-icons — Resize a reference image into iOS and Android icon assets
 
-Accepts a source image path and generates all required sizes using ImageMagick.
+Accepts a source image — either as a file path argument or as an image pasted directly into
+the Claude Code session — and generates all required sizes using ImageMagick.
 No Gradle task or compilation required.
 
-**Invocation:** `/generate-icons /absolute/path/to/icon.png`
+**Invocation options:**
+- `/generate-icons /absolute/path/to/icon.png` — provide a file path
+- `/generate-icons` then paste an image in the chat — Claude saves it to a temp file first
 
 ---
 
@@ -11,10 +14,22 @@ No Gradle task or compilation required.
 
 ### 1. Identify the source image
 
-The argument passed after the skill name is the source image path. If no path was provided,
-ask the user: "What is the path to the source image?"
+Two cases:
 
-Store the path as `SOURCE`.
+**A — file path provided as argument:** The text after the skill name is the path. Store it as
+`SOURCE` and skip to step 2.
+
+**B — image pasted in the chat (no path argument):** The image arrives as vision input. Decode
+it from the conversation and write it to a temp file using the Write tool:
+
+```
+/tmp/icon-source.png  (base64-decoded bytes from the pasted image)
+```
+
+Set `SOURCE=/tmp/icon-source.png`.
+
+If neither a path nor a pasted image is present, ask the user:
+"Please provide a file path or paste the source image."
 
 ### 2. Validate prerequisites
 
