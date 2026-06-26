@@ -65,12 +65,15 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 **Do not narrate between steps.** Never emit a text response between tool calls — not to announce what you are about to do, not to summarise what just happened. The only allowed narration is `echo` statements inside bash commands. If a step fails or requires a decision, a text response is appropriate; otherwise, proceed directly to the next tool call.
 
+**TodoWrite limit:** Do not call TodoWrite more than once per run. Write the plan at the start of the job, then drop all subsequent update calls — they add no artifact value and consume turns.
+
+**No env var echo checks.** Do not emit `echo $TICKET_KEY` or equivalent sanity-check echo commands at the start of a run. The ticket key is passed as an argument and is available in the environment; echoing it wastes a turn without confirming anything useful.
+
 ---
 
 1. The ticket is already In Progress — do not transition it again. Fetch the ticket description and acceptance criteria from Jira:
    ```bash
-   curl -sf -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
-     "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY"
+   ./scripts/worker-fetch-ticket.sh "$TICKET_KEY" && source /tmp/worker_ticket.env
    ```
 2. Run branch setup:
    ```bash
