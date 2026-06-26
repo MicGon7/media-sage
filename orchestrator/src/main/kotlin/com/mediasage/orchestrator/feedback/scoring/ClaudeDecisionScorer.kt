@@ -32,9 +32,6 @@ import java.util.UUID
 private val log = LoggerFactory.getLogger(ClaudeDecisionScorer::class.java)
 
 private const val ANTHROPIC_API_DEFAULT_BASE_URL = "https://api.anthropic.com"
-private const val CLAUDE_API_VERSION = "2023-06-01"
-private const val CLAUDE_MODEL = "claude-sonnet-4-6"
-private const val MAX_TOKENS = 2048
 private const val MAX_ATTEMPTS = 3
 private val RETRY_DELAYS_MS = listOf(1_000L, 2_000L)
 
@@ -86,6 +83,9 @@ class ClaudeDecisionScorer(
     private val httpClient: HttpClient,
     private val authToken: String,
     baseUrl: String = ANTHROPIC_API_DEFAULT_BASE_URL,
+    private val model: String = "claude-sonnet-4-6",
+    private val apiVersion: String = "2023-06-01",
+    private val maxTokens: Int = 2048,
 ) : DecisionScorer {
 
     private val messagesUrl = "${baseUrl.trimEnd('/')}/v1/messages"
@@ -141,8 +141,8 @@ class ClaudeDecisionScorer(
 
     private suspend fun callClaude(transcript: String): List<DecisionScoreResult> {
         val request = ClaudeRequest(
-            model = CLAUDE_MODEL,
-            maxTokens = MAX_TOKENS,
+            model = model,
+            maxTokens = maxTokens,
             system = SYSTEM_PROMPT,
             messages = listOf(ClaudeMessage(role = "user", content = buildUserMessage(transcript))),
             tools = listOf(SCORING_TOOL),
@@ -151,7 +151,7 @@ class ClaudeDecisionScorer(
         val httpResponse = httpClient.post(messagesUrl) {
             contentType(ContentType.Application.Json)
             header("Authorization", "Bearer $authToken")
-            header("anthropic-version", CLAUDE_API_VERSION)
+            header("anthropic-version", apiVersion)
             setBody(request)
         }
         if (!httpResponse.status.isSuccess()) {

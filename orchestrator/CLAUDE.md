@@ -13,6 +13,10 @@ orchestrator/src/main/kotlin/com/mediasage/orchestrator/
 └── tools/               — ToolDefinitions (Anthropic orchestrator-worker pattern)
 ```
 
+## Prompts
+
+System prompts must never be hardcoded in Kotlin. Define them in `src/main/resources/prompts/` and load at runtime via classpath (same pattern as `rubrics/decision-scoring.md`). Plain language only — avoid technical AI jargon in file and variable names so anyone maintaining the code can follow them.
+
 ## Dependency Injection
 
 `agentModule(config, scope)` wires HttpClient, AgentLaunchService, JiraApiService, and CloudRunJobsClient via Koin. Define modules per feature, not per layer.

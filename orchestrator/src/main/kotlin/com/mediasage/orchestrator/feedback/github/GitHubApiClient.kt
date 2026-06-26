@@ -1,7 +1,7 @@
 package com.mediasage.orchestrator.feedback.github
 
 interface GitHubApiClient {
-    suspend fun hasOpenAnalystPr(owner: String, repo: String): Boolean
+    suspend fun hasOpenFeedbackPr(owner: String, repo: String): Boolean
     suspend fun getFileContents(owner: String, repo: String, path: String): FileContents
     suspend fun getBranchSha(owner: String, repo: String, branch: String): String
     suspend fun createBranch(owner: String, repo: String, name: String, sha: String)

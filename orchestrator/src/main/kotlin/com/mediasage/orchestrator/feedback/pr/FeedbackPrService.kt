@@ -27,17 +27,12 @@ import kotlinx.serialization.json.putJsonObject
 import org.slf4j.LoggerFactory
 import java.time.LocalDate
 
-private val log = LoggerFactory.getLogger(SkillPrService::class.java)
+private val log = LoggerFactory.getLogger(FeedbackPrService::class.java)
 private val json = Json { ignoreUnknownKeys = true }
 
-private const val CLAUDE_MODEL = "claude-sonnet-4-6"
-private const val ANTHROPIC_API_VERSION = "2023-06-01"
-private const val MAX_TOKENS = 4096
-private const val SYNTHESIS_SYSTEM_PROMPT =
-    "You are reviewing an AI agent skill file. Propose a precise, minimal change that addresses " +
-        "the identified pattern. Do not rewrite sections unrelated to the pattern."
+data class ClaudeCallParams(val model: String, val apiVersion: String, val maxTokens: Int)
 
-class SkillPrService(
+class FeedbackPrService(
     private val detector: PatternDetector,
     private val githubClient: GitHubApiClient,
     private val httpClient: HttpClient,
@@ -45,18 +40,27 @@ class SkillPrService(
     private val claudeBaseUrl: String,
     private val repoOwner: String,
     private val repoName: String,
+    private val claude: ClaudeCallParams,
 ) {
-    suspend fun maybeOpenPr() {
+    private val patchProposalPrompt: String by lazy {
+        FeedbackPrService::class.java
+            .getResourceAsStream("/prompts/patch-proposal.md")
+            ?.bufferedReader()
+            ?.readText()
+            ?: error("Prompt file not found at /prompts/patch-proposal.md")
+    }
+
+    suspend fun proposePatch() {
         val patterns = withContext(Dispatchers.IO) { detector.detectPatterns() }
         if (patterns.isEmpty()) {
             log.info("No recurring patterns detected — skipping PR")
             return
         }
 
-        val hasOpenPr = runCatching { githubClient.hasOpenAnalystPr(repoOwner, repoName) }
+        val hasOpenPr = runCatching { githubClient.hasOpenFeedbackPr(repoOwner, repoName) }
             .getOrElse { log.error("GitHub PR check failed — skipping: {}", it.message); return }
         if (hasOpenPr) {
-            log.info("Open Analyst PR already exists — skipping to avoid flooding")
+            log.info("Open feedback PR already exists — skipping to avoid flooding")
             return
         }
 
@@ -64,23 +68,23 @@ class SkillPrService(
         val skillPath = SkillFileMapper.skillFileFor(pattern)
         log.info("Pattern detected: {} — proposing edit to {}", pattern.label(), skillPath)
 
-        runCatching { openPr(pattern, skillPath) }
-            .onSuccess { url -> log.info("Analyst PR opened: {}", url) }
-            .onFailure { e -> log.error("Analyst PR failed for {}: {}", pattern.label(), e.message) }
+        runCatching { openPr(pattern, skillPath, patterns) }
+            .onSuccess { url -> log.info("Feedback PR opened: {}", url) }
+            .onFailure { e -> log.error("Feedback PR failed for {}: {}", pattern.label(), e.message) }
     }
 
-    private suspend fun openPr(pattern: DetectedPattern, skillPath: String) {
+    private suspend fun openPr(pattern: DetectedPattern, skillPath: String, allPatterns: List<DetectedPattern>) {
         val currentFile = githubClient.getFileContents(repoOwner, repoName, skillPath)
-        val proposedContent = synthesizePatch(pattern, currentFile.content, skillPath)
-        val branchName = "feedback/analyst-${LocalDate.now()}"
+        val proposedContent = synthesizePatch(allPatterns, currentFile.content, skillPath)
+        val branchName = "feedback/scan-${LocalDate.now()}"
         val mainSha = githubClient.getBranchSha(repoOwner, repoName, "main")
         githubClient.createBranch(repoOwner, repoName, branchName, mainSha)
         githubClient.updateFile(repoOwner, repoName, skillPath, branchName, proposedContent, currentFile.sha)
         val prUrl = githubClient.createPr(
             owner = repoOwner,
             repo = repoName,
-            title = "[Analyst] ${prTitle(pattern)}",
-            body = prBody(pattern, skillPath),
+            title = "[Feedback] ${prTitle(pattern)}",
+            body = prBody(allPatterns),
             head = branchName,
             base = "main",
         )
@@ -88,22 +92,22 @@ class SkillPrService(
     }
 
     internal suspend fun synthesizePatch(
-        pattern: DetectedPattern,
+        patterns: List<DetectedPattern>,
         currentContent: String,
         skillPath: String,
     ): String {
         val request = ClaudeRequest(
-            model = CLAUDE_MODEL,
-            maxTokens = MAX_TOKENS,
-            system = SYNTHESIS_SYSTEM_PROMPT,
-            messages = listOf(ClaudeMessage("user", buildUserMessage(pattern, currentContent, skillPath))),
+            model = claude.model,
+            maxTokens = claude.maxTokens,
+            system = patchProposalPrompt,
+            messages = listOf(ClaudeMessage("user", buildUserMessage(patterns, currentContent, skillPath))),
             tools = listOf(buildPatchTool()),
             toolChoice = buildJsonObject { put("type", "tool"); put("name", "propose_patch") },
         )
         val response = httpClient.post("${claudeBaseUrl.trimEnd('/')}/v1/messages") {
             contentType(ContentType.Application.Json)
             header("Authorization", "Bearer $authToken")
-            header("anthropic-version", ANTHROPIC_API_VERSION)
+            header("anthropic-version", claude.apiVersion)
             setBody(request)
         }
         check(response.status.isSuccess()) {
@@ -136,8 +140,13 @@ private fun buildPatchTool(): JsonObject = buildJsonObject {
     }
 }
 
-private fun buildUserMessage(pattern: DetectedPattern, currentContent: String, skillPath: String): String = """
-    Evidence: ${buildEvidence(pattern)}
+private fun buildUserMessage(
+    patterns: List<DetectedPattern>,
+    currentContent: String,
+    skillPath: String,
+): String = """
+    Evidence:
+    ${patterns.joinToString("\n    ") { "- ${buildEvidence(it)}" }}
 
     Current skill file ($skillPath):
     ---
@@ -153,27 +162,11 @@ private fun prTitle(pattern: DetectedPattern): String = when (pattern) {
     is DetectedPattern.LowRubricScore -> "Improve ${pattern.criterion.replace('_', ' ')} score"
 }
 
-private fun prBody(pattern: DetectedPattern, skillPath: String): String {
-    val evidence = when (pattern) {
-        is DetectedPattern.GateFailure ->
-            "**Gate:** `${pattern.gate}`  \n**Occurrences:** ${pattern.runCount} in the last ${pattern.windowDays} days"
-        is DetectedPattern.LowRubricScore ->
-            "**Criterion:** `${pattern.criterion}`  \n" +
-                "**Average score:** ${"%.1f".format(pattern.avgScore)}/5 across " +
-                "${pattern.runCount} runs in the last ${pattern.windowDays} days"
-    }
-    return """
-        ## Pattern detected
-
-        $evidence
-
-        ## Proposed change
-
-        The diff below shows the proposed edit to `$skillPath`.
-        Review it, adjust if needed, and merge if the change looks right.
-
-        > This PR was opened automatically by the Analyst. It never self-merges.
-    """.trimIndent()
+private fun prBody(patterns: List<DetectedPattern>): String {
+    val evidenceSummary = patterns.joinToString("; ") { buildEvidence(it) }
+    return "Detected by the feedback scanner: $evidenceSummary. " +
+        "Review the proposed edit to the skill file and merge if the change looks right. " +
+        "This PR was opened automatically by the feedback scanner and never self-merges."
 }
 
 // ---- Claude request/response types (private to this file) ----

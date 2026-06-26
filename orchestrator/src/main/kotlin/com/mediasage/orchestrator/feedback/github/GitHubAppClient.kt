@@ -40,14 +40,14 @@ class GitHubAppClient(
     private val installationId: String,
 ) : GitHubApiClient {
 
-    override suspend fun hasOpenAnalystPr(owner: String, repo: String): Boolean {
+    override suspend fun hasOpenFeedbackPr(owner: String, repo: String): Boolean {
         val token = installationToken()
         val response = httpClient.get("$GITHUB_API/repos/$owner/$repo/pulls?state=open&per_page=100") {
             ghAuth(token)
         }
         if (!response.status.isSuccess()) return false
         val prs = json.decodeFromString<List<PrItem>>(response.bodyAsText())
-        return prs.any { it.title.startsWith("[Analyst]") }
+        return prs.any { it.title.startsWith("[Feedback]") }
     }
 
     override suspend fun getFileContents(owner: String, repo: String, path: String): FileContents {
@@ -106,7 +106,7 @@ class GitHubAppClient(
         val token = installationToken()
         val encoded = Base64.getEncoder().encodeToString(content.toByteArray())
         val body = buildJsonObject {
-            put("message", "analyst: propose skill improvement")
+            put("message", "feedback: propose skill improvement")
             put("content", encoded)
             put("sha", currentSha)
             put("branch", branch)

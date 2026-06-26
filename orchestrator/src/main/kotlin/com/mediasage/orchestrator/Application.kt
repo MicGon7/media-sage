@@ -2,7 +2,7 @@ package com.mediasage.orchestrator
 
 import com.mediasage.orchestrator.di.AgentConfig
 import com.mediasage.orchestrator.di.agentModule
-import com.mediasage.orchestrator.feedback.pr.SkillPrService
+import com.mediasage.orchestrator.feedback.pr.FeedbackPrService
 import com.mediasage.orchestrator.feedback.scoring.DecisionScorer
 import com.mediasage.orchestrator.plugins.*
 import com.mediasage.orchestrator.routes.feedbackScanRoutes
@@ -37,7 +37,7 @@ fun Application.module() {
     val cloudRunJobsClient = agentLaunchService.cloudRun?.client
     val jobRegistry = agentLaunchService.cloudRun?.jobs
     val decisionScorer = get<DecisionScorer>()
-    val skillPrService: SkillPrService? = getKoin().getOrNull()
+    val feedbackPrService: FeedbackPrService? = getKoin().getOrNull()
     configureContentNegotiation()
     configureCallLogging()
     configureStatusPages()
@@ -45,7 +45,7 @@ fun Application.module() {
         get("/health") { call.respond(HttpStatusCode.OK, "OK") }
         webhookRoutes(config.jiraBotAccountId)
         githubWebhookRoutes(config.githubWebhookSecret, config.githubBotLogin)
-        feedbackScanRoutes(skillPrService)
+        feedbackScanRoutes(feedbackPrService)
         if (config.pubSubWebhookSecret.isNotBlank() && cloudRunJobsClient != null && jobRegistry != null) {
             pubSubWebhookRoutes(
                 config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry,
@@ -55,33 +55,38 @@ fun Application.module() {
     }
 }
 
-private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): AgentConfig {
-    fun str(key: String) = config.propertyOrNull(key)?.getString() ?: ""
-    return AgentConfig(
-        githubWebhookSecret = str("app.github.webhookSecret"),
-        githubBotLogin = str("app.github.botLogin"),
-        jiraEmail = str("app.jira.email"),
-        jiraApiToken = str("app.jira.apiToken"),
-        jiraCloudId = str("app.jira.cloudId"),
-        jiraBotAccountId = str("app.jira.botAccountId"),
-        jiraBotEmail = str("app.jira.botEmail"),
-        jiraBotApiToken = str("app.jira.botApiToken"),
-        gcpProjectId = str("app.cloudRun.projectId"),
-        gcpRegion = config.propertyOrNull("app.cloudRun.region")?.getString() ?: "us-central1",
-        gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",
-        gcpJudgeJobName = config.propertyOrNull("app.cloudRun.judgeJobName")?.getString() ?: "media-sage-agent-judge",
-        googleCredentialsJson = decodeBase64(str("app.cloudRun.credentialsBase64")),
-        supabaseDbUrl = str("app.supabase.dbUrl"),
-        pubSubWebhookSecret = str("app.pubSub.webhookSecret"),
-        claudeAuthToken = str("app.claude.authToken"),
-        claudeBaseUrl = str("app.claude.baseUrl").ifBlank { "https://api.anthropic.com" },
-        githubAppId = str("app.feedbackScan.githubAppId"),
-        githubAppPrivateKey = str("app.feedbackScan.githubPrivateKey"),
-        githubAppInstallationId = str("app.feedbackScan.githubInstallationId"),
-        githubRepoOwner = str("app.feedbackScan.githubRepoOwner"),
-        githubRepoName = str("app.feedbackScan.githubRepoName"),
+private fun io.ktor.server.config.ApplicationConfig.str(key: String, default: String = "") =
+    propertyOrNull(key)?.getString() ?: default
+
+private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): AgentConfig =
+    AgentConfig(
+        githubWebhookSecret = config.str("app.github.webhookSecret"),
+        githubBotLogin = config.str("app.github.botLogin"),
+        jiraEmail = config.str("app.jira.email"),
+        jiraApiToken = config.str("app.jira.apiToken"),
+        jiraCloudId = config.str("app.jira.cloudId"),
+        jiraBotAccountId = config.str("app.jira.botAccountId"),
+        jiraBotEmail = config.str("app.jira.botEmail"),
+        jiraBotApiToken = config.str("app.jira.botApiToken"),
+        gcpProjectId = config.str("app.cloudRun.projectId"),
+        gcpRegion = config.str("app.cloudRun.region", "us-central1"),
+        gcpJobName = config.str("app.cloudRun.jobName", "media-sage-agent-worker"),
+        gcpJudgeJobName = config.str("app.cloudRun.judgeJobName", "media-sage-agent-judge"),
+        googleCredentialsJson = decodeBase64(config.str("app.cloudRun.credentialsBase64")),
+        supabaseDbUrl = config.str("app.supabase.dbUrl"),
+        pubSubWebhookSecret = config.str("app.pubSub.webhookSecret"),
+        claudeAuthToken = config.str("app.claude.authToken"),
+        claudeBaseUrl = config.str("app.claude.baseUrl", "https://api.anthropic.com"),
+        claudeModel = config.str("app.claude.model", "claude-sonnet-4-6"),
+        claudeApiVersion = config.str("app.claude.apiVersion", "2023-06-01"),
+        claudeMaxTokensSynthesis = config.str("app.claude.maxTokensSynthesis").toIntOrNull() ?: 4096,
+        claudeMaxTokensScoring = config.str("app.claude.maxTokensScoring").toIntOrNull() ?: 2048,
+        githubAppId = config.str("app.feedbackScan.githubAppId"),
+        githubAppPrivateKey = config.str("app.feedbackScan.githubPrivateKey"),
+        githubAppInstallationId = config.str("app.feedbackScan.githubInstallationId"),
+        githubRepoOwner = config.str("app.feedbackScan.githubRepoOwner"),
+        githubRepoName = config.str("app.feedbackScan.githubRepoName"),
     )
-}
 
 private fun decodeBase64(encoded: String): String =
     if (encoded.isNotBlank()) String(java.util.Base64.getDecoder().decode(encoded)) else ""
