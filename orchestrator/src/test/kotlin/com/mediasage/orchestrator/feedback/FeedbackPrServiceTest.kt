@@ -4,7 +4,7 @@ import com.mediasage.orchestrator.feedback.detector.DetectedPattern
 import com.mediasage.orchestrator.feedback.detector.PatternDetector
 import com.mediasage.orchestrator.feedback.github.FileContents
 import com.mediasage.orchestrator.feedback.github.GitHubApiClient
-import com.mediasage.orchestrator.feedback.pr.SkillPrService
+import com.mediasage.orchestrator.feedback.pr.FeedbackPrService
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -20,13 +20,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class SkillPrServiceTest {
+class FeedbackPrServiceTest {
 
     @Test
     fun skipsWhenNoPatternsDetected() = runTest {
         val github = FakeGitHubApiClient()
         val service = buildService(detector = FakePatternDetector(), githubClient = github)
-        service.maybeOpenPr()
+        service.proposePatch()
         assertTrue(github.createPrCalls.isEmpty(), "No PR should be opened when no patterns are detected")
     }
 
@@ -37,19 +37,19 @@ class SkillPrServiceTest {
             detector = FakePatternDetector(listOf(DetectedPattern.GateFailure("tests", 3, 7))),
             githubClient = github,
         )
-        service.maybeOpenPr() // must not throw
+        service.proposePatch() // must not throw
         assertTrue(github.createPrCalls.isEmpty(), "No PR should be opened when the GitHub check throws")
     }
 
     @Test
-    fun skipsWhenOpenAnalystPrAlreadyExists() = runTest {
+    fun skipsWhenOpenFeedbackPrAlreadyExists() = runTest {
         val github = FakeGitHubApiClient(openPrExists = true)
         val service = buildService(
             detector = FakePatternDetector(listOf(DetectedPattern.GateFailure("tests", 3, 7))),
             githubClient = github,
         )
-        service.maybeOpenPr()
-        assertTrue(github.createPrCalls.isEmpty(), "PR must not be opened when an open Analyst PR already exists")
+        service.proposePatch()
+        assertTrue(github.createPrCalls.isEmpty(), "PR must not be opened when an open feedback PR already exists")
     }
 
     @Test
@@ -60,12 +60,12 @@ class SkillPrServiceTest {
             githubClient = github,
             proposedContent = "updated skill content",
         )
-        service.maybeOpenPr()
+        service.proposePatch()
         assertEquals(1, github.createPrCalls.size, "Exactly one PR must be opened")
         val (title, head, base) = github.createPrCalls.first()
-        assertTrue(title.startsWith("[Analyst]"), "PR title must be prefixed with [Analyst]")
+        assertTrue(title.startsWith("[Feedback]"), "PR title must be prefixed with [Feedback]")
         assertTrue(title.contains("detekt"), "PR title must reference the failing gate")
-        assertTrue(head.startsWith("feedback/analyst-"), "Branch must follow feedback/analyst-YYYY-MM-DD convention")
+        assertTrue(head.startsWith("feedback/scan-"), "Branch must follow feedback/scan-YYYY-MM-DD convention")
         assertEquals("main", base)
     }
 
@@ -77,7 +77,7 @@ class SkillPrServiceTest {
             githubClient = github,
             proposedContent = "updated skill content",
         )
-        service.maybeOpenPr()
+        service.proposePatch()
         assertEquals(1, github.createPrCalls.size)
         val (title, _, _) = github.createPrCalls.first()
         assertTrue(title.contains("retry recovery"), "PR title must reference the failing criterion (underscores → spaces)")
@@ -96,7 +96,7 @@ class SkillPrServiceTest {
             githubClient = github,
             proposedContent = "updated",
         )
-        service.maybeOpenPr()
+        service.proposePatch()
         assertEquals(1, github.createPrCalls.size, "Only the highest-signal pattern should produce a PR per invocation")
     }
 
@@ -106,11 +106,11 @@ class SkillPrServiceTest {
         val service = buildService(
             detector = FakePatternDetector(listOf(DetectedPattern.GateFailure("compile", 3, 7))),
             githubClient = github,
-            proposedContent = "new skill content from analyst",
+            proposedContent = "new skill content from feedback scanner",
         )
-        service.maybeOpenPr()
+        service.proposePatch()
         assertNotNull(github.lastUpdatedContent)
-        assertEquals("new skill content from analyst", github.lastUpdatedContent)
+        assertEquals("new skill content from feedback scanner", github.lastUpdatedContent)
     }
 
     // ---- Helpers ----
@@ -119,7 +119,7 @@ class SkillPrServiceTest {
         detector: PatternDetector,
         githubClient: GitHubApiClient,
         proposedContent: String = "patched content",
-    ): SkillPrService {
+    ): FeedbackPrService {
         val mockResponse = """
             {"content":[{"type":"tool_use","input":{"proposed_content":"$proposedContent"}}]}
         """.trimIndent()
@@ -133,7 +133,7 @@ class SkillPrServiceTest {
         val mockClient = HttpClient(mockEngine) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
         }
-        return SkillPrService(
+        return FeedbackPrService(
             detector = detector,
             githubClient = githubClient,
             httpClient = mockClient,
@@ -141,6 +141,7 @@ class SkillPrServiceTest {
             claudeBaseUrl = "https://api.anthropic.com",
             repoOwner = "test-owner",
             repoName = "test-repo",
+            model = "claude-sonnet-4-6",
         )
     }
 }
@@ -162,7 +163,7 @@ private class FakeGitHubApiClient(
     val createPrCalls = mutableListOf<Triple<String, String, String>>()
     var lastUpdatedContent: String? = null
 
-    override suspend fun hasOpenAnalystPr(owner: String, repo: String): Boolean {
+    override suspend fun hasOpenFeedbackPr(owner: String, repo: String): Boolean {
         if (throwOnHasOpenPr) error("GitHub installationToken failed after 3 attempts: simulated timeout")
         return openPrExists
     }

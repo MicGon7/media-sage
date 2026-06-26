@@ -48,6 +48,8 @@ package com.mediasage.orchestrator.di
  *   Sourced from env var `ANTHROPIC_AUTH_TOKEN`. When blank, decision scoring is disabled.
  * @property claudeBaseUrl Anthropic API base URL. Defaults to `https://api.anthropic.com`.
  *   Sourced from env var `ANTHROPIC_BASE_URL`. Set to the Fuelix proxy URL on Cloud Run.
+ * @property claudeModel Model ID for Claude calls. Defaults to `claude-sonnet-4-6`.
+ *   Sourced from env var `ANTHROPIC_MODEL`.
  * @property githubAppId GitHub App ID for the feedback-scan auto-PR feature. Sourced from
  *   `GITHUB_APP_ID`. When blank, the auto-PR feature is disabled.
  * @property githubAppPrivateKey PEM-encoded RSA private key for the GitHub App. Sourced from
@@ -75,6 +77,7 @@ data class AgentConfig(
     val pubSubWebhookSecret: String = "",
     val claudeAuthToken: String = "",
     val claudeBaseUrl: String = "https://api.anthropic.com",
+    val claudeModel: String = "claude-sonnet-4-6",
     val githubAppId: String = "",
     val githubAppPrivateKey: String = "",
     val githubAppInstallationId: String = "",

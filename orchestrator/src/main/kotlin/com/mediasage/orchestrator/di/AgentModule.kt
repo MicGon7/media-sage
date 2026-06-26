@@ -4,7 +4,7 @@ import com.mediasage.orchestrator.db.AgentDatabase
 import com.mediasage.orchestrator.feedback.detector.DatabasePatternDetector
 import com.mediasage.orchestrator.feedback.detector.PatternDetector
 import com.mediasage.orchestrator.feedback.github.GitHubAppClient
-import com.mediasage.orchestrator.feedback.pr.SkillPrService
+import com.mediasage.orchestrator.feedback.pr.FeedbackPrService
 import com.mediasage.orchestrator.feedback.scoring.ClaudeDecisionScorer
 import com.mediasage.orchestrator.feedback.scoring.DecisionScorer
 import com.mediasage.orchestrator.feedback.scoring.NoOpDecisionScorer
@@ -65,7 +65,7 @@ private fun feedbackModule(config: AgentConfig) = module {
     single<PatternDetector> { DatabasePatternDetector() }
     if (isFeedbackEnabled(config)) {
         log.info("Feedback auto-PR enabled — repo={}/{}", config.githubRepoOwner, config.githubRepoName)
-        single { buildSkillPrService(config, get(), get()) }
+        single { buildFeedbackPrService(config, get(), get()) }
     } else {
         log.info("Feedback auto-PR disabled — GITHUB_APP_ID or ANTHROPIC_AUTH_TOKEN not configured")
     }
@@ -81,14 +81,19 @@ private fun buildJiraCommentPoster(config: AgentConfig, httpClient: HttpClient, 
 private fun buildDecisionScorer(config: AgentConfig, httpClient: HttpClient): DecisionScorer =
     if (config.claudeAuthToken.isNotBlank()) {
         log.info("Decision scoring enabled — baseUrl={}", config.claudeBaseUrl)
-        ClaudeDecisionScorer(httpClient, config.claudeAuthToken, config.claudeBaseUrl)
+        ClaudeDecisionScorer(
+            httpClient = httpClient,
+            authToken = config.claudeAuthToken,
+            baseUrl = config.claudeBaseUrl,
+            model = config.claudeModel,
+        )
     } else {
         log.info("Decision scoring disabled — ANTHROPIC_AUTH_TOKEN not set")
         NoOpDecisionScorer()
     }
 
-private fun buildSkillPrService(config: AgentConfig, httpClient: HttpClient, detector: PatternDetector) =
-    SkillPrService(
+private fun buildFeedbackPrService(config: AgentConfig, httpClient: HttpClient, detector: PatternDetector) =
+    FeedbackPrService(
         detector = detector,
         githubClient = GitHubAppClient(
             httpClient = httpClient,
@@ -101,6 +106,7 @@ private fun buildSkillPrService(config: AgentConfig, httpClient: HttpClient, det
         claudeBaseUrl = config.claudeBaseUrl,
         repoOwner = config.githubRepoOwner,
         repoName = config.githubRepoName,
+        model = config.claudeModel,
     )
 
 private fun isFeedbackEnabled(config: AgentConfig): Boolean =
