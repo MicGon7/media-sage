@@ -1,5 +1,6 @@
 package com.mediasage.orchestrator.routes
 
+import com.mediasage.orchestrator.feedback.scoring.DecisionScorer
 import com.mediasage.pipeline.core.JobCompletionEvent
 import com.mediasage.pipeline.core.JobRegistry
 import com.mediasage.pipeline.core.WorkerMetrics
@@ -49,7 +50,8 @@ fun Route.pubSubWebhookRoutes(
     cloudRunJobsClient: CloudRunJobsClient,
     jobRegistry: JobRegistry,
     agentLauncher: AgentLauncher,
-    scope: CoroutineScope
+    decisionScorer: DecisionScorer,
+    scope: CoroutineScope,
 ) {
     post("/webhook/pubsub") {
         if (call.request.queryParameters["token"] != webhookSecret) {
@@ -64,7 +66,7 @@ fun Route.pubSubWebhookRoutes(
         log.info("[${event.ticketKey}] Pub/Sub completion event: status=${event.status}, execution=${event.executionName}")
         // Acknowledge immediately — Pub/Sub retries on non-2xx. Metrics fetch (~15s) runs in background.
         call.respond(HttpStatusCode.OK)
-        scope.launch { processCompletion(event, jobRegistry, cloudRunJobsClient, agentLauncher) }
+        scope.launch { processCompletion(event, jobRegistry, cloudRunJobsClient, agentLauncher, decisionScorer) }
     }
 }
 
@@ -102,6 +104,7 @@ private suspend fun processCompletion(
     jobRegistry: JobRegistry,
     cloudRunJobsClient: CloudRunJobsClient,
     agentLauncher: AgentLauncher,
+    decisionScorer: DecisionScorer,
 ) {
     val job = jobRegistry.findRunningByTicketKey(event.ticketKey)
     if (job == null) {
@@ -119,6 +122,7 @@ private suspend fun processCompletion(
         metrics = event.toWorkerMetrics(),
         envStartupMs = envStartupMs,
     )
+    decisionScorer.score(job.jobId)
     // Dispatch judge after a successful ticket-work completion.
     // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key).
     // PR review and conflict jobs set jiraTicketKey to the real key and use a synthetic ticketKey.

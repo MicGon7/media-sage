@@ -31,6 +31,7 @@ object AgentDatabase {
         renamePromptToPayload()
         createJobDurationsView()
         createTranscriptsTable() // MS-387
+        createDecisionScoresTable()
     }
 
     /** MS-210: Worker efficiency metric columns. */
@@ -80,6 +81,21 @@ object AgentDatabase {
             ALTER TABLE jobs RENAME COLUMN prompt TO payload;
           END IF;
         END ${'$'}${'$'};
+        """.trimIndent()
+    )
+
+    /** Decision scoring results, one row per (job, decision index, criterion). */
+    private fun org.jetbrains.exposed.sql.Transaction.createDecisionScoresTable() = exec(
+        """
+        CREATE TABLE IF NOT EXISTS decision_scores (
+            job_id          UUID REFERENCES jobs(job_id),
+            decision_index  INT NOT NULL,
+            criterion       TEXT NOT NULL,
+            score           INT NOT NULL,
+            rationale       TEXT NOT NULL,
+            recommendation  TEXT NOT NULL,
+            PRIMARY KEY (job_id, decision_index, criterion)
+        )
         """.trimIndent()
     )
 

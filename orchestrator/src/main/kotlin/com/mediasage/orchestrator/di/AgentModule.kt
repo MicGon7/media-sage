@@ -1,6 +1,13 @@
 package com.mediasage.orchestrator.di
 
 import com.mediasage.orchestrator.db.AgentDatabase
+import com.mediasage.orchestrator.feedback.detector.DatabasePatternDetector
+import com.mediasage.orchestrator.feedback.detector.PatternDetector
+import com.mediasage.orchestrator.feedback.github.GitHubAppClient
+import com.mediasage.orchestrator.feedback.pr.SkillPrService
+import com.mediasage.orchestrator.feedback.scoring.ClaudeDecisionScorer
+import com.mediasage.orchestrator.feedback.scoring.DecisionScorer
+import com.mediasage.orchestrator.feedback.scoring.NoOpDecisionScorer
 import com.mediasage.pipeline.core.JobRepository
 import com.mediasage.orchestrator.service.AgentLauncher
 import com.mediasage.orchestrator.service.AgentLaunchService
@@ -37,20 +44,12 @@ import org.slf4j.LoggerFactory
 private val log = LoggerFactory.getLogger("AgentModule")
 
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
+    includes(feedbackModule(config))
     single { buildHttpClient() }
     single { JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken) }
     single<JiraTicketFetcher> { get<JiraApiService>() }
     single<JiraTicketStatusChecker> { get<JiraApiService>() }
-    // Bot credentials for posting automated comments — falls back to human credentials if not configured.
-    single<JiraCommentPoster> {
-        val botEmail = config.jiraBotEmail
-        val botToken = config.jiraBotApiToken
-        if (botEmail.isNotBlank() && botToken.isNotBlank()) {
-            JiraApiService(get(), config.jiraCloudId, botEmail, botToken)
-        } else {
-            get<JiraApiService>()
-        }
-    }
+    single<JiraCommentPoster> { buildJiraCommentPoster(config, get(), get()) }
     single {
         val cloudRun = buildCloudRunDispatch(config, get())
         AgentLaunchService(
@@ -60,6 +59,53 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     }
     single<AgentLauncher> { get<AgentLaunchService>() }
 }
+
+private fun feedbackModule(config: AgentConfig) = module {
+    single<DecisionScorer> { buildDecisionScorer(config, get()) }
+    single<PatternDetector> { DatabasePatternDetector() }
+    if (isFeedbackEnabled(config)) {
+        log.info("Feedback auto-PR enabled — repo={}/{}", config.githubRepoOwner, config.githubRepoName)
+        single { buildSkillPrService(config, get(), get()) }
+    } else {
+        log.info("Feedback auto-PR disabled — GITHUB_APP_ID or ANTHROPIC_AUTH_TOKEN not configured")
+    }
+}
+
+private fun buildJiraCommentPoster(config: AgentConfig, httpClient: HttpClient, fallback: JiraApiService): JiraCommentPoster =
+    if (config.jiraBotEmail.isNotBlank() && config.jiraBotApiToken.isNotBlank()) {
+        JiraApiService(httpClient, config.jiraCloudId, config.jiraBotEmail, config.jiraBotApiToken)
+    } else {
+        fallback
+    }
+
+private fun buildDecisionScorer(config: AgentConfig, httpClient: HttpClient): DecisionScorer =
+    if (config.claudeAuthToken.isNotBlank()) {
+        log.info("Decision scoring enabled — baseUrl={}", config.claudeBaseUrl)
+        ClaudeDecisionScorer(httpClient, config.claudeAuthToken, config.claudeBaseUrl)
+    } else {
+        log.info("Decision scoring disabled — ANTHROPIC_AUTH_TOKEN not set")
+        NoOpDecisionScorer()
+    }
+
+private fun buildSkillPrService(config: AgentConfig, httpClient: HttpClient, detector: PatternDetector) =
+    SkillPrService(
+        detector = detector,
+        githubClient = GitHubAppClient(
+            httpClient = httpClient,
+            appId = config.githubAppId,
+            privateKeyPem = config.githubAppPrivateKey,
+            installationId = config.githubAppInstallationId,
+        ),
+        httpClient = httpClient,
+        authToken = config.claudeAuthToken,
+        claudeBaseUrl = config.claudeBaseUrl,
+        repoOwner = config.githubRepoOwner,
+        repoName = config.githubRepoName,
+    )
+
+private fun isFeedbackEnabled(config: AgentConfig): Boolean =
+    listOf(config.githubAppId, config.githubAppPrivateKey, config.githubAppInstallationId, config.githubRepoOwner, config.githubRepoName)
+        .all { it.isNotBlank() } && config.claudeAuthToken.isNotBlank()
 
 private fun buildHttpClient() = HttpClient(OkHttp) {
     install(ContentNegotiation) {
