@@ -36,10 +36,11 @@ Stop and report the error if the file does not exist.
 Confirm ImageMagick is available:
 
 ```bash
-which convert
+which magick
 ```
 
-If `convert` is not found, stop and tell the user: "ImageMagick is not installed.
+If `magick` is not found, try `which convert` as a fallback (ImageMagick 6 installs `convert` only).
+If neither is found, stop and tell the user: "ImageMagick is not installed.
 Run `brew install imagemagick` on macOS, then re-invoke the skill."
 Do not attempt to install it automatically.
 
@@ -48,7 +49,7 @@ Do not attempt to install it automatically.
 Target: `iosApp/iosApp/Assets.xcassets/AppIcon.appiconset/app-icon-1024.png` (1024×1024)
 
 ```bash
-convert "$SOURCE" -resize 1024x1024! \
+magick "$SOURCE" -resize 1024x1024! \
   iosApp/iosApp/Assets.xcassets/AppIcon.appiconset/app-icon-1024.png
 ```
 
@@ -69,16 +70,16 @@ Run these commands from the project root:
 ```bash
 RES=composeApp/src/androidMain/res
 
-convert "$SOURCE" -resize 48x48!   $RES/mipmap-mdpi/ic_launcher.png
-convert "$SOURCE" -resize 48x48!   $RES/mipmap-mdpi/ic_launcher_round.png
-convert "$SOURCE" -resize 72x72!   $RES/mipmap-hdpi/ic_launcher.png
-convert "$SOURCE" -resize 72x72!   $RES/mipmap-hdpi/ic_launcher_round.png
-convert "$SOURCE" -resize 96x96!   $RES/mipmap-xhdpi/ic_launcher.png
-convert "$SOURCE" -resize 96x96!   $RES/mipmap-xhdpi/ic_launcher_round.png
-convert "$SOURCE" -resize 144x144! $RES/mipmap-xxhdpi/ic_launcher.png
-convert "$SOURCE" -resize 144x144! $RES/mipmap-xxhdpi/ic_launcher_round.png
-convert "$SOURCE" -resize 192x192! $RES/mipmap-xxxhdpi/ic_launcher.png
-convert "$SOURCE" -resize 192x192! $RES/mipmap-xxxhdpi/ic_launcher_round.png
+magick "$SOURCE" -resize 48x48!   $RES/mipmap-mdpi/ic_launcher.png
+magick "$SOURCE" -resize 48x48!   $RES/mipmap-mdpi/ic_launcher_round.png
+magick "$SOURCE" -resize 72x72!   $RES/mipmap-hdpi/ic_launcher.png
+magick "$SOURCE" -resize 72x72!   $RES/mipmap-hdpi/ic_launcher_round.png
+magick "$SOURCE" -resize 96x96!   $RES/mipmap-xhdpi/ic_launcher.png
+magick "$SOURCE" -resize 96x96!   $RES/mipmap-xhdpi/ic_launcher_round.png
+magick "$SOURCE" -resize 144x144! $RES/mipmap-xxhdpi/ic_launcher.png
+magick "$SOURCE" -resize 144x144! $RES/mipmap-xxhdpi/ic_launcher_round.png
+magick "$SOURCE" -resize 192x192! $RES/mipmap-xxxhdpi/ic_launcher.png
+magick "$SOURCE" -resize 192x192! $RES/mipmap-xxxhdpi/ic_launcher_round.png
 ```
 
 ### 5. Write the Android adaptive foreground PNG
@@ -87,7 +88,7 @@ The foreground canvas is 432×432 px (xxxhdpi = 4× density for the 108dp adapti
 The safe zone is 72/108 of 432 = 288px. Center the artwork with 72px padding on each side.
 
 ```bash
-convert "$SOURCE" -resize 288x288! \
+magick "$SOURCE" -resize 288x288! \
   -gravity Center -background none -extent 432x432 \
   composeApp/src/androidMain/res/drawable/ic_launcher_foreground.png
 ```
