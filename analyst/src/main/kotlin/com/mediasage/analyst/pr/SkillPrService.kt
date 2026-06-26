@@ -53,7 +53,9 @@ class SkillPrService(
             return
         }
 
-        if (githubClient.hasOpenAnalystPr(repoOwner, repoName)) {
+        val hasOpenPr = runCatching { githubClient.hasOpenAnalystPr(repoOwner, repoName) }
+            .getOrElse { log.error("GitHub PR check failed — skipping: {}", it.message); return }
+        if (hasOpenPr) {
             log.info("Open Analyst PR already exists — skipping to avoid flooding")
             return
         }

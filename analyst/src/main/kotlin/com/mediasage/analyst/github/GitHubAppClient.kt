@@ -3,9 +3,10 @@ package com.mediasage.analyst.github
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.timeout
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
-import io.ktor.client.request.get
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -147,13 +148,15 @@ class GitHubAppClient(
             .jsonObject["html_url"]!!.jsonPrimitive.content
     }
 
-    // Minted fresh per call — 10-min JWT expiry is plenty for a single PR flow
+    // Global requestTimeoutMillis is 60s, but this call fires after ~4–5 min of DB work on a cold
+    // instance. Override to 15s — the endpoint normally responds in <1s.
     private suspend fun installationToken(): String {
         val jwt = buildJwt()
         val response = httpClient.post("$GITHUB_API/app/installations/$installationId/access_tokens") {
             header("Authorization", "Bearer $jwt")
             header("Accept", GH_ACCEPT)
             header("X-GitHub-Api-Version", GH_API_VERSION)
+            timeout { requestTimeoutMillis = 15_000 }
         }
         check(response.status.isSuccess()) {
             "GitHub installationToken failed (${response.status}): ${response.bodyAsText()}"
