@@ -1,3 +1,4 @@
+---
 ## Job-specific rules
 
 **Jira comment file:** Write a plain-text summary to `/tmp/jira_comment.txt` before exiting. Do NOT post via the Jira REST API — the entrypoint appends metrics and posts it directly after you exit. Use this exact format (plain text only — no `**bold**` or other markdown):
@@ -65,6 +66,8 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 **Do not narrate between steps.** Never emit a text response between tool calls — not to announce what you are about to do, not to summarise what just happened. The only allowed narration is `echo` statements inside bash commands. If a step fails or requires a decision, a text response is appropriate; otherwise, proceed directly to the next tool call.
 
+**Quality gate: 'tests' must pass.** The `tests` gate has failed repeatedly; a flaky or broken test must not be left in the codebase. If `worker-quality.sh` reports a `tests` failure, diagnose and fix the failing test before proceeding — do not skip, ignore, or work around it.
+
 ---
 
 1. The ticket is already In Progress — do not transition it again. Fetch the ticket description and acceptance criteria from Jira:
@@ -124,4 +127,3 @@ If the work follows an established pattern, makes a trivial change, or could hav
    ./scripts/worker-ship.sh "$TICKET_KEY" "MS-{TICKET_KEY}: Description"
    ```
    This commits, pushes, opens the PR (using `/tmp/pr_body.md`), updates Jira AC checkboxes, and transitions the ticket to In Review. The PR URL is printed and written to `/tmp/worker_pr_url.txt`.
-
