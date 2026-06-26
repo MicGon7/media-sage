@@ -2,7 +2,10 @@ package com.mediasage.orchestrator
 
 import com.mediasage.orchestrator.di.AgentConfig
 import com.mediasage.orchestrator.di.agentModule
+import com.mediasage.orchestrator.feedback.pr.SkillPrService
+import com.mediasage.orchestrator.feedback.scoring.DecisionScorer
 import com.mediasage.orchestrator.plugins.*
+import com.mediasage.orchestrator.routes.feedbackScanRoutes
 import com.mediasage.orchestrator.routes.githubWebhookRoutes
 import com.mediasage.orchestrator.routes.pubSubWebhookRoutes
 import com.mediasage.orchestrator.routes.webhookRoutes
@@ -17,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.ktor.ext.get
+import org.koin.ktor.ext.getKoin
 import org.koin.ktor.plugin.Koin
 
 fun main(args: Array<String>) {
@@ -32,6 +36,8 @@ fun Application.module() {
     // Resolve Cloud Run client before routing block to avoid Ktor routing DSL name collision
     val cloudRunJobsClient = agentLaunchService.cloudRun?.client
     val jobRegistry = agentLaunchService.cloudRun?.jobs
+    val decisionScorer = get<DecisionScorer>()
+    val skillPrService: SkillPrService? = getKoin().getOrNull()
     configureContentNegotiation()
     configureCallLogging()
     configureStatusPages()
@@ -39,18 +45,18 @@ fun Application.module() {
         get("/health") { call.respond(HttpStatusCode.OK, "OK") }
         webhookRoutes(config.jiraBotAccountId)
         githubWebhookRoutes(config.githubWebhookSecret, config.githubBotLogin)
+        feedbackScanRoutes(skillPrService)
         if (config.pubSubWebhookSecret.isNotBlank() && cloudRunJobsClient != null && jobRegistry != null) {
-            pubSubWebhookRoutes(config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry, agentLaunchService, scope)
+            pubSubWebhookRoutes(
+                config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry,
+                agentLaunchService, decisionScorer, scope,
+            )
         }
     }
 }
 
 private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): AgentConfig {
     fun str(key: String) = config.propertyOrNull(key)?.getString() ?: ""
-    val credentialsBase64 = str("app.cloudRun.credentialsBase64")
-    val credentialsJson = if (credentialsBase64.isNotBlank()) {
-        String(java.util.Base64.getDecoder().decode(credentialsBase64))
-    } else ""
     return AgentConfig(
         githubWebhookSecret = str("app.github.webhookSecret"),
         githubBotLogin = str("app.github.botLogin"),
@@ -64,8 +70,18 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         gcpRegion = config.propertyOrNull("app.cloudRun.region")?.getString() ?: "us-central1",
         gcpJobName = config.propertyOrNull("app.cloudRun.jobName")?.getString() ?: "media-sage-agent-worker",
         gcpJudgeJobName = config.propertyOrNull("app.cloudRun.judgeJobName")?.getString() ?: "media-sage-agent-judge",
-        googleCredentialsJson = credentialsJson,
+        googleCredentialsJson = decodeBase64(str("app.cloudRun.credentialsBase64")),
         supabaseDbUrl = str("app.supabase.dbUrl"),
         pubSubWebhookSecret = str("app.pubSub.webhookSecret"),
+        claudeAuthToken = str("app.claude.authToken"),
+        claudeBaseUrl = str("app.claude.baseUrl").ifBlank { "https://api.anthropic.com" },
+        githubAppId = str("app.feedbackScan.githubAppId"),
+        githubAppPrivateKey = str("app.feedbackScan.githubPrivateKey"),
+        githubAppInstallationId = str("app.feedbackScan.githubInstallationId"),
+        githubRepoOwner = str("app.feedbackScan.githubRepoOwner"),
+        githubRepoName = str("app.feedbackScan.githubRepoName"),
     )
 }
+
+private fun decodeBase64(encoded: String): String =
+    if (encoded.isNotBlank()) String(java.util.Base64.getDecoder().decode(encoded)) else ""

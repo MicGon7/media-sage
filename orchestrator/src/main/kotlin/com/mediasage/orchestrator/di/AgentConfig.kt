@@ -44,6 +44,18 @@ package com.mediasage.orchestrator.di
  *@property pubSubWebhookSecret Shared secret token appended as `?token=` to the Pub/Sub push
  *   subscription URL. The orchestrator verifies this on every push delivery to reject spoofed
  *   requests. Sourced from env var `PUBSUB_WEBHOOK_SECRET`.
+ * @property claudeAuthToken Auth token for [com.mediasage.orchestrator.feedback.scoring.ClaudeDecisionScorer].
+ *   Sourced from env var `ANTHROPIC_AUTH_TOKEN`. When blank, decision scoring is disabled.
+ * @property claudeBaseUrl Anthropic API base URL. Defaults to `https://api.anthropic.com`.
+ *   Sourced from env var `ANTHROPIC_BASE_URL`. Set to the Fuelix proxy URL on Cloud Run.
+ * @property githubAppId GitHub App ID for the feedback-scan auto-PR feature. Sourced from
+ *   `GITHUB_APP_ID`. When blank, the auto-PR feature is disabled.
+ * @property githubAppPrivateKey PEM-encoded RSA private key for the GitHub App. Sourced from
+ *   `GITHUB_APP_PRIVATE_KEY_BASE64`.
+ * @property githubAppInstallationId GitHub App installation ID for this repo. Sourced from
+ *   `GITHUB_APP_INSTALLATION_ID`.
+ * @property githubRepoOwner Repository owner for the auto-PR feature. Sourced from `GITHUB_OWNER`.
+ * @property githubRepoName Repository name for the auto-PR feature. Sourced from `GITHUB_REPO`.
  */
 data class AgentConfig(
     val githubWebhookSecret: String,
@@ -61,4 +73,11 @@ data class AgentConfig(
     val googleCredentialsJson: String = "",
     val supabaseDbUrl: String = "",
     val pubSubWebhookSecret: String = "",
+    val claudeAuthToken: String = "",
+    val claudeBaseUrl: String = "https://api.anthropic.com",
+    val githubAppId: String = "",
+    val githubAppPrivateKey: String = "",
+    val githubAppInstallationId: String = "",
+    val githubRepoOwner: String = "",
+    val githubRepoName: String = "",
 )

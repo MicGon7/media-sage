@@ -35,6 +35,9 @@ dependencies {
     // Google Auth (Cloud Run Jobs API)
     implementation(libs.google.auth.oauth2)
 
+    // GitHub App JWT signing (feedback-scan route)
+    implementation(libs.auth0.java.jwt)
+
     // Pipeline core (job schema, registry, event models)
     implementation(projects.pipelineCore)
 

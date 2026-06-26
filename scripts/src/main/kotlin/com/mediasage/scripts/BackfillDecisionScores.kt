@@ -1,7 +1,7 @@
 package com.mediasage.scripts
 
-import com.mediasage.analyst.db.FeedbackDatabase
-import com.mediasage.analyst.scoring.ClaudeDecisionScorer
+import com.mediasage.orchestrator.feedback.scoring.ClaudeDecisionScorer
+import org.jetbrains.exposed.sql.Database
 import com.mediasage.pipeline.core.DecisionScoresTable
 import com.mediasage.pipeline.core.TranscriptsTable
 import io.ktor.client.HttpClient
@@ -23,7 +23,7 @@ fun main(args: Array<String>) {
     val authToken = System.getenv("ANTHROPIC_AUTH_TOKEN") ?: error("ANTHROPIC_AUTH_TOKEN env var is not set.")
     val baseUrl = System.getenv("ANTHROPIC_BASE_URL") ?: "https://api.anthropic.com"
 
-    FeedbackDatabase.init(dbUrl)
+    initDatabase(dbUrl)
     val jobIds = findScorableJobs()
     println("=== Backfill Decision Scores ===")
     println("Jobs to score : ${jobIds.size}")
@@ -60,6 +60,17 @@ private fun runScoring(jobIds: List<UUID>, scorer: ClaudeDecisionScorer): Pair<I
         }
     }
     return successCount to failureCount
+}
+
+private fun initDatabase(postgresUrl: String) {
+    val uri = java.net.URI(postgresUrl)
+    val (user, password) = uri.userInfo.split(":", limit = 2)
+    Database.connect(
+        url = "jdbc:postgresql://${uri.host}:${uri.port}${uri.path}?sslmode=require",
+        driver = "org.postgresql.Driver",
+        user = user,
+        password = password,
+    )
 }
 
 private fun buildHttpClient() = HttpClient(OkHttp) {

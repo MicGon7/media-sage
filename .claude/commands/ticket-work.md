@@ -61,6 +61,8 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 **Never force push.** Always use `--force-with-lease`. If it is rejected, stop immediately — post a Jira comment describing the conflict and exit. Do not retry with bare `--force`.
 
+**No ticket references in code.** Never put `MS-NNN` ticket numbers in inline comments, KDoc, or any source file. Ticket context belongs in commit messages and PR descriptions, not in the codebase — it rots the moment the ticket is closed or the code moves. Scan your diff before committing: if any added line contains `MS-\d+` inside a comment, remove it.
+
 **Do not narrate between steps.** Never emit a text response between tool calls — not to announce what you are about to do, not to summarise what just happened. The only allowed narration is `echo` statements inside bash commands. If a step fails or requires a decision, a text response is appropriate; otherwise, proceed directly to the next tool call.
 
 ---
