@@ -19,6 +19,16 @@ tasks.register<JavaExec>("backfillScores") {
     environment("ANTHROPIC_BASE_URL", System.getenv("ANTHROPIC_BASE_URL") ?: "")
 }
 
+tasks.register<JavaExec>("generateAppIcon") {
+    group = "scripts"
+    description = "Generate the app icon via gpt-image-2 and write assets for Android and iOS. Pass --dry-run via -PscriptArgs."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.mediasage.scripts.GenerateAppIconKt")
+    args = (project.findProperty("scriptArgs") as String? ?: "").split(" ").filter { it.isNotEmpty() }
+    environment("OPENAI_API_KEY", System.getenv("OPENAI_API_KEY") ?: "")
+    workingDir = rootProject.projectDir
+}
+
 tasks.register<JavaExec>("generateImages") {
     group = "scripts"
     description = "Generate figure portraits using gpt-image-2. Pass args via -PscriptArgs=\"--batch-size=5 --quality=low --dry-run\""

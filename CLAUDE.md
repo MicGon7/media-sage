@@ -213,6 +213,8 @@ docker run -p 8081:8081 \
 - **Detekt**: Runs in CI before build. `./gradlew detekt` must pass.
 - **Kover**: Coverage reports generated in CI, uploaded as artifacts. Target: 70% line coverage (Phase 2).
 
+**Before writing any new Kotlin code**, read `detekt.yml` in the project root to understand the active rules and thresholds. Key constraints: `LongMethod` (30 lines), `TooManyFunctions` (20/file, 15/class), `MaxLineLength` (140), `ReturnCount` (4). Violating these causes a CI failure that requires a follow-up fix commit.
+
 ## Agent Guidelines
 
 Each job type the pipeline can execute has its own skill in `.claude/commands/`. The three-part model:
@@ -225,6 +227,7 @@ Workflow steps live in skills, not here. See `.claude/commands/` for the full in
 
 ### Rules
 
+- **Detekt first:** Before writing any new Kotlin code, read `detekt.yml` in the project root. Key thresholds: `LongMethod` 30 lines, `TooManyFunctions` 20/file, `MaxLineLength` 140, `ReturnCount` 4. Extract helper functions proactively to stay within limits — fixing a detekt violation after the fact costs an extra commit.
 - **Tests:** Run `./scripts/run-affected-tests.sh` inside the container (Linux, no Android/iOS SDK). Never run bare `./gradlew :module:test` directly. If the script skips for any reason, do not run any Gradle test task manually — CI is the authoritative quality gate.
 - **Blocker stop rule:** If a required tool, SDK, or Gradle task is missing and cannot be self-resolved, **stop immediately**. Post a comment on the PR or Jira ticket describing the exact blocker, then exit.
 - **OOM stop rule:** If any Gradle command exits with an out-of-memory error, Gradle daemon startup failure, or cgroup memory limit error — **stop immediately**. Do not investigate daemon logs, run diagnostics, or retry with alternative JVM flags. Post a comment stating that Gradle quality gates are blocked by an environment memory constraint and that CI is the authoritative quality gate, then exit.
