@@ -32,8 +32,9 @@ Confirm ImageMagick is available:
 which convert
 ```
 
-If `convert` is not on PATH, stop and tell the user to install ImageMagick
-(`brew install imagemagick` on macOS).
+If `convert` is not found, stop and tell the user: "ImageMagick is not installed.
+Run `brew install imagemagick` on macOS, then re-invoke the skill."
+Do not attempt to install it automatically.
 
 ### 3. Write the iOS icon
 
