@@ -110,8 +110,9 @@ for event in lines:
     etype = event.get('type')
 
     if etype == 'assistant':
+        content_blocks = event.get('message', {}).get('content', [])
         turn_parts = []
-        for block in event.get('message', {}).get('content', []):
+        for block in content_blocks:
             if block.get('type') == 'text':
                 text = block['text'].strip()
                 turn_parts.append(f"\n{text}\n" if text else "\n*(narration — no visible output)*\n")
@@ -120,11 +121,11 @@ for event in lines:
                 inp = block.get('input', {})
                 inp_str = json.dumps(inp, indent=2) if inp else ''
                 turn_parts.append(f"\n**Tool call: {name}**\n```\n{inp_str[:1000]}\n```\n")
-        if not turn_parts:
-            continue  # skip thinking-only events and empty init event
+        if content_blocks and not turn_parts:
+            continue  # thinking-only streaming chunk — not a discrete turn
         turn += 1
         parts.append(f"\n---\n\n## Turn {turn}\n")
-        parts.extend(turn_parts)
+        parts.extend(turn_parts if turn_parts else ["\n*(skill initialized)*\n"])
 
     elif etype == 'tool':
         for block in event.get('content', []):
