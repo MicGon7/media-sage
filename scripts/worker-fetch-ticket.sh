@@ -108,9 +108,30 @@ with open("/tmp/worker_ticket.env", "w") as out:
     out.write(f"TICKET_DESCRIPTION={shell_quote_value(description_body)}\n")
     out.write(f"TICKET_AC={shell_quote_value(acceptance_criteria)}\n")
 
+# Extract Relevant Files section
+relevant_files_section = ""
+rf_split = re.split(r"(?m)^#{1,3}\s+Relevant Files", full_description)
+if len(rf_split) >= 2:
+    rf_remainder = rf_split[1]
+    next_section = re.split(r"(?m)^#{1,3}\s+\w", rf_remainder)
+    relevant_files_section = next_section[0].strip()
+
+relevant_file_paths = []
+if relevant_files_section:
+    for line in relevant_files_section.split("\n"):
+        line = line.strip()
+        if line.startswith("-"):
+            path = line.lstrip("- ").split(" — ")[0].split(" - ")[0].strip().strip("`")
+            if path:
+                relevant_file_paths.append(path)
+
 print(f"✅  Ticket fetched: {ticket_key}")
 print(f"    Summary: {summary}")
-print(f"    AC items: {acceptance_criteria.count(chr(10))+ 1 if acceptance_criteria else 0} lines")
+print(f"    AC items: {acceptance_criteria.count(chr(10)) + 1 if acceptance_criteria else 0} lines")
+if relevant_file_paths:
+    print(f"    Relevant files:")
+    for path in relevant_file_paths:
+        print(f"      {path}")
 PYEOF
 
 echo ""
