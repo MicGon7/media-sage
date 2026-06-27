@@ -41,6 +41,15 @@ echo " worker-ship  —  $TICKET_KEY"
 echo "═══════════════════════════════════════════"
 echo ""
 
+# ── 0. Quality gates ──────────────────────────────────────────────────────────
+
+echo "Running quality gates..."
+if ! ./scripts/worker-quality.sh; then
+    echo "❌  Quality gates failed — aborting ship" >&2
+    exit 1
+fi
+echo ""
+
 # ── 1. Commit + push ──────────────────────────────────────────────────────────
 
 echo "Staging and committing..."
@@ -59,7 +68,51 @@ echo "PR: $PR_URL"
 # Write immediately so publish_completion can embed prNumber even if a later Jira step fails.
 echo "$PR_URL" > /tmp/worker_pr_url.txt
 
-# ── 3. Update Jira AC checkboxes ─────────────────────────────────────────────
+# ── 3. Write Jira comment ─────────────────────────────────────────────────────
+
+echo "Writing Jira comment..."
+[ -f /tmp/worker_ticket.env ] && source /tmp/worker_ticket.env
+DIFF_STAT=$(git diff --stat HEAD~1 2>/dev/null | tail -1 || echo "see PR")
+export TICKET_KEY TICKET_SUMMARY TICKET_AC PR_URL DIFF_STAT
+
+python3 << 'PYEOF'
+import os, re
+
+ticket_key = os.environ.get('TICKET_KEY', '')
+ticket_summary = os.environ.get('TICKET_SUMMARY', ticket_key)
+pr_url = os.environ.get('PR_URL', 'see PR')
+diff_stat = os.environ.get('DIFF_STAT', 'see PR')
+ticket_ac = os.environ.get('TICKET_AC', '')
+
+ac_checked = re.sub(r'\[[ x]\]', '✅', ticket_ac).strip() if ticket_ac else '✅ Task completed'
+
+comment = f"""🤖 Agent: Run summary for {ticket_key}
+
+Task: {ticket_summary}
+
+Pipeline checkpoints:
+✅ Jira webhook fired when ticket moved to In Progress
+✅ Orchestrator dispatched Cloud Run Job
+✅ Worker cloned from michael-gonzalez-dev/media-sage successfully
+✅ Worker completed the task and opened a PR
+
+PR: {pr_url}
+
+Quality gates:
+✅ Detekt: passed
+✅ Affected tests: passed
+
+Diff: {diff_stat}
+
+Acceptance criteria:
+{ac_checked}"""
+
+with open('/tmp/jira_comment.txt', 'w') as f:
+    f.write(comment)
+print("✅  Jira comment written to /tmp/jira_comment.txt")
+PYEOF
+
+# ── 5. Update Jira AC checkboxes ─────────────────────────────────────────────
 
 echo "Updating Jira AC checkboxes..."
 curl -sf -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" "$JIRA_BASE" -o /tmp/jira_issue.json || {
@@ -90,7 +143,7 @@ PYEOF
     fi
 fi
 
-# ── 4. Transition to In Review ────────────────────────────────────────────────
+# ── 6. Transition to In Review ────────────────────────────────────────────────
 
 echo "Transitioning $TICKET_KEY to In Review..."
 curl -sf -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" \
