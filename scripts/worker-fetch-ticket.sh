@@ -104,9 +104,9 @@ def shell_quote_value(value):
     return f"'{escaped}'"
 
 with open("/tmp/worker_ticket.env", "w") as out:
-    out.write(f"TICKET_SUMMARY={shell_quote_value(summary)}\n")
-    out.write(f"TICKET_DESCRIPTION={shell_quote_value(description_body)}\n")
-    out.write(f"TICKET_AC={shell_quote_value(acceptance_criteria)}\n")
+    out.write(f"export TICKET_SUMMARY={shell_quote_value(summary)}\n")
+    out.write(f"export TICKET_DESCRIPTION={shell_quote_value(description_body)}\n")
+    out.write(f"export TICKET_AC={shell_quote_value(acceptance_criteria)}\n")
 
 # Extract Relevant Files section
 relevant_files_section = ""
@@ -132,6 +132,8 @@ if relevant_file_paths:
     print(f"    Relevant files:")
     for path in relevant_file_paths:
         print(f"      {path}")
+else:
+    print(f"    Relevant files: none parsed — read $TICKET_DESCRIPTION for file paths")
 PYEOF
 
 echo ""
