@@ -18,13 +18,26 @@
 
 set -euo pipefail
 
-if [ $# -lt 2 ]; then
-    echo "Usage: $0 TICKET_KEY BRANCH_DESCRIPTION" >&2
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 TICKET_KEY [BRANCH_DESCRIPTION]" >&2
     exit 1
 fi
 
 TICKET_KEY="$1"
-BRANCH_DESC="$2"
+
+if [ $# -ge 2 ]; then
+    BRANCH_DESC="$2"
+elif [ -n "${TICKET_SUMMARY:-}" ]; then
+    BRANCH_DESC=$(TICKET_SUMMARY="$TICKET_SUMMARY" python3 -c "
+import re, os
+s = os.environ['TICKET_SUMMARY']
+slug = re.sub(r'[^a-z0-9]+', '-', s.lower()).strip('-')[:50].rstrip('-')
+print(slug)
+")
+else
+    echo "Usage: $0 TICKET_KEY [BRANCH_DESCRIPTION]  (or set TICKET_SUMMARY in env)" >&2
+    exit 1
+fi
 BRANCH_NAME="feature/${TICKET_KEY}-${BRANCH_DESC}"
 
 echo ""

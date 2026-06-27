@@ -74,21 +74,18 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 ---
 
-1. The ticket is already In Progress — do not transition it again. Fetch the ticket description and acceptance criteria from Jira:
+1. The ticket is already In Progress — do not transition it again. Fetch the ticket and set up the branch in one call:
    ```bash
-   ./scripts/worker-fetch-ticket.sh "$TICKET_KEY" && source /tmp/worker_ticket.env
+   ./scripts/worker-fetch-ticket.sh "$TICKET_KEY" && source /tmp/worker_ticket.env && ./scripts/worker-init.sh "$TICKET_KEY" && source /tmp/worker_init.env
    ```
-2. Run branch setup:
-   ```bash
-   ./scripts/worker-init.sh "$TICKET_KEY" "short-description" && source /tmp/worker_init.env
-   ```
-   - `WORKER_BRANCH_STATUS=existing` → diff the existing PR (`gh pr diff "$WORKER_PR_URL"`), check each AC item against it. If all AC items are satisfied, follow the graceful exit rule and stop. If AC is incomplete, the branch is already checked out — continue from step 4.
-   - `WORKER_BRANCH_STATUS=new` → branch is ready, proceed to step 3.
-3. Read the files listed in the ticket's "Relevant files" section before writing any code. Call `Read` on the exact path shown — do not use `find`, `Glob`, or any search to locate a file whose path you already have. Example: if Relevant Files lists `orchestrator/src/main/kotlin/com/mediasage/orchestrator/smoketest/SmokeTest.kt`, your tool call is `Read("orchestrator/src/main/kotlin/com/mediasage/orchestrator/smoketest/SmokeTest.kt")` — nothing else. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
-4. Implement the changes described in the ticket.
-5. Re-read the acceptance criteria. If any AC item requires unit tests, invoke `/unit-test` now (the branch is already checked out — skip branch creation inside that skill). If any AC item requires UI/composable tests, invoke `/ui-test` now (same — skip branch creation). Both may apply to the same ticket.
-6. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
-7. Write `/tmp/pr_body.md`:
+   The fetch script prints the ticket summary and the exact Relevant Files paths — use those paths directly in step 2. The init script derives the branch slug from `$TICKET_SUMMARY` automatically.
+   - `WORKER_BRANCH_STATUS=existing` → diff the existing PR (`gh pr diff "$WORKER_PR_URL"`), check each AC item against it. If all AC items are satisfied, follow the graceful exit rule and stop. If AC is incomplete, the branch is already checked out — continue from step 3.
+   - `WORKER_BRANCH_STATUS=new` → branch is ready, proceed to step 2.
+2. Read the files shown in the fetch script output — the exact paths are printed there. Call `Read` on each path directly. Do not use `find`, `Glob`, or any search. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
+3. Implement the changes described in the ticket.
+4. Re-read the acceptance criteria. If any AC item requires unit tests, invoke `/unit-test` now (the branch is already checked out — skip branch creation inside that skill). If any AC item requires UI/composable tests, invoke `/ui-test` now (same — skip branch creation). Both may apply to the same ticket.
+5. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
+6. Write the PR body and ship in one call:
    ```bash
    cat > /tmp/pr_body.md << 'PRBODY'
    ## Summary
@@ -118,10 +115,7 @@ If the work follows an established pattern, makes a trivial change, or could hav
    - [ ] No API keys or secrets in code
    - [ ] CLAUDE.md updated (if new pattern introduced)
    PRBODY
-   ```
-8. Ship everything in one call:
-   ```bash
    ./scripts/worker-ship.sh "$TICKET_KEY" "MS-{TICKET_KEY}: Description"
    ```
-   This runs quality gates first (exits non-zero on failure), then commits, pushes, opens the PR (using `/tmp/pr_body.md`), writes `/tmp/jira_comment.txt` from ticket env vars and quality results, updates Jira AC checkboxes, and transitions the ticket to In Review.
+   `worker-ship.sh` runs quality gates first (exits non-zero on failure), then commits, pushes, opens the PR, writes `/tmp/jira_comment.txt`, updates Jira AC checkboxes, and transitions the ticket to In Review.
 
