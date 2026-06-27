@@ -63,13 +63,13 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 **No ticket references in code.** Never put `MS-NNN` ticket numbers in inline comments, KDoc, or any source file. Ticket context belongs in commit messages and PR descriptions, not in the codebase — it rots the moment the ticket is closed or the code moves. Scan your diff before committing: if any added line contains `MS-\d+` inside a comment, remove it.
 
-**Do not narrate between steps.** Never emit a text response between tool calls — not to announce what you are about to do, not to summarise what just happened. The only allowed narration is `echo` statements inside bash commands. If a step fails or requires a decision, a text response is appropriate; otherwise, proceed directly to the next tool call.
+**Do not narrate between steps.** Never emit a text response between tool calls — not to announce what you are about to do, not to summarise what just happened, not even a one-liner like "current value is X" or "no learning doc needed." Every text response is a billable API round-trip. The only allowed narration is `echo` statements inside bash commands. If a step fails or requires a decision, a text response is appropriate; otherwise, proceed directly to the next tool call.
 
 **No TodoWrite.** Do not call TodoWrite at any point during a worker run. There is no human watching the session UI in a Cloud Run Job — the task list is invisible and adds no value. The steps in this skill define the workflow; a parallel task list is redundant and wastes turns.
 
-**No env var echo checks.** Do not verify or echo env vars after sourcing any worker script (`worker-fetch-ticket.sh`, `worker-init.sh`, etc.). Trust the exit code — if the script succeeds, the vars are set. Echoing them to confirm wastes a turn.
+**No env var echo checks.** Do not verify or echo env vars after sourcing any worker script (`worker-fetch-ticket.sh`, `worker-init.sh`, etc.). Trust the exit code — if the script succeeds, the vars are set. This includes chained appends on the same line: `./scripts/worker-fetch-ticket.sh "$TICKET_KEY" && source /tmp/worker_ticket.env && echo "$TICKET_SUMMARY"` — the trailing echo is still a check, not a free operation.
 
-**Read Relevant Files directly.** If a file is listed in the ticket's Relevant Files section, go straight to `Read` on that path. Do not use `find` or `grep` to locate it first — the path is already known.
+**Read Relevant Files directly.** If a file is listed in the ticket's Relevant Files section, go straight to `Read` on that path. Do not use `find`, `grep`, or `Glob` to locate it first — the path is already known.
 
 ---
 
