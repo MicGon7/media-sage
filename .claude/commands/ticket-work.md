@@ -65,9 +65,11 @@ If the work follows an established pattern, makes a trivial change, or could hav
 
 **Do not narrate between steps.** Never emit a text response between tool calls — not to announce what you are about to do, not to summarise what just happened. The only allowed narration is `echo` statements inside bash commands. If a step fails or requires a decision, a text response is appropriate; otherwise, proceed directly to the next tool call.
 
-**TodoWrite limit:** Do not call TodoWrite more than once per run. Write the plan at the start of the job, then drop all subsequent update calls — they add no artifact value and consume turns.
+**No TodoWrite.** Do not call TodoWrite at any point during a worker run. There is no human watching the session UI in a Cloud Run Job — the task list is invisible and adds no value. The steps in this skill define the workflow; a parallel task list is redundant and wastes turns.
 
-**No env var echo checks.** Do not emit `echo $TICKET_KEY` or equivalent sanity-check echo commands at the start of a run. The ticket key is passed as an argument and is available in the environment; echoing it wastes a turn without confirming anything useful.
+**No env var echo checks.** Do not verify or echo env vars after sourcing any worker script (`worker-fetch-ticket.sh`, `worker-init.sh`, etc.). Trust the exit code — if the script succeeds, the vars are set. Echoing them to confirm wastes a turn.
+
+**Read Relevant Files directly.** If a file is listed in the ticket's Relevant Files section, go straight to `Read` on that path. Do not use `find` or `grep` to locate it first — the path is already known.
 
 ---
 
