@@ -80,106 +80,42 @@ else:
 PYEOF
     touch /tmp/jira_comment_posted
 
-    # Convert JSONL transcript to human-readable markdown, persist to Supabase,
-    # and attach the markdown file to the Jira ticket.
+    # Persist raw JSONL transcript to Supabase for advisor and feedback scanning.
     # Only workers upload — the judge's JSONL has no consumer.
     if [ -f /tmp/claude-output.jsonl ] && [[ "${CLOUD_RUN_JOB:-}" != *"-judge" ]]; then
       python3 - << 'PYEOF'
-import json, sys, os
+import json, os, subprocess, sys
 
-lines = []
+job_id = os.environ.get('JOB_ID', '')
+rest_url = os.environ.get('SUPABASE_REST_URL', '').rstrip('/')
+svc_key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+
+if not (rest_url and svc_key and job_id):
+    print("Warning: SUPABASE_REST_URL, SUPABASE_SERVICE_ROLE_KEY, or JOB_ID not set — skipping transcript upload", file=sys.stderr)
+    sys.exit(0)
+
 try:
-    with open('/tmp/claude-output.jsonl') as f:
-        lines = [json.loads(l) for l in f if l.strip()]
+    raw_jsonl = open('/tmp/claude-output.jsonl').read()
 except Exception as e:
     print(f"Warning: could not read transcript: {e}", file=sys.stderr)
     sys.exit(0)
 
-ticket = os.environ.get('JIRA_TICKET_KEY') or os.environ.get('TICKET_KEY', 'unknown')
-job_id = os.environ.get('JOB_ID', '')
-execution = os.environ.get('CLOUD_RUN_EXECUTION', '')
-
-parts = [f"# Worker Transcript — {ticket}\n"]
-if job_id:
-    parts.append(f"**Job:** {job_id}  ")
-if execution:
-    parts.append(f"**Execution:** {execution}\n")
-
-turn = 0
-for event in lines:
-    etype = event.get('type')
-
-    if etype == 'assistant':
-        content_blocks = event.get('message', {}).get('content', [])
-        turn_parts = []
-        for block in content_blocks:
-            if block.get('type') == 'text':
-                text = block['text'].strip()
-                turn_parts.append(f"\n{text}\n" if text else "\n*(narration — no visible output)*\n")
-            elif block.get('type') == 'tool_use':
-                name = block.get('name', '')
-                inp = block.get('input', {})
-                inp_str = json.dumps(inp, indent=2) if inp else ''
-                turn_parts.append(f"\n**Tool call: {name}**\n```\n{inp_str[:1000]}\n```\n")
-        if content_blocks and not turn_parts:
-            continue  # thinking-only streaming chunk — not a discrete turn
-        turn += 1
-        parts.append(f"\n---\n\n## Turn {turn}\n")
-        parts.extend(turn_parts if turn_parts else ["\n*(skill initialized)*\n"])
-
-    elif etype == 'tool':
-        for block in event.get('content', []):
-            if block.get('type') == 'tool_result':
-                for inner in block.get('content', []):
-                    if inner.get('type') == 'text':
-                        out = inner['text'].strip()[:1000]
-                        parts.append(f"\n**Tool result:**\n```\n{out}\n```\n")
-
-    elif etype == 'result':
-        turns = event.get('num_turns', '?')
-        cost = event.get('total_cost_usd', 0)
-        d_ms = event.get('duration_ms', 0)
-        d_m, d_s = d_ms // 60000, (d_ms % 60000) // 1000
-        parts.append(f"\n---\n\n## Result\n- **Turns:** {turns}\n- **Cost:** ${cost:.4f}\n- **Duration:** {d_m}m {d_s:02d}s\n")
-
-md = '\n'.join(parts)
-with open('/tmp/worker-transcript.md', 'w') as f:
-    f.write(md)
-print("Transcript markdown written")
-
-# Persist to Supabase transcripts table via PostgREST
-rest_url = os.environ.get('SUPABASE_REST_URL', '').rstrip('/')
-svc_key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
-if rest_url and svc_key and job_id:
-    import subprocess
-    body = json.dumps({'job_id': job_id, 'content': md})
-    result = subprocess.run(
-        ['curl', '-sf', '-X', 'POST',
-         f'{rest_url}/transcripts',
-         '-H', f'apikey: {svc_key}',
-         '-H', f'Authorization: Bearer {svc_key}',
-         '-H', 'Content-Type: application/json',
-         '-H', 'Prefer: return=minimal',
-         '-d', body],
-        capture_output=True, text=True
-    )
-    if result.returncode == 0:
-        print("Transcript persisted to Supabase")
-    else:
-        print(f"Warning: Failed to persist transcript to Supabase: {result.stderr}", file=sys.stderr)
+body = json.dumps({'job_id': job_id, 'content': raw_jsonl})
+result = subprocess.run(
+    ['curl', '-sf', '-X', 'POST',
+     f'{rest_url}/transcripts',
+     '-H', f'apikey: {svc_key}',
+     '-H', f'Authorization: Bearer {svc_key}',
+     '-H', 'Content-Type: application/json',
+     '-H', 'Prefer: return=minimal',
+     '-d', body],
+    capture_output=True, text=True
+)
+if result.returncode == 0:
+    print("Raw JSONL transcript persisted to Supabase")
 else:
-    print("Warning: SUPABASE_REST_URL, SUPABASE_SERVICE_ROLE_KEY, or JOB_ID not set — skipping Supabase upload", file=sys.stderr)
+    print(f"Warning: Failed to persist transcript to Supabase: {result.stderr}", file=sys.stderr)
 PYEOF
-
-      if [ -f /tmp/worker-transcript.md ]; then
-        curl -sf -X POST \
-          -u "${JIRA_BOT_EMAIL}:${JIRA_BOT_API_TOKEN}" \
-          -H "X-Atlassian-Token: no-check" \
-          -F "file=@/tmp/worker-transcript.md;filename=worker-run-${effective_jira_key}.md" \
-          "https://media-sage.atlassian.net/rest/api/3/issue/${effective_jira_key}/attachments" \
-          && echo "Transcript attached to Jira ticket" \
-          || echo "Warning: Failed to attach transcript to Jira ticket"
-      fi
     fi
   fi
 
