@@ -63,7 +63,7 @@ Performs every post-implementation mechanical step atomically: runs quality gate
 
 ### `scripts/judge-fetch.sh PR_NUMBER`
 
-Used exclusively by the `judge-work` job type. Fetches PR metadata, Jira ticket AC, and the full PR diff in a single bash call, then prints structured output to stdout. The judge reads everything it needs from this one result — no separate `Read` or `cat` calls needed before the verdict turn.
+Used by the judge job. Fetches PR metadata, Jira ticket AC, and the full PR diff in a single bash call, then prints structured output to stdout. The output is piped directly to `scripts/judge-evaluate.py`, which calls the Anthropic API and posts the verdict.
 
 ## Applying this pattern to future pipeline work
 

@@ -10,10 +10,8 @@ export GH_REPO="$GITHUB_OWNER/$GITHUB_REPO"
 # Log the dispatched job type and identifiers as a single Cloud Run log entry.
 python3 -c "import json, os; print(json.dumps({'message': '[judge] job dispatched', 'jobType': os.environ.get('JOB_TYPE', ''), 'ticketKey': os.environ.get('TICKET_KEY', ''), 'prNumber': os.environ.get('PR_NUMBER', '')}))"
 
-# Run Claude Code — no exec so the trap can capture the exit code for Pub/Sub.
-# --verbose is required when using --output-format=stream-json.
-# Tee to capture stream-json output for metrics parsing in publish_completion.
-claude -p "/$JOB_TYPE" \
-  --dangerously-skip-permissions \
-  --output-format stream-json \
-  --verbose | tee /tmp/claude-output.jsonl
+# Fetch all judge inputs, pipe directly to the evaluator.
+# judge-fetch.sh collects PR metadata + Jira AC + diff; judge-evaluate.py calls
+# the Anthropic API, posts the PR review comment, and writes /tmp/jira_comment.txt.
+./scripts/judge-fetch.sh "${PR_NUMBER:?ERROR: PR_NUMBER is required}" \
+  | python3 ./scripts/judge-evaluate.py
