@@ -70,6 +70,7 @@ req = urllib.request.Request(
         "x-api-key": auth_token,
         "Content-Type": "application/json",
         "anthropic-version": "2023-06-01",
+        "User-Agent": "curl/7.88.1",
     },
     method="POST",
 )
