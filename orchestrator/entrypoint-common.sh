@@ -2,7 +2,7 @@
 # Do not run directly. Caller must set -eo pipefail before sourcing.
 
 # Capture container start time before any other work — used to compute env_startup_ms (MS-414).
-CONTAINER_STARTED_AT_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
+export CONTAINER_STARTED_AT_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
 
 git config --global user.name "${GITHUB_BOT_NAME:-media-sage-worker}"
 # GitHub App noreply email — deterministic from the App ID, no env var needed
@@ -79,11 +79,13 @@ else:
     print(f'Warning: Jira comment post failed: {result.stderr}')
 PYEOF
     touch /tmp/jira_comment_posted
+  fi
 
-    # Persist raw JSONL transcript to Supabase for advisor and feedback scanning.
-    # Only workers upload — the judge's JSONL has no consumer.
-    if [ -f /tmp/claude-output.jsonl ] && [[ "${CLOUD_RUN_JOB:-}" != *"-judge" ]]; then
-      python3 - << 'PYEOF'
+  # Persist raw JSONL transcript to Supabase for advisor and feedback scanning.
+  # Runs unconditionally on every job type (worker, judge, etc.) so all sessions
+  # are available for advisor analysis and decision scoring.
+  if [ -f /tmp/claude-output.jsonl ]; then
+    python3 - << 'PYEOF'
 import json, os, subprocess, sys
 
 job_id = os.environ.get('JOB_ID', '')
@@ -116,7 +118,6 @@ if result.returncode == 0:
 else:
     print(f"Warning: Failed to persist transcript to Supabase: {result.stderr}", file=sys.stderr)
 PYEOF
-    fi
   fi
 
   if [ -z "$PUBSUB_TOPIC" ] || [ -z "$GCP_PROJECT_ID" ]; then
