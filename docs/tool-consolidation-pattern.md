@@ -22,14 +22,12 @@ The original worker flow had ~15 turns because every discrete action was a separ
 14. `gh pr create` (bash)
 15. Curl POST Jira transition (bash)
 
-Steps 1–2, 5–8, and 9–15 are fully deterministic. They make no decisions that require model judgment. Moving them into scripts reduces the turn count to ~7:
+Steps 1–2, 5–8, and 9–15 are fully deterministic. They make no decisions that require model judgment. Moving them into scripts reduces the turn count to ~4–5:
 
-1. `worker-init.sh` — branch setup (1 turn)
+1. `worker-fetch-ticket.sh` + `worker-init.sh` (chained in one bash call) — fetch Jira ticket + branch setup (1 turn)
 2. Read relevant files (read ×N)
 3. Implement change (edit ×N)
-4. `worker-quality.sh` — tests + detekt (1 turn)
-5. Write `/tmp/pr_body.md` + `/tmp/jira_comment.txt` (write ×2)
-6. `worker-ship.sh` — commit, push, PR, Jira AC, transition (1 turn)
+4. Write `/tmp/pr_body.md` + run `worker-ship.sh` (1 turn) — ship calls quality internally and writes `/tmp/jira_comment.txt`
 
 ## The pattern
 
@@ -45,19 +43,27 @@ Signals that a step should stay as a model turn:
 - It makes a judgment call that depends on ticket context
 - It writes code, prose, or structured data from scratch
 
-## The three worker scripts
+## The five worker scripts
 
-### `scripts/worker-init.sh TICKET_KEY BRANCH_DESCRIPTION`
+### `scripts/worker-fetch-ticket.sh TICKET_KEY`
 
-Handles the "is work already in flight?" check and branch creation in a single turn. Writes `/tmp/worker_init.env` so the worker can `source` the result and branch conditionally without a second read turn.
+Fetches the Jira ticket via REST API and extracts its summary, description, and acceptance criteria into `/tmp/worker_ticket.env`. Also parses and prints the "Relevant Files" section so the worker can read them directly without a separate search turn. Always chained with `worker-init.sh` in a single bash call.
+
+### `scripts/worker-init.sh TICKET_KEY`
+
+Handles the "is work already in flight?" check and branch creation in a single turn. If `$TICKET_SUMMARY` is set (written by `worker-fetch-ticket.sh`), derives the branch slug automatically — no second argument needed. Writes `/tmp/worker_init.env` so the worker can `source` the result and branch conditionally without a second read turn.
 
 ### `scripts/worker-quality.sh`
 
-Runs `run-affected-tests.sh` and `./gradlew detekt` in parallel with `tee` so output is captured inline. If detekt fails it automatically runs the pre-existing violation check (`git stash → detekt → git stash pop`) and distinguishes new violations from inherited ones. The worker gets a single clear pass/fail with no follow-up read needed.
+Runs `run-affected-tests.sh` and `./gradlew detekt` in parallel with `tee` so output is captured inline. If detekt fails it automatically runs the pre-existing violation check (`git stash → detekt → git stash pop`) and distinguishes new violations from inherited ones. The worker gets a single clear pass/fail with no follow-up read needed. Called internally by `worker-ship.sh` — not invoked directly in the standard ticket-work flow.
 
 ### `scripts/worker-ship.sh TICKET_KEY "COMMIT_MSG"`
 
-Performs every post-implementation mechanical step atomically: commit, push, PR creation, Jira AC checkbox update (GET ADF → patch → PUT), and Jira transition to In Review. The PR URL is written to `/tmp/worker_pr_url.txt` for the Jira comment step.
+Performs every post-implementation mechanical step atomically: runs quality gates first (exits non-zero on failure), then commit, push, PR creation, writes `/tmp/jira_comment.txt`, Jira AC checkbox update (GET ADF → patch → PUT), and Jira transition to In Review. The PR URL is written to `/tmp/worker_pr_url.txt`.
+
+### `scripts/judge-fetch.sh PR_NUMBER`
+
+Used exclusively by the `judge-work` job type. Fetches PR metadata, Jira ticket AC, and the full PR diff in a single bash call, then prints structured output to stdout. The judge reads everything it needs from this one result — no separate `Read` or `cat` calls needed before the verdict turn.
 
 ## Applying this pattern to future pipeline work
 
@@ -67,6 +73,6 @@ When adding a new job type (a new skill under `.claude/commands/`), audit the pr
 2. Mark each one: **judgment** (stays as a turn) vs **mechanical** (candidate for a script)
 3. Group consecutive mechanical steps into a single script
 
-The target is ≤ 10 turns for any job type. Below 7 is achievable for straightforward implementation tasks. Turns 1–3 are almost always judgment (read ticket, read code, write code); everything else is usually consolidatable.
+The target is ≤ 10 turns for any job type. Below 5 is achievable for straightforward implementation tasks. Turns 1–3 are almost always judgment (read ticket, read code, write code); everything else is usually consolidatable.
 
 This pattern also improves reliability. A script that `set -euo pipefail`s fails fast with a clear message. A model that encounters an error in the middle of a multi-step bash block may narrate around it or retry in ways that leave the repo in a partial state.
