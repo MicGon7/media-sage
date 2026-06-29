@@ -6,15 +6,11 @@ RUN apk add --no-cache \
     bash \
     curl \
     git \
-    nodejs \
-    npm \
     openssl \
     python3 \
     py3-pip \
-    && npm install -g @anthropic-ai/claude-code@2.1.139 \
     && apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community github-cli
 
-ENV DISABLE_AUTOUPDATER=1
 ENV PYTHONUNBUFFERED=1
 
 RUN adduser -D -s /bin/bash agent
@@ -24,7 +20,6 @@ WORKDIR /home/agent
 COPY --chown=agent:agent orchestrator/entrypoint-common.sh entrypoint-common.sh
 COPY --chown=agent:agent orchestrator/lite-entrypoint.sh entrypoint.sh
 COPY --chown=agent:agent orchestrator/get-github-token.py get-github-token.py
-COPY --chown=agent:agent .claude/commands/ /home/agent/.claude/commands/
 COPY --chown=agent:agent scripts/ /home/agent/scripts/
 RUN chmod +x entrypoint.sh /home/agent/scripts/*.sh
 

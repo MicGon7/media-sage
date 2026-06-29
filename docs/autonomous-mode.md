@@ -37,7 +37,6 @@ Current skills:
 - `/conflict-resolution-work` — rebase a branch ejected from the merge queue and re-request review
 - `/pr-review-work` — respond to a PR review comment: fix code (or explain why not), push, re-request review
 - `/pr-comment-work` — answer a conversational PR comment via a reply; no code push
-- `/judge-work` — review a PR's diff against its Jira AC and post a structured judgment comment
 - `/pipeline-test` — create and execute a smoke test ticket that bumps a version counter in SmokeTest.kt
 
 ## Autonomous ticket requirements
