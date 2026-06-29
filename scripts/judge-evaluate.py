@@ -11,6 +11,8 @@ import os
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 
 fetch_output = sys.stdin.read()
 
@@ -61,26 +63,22 @@ body = json.dumps({
 
 start_ms = int(time.time() * 1000)
 
-result = subprocess.run(
-    [
-        "curl", "-sf", "-X", "POST",
-        f"{base_url}/v1/messages",
-        "-H", f"x-api-key: {auth_token}",
-        "-H", "Content-Type: application/json",
-        "-H", "anthropic-version: 2023-06-01",
-        "-d", body,
-    ],
-    capture_output=True,
-    text=True,
+req = urllib.request.Request(
+    f"{base_url}/v1/messages",
+    data=body.encode(),
+    headers={
+        "x-api-key": auth_token,
+        "Content-Type": "application/json",
+        "anthropic-version": "2023-06-01",
+    },
+    method="POST",
 )
 
-if result.returncode != 0:
-    print(f"ERROR: Anthropic API call failed: {result.stderr}", file=sys.stderr)
-    sys.exit(1)
-
-response = json.loads(result.stdout)
-if "error" in response:
-    print(f"ERROR: Anthropic API error: {response['error']}", file=sys.stderr)
+try:
+    with urllib.request.urlopen(req) as resp:
+        response = json.loads(resp.read())
+except urllib.error.HTTPError as e:
+    print(f"ERROR: Anthropic API error {e.code}: {e.read().decode()}", file=sys.stderr)
     sys.exit(1)
 
 verdict = response["content"][0]["text"].strip()
