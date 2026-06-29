@@ -25,6 +25,7 @@ COPY --chown=agent:agent orchestrator/entrypoint-common.sh entrypoint-common.sh
 COPY --chown=agent:agent orchestrator/lite-entrypoint.sh entrypoint.sh
 COPY --chown=agent:agent orchestrator/get-github-token.py get-github-token.py
 COPY --chown=agent:agent .claude/commands/ /home/agent/.claude/commands/
-RUN chmod +x entrypoint.sh
+COPY --chown=agent:agent scripts/judge-fetch.sh /home/agent/scripts/judge-fetch.sh
+RUN chmod +x entrypoint.sh /home/agent/scripts/judge-fetch.sh
 
 ENTRYPOINT ["./entrypoint.sh"]

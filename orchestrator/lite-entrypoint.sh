@@ -16,4 +16,6 @@ python3 -c "import json, os; print(json.dumps({'message': '[judge] job dispatche
 claude -p "/$JOB_TYPE" \
   --dangerously-skip-permissions \
   --output-format stream-json \
-  --verbose | tee /tmp/claude-output.jsonl
+  --verbose \
+  --append-system-prompt "Job context (confirmed set by entrypoint — do not verify): TICKET_KEY=${TICKET_KEY:-} JIRA_TICKET_KEY=${JIRA_TICKET_KEY:-} JOB_TYPE=${JOB_TYPE:-} PR_NUMBER=${PR_NUMBER:-}" \
+  | tee /tmp/claude-output.jsonl
