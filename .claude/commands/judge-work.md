@@ -2,48 +2,78 @@
 
 | Step | Type | Notes |
 |---|---|---|
-| curl Jira + extract AC | Mechanical | Deterministic fetch |
-| Evaluate diff against AC | Judgment | Requires reading and interpreting code |
-| Post PR review comment | Mechanical | Single gh CLI call after judgment |
-| Write /tmp/jira_comment.txt | Judgment | Summarizing the verdict |
-
-**Shared comment/curl script assessment:** The PR review comment is a single `gh pr review` call that always follows the eval step. Wrapping it in a script saves zero turns — the model still needs a turn to compose the verdict body. No consolidation opportunity.
-
-**MS-357 rule:** `scripts/worker-*.sh` must never appear in a ticket's "Relevant files" section.
+| `judge-fetch.sh` | Mechanical | Single script: PR metadata + Jira AC + diff signals |
+| Evaluate all verdict dimensions | Judgment | AC compliance, test coverage, regression surface, PR accuracy |
+| Post PR comment + write jira_comment.txt | Mechanical | Parallel tool calls — no dependency on each other |
 
 **Never emit a text-only turn.** Each turn must contain at least one tool call. Do not announce what you are about to do — proceed directly to action.
 
 ---
 
-1. Read `$PR_NUMBER` and `$TICKET_KEY` from env. If `$PR_NUMBER` is unset or empty, fall back to: `gh pr list --state open --search "head:feature/$TICKET_KEY" --json number,url,headRefName --limit 1`.
-2. In a single parallel turn, issue both of the following tool calls:
-   - **Fetch Jira AC:** `curl -s -u "$JIRA_BOT_EMAIL:$JIRA_BOT_API_TOKEN" "https://media-sage.atlassian.net/rest/api/3/issue/$TICKET_KEY"`
-   - **Fetch PR diff:** `gh pr diff <pr-number>`
-3. Evaluate the diff against each acceptance criteria item independently. Only verdict on items that are verifiable from the diff or codebase state — skip any AC items that are CI gates (e.g. "Detekt passes", "tests pass", "PR targets main"). For each diff-verifiable item, determine:
-   - ✅ Met — the diff clearly satisfies the criterion. Include a one-line explanation of what in the diff satisfies it.
-   - ❌ Not met — the diff does not address the criterion, or introduces a regression. You MUST include a one-line explanation of what is missing or wrong. "Not met" with no reason is not a valid verdict.
-   - ⚠️ Partial — the criterion is partially addressed but something is missing. Include what is present and what is missing.
-4. In a single turn, issue both of the following tool calls in parallel — they have no dependency on each other:
+**Hard requirement:** If `$PR_NUMBER` is unset or empty, exit immediately — do NOT fall back to `gh pr list`:
+```bash
+[[ -z "${PR_NUMBER:-}" ]] && { echo "ERROR: PR_NUMBER is required" >&2; exit 1; }
+```
+The orchestrator always passes `PR_NUMBER` at dispatch. A missing value means a dispatch bug, not a reason to spend a recovery turn.
 
-   **a) Post a PR review comment** (NOT an approval or request-for-changes) with a structured verdict:
-   ```
-   gh pr review <pr-number> --comment --body "$(cat <<'EOF'
-   🤖 **Agent:** Judge verdict for $TICKET_KEY
+---
 
-   Evaluated PR diff against acceptance criteria from the original Jira ticket.
+**Turn 1 — fetch all inputs (one Bash call):**
+```bash
+./scripts/judge-fetch.sh "$PR_NUMBER"
+```
 
-   **Verdict per AC item:**
-   ✅ {ac item 1} — {one line explaining what in the diff satisfies it}
-   ❌ {ac item 2} — {one line explaining what is missing or wrong}
-   ⚠️ {ac item 3} — {one line explaining what is present and what is missing}
+This prints to stdout: PR title, branch, body, Jira AC, diff signals (test files present, shared infra files, all changed files), and full diff. Read everything from this result — no `cat` or `Read` calls needed before the verdict turn.
 
-   **Overall:** {PASS if all ✅ / FAIL if any ❌ / PARTIAL if any ⚠️}
+---
 
-   This verdict is informational. The human reviewer makes the final call.
-   EOF
-   )"
-   ```
+**Turn 2 — evaluate and deliver verdict:**
 
-   **b) Write `/tmp/jira_comment.txt`** — see the Jira comment file rule in CLAUDE.md Agent Guidelines. Do NOT post via curl or any Jira API — the entrypoint appends metrics and posts directly after you exit.
+Evaluate all dimensions from the fetch output. Then issue both tool calls in parallel in this same turn:
 
-5. Do NOT approve the PR, request changes, or merge. Post a comment only — the human reviewer acts on the verdict.
+**a) Post a PR review comment** (NOT an approval or request-for-changes):
+```
+gh pr review <pr-number> --comment --body "$(cat <<'EOF'
+🤖 **Agent:** Judge verdict for {JIRA_KEY}
+
+**AC Compliance:**
+✅/❌/⚠️ {ac item} — {one-line explanation of what in the diff satisfies or violates it}
+
+**Test coverage:** ✅/❌/⚠️ {did the diff include tests for any new behavior introduced?}
+
+**Regression surface:** ✅ No shared infra changed / ⚠️ {filename} — {explain what this file is shared with and why it warrants review}
+
+**PR description accuracy:** ✅ Accurate / ❌/⚠️ {what is missing or misleading vs the actual diff}
+
+**Overall:** PASS / FAIL / PARTIAL
+
+This verdict is informational. The human reviewer makes the final call.
+EOF
+)"
+```
+
+Verdict rules per dimension:
+- **AC item**: ✅ Met (with diff evidence) | ❌ Not met (must name what is missing) | ⚠️ Partial (what is present, what is missing). Skip items that are CI gates (Detekt passes, tests pass, PR targets main) — those are not diff-verifiable.
+- **Test coverage**: ✅ if `judge-fetch` reported test files in the diff covering new behavior | ❌ if implementation added with no test changes | ⚠️ if test files changed but scope is unclear from diff alone
+- **Regression surface**: Pull directly from the fetch output's "Shared infra files" list. ✅ if empty. ⚠️ if any shared infra files changed — name each file and explain the shared usage.
+- **PR description accuracy**: ✅ if the PR body describes what the diff actually does | ❌ if the body claims changes not present in the diff | ⚠️ if description is vague or omits significant changes
+
+**b) Write `/tmp/jira_comment.txt`** (plain text only — no `**bold**` or markdown):
+```
+🤖 Agent: Judge verdict for {JIRA_KEY}
+
+Task: Judge verdict on PR #{PR_NUMBER}
+
+AC compliance:
+✅/❌/⚠️ {ac item} — {verdict}
+
+Test coverage: ✅/❌/⚠️ {result}
+Regression surface: ✅/⚠️ {result}
+PR description: ✅/❌/⚠️ {result}
+
+Overall: PASS / FAIL / PARTIAL
+```
+
+Do NOT post via curl or Jira API — the entrypoint appends metrics and posts directly after you exit.
+
+**Do NOT** approve the PR, request changes, or merge. Comment only — the human reviewer acts on the verdict.
