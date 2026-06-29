@@ -1,3 +1,4 @@
+---
 ## Job-specific rules
 
 **Jira comment file:** Write a plain-text summary to `/tmp/jira_comment.txt` before exiting. Do NOT post via the Jira REST API — the entrypoint appends metrics and posts it directly after you exit. Use this exact format (plain text only — no `**bold**` or other markdown):
@@ -72,6 +73,8 @@ If the work follows an established pattern, makes a trivial change, or could hav
 - File paths in Relevant Files are authoritative. Call `Read` on that path directly — no `find`, `grep`, `Glob`, or any other search to locate a file whose path you already have.
 - Never add a verification step between two productive steps. If a command fails, the non-zero exit code stops the job. That is the only signal you need.
 
+**Tests gate failure means a real test broke — fix it before shipping.** If `worker-ship.sh` exits non-zero due to a failing test, read the test output, identify the root cause, and fix the implementation or the test. Do not re-run the ship script in a loop hoping the result changes, and do not skip or comment out the failing test. A non-zero exit from the quality gate is a hard stop: resolve the failure, then re-run `worker-ship.sh`.
+
 ---
 
 1. The ticket is already In Progress — do not transition it again. Fetch the ticket and set up the branch in one call:
@@ -118,4 +121,3 @@ If the work follows an established pattern, makes a trivial change, or could hav
    ./scripts/worker-ship.sh "$TICKET_KEY" "MS-{TICKET_KEY}: Description"
    ```
    `worker-ship.sh` runs quality gates first (exits non-zero on failure), then commits, pushes, opens the PR, writes `/tmp/jira_comment.txt`, updates Jira AC checkboxes, and transitions the ticket to In Review.
-
