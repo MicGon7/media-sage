@@ -1,6 +1,8 @@
 package com.mediasage.scripts
 
-import com.mediasage.agentruntime.evaluation.scoring.ClaudeDecisionScorer
+import com.mediasage.agentruntime.AnthropicClient
+import com.mediasage.agentruntime.evaluation.scoring.DecisionScorer
+import com.mediasage.agentruntime.evaluation.scoring.ScoringService
 import org.jetbrains.exposed.sql.Database
 import com.mediasage.pipeline.core.DecisionScoresTable
 import com.mediasage.pipeline.core.TranscriptsTable
@@ -32,7 +34,7 @@ fun main(args: Array<String>) {
     if (jobIds.isEmpty()) { println("Nothing to backfill."); return }
 
     val httpClient = buildHttpClient()
-    val (success, failure) = runScoring(jobIds, ClaudeDecisionScorer(httpClient, authToken, baseUrl))
+    val (success, failure) = runScoring(jobIds, ScoringService(AnthropicClient(httpClient, authToken, baseUrl)))
     httpClient.close()
 
     println("\n=== Complete ===")
@@ -46,7 +48,7 @@ private fun runDryRun(jobIds: List<UUID>) {
     jobIds.forEach { println("  $it") }
 }
 
-private fun runScoring(jobIds: List<UUID>, scorer: ClaudeDecisionScorer): Pair<Int, Int> {
+private fun runScoring(jobIds: List<UUID>, scorer: DecisionScorer): Pair<Int, Int> {
     var successCount = 0
     var failureCount = 0
     runBlocking {

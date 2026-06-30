@@ -1,6 +1,7 @@
 package com.mediasage.agentruntime.feedback
 
-import com.mediasage.agentruntime.evaluation.scoring.ClaudeDecisionScorer
+import com.mediasage.agentruntime.AnthropicClient
+import com.mediasage.agentruntime.evaluation.scoring.ScoringService
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -15,7 +16,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class ClaudeDecisionScorerTest {
+class ScoringServiceTest {
 
     @Test
     fun retriesOnTransientFailureAndSucceeds() = runTest {
@@ -36,7 +37,7 @@ class ClaudeDecisionScorerTest {
                 )
             }
         }
-        val scorer = ClaudeDecisionScorer(mockClient(engine), "test-token", "http://test")
+        val scorer = ScoringService(AnthropicClient(mockClient(engine), "test-token", "http://test"))
 
         val scores = scorer.callClaudeWithRetry("some transcript")
 
@@ -60,7 +61,7 @@ class ClaudeDecisionScorerTest {
                 headers = headersOf("Content-Type", ContentType.Application.Json.toString()),
             )
         }
-        val scorer = ClaudeDecisionScorer(mockClient(engine), "test-token", "http://test")
+        val scorer = ScoringService(AnthropicClient(mockClient(engine), "test-token", "http://test"))
 
         assertFailsWith<IllegalStateException> {
             scorer.callClaudeWithRetry("some transcript")

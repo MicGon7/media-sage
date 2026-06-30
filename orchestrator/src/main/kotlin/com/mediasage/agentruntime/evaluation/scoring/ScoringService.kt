@@ -1,22 +1,15 @@
 package com.mediasage.agentruntime.evaluation.scoring
 
 import com.mediasage.agentruntime.AnthropicApi
+import com.mediasage.agentruntime.AnthropicClient
 import com.mediasage.pipeline.core.DecisionScoresTable
 import com.mediasage.pipeline.core.TranscriptsTable
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.header
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
@@ -30,9 +23,8 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
 import java.util.UUID
 
-private val log = LoggerFactory.getLogger(ClaudeDecisionScorer::class.java)
+private val log = LoggerFactory.getLogger(ScoringService::class.java)
 
-private const val ANTHROPIC_API_DEFAULT_BASE_URL = "https://api.anthropic.com"
 private const val MAX_ATTEMPTS = 3
 private val RETRY_DELAYS_MS = listOf(1_000L, 2_000L)
 
@@ -80,17 +72,13 @@ private val TOOL_CHOICE: JsonObject = buildJsonObject {
     put("name", "record_scores")
 }
 
-class ClaudeDecisionScorer(
-    private val httpClient: HttpClient,
-    private val authToken: String,
-    baseUrl: String = ANTHROPIC_API_DEFAULT_BASE_URL,
+class ScoringService(
+    private val anthropicClient: AnthropicClient,
     private val model: String = "claude-sonnet-4-6",
 ) : DecisionScorer {
 
-    private val messagesUrl = "${baseUrl.trimEnd('/')}/v1/messages"
-
     private val rubric: String by lazy {
-        ClaudeDecisionScorer::class.java
+        ScoringService::class.java
             .getResourceAsStream("/rubrics/decision-scoring.md")
             ?.bufferedReader()
             ?.readText()
@@ -147,17 +135,8 @@ class ClaudeDecisionScorer(
             tools = listOf(SCORING_TOOL),
             toolChoice = TOOL_CHOICE,
         )
-        val httpResponse = httpClient.post(messagesUrl) {
-            contentType(ContentType.Application.Json)
-            header("Authorization", "Bearer $authToken")
-            header("anthropic-version", AnthropicApi.VERSION)
-            setBody(request)
-        }
-        if (!httpResponse.status.isSuccess()) {
-            val body = httpResponse.bodyAsText()
-            error("Claude API error (${httpResponse.status}): $body")
-        }
-        val claudeResponse = httpResponse.body<ClaudeResponse>()
+        val responseText = anthropicClient.post(Json.encodeToString(request))
+        val claudeResponse = responseJson.decodeFromString<ClaudeResponse>(responseText)
         val toolUseBlock = claudeResponse.content.firstOrNull { it.type == "tool_use" }
             ?: error("No tool_use block in Claude response")
         val input = toolUseBlock.input

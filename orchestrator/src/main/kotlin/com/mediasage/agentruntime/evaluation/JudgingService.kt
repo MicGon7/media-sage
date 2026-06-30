@@ -1,39 +1,30 @@
 package com.mediasage.agentruntime.evaluation
 
 import com.mediasage.agentruntime.AnthropicApi
+import com.mediasage.agentruntime.AnthropicClient
 import com.mediasage.agentruntime.feedback.github.GitHubApiClient
 import com.mediasage.agentruntime.feedback.github.PrDetails
 import com.mediasage.agentruntime.service.JiraCommentPoster
 import com.mediasage.agentruntime.service.JiraTicketFetcher
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.header
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import io.ktor.http.isSuccess
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger(JudgingService::class.java)
 
+private val responseJson = Json { ignoreUnknownKeys = true }
+
 class JudgingService(
-    private val httpClient: HttpClient,
+    private val anthropicClient: AnthropicClient,
     private val githubApiClient: GitHubApiClient,
     private val jiraTicketFetcher: JiraTicketFetcher,
     private val jiraCommentPoster: JiraCommentPoster,
-    private val authToken: String,
-    baseUrl: String,
     private val model: String,
     private val repoOwner: String,
     private val repoName: String,
 ) : AcComplianceEvaluator {
-
-    private val messagesUrl = "${baseUrl.trimEnd('/')}/v1/messages"
 
     private val systemPromptTemplate: String by lazy {
         JudgingService::class.java.getResourceAsStream("/prompts/judge-evaluation.md")
@@ -62,17 +53,8 @@ class JudgingService(
         val systemPrompt = systemPromptTemplate
             .replace("{TICKET_KEY}", ticketKey)
             .replace("{PR_NUMBER}", prNumber.toString())
-        val request = buildJsonBody(systemPrompt, fetchOutput)
-        val response = httpClient.post(messagesUrl) {
-            contentType(ContentType.Application.Json)
-            header("Authorization", "Bearer $authToken")
-            header("anthropic-version", AnthropicApi.VERSION)
-            setBody(request)
-        }
-        check(response.status.isSuccess()) {
-            "Claude API error (${response.status}): ${response.bodyAsText()}"
-        }
-        val claudeResponse = response.body<ClaudeResponse>()
+        val responseText = anthropicClient.post(buildJsonBody(systemPrompt, fetchOutput))
+        val claudeResponse = responseJson.decodeFromString<ClaudeResponse>(responseText)
         return claudeResponse.content.firstOrNull { it.type == "text" }?.text?.trim()
             ?: error("No text block in Claude response")
     }
