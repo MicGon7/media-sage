@@ -6,7 +6,7 @@ plugins {
 }
 
 application {
-    mainClass.set("com.mediasage.orchestrator.ApplicationKt")
+    mainClass.set("com.mediasage.agentruntime.ApplicationKt")
 }
 
 dependencies {
