@@ -8,7 +8,7 @@ orchestrator/src/main/kotlin/com/mediasage/agentruntime/
 ├── di/                  — AgentConfig, AgentModule
 ├── db/                  — AgentDatabase, JobsTable, JobRepository (Supabase Postgres)
 ├── evaluation/          — AcComplianceEvaluator, JudgingService, NoOpAcComplianceEvaluator
-│   └── scoring/         — DecisionScorer, ClaudeDecisionScorer, NoOpDecisionScorer
+│   └── scoring/         — DecisionScorer, ScoringService, NoOpScoringService
 ├── feedback/            — PatternDetector, GitHubApiClient, FeedbackPrService
 ├── plugins/             — ContentNegotiation, CallLogging, StatusPages
 ├── routes/              — JiraWebhookRoutes, GitHubWebhookRoutes, PubSubWebhookRoutes

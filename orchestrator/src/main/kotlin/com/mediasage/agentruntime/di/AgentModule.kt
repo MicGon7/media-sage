@@ -1,14 +1,15 @@
 package com.mediasage.agentruntime.di
 
+import com.mediasage.agentruntime.AnthropicClient
 import com.mediasage.agentruntime.db.AgentDatabase
 import com.mediasage.agentruntime.feedback.detector.DatabasePatternDetector
 import com.mediasage.agentruntime.feedback.detector.PatternDetector
 import com.mediasage.agentruntime.evaluation.AcComplianceEvaluator
 import com.mediasage.agentruntime.evaluation.JudgingService
 import com.mediasage.agentruntime.evaluation.NoOpAcComplianceEvaluator
-import com.mediasage.agentruntime.evaluation.scoring.ClaudeDecisionScorer
 import com.mediasage.agentruntime.evaluation.scoring.DecisionScorer
-import com.mediasage.agentruntime.evaluation.scoring.NoOpDecisionScorer
+import com.mediasage.agentruntime.evaluation.scoring.NoOpScoringService
+import com.mediasage.agentruntime.evaluation.scoring.ScoringService
 import com.mediasage.agentruntime.feedback.github.GitHubApiClient
 import com.mediasage.agentruntime.feedback.github.GitHubAppClient
 import com.mediasage.agentruntime.feedback.pr.FeedbackPrService
@@ -62,15 +63,17 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
 }
 
 private fun feedbackModule(config: AgentConfig) = module {
-    single<DecisionScorer> { buildDecisionScorer(config, get()) }
     single<PatternDetector> { DatabasePatternDetector() }
     if (isFeedbackEnabled(config)) {
         log.info("Feedback features enabled — repo={}/{}", config.githubRepoOwner, config.githubRepoName)
+        single { AnthropicClient(get(), config.claudeAuthToken, config.claudeBaseUrl) }
+        single<DecisionScorer> { ScoringService(get(), config.claudeModel) }
         single<GitHubApiClient> { buildGitHubApiClient(config, get()) }
         single { buildFeedbackPrService(config, get(), get(), get()) }
         single<AcComplianceEvaluator> { buildJudgingService(config, get(), get(), get(), get()) }
     } else {
         log.info("Feedback features disabled — GITHUB_APP_ID or ANTHROPIC_AUTH_TOKEN not configured")
+        single<DecisionScorer> { NoOpScoringService() }
         single<AcComplianceEvaluator> { NoOpAcComplianceEvaluator() }
     }
 }
@@ -80,20 +83,6 @@ private fun buildJiraCommentPoster(config: AgentConfig, httpClient: HttpClient, 
         JiraApiService(httpClient, config.jiraCloudId, config.jiraBotEmail, config.jiraBotApiToken)
     } else {
         fallback
-    }
-
-private fun buildDecisionScorer(config: AgentConfig, httpClient: HttpClient): DecisionScorer =
-    if (config.claudeAuthToken.isNotBlank()) {
-        log.info("Decision scoring enabled — baseUrl={}", config.claudeBaseUrl)
-        ClaudeDecisionScorer(
-            httpClient = httpClient,
-            authToken = config.claudeAuthToken,
-            baseUrl = config.claudeBaseUrl,
-            model = config.claudeModel,
-        )
-    } else {
-        log.info("Decision scoring disabled — ANTHROPIC_AUTH_TOKEN not set")
-        NoOpDecisionScorer()
     }
 
 private fun buildGitHubApiClient(config: AgentConfig, httpClient: HttpClient): GitHubApiClient =
@@ -118,17 +107,15 @@ private fun buildFeedbackPrService(config: AgentConfig, httpClient: HttpClient, 
 
 private fun buildJudgingService(
     config: AgentConfig,
-    httpClient: HttpClient,
+    anthropicClient: AnthropicClient,
     githubApiClient: GitHubApiClient,
     jiraTicketFetcher: JiraTicketFetcher,
     jiraCommentPoster: JiraCommentPoster,
 ) = JudgingService(
-    httpClient = httpClient,
+    anthropicClient = anthropicClient,
     githubApiClient = githubApiClient,
     jiraTicketFetcher = jiraTicketFetcher,
     jiraCommentPoster = jiraCommentPoster,
-    authToken = config.claudeAuthToken,
-    baseUrl = config.claudeBaseUrl,
     model = config.claudeModel,
     repoOwner = config.githubRepoOwner,
     repoName = config.githubRepoName,
