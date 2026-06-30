@@ -3,14 +3,16 @@
 ## Structure
 
 ```
-orchestrator/src/main/kotlin/com/mediasage/orchestrator/
+orchestrator/src/main/kotlin/com/mediasage/agentruntime/
 ├── Application.kt       — Entry point, Koin setup (port 8081)
 ├── di/                  — AgentConfig, AgentModule
 ├── db/                  — AgentDatabase, JobsTable, JobRepository (Supabase Postgres)
+├── evaluation/          — AcComplianceEvaluator, JudgingService, NoOpAcComplianceEvaluator
+│   └── scoring/         — DecisionScorer, ClaudeDecisionScorer, NoOpDecisionScorer
+├── feedback/            — PatternDetector, GitHubApiClient, FeedbackPrService
 ├── plugins/             — ContentNegotiation, CallLogging, StatusPages
-├── routes/              — JiraWebhookRoutes, GitHubWebhookRoutes
-├── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiService
-└── tools/               — ToolDefinitions (Anthropic orchestrator-worker pattern)
+├── routes/              — JiraWebhookRoutes, GitHubWebhookRoutes, PubSubWebhookRoutes
+└── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiService
 ```
 
 ## Prompts
@@ -74,9 +76,10 @@ the `result` event's `modelUsage` key alongside the other metrics.
 | `ticket-work` | `JOB_TYPE`, `JOB_ID`, `TICKET_KEY` |
 | `pr-review-work` | `JOB_TYPE`, `JOB_ID`, `PR_NUMBER` |
 | `conflict-resolution-work` | `JOB_TYPE`, `JOB_ID`, `PR_NUMBER` |
-| `judge-work` | `JOB_TYPE`, `JOB_ID`, `TICKET_KEY`, `PR_NUMBER` |
 
 The worker entrypoint runs `claude -p "/$JOB_TYPE"` — the skill is the entry point and owns all framing and context fetching.
+
+AC compliance evaluation (`judge-work`) is no longer a Cloud Run Job. It runs inline inside the orchestrator as `JudgingService` after a successful ticket-work Pub/Sub completion event.
 
 ## Deployment (Container — Production)
 

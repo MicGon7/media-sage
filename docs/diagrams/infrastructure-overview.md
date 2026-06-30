@@ -11,7 +11,7 @@ graph TB
         composeApp[":composeApp<br/>Compose Multiplatform UI"]
         shared[":shared<br/>Business logic · Room · Ktor Client"]
         server[":appServer<br/>Ktor API Server"]
-        agent[":orchestrator<br/>Orchestrator Server"]
+        agent[":orchestrator<br/>AgentRuntime Server"]
     end
 
     subgraph Railway["Railway"]
@@ -22,7 +22,6 @@ graph TB
         Orchestrator["Cloud Run Service<br/>media-sage-orchestrator<br/>:orchestrator · port 8081"]
         subgraph Jobs["Cloud Run Jobs"]
             WorkerJob["worker<br/>Dockerfile.worker<br/>Claude Code + Android SDK"]
-            LiteJobs["judge · comment · conflict<br/>Dockerfile.lite<br/>Claude Code only"]
         end
         PubSub["Pub/Sub<br/>cloud-run-job-completions"]
     end
@@ -51,16 +50,13 @@ graph TB
 
     agent --> Orchestrator
     Orchestrator -->|dispatch worker job| WorkerJob
-    Orchestrator -->|dispatch lite job| LiteJobs
     Orchestrator --> Supabase
     WorkerJob -->|completion event| PubSub
-    LiteJobs -->|completion event| PubSub
     PubSub -->|push webhook| Orchestrator
     WorkerJob --> Claude
-    LiteJobs --> Claude
     WorkerJob -->|git + gh CLI| JiraGH
-    LiteJobs -->|git + gh CLI| JiraGH
-    Orchestrator -->|post Jira comment| JiraGH
+    Orchestrator -->|post Jira comment + verdict| JiraGH
+    Orchestrator -->|JudgingService| Claude
 ```
 
 ## Module responsibilities
