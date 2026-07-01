@@ -96,19 +96,23 @@ object AgentDatabase {
         """.trimIndent()
     )
 
-    private fun org.jetbrains.exposed.sql.Transaction.createJobDurationsView() = exec(
-        """
-        CREATE OR REPLACE VIEW job_durations AS
-        SELECT
-          job_id,
-          ticket_key,
-          status,
-          EXTRACT(EPOCH FROM (completed_at - started_at))::int AS duration_seconds,
-          created_at,
-          started_at,
-          completed_at
-        FROM jobs
-        WHERE started_at IS NOT NULL
-        """.trimIndent()
-    )
+    private fun org.jetbrains.exposed.sql.Transaction.createJobDurationsView() {
+        // DROP + CREATE instead of CREATE OR REPLACE — Postgres forbids OR REPLACE when columns are removed
+        exec("DROP VIEW IF EXISTS job_durations")
+        exec(
+            """
+            CREATE VIEW job_durations AS
+            SELECT
+              job_id,
+              ticket_key,
+              status,
+              EXTRACT(EPOCH FROM (completed_at - started_at))::int AS duration_seconds,
+              created_at,
+              started_at,
+              completed_at
+            FROM jobs
+            WHERE started_at IS NOT NULL
+            """.trimIndent()
+        )
+    }
 }
