@@ -3,7 +3,7 @@ FROM eclipse-temurin:21-jdk-jammy
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl git python3 python3-pip && \
+    apt-get install -y --no-install-recommends curl git python3 && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
@@ -20,19 +20,16 @@ RUN useradd -m -s /bin/bash agent
 USER agent
 WORKDIR /home/agent
 
-# Pre-bake the Gradle distribution, internal API jars, and all module dependencies
-# into the image layer at build time. Covers :orchestrator, :appServer, :composeApp, and :shared.
+# Pre-bake the Gradle distribution and JVM module dependencies into the image layer
+# at build time. Covers :orchestrator and :appServer only.
 #
-# Why single-stage (no Android SDK or Kotlin/Native toolchain needed):
-#   - AGP resolves :composeApp dependencies without the Android SDK at config time
-#   - :shared has iosArm64/iosSimulatorArm64 targets but the dependencies task only
-#     downloads the kotlin-native-prebuilt Maven artifact (~245 MB) to .gradle/caches;
-#     it does NOT extract the 3 GB .konan toolchain directory
-#   - At runtime, if Gradle needs to configure native targets it extracts from the
-#     cached artifact (fast local I/O) rather than downloading over the network
+# :composeApp and :shared are excluded because:
+#   - run-affected-tests.sh explicitly skips both (no Android/iOS SDK in Cloud Run)
+#   - :composeApp/:shared dependency resolution downloads kotlin-native-prebuilt (~245 MB)
+#     which is never used at worker runtime
 #
-# At runtime the worker makes zero Gradle downloads; everything resolves from
-# the image layer on the local container filesystem.
+# At runtime the worker makes zero Gradle downloads for :orchestrator/:appServer;
+# everything resolves from the image layer on the local container filesystem.
 COPY --chown=agent:agent gradlew gradlew
 COPY --chown=agent:agent gradle/ gradle/
 COPY --chown=agent:agent gradle.properties gradle.properties
@@ -44,7 +41,7 @@ COPY --chown=agent:agent composeApp/build.gradle.kts composeApp/build.gradle.kts
 COPY --chown=agent:agent shared/build.gradle.kts shared/build.gradle.kts
 RUN chmod +x gradlew && \
     ./gradlew help --no-daemon && \
-    ./gradlew :orchestrator:dependencies :appServer:dependencies :composeApp:dependencies :shared:dependencies \
+    ./gradlew :orchestrator:dependencies :appServer:dependencies \
         --no-daemon --configure-on-demand && \
     rm -f gradlew && rm -rf gradle
 
