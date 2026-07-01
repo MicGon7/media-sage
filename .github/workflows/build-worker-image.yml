@@ -49,3 +49,5 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:latest
+          provenance: false
+          sbom: false
