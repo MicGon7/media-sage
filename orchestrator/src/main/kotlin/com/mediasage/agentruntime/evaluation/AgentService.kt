@@ -1,5 +1,5 @@
 package com.mediasage.agentruntime.evaluation
 
-interface AcComplianceEvaluator {
+interface AgentService {
     suspend fun evaluate(ticketKey: String, prNumber: Int)
 }

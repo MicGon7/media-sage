@@ -7,12 +7,12 @@ orchestrator/src/main/kotlin/com/mediasage/agentruntime/
 ├── Application.kt       — Entry point, Koin setup (port 8081)
 ├── di/                  — AgentConfig, AgentModule
 ├── db/                  — AgentDatabase, JobsTable, JobRepository (Supabase Postgres)
-├── evaluation/          — AcComplianceEvaluator, JudgingService, NoOpAcComplianceEvaluator
+├── evaluation/          — AgentService, ClaudeAgentService, NoOpAgentService
 │   └── scoring/         — DecisionScorer, ScoringService, NoOpScoringService
 ├── feedback/            — PatternDetector, GitHubApiClient, FeedbackPrService
 ├── plugins/             — ContentNegotiation, CallLogging, StatusPages
 ├── routes/              — JiraWebhookRoutes, GitHubWebhookRoutes, PubSubWebhookRoutes
-└── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiService
+└── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiClient
 ```
 
 ## Prompts
@@ -21,7 +21,7 @@ System prompts must never be hardcoded in Kotlin. Define them in `src/main/resou
 
 ## Dependency Injection
 
-`agentModule(config, scope)` wires HttpClient, AgentLaunchService, JiraApiService, and CloudRunJobsClient via Koin. Define modules per feature, not per layer.
+`agentModule(config, scope)` wires HttpClient, AgentLaunchService, JiraApiClient, and CloudRunJobsClient via Koin. Define modules per feature, not per layer.
 
 **Interface bindings in tests:** When a route resolves a type via `inject<SomeInterface>()`, every test Koin module that exercises that route must include `single<SomeInterface> { get<ConcreteImpl>() }`. Missing this binding causes the inject to fail at the call site — not at startup — so tests that never reach the inject (e.g. early-return paths) pass silently while tests that do reach it return 500 instead of the expected status. After introducing a new interface in `AgentModule`, search all `*RouteTest.kt` files for manual Koin `module { }` blocks and add the interface binding to each.
 
@@ -79,7 +79,7 @@ the `result` event's `modelUsage` key alongside the other metrics.
 
 The worker entrypoint runs `claude -p "/$JOB_TYPE"` — the skill is the entry point and owns all framing and context fetching.
 
-AC compliance evaluation (`judge-work`) is no longer a Cloud Run Job. It runs inline inside the orchestrator as `JudgingService` after a successful ticket-work Pub/Sub completion event.
+AC compliance evaluation (`judge-work`) is no longer a Cloud Run Job. It runs inline inside the orchestrator as `ClaudeAgentService` after a successful ticket-work Pub/Sub completion event.
 
 ## Deployment (Container — Production)
 

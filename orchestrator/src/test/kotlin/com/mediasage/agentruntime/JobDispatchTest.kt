@@ -7,10 +7,11 @@ import com.mediasage.pipeline.core.WorkerMetrics
 import com.mediasage.agentruntime.service.AgentLaunchService
 import com.mediasage.agentruntime.service.CloudRunDispatch
 import com.mediasage.agentruntime.service.JobDispatcher
-import com.mediasage.agentruntime.service.JiraCommentPoster
-import com.mediasage.agentruntime.service.JiraTicketStatusChecker
+import com.mediasage.agentruntime.service.JiraApiClient
+import io.ktor.client.*
+import io.ktor.client.engine.mock.*
+import io.ktor.http.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -24,7 +25,7 @@ import kotlin.test.assertTrue
  * Unit tests for Cloud Run dispatch dedup logic and INTERRUPTED recovery.
  *
  * Strategy: fake implementations of [JobRegistry], [JobDispatcher], and
- * [JiraCommentPoster] replace all I/O. Tests use [runTest] + [advanceUntilIdle]
+ * [FakeJiraApiClient] replace all I/O. Tests use [runTest] + [advanceUntilIdle]
  * to drive the coroutines inside [AgentLaunchService] to completion before asserting.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -56,10 +57,6 @@ class JobDispatchTest {
             runningJobs.firstOrNull { it.ticketKey == ticketKey }
     }
 
-    private class FakeJiraStatusChecker(private val status: String?) : JiraTicketStatusChecker {
-        override suspend fun getTicketStatus(ticketKey: String) = status
-    }
-
     private class FakeJobDispatcher(private val recoverResult: Boolean = true) : JobDispatcher {
         val executions = mutableListOf<String>()
         val jobTypes = mutableListOf<String>()
@@ -80,11 +77,24 @@ class JobDispatchTest {
         }
     }
 
-    private class FakeJiraCommentPoster : JiraCommentPoster {
-        val comments = mutableListOf<Pair<String, String>>() // ticketKey to body
-
+    /**
+     * In-memory subclass of [JiraApiClient] for unit tests.
+     * Overrides all public methods with no-IO implementations so tests are not
+     * sensitive to coroutine dispatcher timing from real HTTP calls.
+     */
+    private class FakeJiraApiClient(
+        private val statusResponse: String? = null,
+        val comments: MutableList<String> = mutableListOf(),
+    ) : JiraApiClient(
+        httpClient = HttpClient(MockEngine { respond("", HttpStatusCode.OK) }),
+        cloudId = "test",
+        email = "test@test.com",
+        apiToken = "token",
+    ) {
+        override suspend fun getTicketStatus(ticketKey: String) = statusResponse
+        override suspend fun getTicketContent(ticketKey: String): String? = null
         override suspend fun addComment(ticketKey: String, body: String) {
-            comments.add(ticketKey to body)
+            comments.add(ticketKey)
         }
     }
 
@@ -93,14 +103,12 @@ class JobDispatchTest {
     private fun cloudRunService(
         registry: FakeJobRegistry,
         dispatcher: FakeJobDispatcher,
-        poster: FakeJiraCommentPoster = FakeJiraCommentPoster(),
-        jiraStatusChecker: JiraTicketStatusChecker? = null,
+        jiraApiClient: JiraApiClient? = null,
         scope: TestScope,
     ) = AgentLaunchService(
         scope = scope,
         cloudRun = CloudRunDispatch(dispatcher, registry),
-        jiraCommentPoster = poster,
-        jiraStatusChecker = jiraStatusChecker,
+        jiraApiClient = jiraApiClient,
     )
 
     // ── Dedup: RUNNING ────────────────────────────────────────────────────────
@@ -170,7 +178,7 @@ class JobDispatchTest {
             latestJob = JobRow(jobId, "MS-99", JobStatus.INTERRUPTED, null)
         }
         val dispatcher = FakeJobDispatcher()
-        val service = cloudRunService(registry, dispatcher, jiraStatusChecker = FakeJiraStatusChecker("In Review"), scope = this)
+        val service = cloudRunService(registry, dispatcher, FakeJiraApiClient(statusResponse = "In Review"), scope = this)
 
         service.launch("MS-99")
         advanceUntilIdle()
@@ -187,7 +195,7 @@ class JobDispatchTest {
             latestJob = JobRow(jobId, "MS-99", JobStatus.INTERRUPTED, null)
         }
         val dispatcher = FakeJobDispatcher()
-        val service = cloudRunService(registry, dispatcher, jiraStatusChecker = FakeJiraStatusChecker("Done"), scope = this)
+        val service = cloudRunService(registry, dispatcher, FakeJiraApiClient(statusResponse = "Done"), scope = this)
 
         service.launch("MS-99")
         advanceUntilIdle()
@@ -204,7 +212,7 @@ class JobDispatchTest {
             latestJob = JobRow(jobId, "MS-99", JobStatus.INTERRUPTED, null)
         }
         val dispatcher = FakeJobDispatcher()
-        val service = cloudRunService(registry, dispatcher, jiraStatusChecker = FakeJiraStatusChecker("In Progress"), scope = this)
+        val service = cloudRunService(registry, dispatcher, FakeJiraApiClient(statusResponse = "In Progress"), scope = this)
 
         service.launch("MS-99")
         advanceUntilIdle()
@@ -220,7 +228,7 @@ class JobDispatchTest {
             latestJob = JobRow(jobId, "MS-99", JobStatus.INTERRUPTED, null)
         }
         val dispatcher = FakeJobDispatcher()
-        val service = cloudRunService(registry, dispatcher, jiraStatusChecker = FakeJiraStatusChecker("To Do"), scope = this)
+        val service = cloudRunService(registry, dispatcher, FakeJiraApiClient(statusResponse = "To Do"), scope = this)
 
         service.launch("MS-99")
         advanceUntilIdle()
@@ -296,16 +304,16 @@ class JobDispatchTest {
             runningJobs = listOf(JobRow(jobId, "MS-99", JobStatus.RUNNING, null))
         }
         val dispatcher = FakeJobDispatcher()
-        val poster = FakeJiraCommentPoster()
-        val service = cloudRunService(registry, dispatcher, poster, scope = this)
+        val jiraClient = FakeJiraApiClient()
+        val service = cloudRunService(registry, dispatcher, jiraClient, scope = this)
 
         service.recoverInterruptedJobs()
         advanceUntilIdle()
 
         assertEquals(listOf(jobId), registry.interrupted)
         assertTrue(dispatcher.recoveries.isEmpty())
-        assertEquals(1, poster.comments.size)
-        assertEquals("MS-99", poster.comments[0].first)
+        assertEquals(1, jiraClient.comments.size)
+        assertEquals("MS-99", jiraClient.comments[0])
     }
 
     // ── recoverInterruptedJobs: execution gone on recovery ────────────────────
@@ -318,15 +326,15 @@ class JobDispatchTest {
             runningJobs = listOf(JobRow(jobId, "MS-99", JobStatus.RUNNING, executionName))
         }
         val dispatcher = FakeJobDispatcher(recoverResult = false) // execution not found
-        val poster = FakeJiraCommentPoster()
-        val service = cloudRunService(registry, dispatcher, poster, scope = this)
+        val jiraClient = FakeJiraApiClient()
+        val service = cloudRunService(registry, dispatcher, jiraClient, scope = this)
 
         service.recoverInterruptedJobs()
         advanceUntilIdle()
 
         assertEquals(listOf(executionName), dispatcher.recoveries)
-        assertEquals(1, poster.comments.size)
-        assertEquals("MS-99", poster.comments[0].first)
+        assertEquals(1, jiraClient.comments.size)
+        assertEquals("MS-99", jiraClient.comments[0])
     }
 
     // ── PR review: Cloud Run dispatch ─────────────────────────────────────────
