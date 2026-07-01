@@ -41,7 +41,7 @@ Server JSON → Client DTO → Room Entity → Domain Model → UI
 
 Koin is used across all modules. Define modules per feature, not per layer.
 - **appServer**: `serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl)` — HttpClient, API services
-- **Orchestrator**: `agentModule(config, scope)` — HttpClient, AgentLaunchService, JiraApiService
+- **Orchestrator**: `agentModule(config, scope)` — HttpClient, AgentLaunchService, JiraApiClient
 - **Shared**: `sharedModule(serverBaseUrl)` — HttpClient, MediaSageApi, repositories
 
 See each module's `CLAUDE.md` for module-specific patterns and conventions.
@@ -173,6 +173,22 @@ docker run -p 8081:8081 \
 - Commit prefix: `MS-{ticket}: Description`
 - PRs follow `.github/pull_request_template.md`
 - Trunk-based development — short-lived branches, merge to main
+
+### Naming Conventions
+
+#### Client vs Service
+
+**Client** — a class that wraps a single `HttpClient` to communicate with one external API provider.
+- No interface. Declared `open` so tests can subclass it with no-IO overrides (preferred over `MockEngine` in unit tests where `StandardTestDispatcher` is in use — `MockEngine` uses `Dispatchers.IO` internally and causes `advanceUntilIdle()` to return before HTTP work completes when calls happen inside nested `launch` coroutines).
+- Named `{Provider}ApiClient` (e.g. `JiraApiClient`, `ClaudeApiClient`, `NewsApiClient`).
+- Methods are thin HTTP calls: authenticate, serialize request, deserialize response, return result.
+
+**Service** — a class that orchestrates multiple clients or repositories to serve a broader purpose.
+- May have an interface when a no-op implementation is needed (e.g. disabled feature flag via Koin module swap).
+- Named `{Domain}Service` with interface + concrete `{Impl/Provider}Service` (e.g. `AgentService` / `ClaudeAgentService`).
+- Methods represent meaningful business operations that coordinate multiple clients.
+
+Do not use the `Impl` suffix — Kotlin docs treat it as illustrative only, not a real convention.
 
 ### Code
 - Kotlin code style: `official` (set in `gradle.properties`)

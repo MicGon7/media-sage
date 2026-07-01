@@ -5,7 +5,6 @@ import com.mediasage.agentruntime.plugins.configureStatusPages
 import com.mediasage.agentruntime.routes.webhookRoutes
 import com.mediasage.agentruntime.service.AgentLaunchService
 import com.mediasage.agentruntime.service.AgentLauncher
-import com.mediasage.agentruntime.service.JiraTicketFetcher
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -89,9 +88,6 @@ private fun testWebhookApp(block: suspend ApplicationTestBuilder.() -> Unit) = t
             modules(module {
                 single { AgentLaunchService(scope = CoroutineScope(Dispatchers.IO)) }
                 single<AgentLauncher> { get<AgentLaunchService>() }
-                single<JiraTicketFetcher> { object : JiraTicketFetcher {
-                    override suspend fun getTicketContent(ticketKey: String): String? = null
-                } }
             })
         }
         configureContentNegotiation()

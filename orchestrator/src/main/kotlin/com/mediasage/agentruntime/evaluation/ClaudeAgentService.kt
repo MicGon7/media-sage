@@ -4,30 +4,28 @@ import com.mediasage.agentruntime.AnthropicApi
 import com.mediasage.agentruntime.AnthropicClient
 import com.mediasage.agentruntime.feedback.github.GitHubApiClient
 import com.mediasage.agentruntime.feedback.github.PrDetails
-import com.mediasage.agentruntime.service.JiraCommentPoster
-import com.mediasage.agentruntime.service.JiraTicketFetcher
+import com.mediasage.agentruntime.service.JiraApiClient
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.slf4j.LoggerFactory
 
-private val log = LoggerFactory.getLogger(JudgingService::class.java)
+private val log = LoggerFactory.getLogger(ClaudeAgentService::class.java)
 
 private val responseJson = Json { ignoreUnknownKeys = true }
 
-class JudgingService(
+class ClaudeAgentService(
     private val anthropicClient: AnthropicClient,
     private val githubApiClient: GitHubApiClient,
-    private val jiraTicketFetcher: JiraTicketFetcher,
-    private val jiraCommentPoster: JiraCommentPoster,
+    private val jiraApiClient: JiraApiClient,
     private val model: String,
     private val repoOwner: String,
     private val repoName: String,
-) : AcComplianceEvaluator {
+) : AgentService {
 
     private val systemPromptTemplate: String by lazy {
-        JudgingService::class.java.getResourceAsStream("/prompts/judge-evaluation.md")
+        ClaudeAgentService::class.java.getResourceAsStream("/prompts/judge-evaluation.md")
             ?.bufferedReader()
             ?.readText()
             ?: error("Judge prompt not found at /prompts/judge-evaluation.md")
@@ -38,11 +36,11 @@ class JudgingService(
         runCatching {
             val pr = githubApiClient.getPrDetails(repoOwner, repoName, prNumber)
             val diff = githubApiClient.getPrDiff(repoOwner, repoName, prNumber)
-            val ticketContent = jiraTicketFetcher.getTicketContent(ticketKey)
+            val ticketContent = jiraApiClient.getTicketContent(ticketKey)
             val fetchOutput = buildFetchOutput(ticketKey, prNumber, pr, diff, ticketContent)
             val verdict = callClaude(fetchOutput, ticketKey, prNumber)
             githubApiClient.postPrComment(repoOwner, repoName, prNumber, formatPrComment(verdict))
-            jiraCommentPoster.addComment(ticketKey, verdict)
+            jiraApiClient.addComment(ticketKey, verdict)
             log.info("[$ticketKey] AC compliance evaluation complete for PR #$prNumber")
         }.onFailure { e ->
             log.error("[$ticketKey] AC compliance evaluation failed for PR #$prNumber: ${e.message}", e)

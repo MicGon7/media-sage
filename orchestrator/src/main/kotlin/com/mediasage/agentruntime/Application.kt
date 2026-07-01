@@ -2,7 +2,7 @@ package com.mediasage.agentruntime
 
 import com.mediasage.agentruntime.di.AgentConfig
 import com.mediasage.agentruntime.di.agentModule
-import com.mediasage.agentruntime.evaluation.AcComplianceEvaluator
+import com.mediasage.agentruntime.evaluation.AgentService
 import com.mediasage.agentruntime.evaluation.scoring.DecisionScorer
 import com.mediasage.agentruntime.feedback.pr.FeedbackPrService
 import com.mediasage.agentruntime.plugins.*
@@ -38,7 +38,7 @@ fun Application.module() {
     val cloudRunJobsClient = agentLaunchService.cloudRun?.client
     val jobRegistry = agentLaunchService.cloudRun?.jobs
     val decisionScorer = get<DecisionScorer>()
-    val judgingService: AcComplianceEvaluator = get()
+    val agentService: AgentService = get()
     val feedbackPrService: FeedbackPrService? = getKoin().getOrNull()
     configureContentNegotiation()
     configureCallLogging()
@@ -51,7 +51,7 @@ fun Application.module() {
         if (config.pubSubWebhookSecret.isNotBlank() && cloudRunJobsClient != null && jobRegistry != null) {
             pubSubWebhookRoutes(
                 config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry,
-                judgingService, decisionScorer, scope,
+                agentService, decisionScorer, scope,
             )
         }
     }

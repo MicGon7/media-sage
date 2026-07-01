@@ -1,5 +1,5 @@
 package com.mediasage.agentruntime.evaluation
 
-class NoOpAcComplianceEvaluator : AcComplianceEvaluator {
+class NoOpAgentService : AgentService {
     override suspend fun evaluate(ticketKey: String, prNumber: Int) = Unit
 }

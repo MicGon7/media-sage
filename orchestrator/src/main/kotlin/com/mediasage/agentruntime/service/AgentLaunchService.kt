@@ -26,8 +26,7 @@ private data class DispatchOptions(
 class AgentLaunchService(
     private val scope: CoroutineScope,
     internal val cloudRun: CloudRunDispatch? = null,
-    private val jiraCommentPoster: JiraCommentPoster? = null,
-    private val jiraStatusChecker: JiraTicketStatusChecker? = null,
+    private val jiraApiClient: JiraApiClient? = null,
 ) : AgentLauncher {
 
     private val log = LoggerFactory.getLogger(AgentLaunchService::class.java)
@@ -97,7 +96,7 @@ class AgentLaunchService(
             log.info("[$ticketKey] job already running or completed — ignoring duplicate webhook")
             return
         }
-        if (shouldSkipInterrupted(ticketKey, cloudRun, jiraStatusChecker, log)) return
+        if (shouldSkipInterrupted(ticketKey, cloudRun, jiraApiClient, log)) return
         val jobId = cloudRun.jobs.insert(ticketKey, payload)
         if (options.dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
@@ -131,12 +130,12 @@ class AgentLaunchService(
             if (executionName == null) {
                 log.warn("[${job.ticketKey}] RUNNING job ${job.jobId} has no execution name — marking INTERRUPTED")
                 cloudRun.jobs.markInterrupted(job.jobId)
-                postInterruptedComment(job.ticketKey, jiraCommentPoster)
+                postInterruptedComment(job.ticketKey, jiraApiClient)
                 return@forEach
             }
             scope.launch {
                 val recovered = cloudRun.dispatcher.recoverJob(job.jobId, job.ticketKey, executionName)
-                if (!recovered) postInterruptedComment(job.ticketKey, jiraCommentPoster)
+                if (!recovered) postInterruptedComment(job.ticketKey, jiraApiClient)
             }
         }
     }
@@ -195,7 +194,7 @@ class AgentLaunchService(
 private suspend fun shouldSkipInterrupted(
     ticketKey: String,
     cloudRun: CloudRunDispatch,
-    checker: JiraTicketStatusChecker?,
+    checker: JiraApiClient?,
     log: Logger
 ): Boolean {
     if (checker == null) return false
@@ -219,7 +218,7 @@ private suspend fun shouldSkipInterrupted(
     }
 }
 
-private suspend fun postInterruptedComment(ticketKey: String, poster: JiraCommentPoster?) {
+private suspend fun postInterruptedComment(ticketKey: String, poster: JiraApiClient?) {
     poster?.addComment(
         ticketKey,
         "⚠️ The agent job for this ticket was interrupted during an orchestrator restart. " +

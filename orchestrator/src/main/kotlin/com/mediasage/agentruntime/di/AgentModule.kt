@@ -4,9 +4,9 @@ import com.mediasage.agentruntime.AnthropicClient
 import com.mediasage.agentruntime.db.AgentDatabase
 import com.mediasage.agentruntime.feedback.detector.DatabasePatternDetector
 import com.mediasage.agentruntime.feedback.detector.PatternDetector
-import com.mediasage.agentruntime.evaluation.AcComplianceEvaluator
-import com.mediasage.agentruntime.evaluation.JudgingService
-import com.mediasage.agentruntime.evaluation.NoOpAcComplianceEvaluator
+import com.mediasage.agentruntime.evaluation.AgentService
+import com.mediasage.agentruntime.evaluation.ClaudeAgentService
+import com.mediasage.agentruntime.evaluation.NoOpAgentService
 import com.mediasage.agentruntime.evaluation.scoring.DecisionScorer
 import com.mediasage.agentruntime.evaluation.scoring.NoOpScoringService
 import com.mediasage.agentruntime.evaluation.scoring.ScoringService
@@ -18,10 +18,7 @@ import com.mediasage.agentruntime.service.AgentLauncher
 import com.mediasage.agentruntime.service.AgentLaunchService
 import com.mediasage.agentruntime.service.CloudRunDispatch
 import com.mediasage.agentruntime.service.CloudRunJobsClient
-import com.mediasage.agentruntime.service.JiraApiService
-import com.mediasage.agentruntime.service.JiraCommentPoster
-import com.mediasage.agentruntime.service.JiraTicketFetcher
-import com.mediasage.agentruntime.service.JiraTicketStatusChecker
+import com.mediasage.agentruntime.service.JiraApiClient
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -37,9 +34,7 @@ import org.slf4j.LoggerFactory
  *
  * Registers the full dependency graph for webhook routing and Cloud Run Job dispatch:
  * - [HttpClient] — OkHttp client with JSON content negotiation and request timeouts.
- * - [JiraApiService] — bound to the [JiraTicketFetcher] and
- *   [JiraTicketStatusChecker] interfaces using human account credentials.
- * - [JiraCommentPoster] — uses bot credentials when configured, falling back to human credentials.
+ * - [JiraApiClient] — uses bot credentials when configured, falling back to human credentials.
  * - [AgentLaunchService] — orchestrates Cloud Run Job dispatch and performs job recovery on startup.
  * - [AgentLauncher] — interface alias for [AgentLaunchService].
  *
@@ -51,13 +46,10 @@ private val log = LoggerFactory.getLogger("AgentModule")
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     includes(feedbackModule(config))
     single { buildHttpClient() }
-    single { JiraApiService(get(), config.jiraCloudId, config.jiraEmail, config.jiraApiToken) }
-    single<JiraTicketFetcher> { get<JiraApiService>() }
-    single<JiraTicketStatusChecker> { get<JiraApiService>() }
-    single<JiraCommentPoster> { buildJiraCommentPoster(config, get(), get()) }
+    single { buildJiraApiClient(config, get()) }
     single {
         val cloudRun = buildCloudRunDispatch(config, get())
-        AgentLaunchService(scope, cloudRun, get(), get<JiraTicketStatusChecker>())
+        AgentLaunchService(scope, cloudRun, get<JiraApiClient>())
     }
     single<AgentLauncher> { get<AgentLaunchService>() }
 }
@@ -70,19 +62,19 @@ private fun feedbackModule(config: AgentConfig) = module {
         single<DecisionScorer> { ScoringService(get(), config.claudeModel) }
         single<GitHubApiClient> { buildGitHubApiClient(config, get()) }
         single { buildFeedbackPrService(config, get(), get(), get()) }
-        single<AcComplianceEvaluator> { buildJudgingService(config, get(), get(), get(), get()) }
+        single<AgentService> { buildClaudeAgentService(config, get(), get(), get()) }
     } else {
         log.info("Feedback features disabled — GITHUB_APP_ID or ANTHROPIC_AUTH_TOKEN not configured")
         single<DecisionScorer> { NoOpScoringService() }
-        single<AcComplianceEvaluator> { NoOpAcComplianceEvaluator() }
+        single<AgentService> { NoOpAgentService() }
     }
 }
 
-private fun buildJiraCommentPoster(config: AgentConfig, httpClient: HttpClient, fallback: JiraApiService): JiraCommentPoster =
+private fun buildJiraApiClient(config: AgentConfig, httpClient: HttpClient): JiraApiClient =
     if (config.jiraBotEmail.isNotBlank() && config.jiraBotApiToken.isNotBlank()) {
-        JiraApiService(httpClient, config.jiraCloudId, config.jiraBotEmail, config.jiraBotApiToken)
+        JiraApiClient(httpClient, config.jiraCloudId, config.jiraBotEmail, config.jiraBotApiToken)
     } else {
-        fallback
+        JiraApiClient(httpClient, config.jiraCloudId, config.jiraEmail, config.jiraApiToken)
     }
 
 private fun buildGitHubApiClient(config: AgentConfig, httpClient: HttpClient): GitHubApiClient =
@@ -105,17 +97,15 @@ private fun buildFeedbackPrService(config: AgentConfig, httpClient: HttpClient, 
         model = config.claudeModel,
     )
 
-private fun buildJudgingService(
+private fun buildClaudeAgentService(
     config: AgentConfig,
     anthropicClient: AnthropicClient,
     githubApiClient: GitHubApiClient,
-    jiraTicketFetcher: JiraTicketFetcher,
-    jiraCommentPoster: JiraCommentPoster,
-) = JudgingService(
+    jiraApiClient: JiraApiClient,
+) = ClaudeAgentService(
     anthropicClient = anthropicClient,
     githubApiClient = githubApiClient,
-    jiraTicketFetcher = jiraTicketFetcher,
-    jiraCommentPoster = jiraCommentPoster,
+    jiraApiClient = jiraApiClient,
     model = config.claudeModel,
     repoOwner = config.githubRepoOwner,
     repoName = config.githubRepoName,

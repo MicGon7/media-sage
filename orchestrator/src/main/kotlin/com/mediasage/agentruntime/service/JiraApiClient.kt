@@ -15,44 +15,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.util.Base64
 import org.slf4j.LoggerFactory
 
-/** Fetches the human-readable content of a Jira ticket. */
-interface JiraTicketFetcher {
-    /**
-     * Returns the summary and description of [ticketKey] as a formatted string, or null if
-     * the ticket cannot be retrieved.
-     *
-     * @param ticketKey Jira issue key (e.g. `MS-242`).
-     * @return Markdown-ish string starting with `**KEY: Summary**` followed by description
-     *   text, or null on HTTP error or network failure.
-     */
-    suspend fun getTicketContent(ticketKey: String): String?
-}
-
-/** Posts a comment on a Jira ticket. */
-interface JiraCommentPoster {
-    /**
-     * Adds [body] as a plain-text comment on [ticketKey] using the Jira Cloud REST API v3.
-     *
-     * Failures are logged and swallowed — callers do not need to handle exceptions.
-     *
-     * @param ticketKey Jira issue key (e.g. `MS-242`).
-     * @param body Comment text to post.
-     */
-    suspend fun addComment(ticketKey: String, body: String)
-}
-
-/** Retrieves the workflow status of a Jira ticket. */
-interface JiraTicketStatusChecker {
-    /**
-     * Returns the status name of [ticketKey] (e.g. `"In Progress"`), or null if the ticket
-     * cannot be retrieved.
-     *
-     * @param ticketKey Jira issue key (e.g. `MS-242`).
-     * @return Status name string as configured in the Jira workflow, or null on HTTP error
-     *   or network failure.
-     */
-    suspend fun getTicketStatus(ticketKey: String): String?
-}
 
 @Serializable
 private data class JiraIssueStatusResponse(
@@ -99,14 +61,14 @@ private data class JiraContentFields(
  * @param email Email address of the Atlassian account used for Basic auth.
  * @param apiToken Atlassian API token paired with [email].
  */
-class JiraApiService(
+open class JiraApiClient(
     private val httpClient: HttpClient,
     private val cloudId: String,
     private val email: String,
     private val apiToken: String
-) : JiraTicketFetcher, JiraCommentPoster, JiraTicketStatusChecker {
+) {
 
-    private val log = LoggerFactory.getLogger(JiraApiService::class.java)
+    private val log = LoggerFactory.getLogger(JiraApiClient::class.java)
     private val authHeader = "Basic " + Base64.getEncoder()
         .encodeToString("$email:$apiToken".toByteArray(Charsets.UTF_8))
 
@@ -125,7 +87,7 @@ class JiraApiService(
      * @param ticketKey Jira issue key (e.g. `MS-242`).
      * @return Formatted ticket content string, or null on HTTP error or network failure.
      */
-    override suspend fun getTicketContent(ticketKey: String): String? {
+    open suspend fun getTicketContent(ticketKey: String): String? {
         return try {
             val response = httpClient.get("$baseUrl/issue/$ticketKey?fields=summary,description") {
                 header(HttpHeaders.Authorization, authHeader)
@@ -158,7 +120,7 @@ class JiraApiService(
      * @return Status name as configured in the Jira workflow, or null on HTTP error or
      *   network failure.
      */
-    override suspend fun getTicketStatus(ticketKey: String): String? {
+    open suspend fun getTicketStatus(ticketKey: String): String? {
         return try {
             val response = httpClient.get("$baseUrl/issue/$ticketKey?fields=status") {
                 header(HttpHeaders.Authorization, authHeader)
@@ -188,7 +150,7 @@ class JiraApiService(
      * @param ticketKey Jira issue key (e.g. `MS-242`).
      * @param body Comment text to post.
      */
-    override suspend fun addComment(ticketKey: String, body: String) {
+    open suspend fun addComment(ticketKey: String, body: String) {
         try {
             val escapedBody = kotlinx.serialization.json.Json.encodeToString(
                 kotlinx.serialization.json.JsonPrimitive(body)

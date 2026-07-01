@@ -1,6 +1,6 @@
 package com.mediasage.agentruntime.routes
 
-import com.mediasage.agentruntime.evaluation.AcComplianceEvaluator
+import com.mediasage.agentruntime.evaluation.AgentService
 import com.mediasage.agentruntime.evaluation.scoring.DecisionScorer
 import com.mediasage.pipeline.core.JobCompletionEvent
 import com.mediasage.pipeline.core.JobRegistry
@@ -49,7 +49,7 @@ fun Route.pubSubWebhookRoutes(
     webhookSecret: String,
     cloudRunJobsClient: CloudRunJobsClient,
     jobRegistry: JobRegistry,
-    judgingService: AcComplianceEvaluator,
+    agentService: AgentService,
     decisionScorer: DecisionScorer,
     scope: CoroutineScope,
 ) {
@@ -66,7 +66,7 @@ fun Route.pubSubWebhookRoutes(
         log.info("[${event.ticketKey}] Pub/Sub completion event: status=${event.status}, execution=${event.executionName}")
         // Acknowledge immediately — Pub/Sub retries on non-2xx. Metrics fetch (~15s) runs in background.
         call.respond(HttpStatusCode.OK)
-        scope.launch { processCompletion(event, jobRegistry, cloudRunJobsClient, judgingService, decisionScorer) }
+        scope.launch { processCompletion(event, jobRegistry, cloudRunJobsClient, agentService, decisionScorer) }
     }
 }
 
@@ -103,7 +103,7 @@ private suspend fun processCompletion(
     event: JobCompletionEvent,
     jobRegistry: JobRegistry,
     cloudRunJobsClient: CloudRunJobsClient,
-    judgingService: AcComplianceEvaluator,
+    agentService: AgentService,
     decisionScorer: DecisionScorer,
 ) {
     val job = jobRegistry.findRunningByTicketKey(event.ticketKey)
@@ -129,7 +129,7 @@ private suspend fun processCompletion(
     val prNumber = event.prNumber
     if (event.jiraTicketKey == null && event.status == "success" && prNumber != null) {
         log.info("[${event.ticketKey}] ticket-work succeeded — running AC compliance evaluation (PR #$prNumber)")
-        judgingService.evaluate(event.ticketKey, prNumber)
+        agentService.evaluate(event.ticketKey, prNumber)
     }
 }
 
