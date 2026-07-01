@@ -184,6 +184,7 @@ docker run -p 8081:8081 \
 - Methods are thin HTTP calls: authenticate, serialize request, deserialize response, return result.
 
 **Service** — a class that orchestrates multiple clients or repositories to serve a broader purpose.
+- The coordinator layer on the server side — analogous to Repository on the Android client side. The roles invert: Android Repositories hold Clients + DAOs; Ktor Services hold Clients + Repositories.
 - May have an interface when a no-op implementation is needed (e.g. disabled feature flag via Koin module swap).
 - Named `{Domain}Service` with interface + concrete `{Impl/Provider}Service` (e.g. `AgentService` / `ClaudeAgentService`).
 - Methods represent meaningful business operations that coordinate multiple clients.
