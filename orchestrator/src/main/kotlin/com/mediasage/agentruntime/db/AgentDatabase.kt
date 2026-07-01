@@ -27,7 +27,6 @@ object AgentDatabase {
     private fun org.jetbrains.exposed.sql.Transaction.migrate() {
         addWorkerMetricColumns() // MS-210
         addFailureAttributionColumns() // MS-386
-        addEnvStartupColumn() // MS-399 — must run before the view, which selects env_startup_ms
         renamePromptToPayload()
         createJobDurationsView()
         createTranscriptsTable() // MS-387
@@ -54,18 +53,6 @@ object AgentDatabase {
         ALTER TABLE jobs
           ADD COLUMN IF NOT EXISTS failed_gate TEXT,
           ADD COLUMN IF NOT EXISTS model_version TEXT
-        """.trimIndent()
-    )
-
-    /**
-     * MS-399: Environment startup time — wall-clock from dispatch (`started_at`) to the worker
-     * container's first log line (Cloud Run cold start + worker image pull), in milliseconds.
-     * Computed orchestrator-side and recorded on completion; the dominant overhead for short jobs.
-     */
-    private fun org.jetbrains.exposed.sql.Transaction.addEnvStartupColumn() = exec(
-        """
-        ALTER TABLE jobs
-          ADD COLUMN IF NOT EXISTS env_startup_ms BIGINT
         """.trimIndent()
     )
 
@@ -119,8 +106,7 @@ object AgentDatabase {
           EXTRACT(EPOCH FROM (completed_at - started_at))::int AS duration_seconds,
           created_at,
           started_at,
-          completed_at,
-          env_startup_ms
+          completed_at
         FROM jobs
         WHERE started_at IS NOT NULL
         """.trimIndent()

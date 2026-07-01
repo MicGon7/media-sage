@@ -183,10 +183,9 @@ class CloudRunJobsClient(
         succeeded: Boolean,
         failedGate: String? = null,
         metrics: WorkerMetrics? = null,
-        envStartupMs: Long? = null,
     ): Boolean {
         return if (succeeded) {
-            handleSuccess(jobId, ticketKey, metrics, envStartupMs)
+            handleSuccess(jobId, ticketKey, metrics)
         } else {
             log.warn("[$ticketKey] Worker reported failure via Pub/Sub" + (failedGate?.let { " (gate=$it)" } ?: ""))
             jobRepository.markFailed(jobId, failedGate, metrics?.modelVersion)
@@ -209,7 +208,6 @@ class CloudRunJobsClient(
         jobId: UUID,
         ticketKey: String,
         metrics: WorkerMetrics?,
-        envStartupMs: Long? = null,
     ): Boolean {
         if (metrics != null) {
             log.info(
@@ -220,7 +218,7 @@ class CloudRunJobsClient(
         } else {
             log.warn("[$ticketKey] Cloud Run job completed — no metrics in event (old worker or recovery path)")
         }
-        jobRepository.markCompleted(jobId, metrics, envStartupMs)
+        jobRepository.markCompleted(jobId, metrics)
         return true
     }
 

@@ -57,7 +57,7 @@ private suspend fun callClaude(
 ): JsonElement? = runCatching {
     val response: ClaudeResponse = client.post("$baseUrl/v1/messages") {
         contentType(ContentType.Application.Json)
-        header("Authorization", "Bearer $authToken")
+        header("x-api-key", authToken)
         header("anthropic-version", AnthropicApi.VERSION)
         setBody(request)
     }.body()

@@ -111,16 +111,12 @@ private suspend fun processCompletion(
         log.warn("[${event.ticketKey}] Pub/Sub webhook: no RUNNING job found — may have already been processed")
         return
     }
-    val envStartupMs = event.containerStartedAtMs?.let { startedMs ->
-        job.startedAt?.let { startedAt -> startedMs - startedAt.toEpochMilli() }
-    }
     cloudRunJobsClient.onJobCompleted(
         jobId = job.jobId,
         ticketKey = event.ticketKey,
         succeeded = event.status == "success",
         failedGate = event.failedGate,
         metrics = event.toWorkerMetrics(),
-        envStartupMs = envStartupMs,
     )
     decisionScorer.score(job.jobId)
     // Run AC compliance evaluation inline after a successful ticket-work completion.
