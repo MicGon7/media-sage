@@ -9,6 +9,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
@@ -59,7 +60,7 @@ private fun requireEnv(name: String): String =
     System.getenv(name) ?: error("Missing required env var: $name")
 
 private fun buildHttpClient() = HttpClient(OkHttp) {
-    install(ContentNegotiation) { json() }
+    install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
 }
 
 private fun buildServer() = Server(
