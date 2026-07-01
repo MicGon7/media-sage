@@ -4,9 +4,9 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'orchestrator/**'
-      - 'settings-orchestrator.gradle.kts'
-      - '!orchestrator/src/main/kotlin/com/mediasage/orchestrator/smoketest/**'
+      - 'agentruntime/**'
+      - 'settings-agentruntime.gradle.kts'
+      - '!agentruntime/src/main/kotlin/com/mediasage/agentruntime/smoketest/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

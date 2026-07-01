@@ -31,7 +31,7 @@ dependencyResolutionManagement {
 include(":composeApp")
 include(":shared")
 include(":appServer")
-include(":orchestrator")
+include(":agentruntime")
 include(":scripts")
 include(":pipelineScenarios")
 include(":pipelineCore")
