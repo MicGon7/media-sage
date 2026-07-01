@@ -49,6 +49,8 @@ internal suspend fun callClaudeWithRetry(
     return null
 }
 
+private val log = org.slf4j.LoggerFactory.getLogger("ClaudeCall")
+
 private suspend fun callClaude(
     client: HttpClient,
     baseUrl: String,
@@ -57,9 +59,12 @@ private suspend fun callClaude(
 ): JsonElement? = runCatching {
     val response: ClaudeResponse = client.post("$baseUrl/v1/messages") {
         contentType(ContentType.Application.Json)
-        header("x-api-key", authToken)
+        header("Authorization", "Bearer $authToken")
         header("anthropic-version", AnthropicApi.VERSION)
         setBody(request)
     }.body()
     response.content.firstOrNull { it.type == "tool_use" }?.input
-}.getOrNull()
+}.getOrElse { e ->
+    log.error("Claude API call failed: ${e.message}", e)
+    null
+}
