@@ -41,10 +41,31 @@ class ClaudeAgentService(
             val verdict = callClaude(fetchOutput, ticketKey, prNumber)
             githubApiClient.postPrComment(repoOwner, repoName, prNumber, formatPrComment(verdict))
             jiraApiClient.addComment(ticketKey, verdict)
+            postInlineObservations(ticketKey, prNumber, verdict)
             log.info("[$ticketKey] AC compliance evaluation complete for PR #$prNumber")
         }.onFailure { e ->
             log.error("[$ticketKey] AC compliance evaluation failed for PR #$prNumber: ${e.message}", e)
         }
+    }
+
+    private suspend fun postInlineObservations(ticketKey: String, prNumber: Int, verdict: String) {
+        parseCodeObservations(verdict).forEach { obs ->
+            runCatching {
+                githubApiClient.postInlineReviewComment(repoOwner, repoName, prNumber, obs.path, obs.line, obs.body)
+            }.onFailure { e ->
+                log.warn("[$ticketKey] Inline comment skipped for ${obs.path}:${obs.line}: ${e.message}")
+            }
+        }
+    }
+
+    private fun parseCodeObservations(verdict: String): List<CodeObservation> {
+        val section = verdict.substringAfter("Code observations:", "").trim()
+        if (section.isBlank()) return emptyList()
+        val pattern = Regex("""^- (.+?):(\d+) — (.+)$""", RegexOption.MULTILINE)
+        return pattern.findAll(section).mapNotNull { m ->
+            val line = m.groupValues[2].toIntOrNull() ?: return@mapNotNull null
+            CodeObservation(path = m.groupValues[1], line = line, body = m.groupValues[3].trim())
+        }.toList()
     }
 
     private suspend fun callClaude(fetchOutput: String, ticketKey: String, prNumber: Int): String {
@@ -75,6 +96,8 @@ class ClaudeAgentService(
         verdict.replace("🤖 Agent:", "🤖 **Agent:**", ignoreCase = false) +
             "\n\nThis verdict is informational. The human reviewer makes the final call."
 }
+
+private data class CodeObservation(val path: String, val line: Int, val body: String)
 
 private data class DiffSignals(
     val changedFiles: List<String>,
