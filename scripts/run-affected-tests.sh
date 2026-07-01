@@ -53,8 +53,8 @@ APPSERVER_TEST_CLASSES=()
 # Map a changed source file to its corresponding test class name.
 # Convention: Foo.kt → FooTest.kt (standard Kotlin/Java naming).
 find_test_class() {
-    local module="$1"   # e.g. "orchestrator"
-    local src_file="$2" # e.g. "orchestrator/src/main/kotlin/com/mediasage/orchestrator/service/AgentLaunchService.kt"
+    local module="$1"   # e.g. "agentruntime"
+    local src_file="$2" # e.g. "agentruntime/src/main/kotlin/com/mediasage/agentruntime/service/AgentLaunchService.kt"
     local base
     base=$(basename "$src_file" .kt)
     local test_file
@@ -70,9 +70,9 @@ find_test_class() {
 
 while IFS= read -r file; do
     case "$file" in
-        orchestrator/src/main/*.kt)
+        agentruntime/src/main/*.kt)
             RUN_ORCHESTRATOR=true
-            cls=$(find_test_class "orchestrator" "$file")
+            cls=$(find_test_class "agentruntime" "$file")
             if [ -n "$cls" ]; then
                 ORCHESTRATOR_TEST_CLASSES+=("$cls")
             fi
@@ -109,7 +109,7 @@ run_tests() {
 RAN_ANY=false
 
 if [ "$RUN_ORCHESTRATOR" = "true" ]; then
-    run_tests ":orchestrator:test" "${ORCHESTRATOR_TEST_CLASSES[@]+"${ORCHESTRATOR_TEST_CLASSES[@]}"}"
+    run_tests ":agentruntime:test" "${ORCHESTRATOR_TEST_CLASSES[@]+"${ORCHESTRATOR_TEST_CLASSES[@]}"}"
     RAN_ANY=true
 fi
 

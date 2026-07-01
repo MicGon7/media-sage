@@ -4,9 +4,9 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'orchestrator/**'
-      - 'settings-orchestrator.gradle.kts'
-      - '!orchestrator/src/main/kotlin/com/mediasage/orchestrator/smoketest/**'
+      - 'agentruntime/**'
+      - 'settings-agentruntime.gradle.kts'
+      - '!agentruntime/src/main/kotlin/com/mediasage/agentruntime/smoketest/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,7 +33,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: orchestrator/Dockerfile
+          file: agentruntime/Dockerfile
           platforms: linux/amd64
           push: true
           tags: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest

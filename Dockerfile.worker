@@ -21,33 +21,33 @@ USER agent
 WORKDIR /home/agent
 
 # Pre-bake the Gradle distribution and JVM module dependencies into the image layer
-# at build time. Covers :orchestrator and :appServer only.
+# at build time. Covers :agentruntime and :appServer only.
 #
 # :composeApp and :shared are excluded because:
 #   - run-affected-tests.sh explicitly skips both (no Android/iOS SDK in Cloud Run)
 #   - :composeApp/:shared dependency resolution downloads kotlin-native-prebuilt (~245 MB)
 #     which is never used at worker runtime
 #
-# At runtime the worker makes zero Gradle downloads for :orchestrator/:appServer;
+# At runtime the worker makes zero Gradle downloads for :agentruntime/:appServer;
 # everything resolves from the image layer on the local container filesystem.
 COPY --chown=agent:agent gradlew gradlew
 COPY --chown=agent:agent gradle/ gradle/
 COPY --chown=agent:agent gradle.properties gradle.properties
 COPY --chown=agent:agent settings.gradle.kts settings.gradle.kts
 COPY --chown=agent:agent build.gradle.kts build.gradle.kts
-COPY --chown=agent:agent orchestrator/build.gradle.kts orchestrator/build.gradle.kts
+COPY --chown=agent:agent agentruntime/build.gradle.kts agentruntime/build.gradle.kts
 COPY --chown=agent:agent appServer/build.gradle.kts appServer/build.gradle.kts
 COPY --chown=agent:agent composeApp/build.gradle.kts composeApp/build.gradle.kts
 COPY --chown=agent:agent shared/build.gradle.kts shared/build.gradle.kts
 RUN chmod +x gradlew && \
     ./gradlew help --no-daemon && \
-    ./gradlew :orchestrator:dependencies :appServer:dependencies \
+    ./gradlew :agentruntime:dependencies :appServer:dependencies \
         --no-daemon --configure-on-demand && \
     rm -f gradlew && rm -rf gradle
 
-COPY --chown=agent:agent orchestrator/entrypoint-common.sh entrypoint-common.sh
-COPY --chown=agent:agent orchestrator/worker-entrypoint.sh entrypoint.sh
-COPY --chown=agent:agent orchestrator/get-github-token.py get-github-token.py
+COPY --chown=agent:agent agentruntime/entrypoint-common.sh entrypoint-common.sh
+COPY --chown=agent:agent agentruntime/worker-entrypoint.sh entrypoint.sh
+COPY --chown=agent:agent agentruntime/get-github-token.py get-github-token.py
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]

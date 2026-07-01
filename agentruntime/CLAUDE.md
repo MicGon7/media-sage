@@ -1,9 +1,9 @@
-# orchestrator — Orchestrator Server
+# agentruntime — Orchestrator Server
 
 ## Structure
 
 ```
-orchestrator/src/main/kotlin/com/mediasage/agentruntime/
+agentruntime/src/main/kotlin/com/mediasage/agentruntime/
 ├── Application.kt       — Entry point, Koin setup (port 8081)
 ├── di/                  — AgentConfig, AgentModule
 ├── db/                  — AgentDatabase, JobsTable, JobRepository (Supabase Postgres)
@@ -83,7 +83,7 @@ AC compliance evaluation (`judge-work`) is no longer a Cloud Run Job. It runs in
 
 ## Deployment (Container — Production)
 
-The `:orchestrator` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`). It is a stateless HTTP server — it receives webhooks, builds prompts, and dispatches Cloud Run Jobs. It does not clone any repo.
+The `:agentruntime` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`). It is a stateless HTTP server — it receives webhooks, builds prompts, and dispatches Cloud Run Jobs. It does not clone any repo.
 
 - **Service:** `media-sage-orchestrator`
 - **URL:** `https://media-sage-orchestrator-924166357877.us-central1.run.app`
@@ -127,11 +127,11 @@ gcloud run deploy media-sage-orchestrator \
   --region us-central1 --project media-sage-agent
 ```
 
-**Manual fallback (Railway):** The Railway `:orchestrator` service retains all env vars and is kept deactivated. To switch back: redeploy Railway service → update Jira + GitHub webhook URLs to the Railway URL.
+**Manual fallback (Railway):** The Railway `media-sage-orchestrator` service retains all env vars and is kept deactivated. To switch back: redeploy Railway service → update Jira + GitHub webhook URLs to the Railway URL.
 
 ## Local Dev
 
-1. Start the orchestrator server: `source ~/.zshrc && ./gradlew :orchestrator:run`
+1. Start the agentruntime server: `source ~/.zshrc && ./gradlew :agentruntime:run`
 2. Start ngrok: `ngrok http 8081` — copy the public HTTPS URL
 3. Temporarily update Jira and GitHub webhook URLs to the ngrok URL
 

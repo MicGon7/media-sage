@@ -12,7 +12,7 @@ Five-module Gradle project (`settings.gradle.kts`):
 :composeApp   — Compose Multiplatform UI (Android + iOS)
 :shared       — KMP library (networking, database, domain models)
 :appServer    — Ktor app API, deployed to Railway (port 8080)
-:orchestrator — Ktor orchestration server, deployed as Cloud Run Service on GCP (port 8081)
+:agentruntime — Ktor orchestration server, deployed as Cloud Run Service on GCP (port 8081)
 :scripts      — One-off batch jobs, run manually (no server, no Koin wiring)
 ```
 
@@ -21,7 +21,7 @@ Five-module Gradle project (`settings.gradle.kts`):
 - **composeApp**: UI layer only. Depends on `:shared`. Uses Compose Material3, Koin for DI, Lifecycle ViewModel, and Nav3 for navigation.
 - **shared**: Business logic, data layer, networking. Room for persistence, Ktor Client for HTTP, kotlinx-serialization for JSON. Platform engines: OkHttp (Android), Darwin (iOS).
 - **appServer**: JVM-only Ktor server (Netty). Calls external APIs (Claude, News, Scripture). Uses Koin for DI, CORS, StatusPages, ContentNegotiation, CallLogging. Deployed to Railway.
-- **orchestrator**: JVM-only Ktor server (Netty, port 8081). Receives Jira and GitHub webhooks, dispatches Claude Code workers via Cloud Run Jobs. Uses Exposed + PostgreSQL (Supabase) for persistent job state. Deployed as a Cloud Run Service on GCP (`media-sage-orchestrator`, `us-central1`). Railway orchestrator service is kept as a manual fallback (deactivated; re-enable by redeploying and updating webhooks).
+- **agentruntime**: JVM-only Ktor server (Netty, port 8081). Receives Jira and GitHub webhooks, dispatches Claude Code workers via Cloud Run Jobs. Uses Exposed + PostgreSQL (Supabase) for persistent job state. Deployed as a Cloud Run Service on GCP (`media-sage-orchestrator`, `us-central1`). Railway orchestrator service is kept as a manual fallback (deactivated; re-enable by redeploying and updating webhooks).
 - **scripts**: JVM-only standalone scripts. No Ktor server, no Koin. Uses Exposed + SQLite/Postgres for DB access. Run manually via Gradle tasks (e.g., `generateImages`).
 
 ### Data Flow
@@ -100,7 +100,7 @@ appServer/src/main/kotlin/com/mediasage/appserver/
 ├── service/             — ClaudeApiService, NewsApiService, ScriptureApiService
 └── di/                  — ServerModule
 
-orchestrator/src/main/kotlin/com/mediasage/orchestrator/
+agentruntime/src/main/kotlin/com/mediasage/agentruntime/
 ├── Application.kt       — Entry point, Koin setup (port 8081)
 ├── di/                  — AgentConfig, AgentModule
 ├── db/                  — AgentDatabase, JobsTable, JobRepository (Supabase Postgres)
@@ -134,10 +134,10 @@ scripts/src/main/kotlin/com/mediasage/scripts/
 source ~/.zshrc && ./gradlew :appServer:run
 
 # Run agent orchestration server locally (port 8081 — requires Jira, GitHub env vars)
-source ~/.zshrc && ./gradlew :orchestrator:run
+source ~/.zshrc && ./gradlew :agentruntime:run
 
 # Build agent container image locally
-docker build -f orchestrator/Dockerfile -t media-sage-agent .
+docker build -f agentruntime/Dockerfile -t media-sage-agent .
 
 # Build worker image for Cloud Run (automated via .github/workflows/build-worker-image.yml on merge to main)
 # Manual build only needed when testing Dockerfile.worker changes locally before pushing:
