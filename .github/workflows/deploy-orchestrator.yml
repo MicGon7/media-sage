@@ -33,7 +33,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: orchestrator/Dockerfile
+          file: agentruntime/Dockerfile
           platforms: linux/amd64
           push: true
           tags: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest
