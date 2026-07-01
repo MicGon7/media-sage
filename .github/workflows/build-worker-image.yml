@@ -1,6 +1,7 @@
 name: Build and Push Worker Image
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
     paths:
@@ -19,6 +20,7 @@ on:
       - 'composeApp/build.gradle.kts'
       - 'shared/build.gradle.kts'
       - 'gradle.properties'
+      - '.github/workflows/build-worker-image.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
