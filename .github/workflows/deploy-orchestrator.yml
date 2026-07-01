@@ -1,4 +1,4 @@
-name: Build and Deploy Orchestrator
+name: Build and Deploy AgentRuntime
 
 on:
   push:
