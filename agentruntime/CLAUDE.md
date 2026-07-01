@@ -105,6 +105,7 @@ The `:agentruntime` server runs as a GCP Cloud Run Service (`media-sage-orchestr
 | `GCP_REGION` | `us-central1` |
 | `GCP_JOB_NAME` | `media-sage-agent-worker` |
 | `ANTHROPIC_BASE_URL` | `https://api.fuelix.ai` (Fuelix proxy) |
+| `CLAUDE_MODEL` | `claude-sonnet-4` (short-form alias required by Fuelix; also read by entrypoint to record `model_version`) |
 
 **Secrets (Secret Manager):**
 

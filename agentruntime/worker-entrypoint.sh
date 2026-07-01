@@ -19,6 +19,7 @@ python3 -c "import json, os; print(json.dumps({'message': '[worker] job dispatch
 # --verbose is required when using --output-format=stream-json.
 # Tee to capture stream-json output for metrics parsing in publish_completion.
 claude -p "/$JOB_TYPE" \
+  --model "${CLAUDE_MODEL:-claude-sonnet-4}" \
   --dangerously-skip-permissions \
   --output-format stream-json \
   --verbose \
