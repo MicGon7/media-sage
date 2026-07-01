@@ -1,9 +1,6 @@
 # Sourced by worker-entrypoint.sh and lite-entrypoint.sh.
 # Do not run directly. Caller must set -eo pipefail before sourcing.
 
-# Capture container start time before any other work — used to compute env_startup_ms (MS-414).
-export CONTAINER_STARTED_AT_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
-
 git config --global user.name "${GITHUB_BOT_NAME:-media-sage-worker}"
 # GitHub App noreply email — deterministic from the App ID, no env var needed
 git config --global user.email "${GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com"
@@ -200,14 +197,6 @@ try:
             pass
 except Exception:
     pass
-
-# Container start timestamp for env_startup_ms computation (MS-414).
-container_started_at = os.environ.get('CONTAINER_STARTED_AT_MS', '').strip()
-if container_started_at:
-    try:
-        payload['containerStartedAtMs'] = int(container_started_at)
-    except ValueError:
-        pass
 
 data = base64.b64encode(json.dumps(payload).encode()).decode()
 print(json.dumps({'messages': [{'data': data}]}))
