@@ -62,11 +62,13 @@ body = json.dumps({
         'content': [{'type': 'paragraph', 'content': [{'type': 'text', 'text': comment_text}]}]
     }
 })
+with open('/tmp/jira_comment_body.json', 'w') as f:
+    f.write(body)
 result = subprocess.run(
     ['curl', '-sf', '-X', 'POST',
      '-u', f"{jira_user}:{jira_token}",
      '-H', 'Content-Type: application/json',
-     '-d', body,
+     '-d', '@/tmp/jira_comment_body.json',
      f'https://media-sage.atlassian.net/rest/api/3/issue/{ticket_key}/comment'],
     capture_output=True, text=True
 )
@@ -100,6 +102,8 @@ except Exception as e:
     sys.exit(0)
 
 body = json.dumps({'job_id': job_id, 'content': raw_jsonl})
+with open('/tmp/supabase_transcript_body.json', 'w') as f:
+    f.write(body)
 result = subprocess.run(
     ['curl', '-sf', '-X', 'POST',
      f'{rest_url}/transcripts',
@@ -107,7 +111,7 @@ result = subprocess.run(
      '-H', f'Authorization: Bearer {svc_key}',
      '-H', 'Content-Type: application/json',
      '-H', 'Prefer: return=minimal',
-     '-d', body],
+     '-d', '@/tmp/supabase_transcript_body.json'],
     capture_output=True, text=True
 )
 if result.returncode == 0:
@@ -202,11 +206,12 @@ data = base64.b64encode(json.dumps(payload).encode()).decode()
 print(json.dumps({'messages': [{'data': data}]}))
 ")
 
+  printf '%s' "$message" > /tmp/pubsub_payload.json
   curl -sf -X POST \
     "https://pubsub.googleapis.com/v1/projects/${GCP_PROJECT_ID}/topics/${PUBSUB_TOPIC}:publish" \
     -H "Authorization: Bearer ${gcp_token}" \
     -H "Content-Type: application/json" \
-    -d "$message" \
+    -d "@/tmp/pubsub_payload.json" \
     && echo "Pub/Sub completion event published (status=$status)" \
     || echo "Warning: Failed to publish Pub/Sub completion event — orchestrator will recover on restart"
 }
