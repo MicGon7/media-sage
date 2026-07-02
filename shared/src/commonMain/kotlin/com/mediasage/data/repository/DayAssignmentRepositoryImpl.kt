@@ -4,6 +4,8 @@ import com.mediasage.data.local.dao.DayAssignmentDao
 import com.mediasage.data.local.dao.FigureDao
 import com.mediasage.data.local.entity.DayAssignmentEntity
 import com.mediasage.data.remote.MediaSageApi
+import com.mediasage.domain.model.DayAssignment
+import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DayAssignmentRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -15,11 +17,18 @@ class DayAssignmentRepositoryImpl(
     private val api: MediaSageApi,
 ) : DayAssignmentRepository {
 
-    override fun observeAssignments(): Flow<Map<Int, Long>> =
-        dao.observeAll().map { entities -> entities.associate { it.dayOfWeek to it.figureId } }
+    override fun observeAssignments(): Flow<Map<Int, DayAssignment>> =
+        dao.observeAll().map { entities ->
+            entities.associate { entity ->
+                entity.dayOfWeek to DayAssignment(
+                    figureId = entity.figureId,
+                    lens = entity.lens?.let { name -> LensFilter.entries.firstOrNull { it.name == name } },
+                )
+            }
+        }
 
-    override suspend fun assign(dayOfWeek: Int, figureId: Long) {
-        dao.upsert(DayAssignmentEntity(dayOfWeek = dayOfWeek, figureId = figureId))
+    override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) {
+        dao.upsert(DayAssignmentEntity(dayOfWeek = dayOfWeek, figureId = figureId, lens = lens?.name))
     }
 
     override suspend fun clear(dayOfWeek: Int) {

@@ -2,6 +2,7 @@
 
 package com.mediasage.feature.you
 
+import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.LensFilter
@@ -9,7 +10,6 @@ import com.mediasage.domain.model.Quote
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
-import com.mediasage.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,7 +69,6 @@ class ReaderViewModelTest {
         figureRepository = FakeFigureRepository(figure),
         dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap())),
         quoteRepository = FakeQuoteRepository(latestQuote),
-        userPreferencesRepository = FakeUserPreferencesRepository()
     )
 }
 
@@ -83,19 +82,12 @@ private class FakeFigureRepository(private val figure: Figure) : FigureRepositor
 }
 
 private class FakeDayAssignmentRepository(
-    private val assignmentsFlow: MutableStateFlow<Map<Int, Long>>
+    private val assignmentsFlow: MutableStateFlow<Map<Int, DayAssignment>>
 ) : DayAssignmentRepository {
-    override fun observeAssignments(): Flow<Map<Int, Long>> = assignmentsFlow
-    override suspend fun assign(dayOfWeek: Int, figureId: Long) = Unit
+    override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = assignmentsFlow
+    override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
-}
-
-private class FakeUserPreferencesRepository : UserPreferencesRepository {
-    private val flow = MutableStateFlow(LensFilter.NEWS)
-    override fun observeLens(): Flow<LensFilter> = flow
-    override suspend fun saveLens(lens: LensFilter) { flow.value = lens }
-    override suspend fun initializeIfAbsent() = Unit
 }
 
 private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteRepository {

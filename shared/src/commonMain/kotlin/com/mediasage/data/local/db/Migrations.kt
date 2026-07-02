@@ -43,6 +43,13 @@ val MIGRATION_21_22 = object : Migration(21, 22) {
     }
 }
 
+val MIGRATION_22_23 = object : Migration(22, 23) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE day_assignment ADD COLUMN lens TEXT")
+        connection.execSQL("DROP TABLE IF EXISTS user_preferences")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

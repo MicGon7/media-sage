@@ -11,6 +11,7 @@ object ReaderContract {
         val isToday: Boolean,
         val assignedFigureName: String? = null,
         val assignedFigureImageUrl: String? = null,
+        val assignedLens: LensFilter? = null,
     )
 
     data class QuoteCard(
@@ -24,7 +25,6 @@ object ReaderContract {
     sealed interface UiState {
         data class Ready(
             val weekSlots: List<DaySlot> = emptyList(),
-            val selectedLens: LensFilter = LensFilter.NEWS,
             val quoteCard: QuoteCard? = null,
             val pickerOpenForDay: Int? = null,
             val pickerFigures: List<Figure> = emptyList(),
@@ -33,9 +33,8 @@ object ReaderContract {
 
     sealed interface Intent {
         data class DaySlotTapped(val index: Int) : Intent
-        data class LensSelected(val lens: LensFilter) : Intent
         data object PickerDismissed : Intent
-        data class FigureAssigned(val dayOfWeek: Int, val figureId: Long) : Intent
+        data class FigureAssigned(val dayOfWeek: Int, val figureId: Long, val lens: LensFilter?) : Intent
         data class AssignmentCleared(val dayOfWeek: Int) : Intent
     }
 }

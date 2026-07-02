@@ -8,7 +8,6 @@ import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
-import com.mediasage.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +26,6 @@ class BriefingViewModel(
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val dailyReflectionRepository: DailyReflectionRepository,
     private val figureRepository: FigureRepository,
-    private val userPreferencesRepository: UserPreferencesRepository,
     private val headlineRepository: HeadlineRepository,
 ) : ViewModel() {
 
@@ -54,32 +52,32 @@ class BriefingViewModel(
             combine(
                 dayAssignmentRepository.observeAssignments(),
                 figureRepository.observeAllFigures(),
-                userPreferencesRepository.observeLens(),
-            ) { assignments, figures, lens -> Triple(assignments, figures, lens) }
+            ) { assignments, figures -> Pair(assignments, figures) }
                 .distinctUntilChanged()
-                .collectLatest { (assignments, figures, _) ->
+                .collectLatest { (assignments, figures) ->
                     val todayOrdinal = todayDayOfWeekOrdinal()
-                    val figureId = assignments[todayOrdinal] ?: figures.firstOrNull()?.id
+                    val assignment = assignments[todayOrdinal]
+                    val figureId = assignment?.figureId ?: figures.firstOrNull()?.id
                     if (figureId == null) {
                         updateCard(BriefingContract.CardState.Hidden)
                         emitLoadingSuccess()
                         return@collectLatest
                     }
-                    fetchAndUpdateCard(figureId)
+                    fetchAndUpdateCard(figureId, assignment?.lens)
                 }
         }
     }
 
-    private suspend fun fetchAndUpdateCard(figureId: Long) {
+    private suspend fun fetchAndUpdateCard(figureId: Long, lens: LensFilter?) {
         val figure = figureRepository.getFigureById(figureId) ?: return
         val tone = currentTone()
-        val lens = userPreferencesRepository.observeLens().first()
-        val headlines = if (lens == LensFilter.NEWS) {
+        val effectiveLens = lens ?: LensFilter.NEWS
+        val headlines = if (effectiveLens == LensFilter.NEWS) {
             headlineRepository.observeHeadlines().first().map { it.title }
         } else {
             emptyList()
         }
-        val themeLabel = lens.name.takeIf { lens != LensFilter.NEWS }
+        val themeLabel = effectiveLens.name.takeIf { effectiveLens != LensFilter.NEWS }
         updateCard(
             BriefingContract.CardState.LoadingWithFigure(
                 figureId = figureId,

@@ -2,9 +2,11 @@
 
 package com.mediasage.feature.figures
 
+import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
+import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
@@ -233,10 +235,10 @@ private fun buildFigure(id: Long, name: String, role: String) = Figure(
 )
 
 private class FakeDayAssignmentRepository(
-    private val assignments: Map<Int, Long> = emptyMap()
+    private val assignments: Map<Int, DayAssignment> = emptyMap()
 ) : DayAssignmentRepository {
-    override fun observeAssignments(): Flow<Map<Int, Long>> = flowOf(assignments)
-    override suspend fun assign(dayOfWeek: Int, figureId: Long) = Unit
+    override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = flowOf(assignments)
+    override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
 }

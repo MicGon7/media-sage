@@ -3,10 +3,11 @@ package com.mediasage.feature.you
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.DayAssignment
+import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
-import com.mediasage.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,20 +26,17 @@ class ReaderViewModel(
     private val figureRepository: FigureRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val quoteRepository: QuoteRepository,
-    private val userPreferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ReaderContract.UiState>(ReaderContract.UiState.Ready())
     val state: StateFlow<ReaderContract.UiState> = _state.asStateFlow()
 
     init {
-        viewModelScope.launch { userPreferencesRepository.initializeIfAbsent() }
         combine(
             figureRepository.observeAllFigures(),
             dayAssignmentRepository.observeAssignments(),
             quoteRepository.observeAllQuotes(),
-            userPreferencesRepository.observeLens(),
-        ) { figures, assignments, allQuotes, lens ->
+        ) { figures, assignments, allQuotes ->
             val current = _state.value as? ReaderContract.UiState.Ready ?: ReaderContract.UiState.Ready()
             val figuresById = figures.associateBy { it.id }
             val latestQuote = allQuotes.maxByOrNull { it.id }
@@ -46,7 +44,6 @@ class ReaderViewModel(
             current.copy(
                 weekSlots = buildWeekSlots(assignments, figuresById),
                 pickerFigures = figures,
-                selectedLens = lens,
                 quoteCard = if (latestQuote != null && quoteFigure != null) {
                     ReaderContract.QuoteCard(
                         quoteText = latestQuote.text,
@@ -66,15 +63,11 @@ class ReaderViewModel(
             is ReaderContract.Intent.DaySlotTapped ->
                 _state.value = current.copy(pickerOpenForDay = current.weekSlots[intent.index].dayOfWeek.ordinal)
 
-            is ReaderContract.Intent.LensSelected -> viewModelScope.launch {
-                userPreferencesRepository.saveLens(intent.lens)
-            }
-
             is ReaderContract.Intent.PickerDismissed ->
                 _state.value = current.copy(pickerOpenForDay = null)
 
             is ReaderContract.Intent.FigureAssigned -> viewModelScope.launch {
-                dayAssignmentRepository.assign(intent.dayOfWeek, intent.figureId)
+                dayAssignmentRepository.assign(intent.dayOfWeek, intent.figureId, intent.lens)
                 _state.value = current.copy(pickerOpenForDay = null)
             }
 
@@ -86,7 +79,7 @@ class ReaderViewModel(
     }
 
     private fun buildWeekSlots(
-        assignments: Map<Int, Long>,
+        assignments: Map<Int, DayAssignment>,
         figuresById: Map<Long, com.mediasage.domain.model.Figure>,
     ): List<ReaderContract.DaySlot> {
         val today = Instant.fromEpochMilliseconds(epochMillis())
@@ -94,12 +87,14 @@ class ReaderViewModel(
         val startOfWeek = today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
         return (0..6).map { i ->
             val date = startOfWeek.plus(i, DateTimeUnit.DAY)
-            val figure = assignments[date.dayOfWeek.ordinal]?.let { figuresById[it] }
+            val assignment = assignments[date.dayOfWeek.ordinal]
+            val figure = assignment?.figureId?.let { figuresById[it] }
             ReaderContract.DaySlot(
                 dayOfWeek = date.dayOfWeek,
                 isToday = date == today,
                 assignedFigureName = figure?.name,
                 assignedFigureImageUrl = figure?.portraitUrl,
+                assignedLens = assignment?.lens,
             )
         }
     }

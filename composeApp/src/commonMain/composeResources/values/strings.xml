@@ -65,6 +65,8 @@
     <string name="you_picker_search_clear">Clear search</string>
     <string name="you_picker_clear_day">Clear day</string>
     <string name="you_picker_empty">No figures match your search</string>
+    <string name="you_picker_choose_theme">Choose a Theme</string>
+    <string name="you_picker_back_description">Back to figure list</string>
 
     <!-- Settings screen -->
     <string name="title_settings">Settings</string>

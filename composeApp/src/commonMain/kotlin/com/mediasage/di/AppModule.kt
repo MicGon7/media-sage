@@ -11,7 +11,6 @@ import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.QuoteRepository
-import com.mediasage.domain.repository.UserPreferencesRepository
 import com.mediasage.feature.bookmarks.BookmarksViewModel
 import com.mediasage.feature.login.LoginViewModel
 import com.mediasage.feature.settings.SettingsViewModel
@@ -27,14 +26,14 @@ import org.koin.dsl.module
 
 val appModule = module {
     viewModel { AppViewModel(get<FigureRepository>(), get<DayAssignmentRepository>(), get<ThemePreferencesRepository>(), get<AuthRepository>()) }
-    viewModel { BriefingViewModel(get<DayAssignmentRepository>(), get<DailyReflectionRepository>(), get<FigureRepository>(), get<UserPreferencesRepository>(), get<HeadlineRepository>()) }
+    viewModel { BriefingViewModel(get<DayAssignmentRepository>(), get<DailyReflectionRepository>(), get<FigureRepository>(), get<HeadlineRepository>()) }
     viewModel { HeadlinesViewModel(get<HeadlineRepository>()) }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get(), get(), get()) }
     viewModel { FiguresViewModel(get<FigureRepository>(), get<EncouragementRepository>(), get<DayAssignmentRepository>()) }
     viewModel { (figureId: Long) -> FigureDetailViewModel(figureId, get<FigureRepository>(), get<EncouragementRepository>(), get<DayAssignmentRepository>()) }
     viewModel { LoginViewModel(get<AuthRepository>(), get<AuthPreferencesRepository>()) }
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
-    viewModel { ReaderViewModel(get<FigureRepository>(), get<DayAssignmentRepository>(), get<QuoteRepository>(), get<UserPreferencesRepository>()) }
+    viewModel { ReaderViewModel(get<FigureRepository>(), get<DayAssignmentRepository>(), get<QuoteRepository>()) }
     viewModel { HistoryViewModel(get<EncouragementRepository>()) }
     viewModel { BookmarksViewModel(get<EncouragementRepository>()) }
 }
