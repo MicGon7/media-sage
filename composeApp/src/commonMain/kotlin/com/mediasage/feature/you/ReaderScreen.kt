@@ -2,6 +2,7 @@ package com.mediasage.feature.you
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -25,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.BookmarkBorder
@@ -102,11 +104,11 @@ import mediasage.composeapp.generated.resources.you_lens_justice
 import mediasage.composeapp.generated.resources.you_lens_love
 import mediasage.composeapp.generated.resources.you_lens_perseverance
 import mediasage.composeapp.generated.resources.you_lens_repentance
-import mediasage.composeapp.generated.resources.you_lens_section_title
-
 import mediasage.composeapp.generated.resources.you_lens_today
 import mediasage.composeapp.generated.resources.you_nav_history
 import mediasage.composeapp.generated.resources.you_nav_saved
+import mediasage.composeapp.generated.resources.you_picker_back_description
+import mediasage.composeapp.generated.resources.you_picker_choose_theme
 import mediasage.composeapp.generated.resources.you_picker_clear_day
 import mediasage.composeapp.generated.resources.you_picker_empty
 import mediasage.composeapp.generated.resources.you_picker_search_clear
@@ -144,8 +146,8 @@ fun ReaderScreen(
             FigurePickerSheet(
                 figures = state.pickerFigures,
                 showClearOption = isAssigned,
-                onFigureSelected = { figure ->
-                    onIntent(ReaderContract.Intent.FigureAssigned(state.pickerOpenForDay, figure.id))
+                onFigureAndLensSelected = { figure, lens ->
+                    onIntent(ReaderContract.Intent.FigureAssigned(state.pickerOpenForDay, figure.id, lens))
                 },
                 onClearDay = {
                     onIntent(ReaderContract.Intent.AssignmentCleared(state.pickerOpenForDay))
@@ -219,26 +221,13 @@ fun ReaderScreen(
                     )
                 }
 
-                item {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-
-                item {
-                    LensChipRow(
-                        selectedLens = state.selectedLens,
-                        onLensSelected = { onIntent(ReaderContract.Intent.LensSelected(it)) },
-                        modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
-                    )
-                }
-
                 state.quoteCard?.let { quote ->
                     item {
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     }
                     item {
                         SavedQuoteCard(
                             quote = quote,
-                            selectedLens = state.selectedLens,
                             onViewMore = { if (it > 0) onNavigateToFigureDetail(it) },
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
                         )
@@ -343,14 +332,24 @@ private fun DaySlotItem(slot: ReaderContract.DaySlot, onClick: () -> Unit) {
             textAlign = TextAlign.Center,
         )
 
-        ReporterCircle(
-            slot = slot,
-            size = 72.dp,
-            primaryColor = primary,
-            todayRingColor = BrandAmber,
-            surfaceVariantColor = surfaceVariant,
-            onSurfaceVariantColor = onSurfaceVariant,
-        )
+        Box(contentAlignment = Alignment.BottomEnd) {
+            ReporterCircle(
+                slot = slot,
+                size = 72.dp,
+                primaryColor = primary,
+                todayRingColor = BrandAmber,
+                surfaceVariantColor = surfaceVariant,
+                onSurfaceVariantColor = onSurfaceVariant,
+            )
+            if (slot.assignedLens != null) {
+                LensBadge(
+                    lens = slot.assignedLens,
+                    modifier = Modifier
+                        .size(18.dp)
+                        .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                )
+            }
+        }
 
         Text(
             text = slot.assignedFigureName ?: stringResource(Res.string.you_carousel_assign_hint),
@@ -448,66 +447,13 @@ private fun Modifier.solidCircleBorder(color: Color, strokeWidth: Dp): Modifier 
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun LensChipRow(
-    selectedLens: LensFilter,
-    onLensSelected: (LensFilter) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier) {
-        SectionLabel(
-            text = stringResource(Res.string.you_lens_section_title),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-        FlowRow(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            LensFilter.entries.forEach { lens ->
-                LensChip(
-                    lens = lens,
-                    selected = selectedLens == lens,
-                    onClick = { onLensSelected(lens) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LensChip(
-    lens: LensFilter,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val lensColor = lens.color()
-    val onChip = if (lensColor.luminance() > 0.4f) Color(0xFF1A1A1A) else Color.White
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = {
-            Text(
-                text = stringResource(lens.labelRes()),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            )
-        },
-        shape = CircleShape,
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = lensColor,
-            selectedLabelColor = onChip,
-            labelColor = lensColor,
-        ),
-        border = FilterChipDefaults.filterChipBorder(
-            enabled = true,
-            selected = selected,
-            borderColor = lensColor.copy(alpha = 0.5f),
-            selectedBorderColor = Color.Transparent,
-            borderWidth = 1.5.dp,
-        ),
+private fun LensBadge(lens: LensFilter, modifier: Modifier = Modifier) {
+    val color = lens.color()
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(color),
     )
 }
 
@@ -539,7 +485,6 @@ private fun LensFilter.color(): Color = when (this) {
 @Composable
 private fun SavedQuoteCard(
     quote: ReaderContract.QuoteCard,
-    selectedLens: LensFilter,
     onViewMore: (figureId: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -605,7 +550,7 @@ private fun SavedQuoteCard(
                         com.mediasage.ui.FigurePlaceholder(name = quote.figureName, size = 32.dp)
                     }
                     Text(
-                        text = "\u2014 ${quote.figureName}, ${quote.figureRole}",
+                        text = "— ${quote.figureName}, ${quote.figureRole}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -625,136 +570,219 @@ private fun SavedQuoteCard(
 
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FigurePickerSheet(
     figures: List<Figure>,
     showClearOption: Boolean,
-    onFigureSelected: (Figure) -> Unit,
+    onFigureAndLensSelected: (Figure, LensFilter?) -> Unit,
     onClearDay: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
+    var selectedFigure by remember { mutableStateOf<Figure?>(null) }
     val filtered = remember(figures, query) {
         if (query.isBlank()) figures
         else figures.filter { it.name.contains(query.trim(), ignoreCase = true) }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = stringResource(Res.string.you_picker_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            placeholder = { Text(stringResource(Res.string.you_picker_search_hint)) },
-            trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { query = "" }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(Res.string.you_picker_search_clear),
-                        )
-                    }
-                }
-            },
-            singleLine = true,
-            shape = CircleShape,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        LazyColumn(
-            contentPadding = PaddingValues(bottom = 32.dp),
-        ) {
-            if (showClearOption) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onClearDay)
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.errorContainer),
-                            contentAlignment = Alignment.Center,
-                        ) {
+        if (selectedFigure != null) {
+            LensPickerSection(
+                figure = selectedFigure!!,
+                onLensSelected = { lens -> onFigureAndLensSelected(selectedFigure!!, lens) },
+                onBack = { selectedFigure = null },
+            )
+        } else {
+            Text(
+                text = stringResource(Res.string.you_picker_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text(stringResource(Res.string.you_picker_search_hint)) },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { query = "" }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.size(20.dp),
+                                contentDescription = stringResource(Res.string.you_picker_search_clear),
                             )
                         }
+                    }
+                },
+                singleLine = true,
+                shape = CircleShape,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyColumn(
+                contentPadding = PaddingValues(bottom = 32.dp),
+            ) {
+                if (showClearOption) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = onClearDay)
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.errorContainer),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                            Text(
+                                text = stringResource(Res.string.you_picker_clear_day),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+                }
+
+                if (filtered.isEmpty()) {
+                    item {
                         Text(
-                            text = stringResource(Res.string.you_picker_clear_day),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error,
+                            text = stringResource(Res.string.you_picker_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 32.dp),
+                            textAlign = TextAlign.Center,
                         )
                     }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-            }
-
-            if (filtered.isEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(Res.string.you_picker_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 32.dp),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            } else {
-                items(filtered, key = { it.id }) { figure ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onFigureSelected(figure) }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        if (figure.portraitUrl != null) {
-                            AsyncImage(
-                                model = figure.portraitUrl,
-                                contentDescription = figure.name,
-                                modifier = Modifier.size(40.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop,
-                                alignment = Alignment.TopCenter,
-                                error = rememberVectorPainter(Icons.Filled.Person),
-                                fallback = rememberVectorPainter(Icons.Filled.Person),
-                            )
-                        } else {
-                            FigurePlaceholder(name = figure.name, size = 40.dp)
-                        }
-                        Column {
-                            Text(
-                                text = figure.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            if (figure.role.isNotBlank()) {
-                                Text(
-                                    text = figure.role,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                } else {
+                    items(filtered, key = { it.id }) { figure ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedFigure = figure }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            if (figure.portraitUrl != null) {
+                                AsyncImage(
+                                    model = figure.portraitUrl,
+                                    contentDescription = figure.name,
+                                    modifier = Modifier.size(40.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop,
+                                    alignment = Alignment.TopCenter,
+                                    error = rememberVectorPainter(Icons.Filled.Person),
+                                    fallback = rememberVectorPainter(Icons.Filled.Person),
                                 )
+                            } else {
+                                FigurePlaceholder(name = figure.name, size = 40.dp)
+                            }
+                            Column {
+                                Text(
+                                    text = figure.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                                if (figure.role.isNotBlank()) {
+                                    Text(
+                                        text = figure.role,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LensPickerSection(
+    figure: Figure,
+    onLensSelected: (LensFilter?) -> Unit,
+    onBack: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onBack)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(Res.string.you_picker_back_description),
+            )
+            if (figure.portraitUrl != null) {
+                AsyncImage(
+                    model = figure.portraitUrl,
+                    contentDescription = figure.name,
+                    modifier = Modifier.size(32.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopCenter,
+                    error = rememberVectorPainter(Icons.Filled.Person),
+                    fallback = rememberVectorPainter(Icons.Filled.Person),
+                )
+            } else {
+                FigurePlaceholder(name = figure.name, size = 32.dp)
+            }
+            Text(text = figure.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+        }
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        SectionLabel(
+            text = stringResource(Res.string.you_picker_choose_theme),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+        FlowRow(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            LensFilter.entries.forEach { lens ->
+                val lensColor = lens.color()
+                FilterChip(
+                    selected = false,
+                    onClick = { onLensSelected(if (lens == LensFilter.NEWS) null else lens) },
+                    label = {
+                        Text(
+                            text = stringResource(lens.labelRes()),
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        )
+                    },
+                    shape = CircleShape,
+                    colors = FilterChipDefaults.filterChipColors(
+                        labelColor = lensColor,
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = false,
+                        borderColor = lensColor.copy(alpha = 0.5f),
+                        borderWidth = 1.5.dp,
+                    ),
+                )
             }
         }
     }
@@ -769,7 +797,6 @@ private fun ReaderScreenPreview() {
         ReaderScreen(
             state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = LensFilter.NEWS,
                 quoteCard = previewQuoteCard(),
             ),
             onIntent = {},
@@ -784,7 +811,6 @@ private fun ReaderScreenDarkPreview() {
         ReaderScreen(
             state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = LensFilter.HOPE,
                 quoteCard = previewQuoteCard(),
             ),
             onIntent = {},
@@ -799,7 +825,6 @@ private fun ReaderScreenModernPreview() {
         ReaderScreen(
             state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = LensFilter.NEWS,
             ),
             onIntent = {},
         )
@@ -813,7 +838,6 @@ private fun ReaderScreenWarmPreview() {
         ReaderScreen(
             state = ReaderContract.UiState.Ready(
                 weekSlots = previewWeekSlots(),
-                selectedLens = LensFilter.JUSTICE,
             ),
             onIntent = {},
         )
@@ -821,18 +845,19 @@ private fun ReaderScreenWarmPreview() {
 }
 
 private fun previewWeekSlots() = listOf(
-    DayOfWeek.MONDAY to "Augustine",
-    DayOfWeek.TUESDAY to "Teresa of Ávila",
-    DayOfWeek.WEDNESDAY to null,
-    DayOfWeek.THURSDAY to "C.S. Lewis",
-    DayOfWeek.FRIDAY to null,
-    DayOfWeek.SATURDAY to null,
-    DayOfWeek.SUNDAY to null,
-).mapIndexed { i, (day, name) ->
+    DayOfWeek.MONDAY to Pair("Augustine", LensFilter.FAITH),
+    DayOfWeek.TUESDAY to Pair("Teresa of Ávila", LensFilter.GRACE),
+    DayOfWeek.WEDNESDAY to Pair(null, null),
+    DayOfWeek.THURSDAY to Pair("C.S. Lewis", null),
+    DayOfWeek.FRIDAY to Pair(null, null),
+    DayOfWeek.SATURDAY to Pair(null, null),
+    DayOfWeek.SUNDAY to Pair(null, null),
+).mapIndexed { i, (day, figureLens) ->
     ReaderContract.DaySlot(
         dayOfWeek = day,
         isToday = i == 3,
-        assignedFigureName = name,
+        assignedFigureName = figureLens.first,
+        assignedLens = figureLens.second,
     )
 }
 

@@ -40,7 +40,7 @@ class FiguresViewModel(
                 _searchQuery
             ) { figures, counts, assignments, query ->
                 val todayOrdinal = todayDayOfWeekOrdinal()
-                val todayFigureId = assignments[todayOrdinal]
+                val todayFigureId = assignments[todayOrdinal]?.figureId
                 val items = figures.map { figure ->
                     VoiceFigureItem(
                         id = figure.id,

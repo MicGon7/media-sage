@@ -2,9 +2,11 @@
 
 package com.mediasage.feature.figures
 
+import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
+import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
@@ -190,7 +192,7 @@ class FiguresViewModelTest {
         val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
         val repo = FakeEncouragementRepository(MutableStateFlow(emptyMap()))
         // Assign Zwingli (id=2) to every day so the test is day-of-week agnostic
-        val dayAssignmentRepo = FakeDayAssignmentRepository(assignments = (0..6).associate { it to 2L })
+        val dayAssignmentRepo = FakeDayAssignmentRepository(assignments = (0..6).associate { it to DayAssignment(figureId = 2L, lens = null) })
         val vm = FiguresViewModel(figureRepo, repo, dayAssignmentRepo)
 
         val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
@@ -233,10 +235,10 @@ private fun buildFigure(id: Long, name: String, role: String) = Figure(
 )
 
 private class FakeDayAssignmentRepository(
-    private val assignments: Map<Int, Long> = emptyMap()
+    private val assignments: Map<Int, DayAssignment> = emptyMap()
 ) : DayAssignmentRepository {
-    override fun observeAssignments(): Flow<Map<Int, Long>> = flowOf(assignments)
-    override suspend fun assign(dayOfWeek: Int, figureId: Long) = Unit
+    override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = flowOf(assignments)
+    override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
 }

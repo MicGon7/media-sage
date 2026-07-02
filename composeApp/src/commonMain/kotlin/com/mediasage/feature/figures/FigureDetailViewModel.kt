@@ -59,7 +59,7 @@ class FigureDetailViewModel(
                     figureImageUrl = figure.portraitUrl,
                     bio = figure.bio,
                     quotes = encouragements.map { FigureQuoteItem(it.quoteText, it.headlineTitle) },
-                    isPinned = assignments[todayOrdinal] == figureId
+                    isPinned = assignments[todayOrdinal]?.figureId == figureId
                 )
             }.collect { _state.value = it }
         }

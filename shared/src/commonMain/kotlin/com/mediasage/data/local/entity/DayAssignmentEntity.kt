@@ -7,4 +7,5 @@ import androidx.room.PrimaryKey
 data class DayAssignmentEntity(
     @PrimaryKey val dayOfWeek: Int,
     val figureId: Long,
+    val lens: String? = null,
 )
