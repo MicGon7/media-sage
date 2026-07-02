@@ -51,6 +51,25 @@ Current skills:
 - No ambiguous requirements — if it needs clarification, use `assisted` instead
 - Tickets that touch `.github/workflows/`, `Dockerfile.worker`, or `agent/worker-entrypoint.sh` must use `assisted` — these files define the pipeline itself, the worker cannot push workflow files without elevated permissions, and mistakes here have wide blast radius
 
+## Ticket Scope Guidelines
+
+Tickets scoped to a single Gradle module reduce autonomous worker cache-read costs by ~60% compared to cross-layer tickets. The `create-ticket` skill enforces these rules automatically during ticket creation.
+
+**Module boundary rule:** When a feature touches more than one Gradle module, create one ticket per module rather than one monolithic ticket. Each ticket lists only the Relevant Files for its own module.
+
+**8-file heuristic:** When a single module has more than 8 Relevant Files, split into two tickets at the natural seam:
+- `:shared` — data layer (entities, migrations, DAOs) as one ticket; domain layer (domain models, repository interfaces, mappers) as the other
+- Other modules — use your best judgment to find a cohesive seam
+
+**Two-phase dependency sequencing:** KMP compile order determines dispatch order:
+- `:appServer` and `:agentruntime` — independent; no dependency on client modules
+- `:shared` — must be worked before `:composeApp`
+- `:composeApp` — depends on `:shared`
+
+Encode this order with Jira `Blocks` links: the `:shared` ticket blocks the `:composeApp` ticket. Workers read these links to determine sequencing.
+
+**Infrastructure tickets:** Files outside the four Gradle modules (`.github/workflows/`, `Dockerfile*`, `gradle/`, `docs/`, etc.) are classified as infrastructure. If a ticket touches infrastructure and module files together, do not decompose — create a single `assisted` ticket and note the cross-cutting scope in Implementation Notes. Infrastructure-only tickets also remain as a single ticket; the compile-order concern that motivates splitting does not apply.
+
 ## Automation levels
 
 - **Level 1 — Assisted**: Human works interactively with Claude Code in any configuration (auto-accept, plan mode, or with tool approvals). The configuration doesn't define the level — the human's presence does. They can steer, redirect, and co-author at any point. This is AI-augmented pair programming.

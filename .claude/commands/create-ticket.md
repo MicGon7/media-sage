@@ -30,7 +30,37 @@ Rules:
 - If no existing files are directly relevant (e.g. the ticket creates something new), list the
   directory where the new file will live and one or two reference files to model it after
 
-### 3. Draft the ticket body
+### 3. Detect module boundaries and decide ticket count
+
+Group the Relevant Files from step 2 by bucket:
+
+| Path prefix | Bucket |
+|---|---|
+| `shared/` | `:shared` |
+| `composeApp/` | `:composeApp` |
+| `appServer/` | `:appServer` |
+| `agentruntime/` | `:agentruntime` |
+| Anything else (`.github/`, `Dockerfile*`, `gradle/`, `docs/`, etc.) | `infrastructure` |
+
+**Decision rules:**
+
+- **Infrastructure + any module files** → create a **single `assisted` ticket** covering all files. Note in Implementation Notes that the ticket is cross-cutting. Do not decompose.
+- **Infrastructure files only** → create a **single ticket**. Do not decompose.
+- **Multiple Gradle modules, no infrastructure** → **multi-ticket mode**: one ticket per module, each with only its own module's Relevant Files.
+- **Single Gradle module, >8 files** → split into two tickets at the natural seam:
+  - `:shared` — data layer (entities, migrations, DAOs) vs. domain layer (domain models, repository interfaces, mappers)
+  - Other modules — use your best judgment to find a cohesive seam
+- **Single Gradle module, ≤8 files** → single ticket. Proceed to step 4.
+
+**KMP compile dependency order (encode as Jira `Blocks` links in step 6):**
+
+```
+:appServer, :agentruntime   — independent (no dependency on client modules)
+:shared                     — must compile before :composeApp
+:composeApp                 — depends on :shared
+```
+
+### 4. Draft the ticket body
 
 Use this exact structure — all four sections are required:
 
@@ -70,24 +100,33 @@ Reject any item that names a tool, script, or quality gate:
 | Run `./scripts/run-affected-tests.sh` | All existing tests continue to pass |
 | CI passes | The feature works end-to-end in the running app |
 
-### 4. Determine the correct Jira fields
+### 5. Determine the correct Jira fields
 
 - **Parent epic:** use the `parent` field with the epic issue key (e.g. `MS-4`). If no epic applies, omit the field.
 - **Label:** `assisted` or `autonomous` — set from step 1.
 - **Summary:** concise imperative phrase, e.g. "Add retry logic to CloudRunJobsClient"
 
-### 5. Create the ticket
+### 6. Create the ticket(s)
 
-Call `createJiraIssue` with:
+**Single-ticket mode:** Call `createJiraIssue` once:
 - `cloudId`: `media-sage.atlassian.net`
 - `project`: `{ "key": "MS" }`
 - `issuetype`: `{ "name": "Task" }`
 - `summary`: the one-line summary
-- `description`: the full body from step 3, using `contentFormat: "markdown"`
+- `description`: the full body from step 4, using `contentFormat: "markdown"`
 - `parent`: `{ "key": "<epic key>" }` if an epic was identified
 - `labels`: `["assisted"]` or `["autonomous"]`
 
-### 6. Confirm to the user
+**Multi-ticket mode:**
+1. Create tickets in compile order: `:shared` before `:composeApp`; `:appServer` and `:agentruntime` can be created in any order.
+2. Use the same `parent` epic and `labels` on all tickets.
+3. After all tickets are created, call `createIssueLink` for each blocking relationship:
+   - `cloudId`: `media-sage.atlassian.net`
+   - `type`: `Blocks`
+   - `inwardIssue`: the blocker ticket key (e.g. the `:shared` ticket)
+   - `outwardIssue`: the blocked ticket key (e.g. the `:composeApp` ticket)
+
+### 7. Confirm to the user
 
 Reply with:
 - The Jira issue key and URL (e.g. [MS-370](https://media-sage.atlassian.net/browse/MS-370))
