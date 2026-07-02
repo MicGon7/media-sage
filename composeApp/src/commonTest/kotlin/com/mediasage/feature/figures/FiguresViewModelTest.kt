@@ -192,7 +192,7 @@ class FiguresViewModelTest {
         val figureRepo = FakeFigureRepository(MutableStateFlow(figures))
         val repo = FakeEncouragementRepository(MutableStateFlow(emptyMap()))
         // Assign Zwingli (id=2) to every day so the test is day-of-week agnostic
-        val dayAssignmentRepo = FakeDayAssignmentRepository(assignments = (0..6).associate { it to 2L })
+        val dayAssignmentRepo = FakeDayAssignmentRepository(assignments = (0..6).associate { it to DayAssignment(figureId = 2L, lens = null) })
         val vm = FiguresViewModel(figureRepo, repo, dayAssignmentRepo)
 
         val state = assertIs<FiguresContract.UiState.Success>(vm.state.value)
