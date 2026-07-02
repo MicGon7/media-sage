@@ -206,12 +206,11 @@ data = base64.b64encode(json.dumps(payload).encode()).decode()
 print(json.dumps({'messages': [{'data': data}]}))
 ")
 
-  printf '%s' "$message" > /tmp/pubsub_payload.json
   curl -sf -X POST \
     "https://pubsub.googleapis.com/v1/projects/${GCP_PROJECT_ID}/topics/${PUBSUB_TOPIC}:publish" \
     -H "Authorization: Bearer ${gcp_token}" \
     -H "Content-Type: application/json" \
-    -d "@/tmp/pubsub_payload.json" \
+    -d "$message" \
     && echo "Pub/Sub completion event published (status=$status)" \
     || echo "Warning: Failed to publish Pub/Sub completion event — orchestrator will recover on restart"
 }
