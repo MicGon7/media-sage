@@ -47,4 +47,18 @@ interface AgentLauncher {
      */
     fun launchForConflictResolution(prNumber: Int): Boolean
 
+    /**
+     * Launches a Cloud Run Job for [ticketKey] after its last blocker merged.
+     *
+     * Posts a Jira comment on [ticketKey] citing [blockerKey] as the trigger before
+     * dispatching. Deduplicates by ticket key — the resulting bot-initiated In Progress
+     * Jira webhook is caught by the in-process [activeKeys] gate in [AgentLaunchService],
+     * preventing a second dispatch.
+     *
+     * @param ticketKey Jira issue key of the newly unblocked ticket (e.g. "MS-521").
+     * @param blockerKey Jira issue key of the blocker whose PR just merged (e.g. "MS-520").
+     * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
+     */
+    fun launchForUnblockedTicket(ticketKey: String, blockerKey: String): Boolean
+
 }

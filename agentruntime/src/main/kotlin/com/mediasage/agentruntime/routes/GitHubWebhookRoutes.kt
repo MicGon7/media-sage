@@ -1,6 +1,7 @@
 package com.mediasage.agentruntime.routes
 
 import com.mediasage.agentruntime.service.AgentLauncher
+import com.mediasage.agentruntime.service.TicketSystemClient
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -45,7 +46,9 @@ data class GitHubPullRequest(
     @SerialName("base")
     val base: GitHubBranch = GitHubBranch("main"),
     @SerialName("user")
-    val user: GitHubUser
+    val user: GitHubUser,
+    @SerialName("merged")
+    val merged: Boolean = false,
 )
 
 @Serializable
@@ -70,6 +73,13 @@ private data class WebhookContext(
 private data class DequeueContext(
     val prNumber: Int,
 )
+
+private data class MergeContext(
+    val prNumber: Int,
+    val ticketKey: String,
+)
+
+private val ticketKeyRegex = Regex("MS-\\d+")
 
 private val log = LoggerFactory.getLogger("GitHubWebhookRoutes")
 private val webhookJson = Json { ignoreUnknownKeys = true }
@@ -98,6 +108,7 @@ private val webhookJson = Json { ignoreUnknownKeys = true }
  */
 fun Route.githubWebhookRoutes(webhookSecret: String, botLogin: String) {
     val agentService by inject<AgentLauncher>()
+    val ticketClient by inject<TicketSystemClient>()
 
     post("/webhook/github") {
         val eventType = call.request.header("X-GitHub-Event") ?: run {
@@ -113,7 +124,7 @@ fun Route.githubWebhookRoutes(webhookSecret: String, botLogin: String) {
             call.respond(HttpStatusCode.Unauthorized)
             return@post
         }
-        handleGitHubEvent(eventType, rawBody, agentService, botLogin)
+        handleGitHubEvent(eventType, rawBody, agentService, ticketClient, botLogin)
         call.respond(HttpStatusCode.OK)
     }
 }
@@ -134,10 +145,14 @@ private suspend fun handleGitHubEvent(
     eventType: String,
     rawBody: ByteArray,
     agentService: AgentLauncher,
-    botLogin: String
+    ticketClient: TicketSystemClient,
+    botLogin: String,
 ) {
     when (eventType) {
-        "pull_request" -> handleDequeueEvent(rawBody, agentService, botLogin)
+        "pull_request" -> {
+            handleDequeueEvent(rawBody, agentService, botLogin)
+            handleMergeEvent(rawBody, ticketClient, agentService)
+        }
         "pull_request_review" -> handleReviewEvent(rawBody, agentService, botLogin)
     }
 }
@@ -207,6 +222,47 @@ private fun parseReviewContext(rawBody: ByteArray, botLogin: String): WebhookCon
 
     val valid = payload.action == "submitted" && state == "changes_requested" && !reviewBody.startsWith("🤖 **Agent:**")
     return if (valid) WebhookContext(prNumber, state) else null
+}
+
+/**
+ * Handles a merged PR event (`pull_request`, `closed`, `merged: true`).
+ *
+ * Extracts the Jira ticket key from the branch name (e.g. `feature/MS-520-...` → `MS-520`),
+ * queries [TicketSystemClient] for tickets newly unblocked by that merge, then dispatches
+ * each via [AgentLauncher.launchForUnblockedTicket]. No-op if the PR was not merged, the
+ * branch has no recognisable ticket key, or no tickets are unblocked.
+ */
+private suspend fun handleMergeEvent(
+    rawBody: ByteArray,
+    ticketClient: TicketSystemClient,
+    agentService: AgentLauncher,
+) {
+    val context = parseMergeContext(rawBody) ?: return
+    val unblocked = ticketClient.getNewlyUnblockedTickets(context.ticketKey)
+    if (unblocked.isEmpty()) return
+    log.info("PR#${context.prNumber} merged (${context.ticketKey}) — ${unblocked.size} ticket(s) unblocked")
+    unblocked.forEach { ticket ->
+        log.info("Dispatching $ticket unblocked by ${context.ticketKey}")
+        agentService.launchForUnblockedTicket(ticket, context.ticketKey)
+    }
+}
+
+/**
+ * Parses a `pull_request` webhook payload into a [MergeContext].
+ *
+ * Returns `null` if:
+ * - the action is not `closed` or the PR was not merged
+ * - the branch name contains no recognisable `MS-NNN` ticket key
+ */
+private fun parseMergeContext(rawBody: ByteArray): MergeContext? {
+    val payload = webhookJson.decodeFromString<GitHubWebhookPayload>(rawBody.decodeToString())
+    if (payload.action != "closed" || !payload.pullRequest.merged) return null
+    val branchRef = payload.pullRequest.head.ref
+    val ticketKey = ticketKeyRegex.find(branchRef)?.value ?: run {
+        log.info("PR#${payload.pullRequest.number} merged but '$branchRef' has no ticket key — ignoring")
+        return null
+    }
+    return MergeContext(payload.pullRequest.number, ticketKey)
 }
 
 /**

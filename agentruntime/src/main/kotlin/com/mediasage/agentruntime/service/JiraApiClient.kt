@@ -62,17 +62,17 @@ private data class JiraContentFields(
  * @param apiToken Atlassian API token paired with [email].
  */
 open class JiraApiClient(
-    private val httpClient: HttpClient,
-    private val cloudId: String,
-    private val email: String,
-    private val apiToken: String
+    protected val httpClient: HttpClient,
+    cloudId: String,
+    email: String,
+    apiToken: String,
 ) {
 
     private val log = LoggerFactory.getLogger(JiraApiClient::class.java)
-    private val authHeader = "Basic " + Base64.getEncoder()
+    protected val authHeader = "Basic " + Base64.getEncoder()
         .encodeToString("$email:$apiToken".toByteArray(Charsets.UTF_8))
 
-    private val baseUrl = "https://api.atlassian.com/ex/jira/$cloudId/rest/api/3"
+    protected val baseUrl = "https://api.atlassian.com/ex/jira/$cloudId/rest/api/3"
 
     /**
      * Returns the summary and description of [ticketKey] as a formatted string, or null if

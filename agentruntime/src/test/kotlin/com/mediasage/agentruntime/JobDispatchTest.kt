@@ -405,4 +405,73 @@ class JobDispatchTest {
         assertFalse(second, "Second launch for same PR must be deduplicated")
         assertEquals(1, dispatcher.executions.size, "Only one job must be dispatched")
     }
+
+    // ── launchForUnblockedTicket ──────────────────────────────────────────────
+
+    @Test
+    fun `launchForUnblockedTicket dispatches with ticket-work job type`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
+
+        service.launchForUnblockedTicket("MS-521", "MS-520")
+        advanceUntilIdle()
+
+        assertEquals("ticket-work", dispatcher.jobTypes.single())
+    }
+
+    @Test
+    fun `launchForUnblockedTicket passes TICKET_KEY identifier`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
+
+        service.launchForUnblockedTicket("MS-521", "MS-520")
+        advanceUntilIdle()
+
+        assertEquals("MS-521", dispatcher.lastIdentifiers["TICKET_KEY"])
+        assertEquals(listOf("MS-521"), dispatcher.executions)
+    }
+
+    @Test
+    fun `launchForUnblockedTicket posts Jira comment with blocker key`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val jiraClient = FakeJiraApiClient()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, jiraClient, scope = this)
+
+        service.launchForUnblockedTicket("MS-521", "MS-520")
+        advanceUntilIdle()
+
+        assertEquals(1, jiraClient.comments.size, "Jira comment must be posted")
+        assertEquals("MS-521", jiraClient.comments[0], "Comment must be posted on the unblocked ticket")
+    }
+
+    @Test
+    fun `launchForUnblockedTicket is deduplicated by activeKeys for re-entrant Jira webhook`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        // Simulate: GitHub webhook calls launchForUnblockedTicket and activeKeys is set synchronously.
+        // A re-entrant Jira webhook then calls launch for the same key — the activeKeys gate rejects it.
+        val first = service.launchForUnblockedTicket("MS-521", "MS-520")
+        val reentrant = service.launch("MS-521") // simulates Jira webhook fired by In Progress transition
+        advanceUntilIdle()
+
+        assertTrue(first, "Initial dispatch must succeed")
+        assertFalse(reentrant, "Re-entrant dispatch must be rejected by activeKeys gate")
+        assertEquals(1, dispatcher.executions.size, "Only one Cloud Run job must be dispatched")
+    }
+
+    @Test
+    fun `launchForUnblockedTicket with shouldDispatch false is a no-op`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = false)
+        val dispatcher = FakeJobDispatcher()
+        val jiraClient = FakeJiraApiClient()
+        val service = cloudRunService(registry, dispatcher, jiraClient, scope = this)
+
+        service.launchForUnblockedTicket("MS-521", "MS-520")
+        advanceUntilIdle()
+
+        assertTrue(dispatcher.executions.isEmpty(), "Must not dispatch when shouldDispatch returns false")
+        assertTrue(jiraClient.comments.isEmpty(), "Must not post comment when dedup rejects dispatch")
+    }
 }
