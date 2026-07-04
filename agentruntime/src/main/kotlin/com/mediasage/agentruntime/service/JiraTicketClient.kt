@@ -109,18 +109,23 @@ open class JiraTicketClient(
         if (outwardBlocked.isEmpty()) return emptyList()
 
         return outwardBlocked.mapNotNull { candidateKey ->
-            isFullyUnblockedAndBotAssigned(candidateKey)
+            isFullyUnblockedAndBotAssigned(candidateKey, mergedTicketKey)
         }
     }
 
-    private suspend fun isFullyUnblockedAndBotAssigned(candidateKey: String): String? {
+    // mergedTicketKey is treated as resolved regardless of its current Jira status —
+    // the GitHub webhook fires before GitHub Actions auto-transitions the blocker to Done.
+    private suspend fun isFullyUnblockedAndBotAssigned(candidateKey: String, mergedTicketKey: String): String? {
         val candidate = fetchIssueLinks(candidateKey) ?: return null
         val fields = candidate.fields ?: return null
         if (fields.assignee?.accountId != botAccountId) return null
 
         val allBlockersDone = fields.issueLinks
             .filter { it.type.name == LINK_TYPE_BLOCKS && it.inwardIssue != null }
-            .all { it.inwardIssue?.fields?.status?.name == STATUS_DONE }
+            .all { link ->
+                link.inwardIssue!!.key == mergedTicketKey ||
+                    link.inwardIssue.fields?.status?.name == STATUS_DONE
+            }
 
         return if (allBlockersDone) candidateKey else null
     }
