@@ -85,6 +85,7 @@ class JobDispatchTest {
     private class FakeJiraApiClient(
         private val statusResponse: String? = null,
         val comments: MutableList<String> = mutableListOf(),
+        val transitions: MutableList<String> = mutableListOf(),
     ) : JiraApiClient(
         httpClient = HttpClient(MockEngine { respond("", HttpStatusCode.OK) }),
         cloudId = "test",
@@ -95,6 +96,9 @@ class JobDispatchTest {
         override suspend fun getTicketContent(ticketKey: String): String? = null
         override suspend fun addComment(ticketKey: String, body: String) {
             comments.add(ticketKey)
+        }
+        override suspend fun transitionToInProgress(ticketKey: String) {
+            transitions.add(ticketKey)
         }
     }
 
@@ -459,6 +463,30 @@ class JobDispatchTest {
         assertTrue(first, "Initial dispatch must succeed")
         assertFalse(reentrant, "Re-entrant dispatch must be rejected by activeKeys gate")
         assertEquals(1, dispatcher.executions.size, "Only one Cloud Run job must be dispatched")
+    }
+
+    @Test
+    fun `launchForUnblockedTicket transitions ticket to In Progress`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val jiraClient = FakeJiraApiClient()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, jiraClient, scope = this)
+
+        service.launchForUnblockedTicket("MS-521", "MS-520")
+        advanceUntilIdle()
+
+        assertEquals(listOf("MS-521"), jiraClient.transitions, "In Progress transition must be applied")
+    }
+
+    @Test
+    fun `launch without blockerKey does not transition to In Progress`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val jiraClient = FakeJiraApiClient()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, jiraClient, scope = this)
+
+        service.launch("MS-521")
+        advanceUntilIdle()
+
+        assertTrue(jiraClient.transitions.isEmpty(), "Direct launch must not trigger In Progress transition")
     }
 
     @Test

@@ -100,6 +100,7 @@ class AgentLaunchService(
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraApiClient, log)) return
         options.blockerKey?.let { blocker ->
             jiraApiClient?.addComment(ticketKey, "🤖 Dispatched automatically after **$blocker** was merged.")
+            jiraApiClient?.transitionToInProgress(ticketKey)
         }
         val jobId = cloudRun.jobs.insert(ticketKey, payload)
         if (options.dryRun) {
