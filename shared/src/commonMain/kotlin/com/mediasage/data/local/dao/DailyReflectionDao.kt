@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.mediasage.data.local.entity.DailyReflectionEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DailyReflectionDao {
@@ -19,6 +20,9 @@ interface DailyReflectionDao {
 
     @Query("SELECT DISTINCT scriptureReference FROM daily_reflection WHERE figureId = :figureId AND epochDay >= :fromDay AND epochDay < :today")
     suspend fun getRecentScripturesForFigure(figureId: Long, fromDay: Long, today: Long): List<String>
+
+    @Query("SELECT * FROM daily_reflection WHERE epochDay >= :start AND epochDay <= :end ORDER BY epochDay ASC")
+    fun getByEpochDayRange(start: Long, end: Long): Flow<List<DailyReflectionEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: DailyReflectionEntity)
