@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory
 private data class DispatchOptions(
     val dryRun: Boolean = false,
     val jobNameOverride: String? = null,
+    val blockerKey: String? = null,
 )
 
 /**
@@ -97,6 +98,9 @@ class AgentLaunchService(
             return
         }
         if (shouldSkipInterrupted(ticketKey, cloudRun, jiraApiClient, log)) return
+        options.blockerKey?.let { blocker ->
+            jiraApiClient?.addComment(ticketKey, "🤖 Dispatched automatically after **$blocker** was merged.")
+        }
         val jobId = cloudRun.jobs.insert(ticketKey, payload)
         if (options.dryRun) {
             log.info("[$ticketKey] dry-run: job $jobId inserted — skipping Cloud Run dispatch")
@@ -172,6 +176,26 @@ class AgentLaunchService(
         val payload = json.encodeToString(mapOf("prNumber" to prNumber.toString()))
         val identifiers = mapOf("PR_NUMBER" to prNumber.toString())
         return dispatchToCloudRun(key, "conflict-resolution-work", payload, identifiers, cloudRun)
+    }
+
+    /**
+     * Launches a Cloud Run Job for [ticketKey] that was unblocked when [blockerKey]'s PR merged.
+     *
+     * Posts a Jira comment on [ticketKey] citing [blockerKey] as the trigger, then dispatches.
+     * The comment is posted inside the dedup-guarded coroutine so it only fires on actual dispatch.
+     *
+     * @param ticketKey Newly unblocked ticket key (e.g. "MS-521").
+     * @param blockerKey Blocker ticket key whose PR just merged (e.g. "MS-520").
+     * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
+     */
+    override fun launchForUnblockedTicket(ticketKey: String, blockerKey: String): Boolean {
+        val cloudRun = cloudRun ?: return false
+        val payload = json.encodeToString(mapOf("ticketKey" to ticketKey))
+        val identifiers = mapOf("TICKET_KEY" to ticketKey)
+        return dispatchToCloudRun(
+            ticketKey, "ticket-work", payload, identifiers, cloudRun,
+            DispatchOptions(blockerKey = blockerKey),
+        )
     }
 
     /**

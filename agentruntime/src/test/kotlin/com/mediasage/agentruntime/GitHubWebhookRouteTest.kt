@@ -4,6 +4,7 @@ import com.mediasage.agentruntime.plugins.configureContentNegotiation
 import com.mediasage.agentruntime.plugins.configureStatusPages
 import com.mediasage.agentruntime.routes.githubWebhookRoutes
 import com.mediasage.agentruntime.service.AgentLauncher
+import com.mediasage.agentruntime.service.TicketSystemClient
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -193,6 +194,73 @@ class GitHubWebhookRouteTest {
     }
 
     @Test
+    fun mergedPrWithUnblockedTicketsDispatchesEach() {
+        val unblocked = FakeTicketSystemClient(unblocked = listOf("MS-521", "MS-522"))
+        val tracking = FakeAgentLauncher()
+        testGitHubApp(agentService = tracking, ticketClient = unblocked) {
+            val body = mergedPrPayload(branchRef = "feature/MS-520-something")
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(2, tracking.unblockedLaunches, "Must dispatch both unblocked tickets")
+            assertEquals("MS-522", tracking.lastUnblockedTicket)
+            assertEquals("MS-520", tracking.lastBlockerKey)
+        }
+    }
+
+    @Test
+    fun mergedPrWithNoUnblockedTicketsDoesNotDispatch() {
+        val tracking = FakeAgentLauncher()
+        testGitHubApp(agentService = tracking) {
+            val body = mergedPrPayload(branchRef = "feature/MS-520-something")
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(0, tracking.unblockedLaunches, "Must not dispatch when no tickets are unblocked")
+        }
+    }
+
+    @Test
+    fun mergedPrWithNoBranchTicketKeyIsIgnored() {
+        val tracking = FakeAgentLauncher()
+        testGitHubApp(agentService = tracking) {
+            val body = mergedPrPayload(branchRef = "renovate/update-deps")
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(0, tracking.unblockedLaunches, "Must not dispatch when branch has no ticket key")
+        }
+    }
+
+    @Test
+    fun closedButNotMergedPrIsIgnored() {
+        val tracking = FakeAgentLauncher()
+        testGitHubApp(agentService = tracking) {
+            val body = mergedPrPayload(branchRef = "feature/MS-520-something", merged = false)
+            val response = client.post("/webhook/github") {
+                contentType(ContentType.Application.Json)
+                header("X-GitHub-Event", "pull_request")
+                header("X-Hub-Signature-256", validSignature(TEST_SECRET, body))
+                setBody(body)
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(0, tracking.unblockedLaunches, "Must not dispatch for closed-but-not-merged PR")
+        }
+    }
+
+    @Test
     fun mergeConflictDequeueFiresConflictResolver() {
         val tracking = FakeAgentLauncher()
         testGitHubApp(agentService = tracking) {
@@ -246,6 +314,25 @@ class GitHubWebhookRouteTest {
 }
 
 // ---- Payload builders ----
+
+private fun mergedPrPayload(
+    branchRef: String = "feature/MS-520-some-feature",
+    prNumber: Int = 99,
+    merged: Boolean = true,
+    senderLogin: String = HUMAN_LOGIN,
+) = """
+{
+  "action": "closed",
+  "sender": { "login": "$senderLogin" },
+  "pull_request": {
+    "number": $prNumber,
+    "head": { "ref": "$branchRef" },
+    "base": { "ref": "main" },
+    "user": { "login": "$senderLogin" },
+    "merged": $merged
+  }
+}
+""".trimIndent()
 
 private fun dequeuePayload(
     prAuthorLogin: String = BOT_LOGIN,
@@ -328,12 +415,14 @@ private fun validSignature(secret: String, body: String): String {
 private fun testGitHubApp(
     botLogin: String = BOT_LOGIN,
     agentService: AgentLauncher = FakeAgentLauncher(),
+    ticketClient: TicketSystemClient = FakeTicketSystemClient(),
     block: suspend ApplicationTestBuilder.() -> Unit
 ) = testApplication {
     application {
         install(Koin) {
             modules(module {
                 single<AgentLauncher> { agentService }
+                single<TicketSystemClient> { ticketClient }
             })
         }
         configureContentNegotiation()
@@ -346,7 +435,10 @@ private fun testGitHubApp(
 private class FakeAgentLauncher : AgentLauncher {
     var agentLaunches = 0
     var conflictResolutionLaunches = 0
+    var unblockedLaunches = 0
     var lastPrNumber: Int? = null
+    var lastUnblockedTicket: String? = null
+    var lastBlockerKey: String? = null
 
     override fun launch(ticketKey: String, dryRun: Boolean) = false
 
@@ -361,4 +453,18 @@ private class FakeAgentLauncher : AgentLauncher {
         lastPrNumber = prNumber
         return true
     }
+
+    override fun launchForUnblockedTicket(ticketKey: String, blockerKey: String): Boolean {
+        unblockedLaunches++
+        lastUnblockedTicket = ticketKey
+        lastBlockerKey = blockerKey
+        return true
+    }
+}
+
+private class FakeTicketSystemClient(
+    private val unblocked: List<String> = emptyList(),
+) : TicketSystemClient {
+    override suspend fun getNewlyUnblockedTickets(mergedTicketKey: String) = unblocked
+    override suspend fun isResolved(ticketKey: String) = false
 }

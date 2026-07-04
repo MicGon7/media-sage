@@ -19,6 +19,8 @@ import com.mediasage.agentruntime.service.AgentLaunchService
 import com.mediasage.agentruntime.service.CloudRunDispatch
 import com.mediasage.agentruntime.service.CloudRunJobsClient
 import com.mediasage.agentruntime.service.JiraApiClient
+import com.mediasage.agentruntime.service.JiraTicketClient
+import com.mediasage.agentruntime.service.TicketSystemClient
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -46,7 +48,9 @@ private val log = LoggerFactory.getLogger("AgentModule")
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     includes(feedbackModule(config))
     single { buildHttpClient() }
-    single { buildJiraApiClient(config, get()) }
+    single { buildJiraTicketClient(config, get()) }
+    single<JiraApiClient> { get<JiraTicketClient>() }
+    single<TicketSystemClient> { get<JiraTicketClient>() }
     single {
         val cloudRun = buildCloudRunDispatch(config, get())
         AgentLaunchService(scope, cloudRun, get<JiraApiClient>())
@@ -70,11 +74,11 @@ private fun feedbackModule(config: AgentConfig) = module {
     }
 }
 
-private fun buildJiraApiClient(config: AgentConfig, httpClient: HttpClient): JiraApiClient =
+private fun buildJiraTicketClient(config: AgentConfig, httpClient: HttpClient): JiraTicketClient =
     if (config.jiraBotEmail.isNotBlank() && config.jiraBotApiToken.isNotBlank()) {
-        JiraApiClient(httpClient, config.jiraCloudId, config.jiraBotEmail, config.jiraBotApiToken)
+        JiraTicketClient(httpClient, config.jiraCloudId, config.jiraBotEmail, config.jiraBotApiToken, config.jiraBotAccountId)
     } else {
-        JiraApiClient(httpClient, config.jiraCloudId, config.jiraEmail, config.jiraApiToken)
+        JiraTicketClient(httpClient, config.jiraCloudId, config.jiraEmail, config.jiraApiToken, config.jiraBotAccountId)
     }
 
 private fun buildGitHubApiClient(config: AgentConfig, httpClient: HttpClient): GitHubApiClient =
