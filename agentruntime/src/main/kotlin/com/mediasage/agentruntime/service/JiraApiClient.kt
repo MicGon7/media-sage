@@ -48,6 +48,22 @@ private data class JiraContentFields(
     val description: JsonElement? = null
 )
 
+@Serializable
+private data class JiraTransitionsResponse(
+    @SerialName("transitions")
+    val transitions: List<JiraTransition> = emptyList()
+)
+
+@Serializable
+private data class JiraTransition(
+    @SerialName("id")
+    val id: String,
+    @SerialName("name")
+    val name: String,
+)
+
+private const val IN_PROGRESS_STATUS = "In Progress"
+
 /**
  * Jira Cloud REST API v3 client that implements label checking, ticket content fetching,
  * status inspection, and comment posting for the Media Sage agent orchestrator.
@@ -150,6 +166,43 @@ open class JiraApiClient(
      * @param ticketKey Jira issue key (e.g. `MS-242`).
      * @param body Comment text to post.
      */
+    /**
+     * Transitions [ticketKey] to "In Progress" by fetching available transitions dynamically
+     * and applying the one named "In Progress". Failures are logged and swallowed.
+     *
+     * Calls `GET /rest/api/3/issue/{ticketKey}/transitions` then
+     * `POST /rest/api/3/issue/{ticketKey}/transitions`.
+     *
+     * @param ticketKey Jira issue key (e.g. `MS-531`).
+     */
+    open suspend fun transitionToInProgress(ticketKey: String) {
+        try {
+            val fetchResponse = httpClient.get("$baseUrl/issue/$ticketKey/transitions") {
+                header(HttpHeaders.Authorization, authHeader)
+                accept(ContentType.Application.Json)
+            }
+            if (!fetchResponse.status.isSuccess()) {
+                log.warn("[$ticketKey] Failed to fetch Jira transitions: ${fetchResponse.status}")
+                return
+            }
+            val body = fetchResponse.body<JiraTransitionsResponse>()
+            val transitionId = body.transitions.find { it.name == IN_PROGRESS_STATUS }?.id ?: run {
+                log.warn("[$ticketKey] No '$IN_PROGRESS_STATUS' transition found in Jira")
+                return
+            }
+            val postResponse = httpClient.post("$baseUrl/issue/$ticketKey/transitions") {
+                header(HttpHeaders.Authorization, authHeader)
+                contentType(ContentType.Application.Json)
+                setBody("""{"transition":{"id":"$transitionId"}}""")
+            }
+            if (!postResponse.status.isSuccess()) {
+                log.warn("[$ticketKey] Failed to apply In Progress transition: ${postResponse.status}")
+            }
+        } catch (e: Exception) {
+            log.warn("[$ticketKey] Failed to transition to In Progress: ${e.message}")
+        }
+    }
+
     open suspend fun addComment(ticketKey: String, body: String) {
         try {
             val escapedBody = kotlinx.serialization.json.Json.encodeToString(
