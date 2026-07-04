@@ -79,7 +79,7 @@ private data class MergeContext(
     val ticketKey: String,
 )
 
-private val ticketKeyRegex = Regex("MS-\\d+")
+private val ticketKeyRegex = Regex("[A-Z]+-\\d+")
 
 private val log = LoggerFactory.getLogger("GitHubWebhookRoutes")
 private val webhookJson = Json { ignoreUnknownKeys = true }
