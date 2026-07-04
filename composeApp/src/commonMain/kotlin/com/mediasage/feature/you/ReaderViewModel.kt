@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.LensFilter
+import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
@@ -22,11 +23,16 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
+private const val MS_PER_DAY = 86_400_000L
+
 class ReaderViewModel(
     private val figureRepository: FigureRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val quoteRepository: QuoteRepository,
+    private val dailyReflectionRepository: DailyReflectionRepository,
 ) : ViewModel() {
+
+    private val todayEpochDay = epochMillis() / MS_PER_DAY
 
     private val _state = MutableStateFlow<ReaderContract.UiState>(ReaderContract.UiState.Ready())
     val state: StateFlow<ReaderContract.UiState> = _state.asStateFlow()
@@ -36,23 +42,18 @@ class ReaderViewModel(
             figureRepository.observeAllFigures(),
             dayAssignmentRepository.observeAssignments(),
             quoteRepository.observeAllQuotes(),
-        ) { figures, assignments, allQuotes ->
+            dailyReflectionRepository.observeByEpochDayRange(todayEpochDay - 6, todayEpochDay),
+        ) { figures, assignments, allQuotes, briefingDays ->
             val current = _state.value as? ReaderContract.UiState.Ready ?: ReaderContract.UiState.Ready()
             val figuresById = figures.associateBy { it.id }
             val latestQuote = allQuotes.maxByOrNull { it.id }
             val quoteFigure = latestQuote?.let { figuresById[it.figureId] }
+            val briefingByDay = briefingDays.associate { it.epochDay to it.figureId }
             current.copy(
                 weekSlots = buildWeekSlots(assignments, figuresById),
                 pickerFigures = figures,
-                quoteCard = if (latestQuote != null && quoteFigure != null) {
-                    ReaderContract.QuoteCard(
-                        quoteText = latestQuote.text,
-                        figureName = quoteFigure.name,
-                        figureRole = quoteFigure.role,
-                        figureImageUrl = quoteFigure.portraitUrl,
-                        figureId = quoteFigure.id,
-                    )
-                } else null,
+                quoteCard = buildQuoteCard(latestQuote, quoteFigure),
+                calendarDays = buildCalendarDays(briefingByDay, figuresById),
             )
         }.onEach { _state.value = it }.launchIn(viewModelScope)
     }
@@ -97,5 +98,37 @@ class ReaderViewModel(
                 assignedLens = assignment?.lens,
             )
         }
+    }
+
+    private fun buildCalendarDays(
+        briefingByDay: Map<Long, Long>,
+        figuresById: Map<Long, com.mediasage.domain.model.Figure>,
+    ): List<ReaderContract.CalendarDay> {
+        return (6 downTo 0).map { daysAgo ->
+            val epochDay = todayEpochDay - daysAgo
+            val figureId = briefingByDay[epochDay]
+            val figure = figureId?.let { figuresById[it] }
+            ReaderContract.CalendarDay(
+                epochDay = epochDay,
+                isToday = daysAgo == 0,
+                hasData = figureId != null,
+                figurePortraitUrl = figure?.portraitUrl,
+                figureName = figure?.name,
+            )
+        }
+    }
+
+    private fun buildQuoteCard(
+        latestQuote: com.mediasage.domain.model.Quote?,
+        quoteFigure: com.mediasage.domain.model.Figure?,
+    ): ReaderContract.QuoteCard? {
+        if (latestQuote == null || quoteFigure == null) return null
+        return ReaderContract.QuoteCard(
+            quoteText = latestQuote.text,
+            figureName = quoteFigure.name,
+            figureRole = quoteFigure.role,
+            figureImageUrl = quoteFigure.portraitUrl,
+            figureId = quoteFigure.id,
+        )
     }
 }

@@ -94,6 +94,20 @@
     <string name="history_coming_soon">History coming soon</string>
     <string name="history_empty_title">No reading history yet</string>
     <string name="history_empty_subtitle">Articles you read will appear here</string>
+    <string name="history_mode_week">Week</string>
+    <string name="history_mode_month">Month</string>
+    <string name="history_mode_year">Year</string>
+    <string name="history_reflection_section">DAILY BRIEFING</string>
+    <string name="history_scripture_label">SCRIPTURE</string>
+    <string name="history_insight_label">INSIGHT</string>
+    <string name="history_implication_label">IMPLICATION</string>
+    <string name="history_inspiration_label">INSPIRATION</string>
+    <string name="history_empty_day_title">No entries yet</string>
+    <string name="history_empty_day_subtitle">Readings from this day will appear here</string>
+
+    <!-- Reader screen calendar card -->
+    <string name="you_calendar_section_title">RECENT BRIEFINGS</string>
+    <string name="you_calendar_no_data">—</string>
 
     <!-- Figure detail screen -->
     <string name="figure_detail_biography">Biography</string>

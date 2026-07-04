@@ -64,4 +64,14 @@ class EncouragementRepositoryImpl(
         encouragementDao.toggleBookmark(articleUrl)
     }
 
+    override fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>> {
+        val start = epochDay * MS_PER_DAY
+        return encouragementDao.observeByDateRange(start, start + MS_PER_DAY)
+            .map { entities -> entities.map { it.toDomain() } }
+    }
+
+    override fun observeActiveEpochDays(): Flow<Set<Long>> =
+        encouragementDao.observeActiveEpochDays().map { it.toSet() }
 }
+
+private const val MS_PER_DAY = 86_400_000L

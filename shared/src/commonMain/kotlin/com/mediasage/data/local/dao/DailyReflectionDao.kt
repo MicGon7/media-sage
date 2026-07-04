@@ -24,6 +24,9 @@ interface DailyReflectionDao {
     @Query("SELECT * FROM daily_reflection WHERE epochDay >= :start AND epochDay <= :end ORDER BY epochDay ASC")
     fun getByEpochDayRange(start: Long, end: Long): Flow<List<DailyReflectionEntity>>
 
+    @Query("SELECT * FROM daily_reflection WHERE epochDay = :epochDay LIMIT 1")
+    suspend fun getFirstForDay(epochDay: Long): DailyReflectionEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: DailyReflectionEntity)
 }

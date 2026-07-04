@@ -29,8 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -105,8 +103,6 @@ import mediasage.composeapp.generated.resources.you_lens_love
 import mediasage.composeapp.generated.resources.you_lens_perseverance
 import mediasage.composeapp.generated.resources.you_lens_repentance
 import mediasage.composeapp.generated.resources.you_lens_today
-import mediasage.composeapp.generated.resources.you_nav_history
-import mediasage.composeapp.generated.resources.you_nav_saved
 import mediasage.composeapp.generated.resources.you_picker_back_description
 import mediasage.composeapp.generated.resources.you_picker_choose_theme
 import mediasage.composeapp.generated.resources.you_picker_clear_day
@@ -128,8 +124,7 @@ import org.jetbrains.compose.resources.stringResource
 fun ReaderScreen(
     state: ReaderContract.UiState,
     onIntent: (ReaderContract.Intent) -> Unit,
-    onNavigateToBookmarks: () -> Unit = {},
-    onNavigateToHistory: () -> Unit = {},
+    onNavigateToHistory: (epochDay: Long) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToFigureDetail: (figureId: Long) -> Unit = {},
 ) {
@@ -182,27 +177,14 @@ fun ReaderScreen(
                                 .weight(1f)
                                 .padding(horizontal = 16.dp),
                         )
-                        // padding(top) matches ScreenHeader's internal title padding(top = 12.dp)
-                        // so the icons sit at the same visual midpoint as the title text.
-                        Row(modifier = Modifier.padding(top = 12.dp)) {
-                            IconButton(onClick = onNavigateToBookmarks) {
-                                Icon(
-                                    imageVector = Icons.Outlined.BookmarkBorder,
-                                    contentDescription = stringResource(Res.string.you_nav_saved),
-                                )
-                            }
-                            IconButton(onClick = onNavigateToHistory) {
-                                Icon(
-                                    imageVector = Icons.Outlined.History,
-                                    contentDescription = stringResource(Res.string.you_nav_history),
-                                )
-                            }
-                            IconButton(onClick = onNavigateToSettings) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Settings,
-                                    contentDescription = stringResource(Res.string.you_settings_icon_description),
-                                )
-                            }
+                        IconButton(
+                            onClick = onNavigateToSettings,
+                            modifier = Modifier.padding(top = 4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = stringResource(Res.string.you_settings_icon_description),
+                            )
                         }
                     }
                 }
@@ -219,6 +201,17 @@ fun ReaderScreen(
                         onDayTapped = { index -> onIntent(ReaderContract.Intent.DaySlotTapped(index)) },
                         modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
                     )
+                }
+
+                if (state.calendarDays.isNotEmpty()) {
+                    item {
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        CalendarCard(
+                            days = state.calendarDays,
+                            onDayTapped = { epochDay -> onNavigateToHistory(epochDay) },
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        )
+                    }
                 }
 
                 state.quoteCard?.let { quote ->

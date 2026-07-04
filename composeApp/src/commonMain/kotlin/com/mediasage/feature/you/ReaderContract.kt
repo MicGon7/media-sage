@@ -22,12 +22,21 @@ object ReaderContract {
         val figureId: Long,
     )
 
+    data class CalendarDay(
+        val epochDay: Long,
+        val isToday: Boolean,
+        val hasData: Boolean,
+        val figurePortraitUrl: String?,
+        val figureName: String?,
+    )
+
     sealed interface UiState {
         data class Ready(
             val weekSlots: List<DaySlot> = emptyList(),
             val quoteCard: QuoteCard? = null,
             val pickerOpenForDay: Int? = null,
             val pickerFigures: List<Figure> = emptyList(),
+            val calendarDays: List<CalendarDay> = emptyList(),
         ) : UiState
     }
 

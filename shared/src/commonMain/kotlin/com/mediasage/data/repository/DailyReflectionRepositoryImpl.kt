@@ -4,9 +4,12 @@ import com.mediasage.data.local.dao.DailyReflectionDao
 import com.mediasage.data.local.entity.DailyReflectionEntity
 import com.mediasage.data.remote.DailyReflectionRequestDto
 import com.mediasage.data.remote.MediaSageApi
+import com.mediasage.domain.model.BriefingDay
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.repository.DailyReflectionRepository
 import kotlin.time.Instant
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
@@ -65,6 +68,14 @@ class DailyReflectionRepositoryImpl(
         dao.upsert(entity)
         return entity.toDomain()
     }
+
+    override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
+        dao.getByEpochDayRange(startEpochDay, endEpochDay).map { entities ->
+            entities.groupBy { it.epochDay }.map { (day, list) -> BriefingDay(day, list.first().figureId) }
+        }
+
+    override suspend fun getForDay(epochDay: Long): DailyReflection? =
+        dao.getFirstForDay(epochDay)?.toDomain()
 }
 
 private fun DailyReflectionEntity.toDomain() = DailyReflection(
