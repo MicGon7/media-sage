@@ -77,5 +77,8 @@ private class FakeDailyReflectionDao(private val store: List<DailyReflectionEnti
     override fun getByEpochDayRange(start: Long, end: Long): Flow<List<DailyReflectionEntity>> =
         flowOf(store.filter { it.epochDay in start..end }.sortedBy { it.epochDay })
 
+    override suspend fun getFirstForDay(epochDay: Long): DailyReflectionEntity? =
+        store.firstOrNull { it.epochDay == epochDay }
+
     override suspend fun upsert(entity: DailyReflectionEntity) {}
 }
