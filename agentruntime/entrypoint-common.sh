@@ -46,7 +46,7 @@ for line in open('/tmp/claude-output.jsonl'):
     echo "Warning: JIRA_BOT_EMAIL or JIRA_BOT_API_TOKEN not set — skipping Jira comment to avoid posting as personal account"
   elif [ -f /tmp/jira_comment.txt ] && [ -n "$effective_jira_key" ]; then
     python3 - "$effective_jira_key" "$JIRA_BOT_EMAIL" "$JIRA_BOT_API_TOKEN" << 'PYEOF' || echo "Warning: Failed to post Jira comment"
-import json, subprocess, sys
+import base64, json, sys, urllib.request, urllib.error
 ticket_key = sys.argv[1]
 jira_user = sys.argv[2]
 jira_token = sys.argv[3]
@@ -56,26 +56,26 @@ try:
     comment_text = comment_text.replace('{pr_url}', pr_url)
 except FileNotFoundError:
     pass
-body = json.dumps({
+payload = json.dumps({
     'body': {
         'type': 'doc', 'version': 1,
         'content': [{'type': 'paragraph', 'content': [{'type': 'text', 'text': comment_text}]}]
     }
-})
-with open('/tmp/jira_comment_body.json', 'w') as f:
-    f.write(body)
-result = subprocess.run(
-    ['curl', '-sf', '-X', 'POST',
-     '-u', f"{jira_user}:{jira_token}",
-     '-H', 'Content-Type: application/json',
-     '-d', '@/tmp/jira_comment_body.json',
-     f'https://media-sage.atlassian.net/rest/api/3/issue/{ticket_key}/comment'],
-    capture_output=True, text=True
+}).encode()
+credentials = base64.b64encode(f"{jira_user}:{jira_token}".encode()).decode()
+req = urllib.request.Request(
+    f'https://media-sage.atlassian.net/rest/api/3/issue/{ticket_key}/comment',
+    data=payload, method='POST'
 )
-if result.returncode == 0:
-    print('Jira comment posted')
-else:
-    print(f'Warning: Jira comment post failed: {result.stderr}')
+req.add_header('Authorization', f'Basic {credentials}')
+req.add_header('Content-Type', 'application/json')
+try:
+    with urllib.request.urlopen(req):
+        print('Jira comment posted')
+except urllib.error.HTTPError as exc:
+    print(f'Warning: Jira comment post failed: {exc.code} {exc.reason}')
+except Exception as exc:
+    print(f'Warning: Jira comment post failed: {exc}')
 PYEOF
     touch /tmp/jira_comment_posted
   fi
@@ -85,7 +85,7 @@ PYEOF
   # are available for advisor analysis and decision scoring.
   if [ -f /tmp/claude-output.jsonl ]; then
     python3 - << 'PYEOF'
-import json, os, subprocess, sys
+import json, os, sys, urllib.request, urllib.error
 
 job_id = os.environ.get('JOB_ID', '')
 rest_url = os.environ.get('SUPABASE_REST_URL', '').rstrip('/')
@@ -101,23 +101,20 @@ except Exception as e:
     print(f"Warning: could not read transcript: {e}", file=sys.stderr)
     sys.exit(0)
 
-body = json.dumps({'job_id': job_id, 'content': raw_jsonl})
-with open('/tmp/supabase_transcript_body.json', 'w') as f:
-    f.write(body)
-result = subprocess.run(
-    ['curl', '-sf', '-X', 'POST',
-     f'{rest_url}/transcripts',
-     '-H', f'apikey: {svc_key}',
-     '-H', f'Authorization: Bearer {svc_key}',
-     '-H', 'Content-Type: application/json',
-     '-H', 'Prefer: return=minimal',
-     '-d', '@/tmp/supabase_transcript_body.json'],
-    capture_output=True, text=True
-)
-if result.returncode == 0:
-    print("Raw JSONL transcript persisted to Supabase")
-else:
-    print(f"Warning: Failed to persist transcript to Supabase: {result.stderr}", file=sys.stderr)
+payload = json.dumps({'job_id': job_id, 'content': raw_jsonl}).encode()
+req = urllib.request.Request(f'{rest_url}/transcripts', data=payload, method='POST')
+req.add_header('apikey', svc_key)
+req.add_header('Authorization', f'Bearer {svc_key}')
+req.add_header('Content-Type', 'application/json')
+req.add_header('Prefer', 'return=minimal')
+try:
+    with urllib.request.urlopen(req):
+        print("Raw JSONL transcript persisted to Supabase")
+except urllib.error.HTTPError as exc:
+    body_err = exc.read().decode(errors='replace')
+    print(f"Warning: Failed to persist transcript to Supabase: {exc.code} {body_err}", file=sys.stderr)
+except Exception as exc:
+    print(f"Warning: Failed to persist transcript to Supabase: {exc}", file=sys.stderr)
 PYEOF
   fi
 
