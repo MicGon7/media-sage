@@ -21,4 +21,7 @@ interface DayAssignmentDao {
 
     @Query("SELECT COUNT(*) FROM day_assignment")
     suspend fun countAll(): Int
+
+    @Query("SELECT * FROM day_assignment WHERE dayOfWeek = :dayOfWeek LIMIT 1")
+    suspend fun getByDayOfWeek(dayOfWeek: Int): DayAssignmentEntity?
 }

@@ -2,8 +2,10 @@ package com.mediasage.data.repository
 
 import com.mediasage.data.local.dao.DayAssignmentDao
 import com.mediasage.data.local.dao.FigureDao
+import com.mediasage.data.local.dao.ScheduleOverrideDao
 import com.mediasage.data.local.entity.DayAssignmentEntity
 import com.mediasage.data.local.entity.FigureEntity
+import com.mediasage.data.local.entity.ScheduleOverrideEntity
 import com.mediasage.data.local.entity.VoiceFigureProjection
 import com.mediasage.data.remote.AssignmentDefaultDto
 import com.mediasage.data.remote.DailyReflectionRequestDto
@@ -53,7 +55,7 @@ class DayAssignmentRepositoryTest {
                 AssignmentDefaultDto(6, "Mother Teresa"),
             )
         )
-        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
+        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api, FakeScheduleOverrideDao())
 
         repo.seedDefaultsIfEmpty()
 
@@ -65,7 +67,7 @@ class DayAssignmentRepositoryTest {
         val dao = FakeDayAssignmentDao(initialCount = 3)
         val figureDao = FakeFigureDaoForSeeding(allFigures)
         val api = FakeAssignmentApi()
-        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
+        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api, FakeScheduleOverrideDao())
 
         repo.seedDefaultsIfEmpty()
 
@@ -78,7 +80,7 @@ class DayAssignmentRepositoryTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         val figureDao = FakeFigureDaoForSeeding(allFigures)
         val api = FakeAssignmentApi(shouldThrow = true)
-        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
+        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api, FakeScheduleOverrideDao())
 
         repo.seedDefaultsIfEmpty()
 
@@ -95,7 +97,7 @@ class DayAssignmentRepositoryTest {
                 AssignmentDefaultDto(1, "Unknown Figure"),
             )
         )
-        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
+        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api, FakeScheduleOverrideDao())
 
         repo.seedDefaultsIfEmpty()
 
@@ -112,7 +114,7 @@ class DayAssignmentRepositoryTest {
                 AssignmentDefaultDto(0, "augustine of hippo"),
             )
         )
-        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
+        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api, FakeScheduleOverrideDao())
 
         repo.seedDefaultsIfEmpty()
 
@@ -124,20 +126,97 @@ class DayAssignmentRepositoryTest {
     fun seedDefaultsIfEmpty_fallbackContains7Entries() = runTest {
         assertEquals(7, DayAssignmentRepositoryImpl.FALLBACK_DEFAULTS.size)
     }
+
+    @Test
+    fun resolveReporter_returnsOverrideFigureIdWhenOverrideExists() = runTest {
+        val overrideDao = FakeScheduleOverrideDao()
+        val dao = FakeDayAssignmentDao()
+        dao.upsert(DayAssignmentEntity(dayOfWeek = 1, figureId = 10L))
+        overrideDao.upsert(ScheduleOverrideEntity(epochDay = 20000L, figureId = 99L))
+        val repo = DayAssignmentRepositoryImpl(dao, FakeFigureDaoForSeeding(), FakeAssignmentApi(), overrideDao)
+
+        val result = repo.resolveReporter(epochDay = 20000L, dayOfWeek = 1)
+
+        assertEquals(99L, result)
+    }
+
+    @Test
+    fun resolveReporter_fallsBackToDayAssignmentWhenNoOverride() = runTest {
+        val overrideDao = FakeScheduleOverrideDao()
+        val dao = FakeDayAssignmentDao()
+        dao.upsert(DayAssignmentEntity(dayOfWeek = 3, figureId = 42L))
+        val repo = DayAssignmentRepositoryImpl(dao, FakeFigureDaoForSeeding(), FakeAssignmentApi(), overrideDao)
+
+        val result = repo.resolveReporter(epochDay = 20001L, dayOfWeek = 3)
+
+        assertEquals(42L, result)
+    }
+
+    @Test
+    fun resolveReporter_returnsNullWhenNeitherOverrideNorAssignmentExists() = runTest {
+        val repo = DayAssignmentRepositoryImpl(
+            FakeDayAssignmentDao(), FakeFigureDaoForSeeding(), FakeAssignmentApi(), FakeScheduleOverrideDao()
+        )
+
+        val result = repo.resolveReporter(epochDay = 20002L, dayOfWeek = 5)
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun setOverride_storesOverrideRetrievableByResolveReporter() = runTest {
+        val overrideDao = FakeScheduleOverrideDao()
+        val repo = DayAssignmentRepositoryImpl(
+            FakeDayAssignmentDao(), FakeFigureDaoForSeeding(), FakeAssignmentApi(), overrideDao
+        )
+
+        repo.setOverride(epochDay = 19999L, figureId = 7L)
+        val result = repo.resolveReporter(epochDay = 19999L, dayOfWeek = 0)
+
+        assertEquals(7L, result)
+    }
+
+    @Test
+    fun clearOverride_removesOverrideSoFallbackApplies() = runTest {
+        val overrideDao = FakeScheduleOverrideDao()
+        val dao = FakeDayAssignmentDao()
+        dao.upsert(DayAssignmentEntity(dayOfWeek = 2, figureId = 55L))
+        val repo = DayAssignmentRepositoryImpl(dao, FakeFigureDaoForSeeding(), FakeAssignmentApi(), overrideDao)
+
+        repo.setOverride(epochDay = 20003L, figureId = 88L)
+        repo.clearOverride(epochDay = 20003L)
+        val result = repo.resolveReporter(epochDay = 20003L, dayOfWeek = 2)
+
+        assertEquals(55L, result)
+    }
 }
 
 private class FakeDayAssignmentDao(private val initialCount: Int = 0) : DayAssignmentDao {
     val upsertCalls = mutableListOf<DayAssignmentEntity>()
+    private val store = mutableMapOf<Int, DayAssignmentEntity>()
 
     override fun observeAll(): Flow<List<DayAssignmentEntity>> = flowOf(emptyList())
 
     override suspend fun upsert(entity: DayAssignmentEntity) {
         upsertCalls.add(entity)
+        store[entity.dayOfWeek] = entity
     }
 
-    override suspend fun delete(dayOfWeek: Int) {}
+    override suspend fun delete(dayOfWeek: Int) { store.remove(dayOfWeek) }
 
     override suspend fun countAll(): Int = initialCount
+
+    override suspend fun getByDayOfWeek(dayOfWeek: Int): DayAssignmentEntity? = store[dayOfWeek]
+}
+
+private class FakeScheduleOverrideDao : ScheduleOverrideDao {
+    private val store = mutableMapOf<Long, ScheduleOverrideEntity>()
+
+    override suspend fun upsert(entity: ScheduleOverrideEntity) { store[entity.epochDay] = entity }
+
+    override suspend fun delete(epochDay: Long) { store.remove(epochDay) }
+
+    override suspend fun getByEpochDay(epochDay: Long): ScheduleOverrideEntity? = store[epochDay]
 }
 
 private class FakeFigureDaoForSeeding(figures: List<FigureEntity> = emptyList()) : FigureDao {
