@@ -88,6 +88,9 @@ private class FakeDayAssignmentRepository(
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
+    override suspend fun setOverride(epochDay: Long, figureId: Long) = Unit
+    override suspend fun clearOverride(epochDay: Long) = Unit
+    override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = null
 }
 
 private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteRepository {

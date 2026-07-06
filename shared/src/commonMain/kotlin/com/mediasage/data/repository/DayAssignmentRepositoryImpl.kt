@@ -2,7 +2,9 @@ package com.mediasage.data.repository
 
 import com.mediasage.data.local.dao.DayAssignmentDao
 import com.mediasage.data.local.dao.FigureDao
+import com.mediasage.data.local.dao.ScheduleOverrideDao
 import com.mediasage.data.local.entity.DayAssignmentEntity
+import com.mediasage.data.local.entity.ScheduleOverrideEntity
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.LensFilter
@@ -15,6 +17,7 @@ class DayAssignmentRepositoryImpl(
     private val dao: DayAssignmentDao,
     private val figureDao: FigureDao,
     private val api: MediaSageApi,
+    private val overrideDao: ScheduleOverrideDao,
 ) : DayAssignmentRepository {
 
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> =
@@ -33,6 +36,19 @@ class DayAssignmentRepositoryImpl(
 
     override suspend fun clear(dayOfWeek: Int) {
         dao.delete(dayOfWeek)
+    }
+
+    override suspend fun setOverride(epochDay: Long, figureId: Long) {
+        overrideDao.upsert(ScheduleOverrideEntity(epochDay = epochDay, figureId = figureId))
+    }
+
+    override suspend fun clearOverride(epochDay: Long) {
+        overrideDao.delete(epochDay)
+    }
+
+    override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? {
+        overrideDao.getByEpochDay(epochDay)?.let { return it.figureId }
+        return dao.getByDayOfWeek(dayOfWeek)?.figureId
     }
 
     override suspend fun seedDefaultsIfEmpty() {
