@@ -43,7 +43,7 @@
     <!-- You screen -->
     <string name="you_screen_title">Reader</string>
     <string name="you_nav_saved">Saved</string>
-    <string name="you_nav_history">History</string>
+    <string name="you_nav_history">Journal</string>
     <string name="you_settings_icon_description">Settings</string>
     <string name="you_carousel_title">YOUR REPORTERS THIS WEEK</string>
     <string name="you_saved_section_title">FROM THE REPORTERS</string>
@@ -90,7 +90,7 @@
     <string name="bookmark_remove">Remove saved article</string>
 
     <!-- History screen -->
-    <string name="title_history">History</string>
+    <string name="title_history">Journal</string>
     <string name="history_coming_soon">History coming soon</string>
     <string name="history_empty_title">No reading history yet</string>
     <string name="history_empty_subtitle">Articles you read will appear here</string>
@@ -102,11 +102,13 @@
     <string name="history_insight_label">INSIGHT</string>
     <string name="history_implication_label">IMPLICATION</string>
     <string name="history_inspiration_label">INSPIRATION</string>
-    <string name="history_empty_day_title">No entries yet</string>
+    <string name="history_empty_day_for">No entry for %1$s</string>
     <string name="history_empty_day_subtitle">Readings from this day will appear here</string>
+    <string name="history_tab_briefing">Briefing</string>
+    <string name="history_tab_articles">Articles</string>
 
     <!-- Reader screen calendar card -->
-    <string name="you_calendar_section_title">RECENT BRIEFINGS</string>
+    <string name="you_calendar_section_title">HISTORY</string>
     <string name="you_calendar_no_data">—</string>
 
     <!-- Figure detail screen -->

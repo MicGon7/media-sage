@@ -36,7 +36,7 @@ val appModule = module {
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
     viewModel { ReaderViewModel(get<FigureRepository>(), get<DayAssignmentRepository>(), get<QuoteRepository>(), get<DailyReflectionRepository>()) }
     viewModel { HistoryViewModel(get<EncouragementRepository>()) }
-    viewModel { (epochDay: Long) -> YouHistoryViewModel(epochDay, get<DailyReflectionRepository>(), get<EncouragementRepository>()) }
+    viewModel { (epochDay: Long) -> YouHistoryViewModel(epochDay, get<DailyReflectionRepository>(), get<EncouragementRepository>(), get<FigureRepository>(), get<DayAssignmentRepository>()) }
     viewModel { BookmarksViewModel(get<EncouragementRepository>()) }
 }
 

@@ -206,6 +206,8 @@ private class FakeEncouragementRepository(private val encouragement: Encourageme
     override fun observeCountByFigureName(): Flow<Map<String, Int>> = MutableStateFlow(emptyMap())
     override fun observeByFigureId(figureId: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
     override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> = MutableStateFlow(false)
+    override fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeActiveEpochDays(): Flow<Set<Long>> = MutableStateFlow(emptySet())
     override suspend fun toggleBookmark(articleUrl: String) = Unit
 }
 

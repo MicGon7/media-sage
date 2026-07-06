@@ -6,31 +6,32 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.you_calendar_section_title
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mediasage.theme.BrandAmber
 import kotlinx.datetime.LocalDate
-import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.you_calendar_no_data
-import mediasage.composeapp.generated.resources.you_calendar_section_title
-import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun CalendarCard(
@@ -38,75 +39,137 @@ fun CalendarCard(
     onDayTapped: (epochDay: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier.padding(horizontal = 16.dp)) {
         Text(
             text = stringResource(Res.string.you_calendar_section_title),
             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
         )
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier.fillMaxWidth(),
+            tonalElevation = 0.dp,
+            shadowElevation = 2.dp
         ) {
-            items(days, key = { it.epochDay }) { day ->
-                RecentBriefingCell(day = day, onClick = { onDayTapped(day.epochDay) })
+            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
+                MonthHeader(days)
+                WeekDayHeaderRow()
+                val firstDayOffset = days.firstOrNull()?.let {
+                    LocalDate.fromEpochDays(it.epochDay.toInt()).dayOfWeek.ordinal
+                } ?: 0
+                val cells = buildMonthCells(days, firstDayOffset)
+                cells.chunked(7).forEach { week ->
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        week.forEach { day ->
+                            MonthDayCell(
+                                day = day,
+                                onClick = { day?.let { onDayTapped(it.epochDay) } },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun RecentBriefingCell(day: ReaderContract.CalendarDay, onClick: () -> Unit) {
-    val dayLabel = LocalDate.fromEpochDays(day.epochDay.toInt()).dayOfWeek.name.take(3)
-    val primary = MaterialTheme.colorScheme.primary
-    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
-    Column(
-        modifier = Modifier.clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = dayLabel,
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-            color = if (day.isToday) primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = if (day.isToday) FontWeight.Bold else FontWeight.Normal,
-        )
-        Box(contentAlignment = Alignment.Center) {
-            if (day.hasData && day.figurePortraitUrl != null) {
-                AsyncImage(
-                    model = day.figurePortraitUrl,
-                    contentDescription = day.figureName,
-                    modifier = Modifier.cellCircle(day.isToday),
-                    contentScale = ContentScale.Crop,
-                    alignment = Alignment.TopCenter,
+private fun MonthHeader(days: List<ReaderContract.CalendarDay>) {
+    val title = remember(days) {
+        days.firstOrNull()?.let { day ->
+            val date = LocalDate.fromEpochDays(day.epochDay.toInt())
+            "${date.month.name} ${date.year}"
+        } ?: ""
+    }
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(vertical = 4.dp),
+    )
+}
+
+@Composable
+private fun WeekDayHeaderRow() {
+    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+        listOf("M", "T", "W", "T", "F", "S", "S").forEach { label ->
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )
-            } else if (day.hasData) {
-                Box(
-                    modifier = Modifier.cellCircle(day.isToday).background(surfaceVariant),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(text = "†", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                Box(
-                    modifier = Modifier.cellCircle(false)
-                        .background(surfaceVariant.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(Res.string.you_calendar_no_data),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        textAlign = TextAlign.Center,
-                    )
-                }
             }
         }
     }
 }
 
-private fun Modifier.cellCircle(isToday: Boolean): Modifier =
-    this.size(48.dp)
-        .clip(CircleShape)
-        .then(if (isToday) Modifier.border(2.dp, BrandAmber, CircleShape) else Modifier)
+@Composable
+private fun MonthDayCell(
+    day: ReaderContract.CalendarDay?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (day == null) {
+        Box(modifier = modifier.size(44.dp))
+        return
+    }
+    Column(
+        modifier = modifier.clickable(onClick = onClick).padding(vertical = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = "${day.dateNumber}",
+            style = MaterialTheme.typography.labelSmall,
+            color = when {
+                day.isToday -> BrandAmber
+                day.hasData -> MaterialTheme.colorScheme.onSurface
+                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+            },
+            fontWeight = if (day.isToday) FontWeight.Bold else FontWeight.Normal,
+        )
+        when {
+            day.hasData -> DayPortrait(day)
+            day.isToday -> Box(Modifier.size(6.dp).clip(CircleShape).background(BrandAmber))
+            else -> Spacer(Modifier.size(28.dp))
+        }
+    }
+}
+
+@Composable
+private fun DayPortrait(day: ReaderContract.CalendarDay) {
+    val ringModifier = if (day.isToday) Modifier.border(2.dp, BrandAmber, CircleShape) else Modifier
+    if (day.figurePortraitUrl != null) {
+        AsyncImage(
+            model = day.figurePortraitUrl,
+            contentDescription = day.figureName,
+            modifier = Modifier.size(28.dp).clip(CircleShape).then(ringModifier),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+        )
+    } else {
+        Box(
+            modifier = Modifier.size(28.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .then(ringModifier),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("†", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+    }
+}
+
+private fun buildMonthCells(
+    days: List<ReaderContract.CalendarDay>,
+    firstDayOffset: Int,
+): List<ReaderContract.CalendarDay?> {
+    val cells = mutableListOf<ReaderContract.CalendarDay?>()
+    repeat(firstDayOffset) { cells.add(null) }
+    cells.addAll(days)
+    while (cells.size % 7 != 0) cells.add(null)
+    return cells
+}

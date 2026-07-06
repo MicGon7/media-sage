@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
@@ -33,6 +34,12 @@ class ReaderViewModel(
 ) : ViewModel() {
 
     private val todayEpochDay = epochMillis() / MS_PER_DAY
+    private val todayDate = Instant.fromEpochMilliseconds(epochMillis())
+        .toLocalDateTime(TimeZone.currentSystemDefault()).date
+    private val monthFirstDay = LocalDate(todayDate.year, todayDate.monthNumber, 1)
+    private val monthStartEpoch = monthFirstDay.toEpochDays().toLong()
+    private val monthEndEpoch = monthFirstDay.plus(1, DateTimeUnit.MONTH).toEpochDays().toLong() - 1
+    private val daysInMonth = (monthEndEpoch - monthStartEpoch + 1).toInt()
 
     private val _state = MutableStateFlow<ReaderContract.UiState>(ReaderContract.UiState.Ready())
     val state: StateFlow<ReaderContract.UiState> = _state.asStateFlow()
@@ -42,7 +49,7 @@ class ReaderViewModel(
             figureRepository.observeAllFigures(),
             dayAssignmentRepository.observeAssignments(),
             quoteRepository.observeAllQuotes(),
-            dailyReflectionRepository.observeByEpochDayRange(todayEpochDay - 6, todayEpochDay),
+            dailyReflectionRepository.observeByEpochDayRange(monthStartEpoch, monthEndEpoch),
         ) { figures, assignments, allQuotes, briefingDays ->
             val current = _state.value as? ReaderContract.UiState.Ready ?: ReaderContract.UiState.Ready()
             val figuresById = figures.associateBy { it.id }
@@ -104,13 +111,15 @@ class ReaderViewModel(
         briefingByDay: Map<Long, Long>,
         figuresById: Map<Long, com.mediasage.domain.model.Figure>,
     ): List<ReaderContract.CalendarDay> {
-        return (6 downTo 0).map { daysAgo ->
-            val epochDay = todayEpochDay - daysAgo
+        return (0 until daysInMonth).map { d ->
+            val epochDay = monthStartEpoch + d
+            val date = LocalDate.fromEpochDays(epochDay.toInt())
             val figureId = briefingByDay[epochDay]
             val figure = figureId?.let { figuresById[it] }
             ReaderContract.CalendarDay(
                 epochDay = epochDay,
-                isToday = daysAgo == 0,
+                dateNumber = date.dayOfMonth,
+                isToday = epochDay == todayEpochDay,
                 hasData = figureId != null,
                 figurePortraitUrl = figure?.portraitUrl,
                 figureName = figure?.name,

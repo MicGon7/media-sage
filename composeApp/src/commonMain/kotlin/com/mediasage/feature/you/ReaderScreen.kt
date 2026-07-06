@@ -209,7 +209,7 @@ fun ReaderScreen(
                         CalendarCard(
                             days = state.calendarDays,
                             onDayTapped = { epochDay -> onNavigateToHistory(epochDay) },
-                            modifier = Modifier.padding(bottom = 8.dp),
+                            modifier = Modifier.padding(bottom = 16.dp),
                         )
                     }
                 }
@@ -222,7 +222,7 @@ fun ReaderScreen(
                         SavedQuoteCard(
                             quote = quote,
                             onViewMore = { if (it > 0) onNavigateToFigureDetail(it) },
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                            modifier = Modifier.padding(16.dp),
                         )
                     }
                 }

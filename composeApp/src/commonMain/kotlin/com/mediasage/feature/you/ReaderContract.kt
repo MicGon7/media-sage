@@ -24,6 +24,7 @@ object ReaderContract {
 
     data class CalendarDay(
         val epochDay: Long,
+        val dateNumber: Int,
         val isToday: Boolean,
         val hasData: Boolean,
         val figurePortraitUrl: String?,

@@ -2,11 +2,14 @@
 
 package com.mediasage.feature.you
 
+import com.mediasage.domain.model.BriefingDay
+import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.model.Quote
+import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
@@ -69,6 +72,7 @@ class ReaderViewModelTest {
         figureRepository = FakeFigureRepository(figure),
         dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap())),
         quoteRepository = FakeQuoteRepository(latestQuote),
+        dailyReflectionRepository = FakeDailyReflectionRepository(),
     )
 }
 
@@ -88,6 +92,19 @@ private class FakeDayAssignmentRepository(
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
+}
+
+private class FakeDailyReflectionRepository : DailyReflectionRepository {
+    override suspend fun getOrFetch(
+        figureId: Long,
+        figureName: String,
+        headlines: List<String>,
+        tone: String,
+        theme: String?,
+    ): DailyReflection = throw UnsupportedOperationException()
+    override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
+        MutableStateFlow(emptyList())
+    override suspend fun getForDay(epochDay: Long): DailyReflection? = null
 }
 
 private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteRepository {

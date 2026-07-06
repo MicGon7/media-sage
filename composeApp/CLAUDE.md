@@ -13,6 +13,7 @@ Each feature has 3 files under `composeApp/src/commonMain/kotlin/com/mediasage/f
 Key conventions:
 - **Sealed interfaces for UiState**: Loading, Success, Error — mutually exclusive, no invalid combinations
 - **Channels for side effects**: One-off events (navigation, snackbar) via `Channel(Channel.BUFFERED)` → `receiveAsFlow()`. Always use `Channel.BUFFERED` — the default `RENDEZVOUS` capacity causes `send()` to suspend if no collector is active, which blocks `finally` blocks and leaves the UI in a stuck state.
+- **Single `_state` rule**: ViewModel-owned values (selected tab, mode, selected day) live in `UiState.Ready` fields, not in separate `MutableStateFlow`s. Collect repository Flows in `init` and write their results into `_state.value` directly. Intents read the current state with `(_state.value as? UiState.Ready) ?: return` and write back with `_state.value = current.copy(...)`. Never split ViewModel state across multiple private flows to participate in a `combine` — that pattern is reserved for combining multiple repository streams, not for managing state the ViewModel already owns.
 - **`state` not `uiState`**: The type name already says UiState
 - **Screens are stateless**: Receive state + callbacks, no ViewModel dependency. Previewable and testable.
 - **No base ViewModel class**: Convention over abstraction

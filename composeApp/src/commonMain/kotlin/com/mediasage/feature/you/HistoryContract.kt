@@ -9,6 +9,9 @@ object HistoryContract {
         val label: String,
         val isToday: Boolean,
         val hasData: Boolean,
+        val isFuture: Boolean = false,
+        val figurePortraitUrl: String? = null,
+        val figureName: String? = null,
     )
 
     data class ReflectionSummary(
@@ -17,6 +20,7 @@ object HistoryContract {
         val insight: String,
         val implication: String,
         val inspiration: String,
+        val sources: List<String>,
     )
 
     data class EncouragementItem(
@@ -33,12 +37,17 @@ object HistoryContract {
         val epochDay: Long,
         val reflection: ReflectionSummary?,
         val encouragements: List<EncouragementItem>,
+        val figureName: String? = null,
+        val figureImageUrl: String? = null,
     )
+
+    enum class DayTab { BRIEFING, ARTICLES }
 
     sealed interface UiState {
         data object Loading : UiState
         data class Ready(
             val mode: CalendarMode = CalendarMode.WEEK,
+            val selectedTab: DayTab = DayTab.BRIEFING,
             val calendarDays: List<CalendarDay> = emptyList(),
             val selectedEpochDay: Long? = null,
             val dayDetail: DayDetail? = null,
@@ -48,6 +57,7 @@ object HistoryContract {
     sealed interface Intent {
         data class SelectMode(val mode: CalendarMode) : Intent
         data class SelectDay(val epochDay: Long) : Intent
+        data class SelectTab(val tab: DayTab) : Intent
         data object ClearSelection : Intent
         data class ToggleBookmark(val articleUrl: String) : Intent
     }
