@@ -146,6 +146,8 @@ private class FakeEncouragementRepository(
     override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> =
         MutableStateFlow(_flow.value.find { it.articleUrl == articleUrl }?.bookmarked ?: false)
 
+    override fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeActiveEpochDays(): Flow<Set<Long>> = MutableStateFlow(emptySet())
     override suspend fun toggleBookmark(articleUrl: String) = Unit
 
     override suspend fun getEncouragement(

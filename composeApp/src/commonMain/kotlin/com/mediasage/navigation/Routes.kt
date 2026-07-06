@@ -38,9 +38,9 @@ sealed interface Route : NavKey {
     @Serializable
     data object Bookmarks : Route
 
-    /** History screen — reading history (shell). */
+    /** History journal — calendar view of past briefings and readings. */
     @Serializable
-    data object History : Route
+    data class History(val epochDay: Long = 0L) : Route
 
     /** Settings screen (shell). */
     @Serializable

@@ -236,6 +236,12 @@ private class FakeEncouragementDao(preloaded: List<EncouragementEntity> = emptyL
         store[articleUrl]?.let { store[articleUrl] = it.copy(bookmarked = !it.bookmarked) }
     }
 
+    override fun observeByDateRange(startMillis: Long, endMillis: Long): Flow<List<EncouragementEntity>> =
+        flowOf(store.values.filter { it.cachedAt >= startMillis && it.cachedAt < endMillis })
+
+    override fun observeActiveEpochDays(): Flow<List<Long>> =
+        flowOf(store.values.filter { it.cachedAt > 0 }.map { it.cachedAt / 86400000 }.distinct())
+
     override suspend fun deleteAll() { store.clear() }
 }
 

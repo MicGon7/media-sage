@@ -58,6 +58,12 @@ interface EncouragementDao {
     @Query("UPDATE encouragements SET bookmarked = NOT bookmarked WHERE articleUrl = :articleUrl")
     suspend fun toggleBookmark(articleUrl: String)
 
+    @Query("SELECT * FROM encouragements WHERE cachedAt >= :startMillis AND cachedAt < :endMillis ORDER BY cachedAt DESC")
+    fun observeByDateRange(startMillis: Long, endMillis: Long): Flow<List<EncouragementEntity>>
+
+    @Query("SELECT DISTINCT cachedAt / 86400000 FROM encouragements WHERE cachedAt > 0")
+    fun observeActiveEpochDays(): Flow<List<Long>>
+
     @Query("DELETE FROM encouragements")
     suspend fun deleteAll()
 }

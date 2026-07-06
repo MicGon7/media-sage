@@ -23,4 +23,8 @@ interface EncouragementRepository {
     fun observeIsBookmarked(articleUrl: String): Flow<Boolean>
 
     suspend fun toggleBookmark(articleUrl: String)
+
+    fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>>
+
+    fun observeActiveEpochDays(): Flow<Set<Long>>
 }

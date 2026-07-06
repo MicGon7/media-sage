@@ -32,8 +32,8 @@ import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.headlines.HeadlinesContract
 import com.mediasage.feature.headlines.HeadlinesScreen
 import com.mediasage.feature.headlines.HeadlinesViewModel
-import com.mediasage.feature.history.HistoryScreen
-import com.mediasage.feature.history.HistoryViewModel
+import com.mediasage.feature.you.HistoryScreen as YouHistoryScreen
+import com.mediasage.feature.you.HistoryViewModel as YouHistoryViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailScreen
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
 import com.mediasage.feature.settings.SettingsContract
@@ -162,9 +162,9 @@ fun MediaSageScaffold(
                     ReaderScreen(
                         state = state,
                         onIntent = vm::onIntent,
-                        onNavigateToBookmarks = { appState.navigateToBookmarks() },
-                        onNavigateToHistory = { appState.navigateToHistory() },
-                        onNavigateToSettings = { appState.navigateToSettings() }
+                        onNavigateToHistory = { epochDay -> appState.navigateToHistory(epochDay) },
+                        onNavigateToSettings = { appState.navigateToSettings() },
+                        onNavigateToFigureDetail = { id -> appState.navigateToFigureDetail(id) },
                     )
                 }
                 is Route.Bookmarks -> NavEntry(route) {
@@ -178,13 +178,16 @@ fun MediaSageScaffold(
                     )
                 }
                 is Route.History -> NavEntry(route) {
-                    val vm = koinViewModel<HistoryViewModel>()
+                    val vm = koinViewModel<YouHistoryViewModel>(
+                        key = "you-history-${route.epochDay}",
+                        parameters = { parametersOf(route.epochDay) },
+                    )
                     val state by vm.state.collectAsState()
-                    HistoryScreen(
+                    YouHistoryScreen(
                         state = state,
                         onIntent = vm::onIntent,
                         onNavigateBack = { appState.navigateBack() },
-                        onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) }
+                        onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) },
                     )
                 }
                 is Route.Settings -> NavEntry(route) {
