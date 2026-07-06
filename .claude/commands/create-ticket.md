@@ -13,7 +13,7 @@ populated before the ticket is created.
 If the user has not already provided them, ask:
 
 - **What does this ticket accomplish?** (one sentence — becomes the summary)
-- **Which epic does it belong to?** MS-1 (Server API), MS-2 (Shared Data), MS-3 (App UI), MS-4 (Infrastructure), MS-5 (Agentic Pipeline), or none
+- **Which epic does it belong to?** MS-1 (Server API), MS-2 (Shared Data), MS-3 (App UI), MS-4 (Infrastructure), MS-68 (Agentic Pipeline), or none
 - **Automation mode:** `assisted` (human drives, AI helps) or `autonomous` (AI executes end-to-end with no human in the loop)
 
 If the user has given you enough context to infer any of these, derive them — don't ask for what
@@ -49,6 +49,7 @@ Group the Relevant Files from step 2 by bucket:
 - **Multiple Gradle modules, no infrastructure** → **multi-ticket mode**: one ticket per module, each with only its own module's Relevant Files.
 - **Single Gradle module, >8 files** → split into two tickets at the natural seam:
   - `:shared` — data layer (entities, migrations, DAOs) vs. domain layer (domain models, repository interfaces, mappers)
+  - `:composeApp` — **one ticket per screen**. A screen is the natural split unit. If the work touches two or more distinct screens or top-level components with no shared runtime state between them, create one ticket per screen. Exception: if one screen directly hosts the other (e.g. a detail sheet inside a list screen), keep them together.
   - Other modules — use your best judgment to find a cohesive seam
 - **Single Gradle module, ≤8 files** → single ticket. Proceed to step 4.
 
