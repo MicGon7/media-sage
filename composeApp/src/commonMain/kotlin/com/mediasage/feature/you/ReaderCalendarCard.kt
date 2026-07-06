@@ -83,14 +83,14 @@ private fun RecentBriefingCell(day: ReaderContract.CalendarDay, onClick: () -> U
                 )
             } else if (day.hasData) {
                 Box(
-                    modifier = cellCircle(day.isToday).background(surfaceVariant),
+                    modifier = Modifier.cellCircle(day.isToday).background(surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(text = "†", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 Box(
-                    modifier = cellCircle(false)
+                    modifier = Modifier.cellCircle(false)
                         .background(surfaceVariant.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center,
                 ) {
