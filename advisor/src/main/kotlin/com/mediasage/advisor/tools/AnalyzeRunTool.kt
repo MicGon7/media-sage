@@ -131,7 +131,7 @@ private suspend fun runAnalysis(
             appendLine()
         }
         appendLine("## Session Transcript")
-        append(transcript)
+        append(preprocessTranscript(transcript))
     }
     val claudeRequest = ClaudeRequest(
         model = MODEL,

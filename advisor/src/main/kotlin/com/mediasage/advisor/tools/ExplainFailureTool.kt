@@ -111,7 +111,7 @@ private suspend fun runExplanation(
         model = MODEL,
         maxTokens = AnthropicApi.TokenBudget.STANDARD,
         system = system,
-        messages = listOf(ClaudeMessage("user", context.transcript)),
+        messages = listOf(ClaudeMessage("user", preprocessTranscript(context.transcript))),
         tools = listOf(EXPLAIN_TOOL),
         toolChoice = TOOL_CHOICE,
     )
