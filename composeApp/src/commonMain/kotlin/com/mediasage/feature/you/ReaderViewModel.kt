@@ -24,8 +24,6 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
-private const val MS_PER_DAY = 86_400_000L
-
 class ReaderViewModel(
     private val figureRepository: FigureRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
@@ -33,9 +31,9 @@ class ReaderViewModel(
     private val dailyReflectionRepository: DailyReflectionRepository,
 ) : ViewModel() {
 
-    private val todayEpochDay = epochMillis() / MS_PER_DAY
     private val todayDate = Instant.fromEpochMilliseconds(epochMillis())
         .toLocalDateTime(TimeZone.currentSystemDefault()).date
+    private val todayEpochDay = todayDate.toEpochDays().toLong()
     private val monthFirstDay = LocalDate(todayDate.year, todayDate.monthNumber, 1)
     private val monthStartEpoch = monthFirstDay.toEpochDays().toLong()
     private val monthEndEpoch = monthFirstDay.plus(1, DateTimeUnit.MONTH).toEpochDays().toLong() - 1
@@ -58,7 +56,7 @@ class ReaderViewModel(
             val quoteFigure = latestQuote?.let { figuresById[it.figureId] }
             val briefingByDay = briefingDays.associate { it.epochDay to it.figureId }
             current.copy(
-                weekSlots = buildWeekSlots(assignments, figuresById),
+                weekSlots = buildWeekSlots(assignments, overridesByDay, figuresById),
                 pickerFigures = figures,
                 quoteCard = buildQuoteCard(latestQuote, quoteFigure),
                 calendarDays = buildCalendarDays(briefingByDay, overridesByDay, figuresById),
@@ -102,6 +100,7 @@ class ReaderViewModel(
 
     private fun buildWeekSlots(
         assignments: Map<Int, DayAssignment>,
+        overridesByDay: Map<Long, Long>,
         figuresById: Map<Long, com.mediasage.domain.model.Figure>,
     ): List<ReaderContract.DaySlot> {
         val today = Instant.fromEpochMilliseconds(epochMillis())
@@ -109,14 +108,17 @@ class ReaderViewModel(
         val startOfWeek = today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
         return (0..6).map { i ->
             val date = startOfWeek.plus(i, DateTimeUnit.DAY)
+            val epochDay = date.toEpochDays().toLong()
+            val overrideFigureId = if (epochDay > todayEpochDay) overridesByDay[epochDay] else null
             val assignment = assignments[date.dayOfWeek.ordinal]
-            val figure = assignment?.figureId?.let { figuresById[it] }
+            val figureId = overrideFigureId ?: assignment?.figureId
+            val figure = figureId?.let { figuresById[it] }
             ReaderContract.DaySlot(
                 dayOfWeek = date.dayOfWeek,
                 isToday = date == today,
                 assignedFigureName = figure?.name,
                 assignedFigureImageUrl = figure?.portraitUrl,
-                assignedLens = assignment?.lens,
+                assignedLens = if (overrideFigureId != null) null else assignment?.lens,
             )
         }
     }
