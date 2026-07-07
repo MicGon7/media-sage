@@ -66,5 +66,5 @@ private suspend fun callClaude(
     response.content.firstOrNull { it.type == "tool_use" }?.input
 }.getOrElse { e ->
     log.error("Claude API call failed: ${e.message}", e)
-    null
+null
 }

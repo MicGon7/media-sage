@@ -7,6 +7,7 @@ import com.mediasage.advisor.tools.registerFetchTranscriptTool
 import com.mediasage.advisor.tools.registerQueryRunsTool
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -61,6 +62,7 @@ private fun requireEnv(name: String): String =
 
 private fun buildHttpClient() = HttpClient(OkHttp) {
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+    install(HttpTimeout) { socketTimeoutMillis = 120_000 }
 }
 
 private fun buildServer() = Server(
