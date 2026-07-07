@@ -24,6 +24,7 @@ import mediasage.composeapp.generated.resources.you_calendar_section_title
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -141,21 +142,21 @@ private fun MonthDayCell(
 
 @Composable
 private fun DayPortrait(day: ReaderContract.CalendarDay) {
+    val isPast = !day.isToday && !day.isFuture
     val ringModifier = if (day.isToday) Modifier.border(2.dp, BrandAmber, CircleShape) else Modifier
+    val baseModifier = Modifier.size(28.dp).clip(CircleShape).then(ringModifier)
+        .then(if (isPast) Modifier.alpha(0.4f) else Modifier)
     if (day.figurePortraitUrl != null) {
         AsyncImage(
             model = day.figurePortraitUrl,
             contentDescription = day.figureName,
-            modifier = Modifier.size(28.dp).clip(CircleShape).then(ringModifier),
+            modifier = baseModifier,
             contentScale = ContentScale.Crop,
             alignment = Alignment.TopCenter,
         )
     } else {
         Box(
-            modifier = Modifier.size(28.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .then(ringModifier),
+            modifier = baseModifier.background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
             Text("†", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
