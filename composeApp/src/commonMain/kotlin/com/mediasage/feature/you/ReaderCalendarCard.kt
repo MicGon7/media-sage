@@ -1,7 +1,6 @@
 package com.mediasage.feature.you
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,11 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.mediasage.theme.BrandAmber
 import kotlinx.datetime.LocalDate
 
@@ -143,20 +138,20 @@ private fun MonthDayCell(
 @Composable
 private fun DayPortrait(day: ReaderContract.CalendarDay) {
     val isPast = !day.isToday && !day.isFuture
-    val ringModifier = if (day.isToday) Modifier.border(2.dp, BrandAmber, CircleShape) else Modifier
-    val baseModifier = Modifier.size(28.dp).clip(CircleShape).then(ringModifier)
-        .then(if (isPast) Modifier.alpha(0.4f) else Modifier)
     if (day.figurePortraitUrl != null) {
-        AsyncImage(
-            model = day.figurePortraitUrl,
-            contentDescription = day.figureName,
-            modifier = baseModifier,
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.TopCenter,
+        FigurePortraitImage(
+            imageUrl = day.figurePortraitUrl,
+            name = day.figureName,
+            size = 28.dp,
+            isToday = day.isToday,
+            isPast = isPast,
         )
     } else {
+        val fallbackModifier = Modifier.size(28.dp).clip(CircleShape)
+            .then(if (day.isToday) Modifier.solidCircleBorder(BrandAmber, 2.dp) else Modifier)
+            .then(if (isPast) Modifier.alpha(0.6f) else Modifier)
         Box(
-            modifier = baseModifier.background(MaterialTheme.colorScheme.primaryContainer),
+            modifier = fallbackModifier.background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
             Text("†", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)

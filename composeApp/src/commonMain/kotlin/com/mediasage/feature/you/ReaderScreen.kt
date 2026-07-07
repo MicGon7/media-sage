@@ -393,18 +393,11 @@ private fun ReporterCircle(
 
     when {
         slot.assignedFigureImageUrl != null -> {
-            AsyncImage(
-                model = slot.assignedFigureImageUrl,
-                contentDescription = slot.assignedFigureName,
-                modifier = Modifier
-                    .size(size)
-                    .clip(CircleShape)
-                    .then(
-                        if (slot.isToday) Modifier.solidCircleBorder(todayRingColor, 2.dp)
-                        else Modifier
-                    ),
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.TopCenter,
+            FigurePortraitImage(
+                imageUrl = slot.assignedFigureImageUrl,
+                name = slot.assignedFigureName,
+                size = size,
+                isToday = slot.isToday,
             )
         }
         isAssigned -> {
@@ -457,14 +450,6 @@ private fun Modifier.dashedCircleBorder(color: Color, strokeWidth: Dp): Modifier
     )
 }
 
-private fun Modifier.solidCircleBorder(color: Color, strokeWidth: Dp): Modifier = drawBehind {
-    drawCircle(
-        color = color,
-        radius = size.minDimension / 2 - strokeWidth.toPx() / 2,
-        center = Offset(size.width / 2, size.height / 2),
-        style = Stroke(width = strokeWidth.toPx()),
-    )
-}
 
 @Composable
 private fun LensBadge(lens: LensFilter, modifier: Modifier = Modifier) {
