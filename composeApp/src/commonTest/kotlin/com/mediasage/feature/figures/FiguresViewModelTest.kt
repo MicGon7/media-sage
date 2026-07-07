@@ -238,6 +238,7 @@ private class FakeDayAssignmentRepository(
     private val assignments: Map<Int, DayAssignment> = emptyMap()
 ) : DayAssignmentRepository {
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = flowOf(assignments)
+    override fun observeOverridesByEpochDayRange(start: Long, end: Long): Flow<Map<Long, Long>> = flowOf(emptyMap())
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
