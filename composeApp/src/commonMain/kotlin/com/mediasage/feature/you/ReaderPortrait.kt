@@ -7,8 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
@@ -39,11 +38,12 @@ internal fun FigurePortraitImage(
     )
 }
 
-internal fun Modifier.solidCircleBorder(color: Color, strokeWidth: Dp): Modifier = drawBehind {
+internal fun Modifier.solidCircleBorder(color: Color, strokeWidth: Dp): Modifier = drawWithContent {
+    drawContent()
     drawCircle(
         color = color,
         radius = size.minDimension / 2 - strokeWidth.toPx() / 2,
-        center = Offset(size.width / 2, size.height / 2),
+        center = center,
         style = Stroke(width = strokeWidth.toPx()),
     )
 }
