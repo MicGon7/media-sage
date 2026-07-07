@@ -253,6 +253,9 @@ Workflow steps live in skills, not here. See `.claude/commands/` for the full in
 - **Smoke test external APIs:** Test real API changes with live APIs before writing the learning doc or opening a PR — docs describe verified behaviour, not assumed behaviour.
 - **Jira comment file:** Every job writes `/tmp/jira_comment.txt` before exiting — see `.claude/commands/ticket-work.md` for the exact format.
 - **Failed-gate file:** If you stop because a quality gate failed and you could not resolve it, write the gate name — one of `compile`, `tests`, `detekt`, `ci` — to `/tmp/failed_gate.txt` before exiting. The worker forwards it on the completion event so the orchestrator records `jobs.failed_gate` for failure attribution (MS-386). Write nothing on success or for non-gate failures.
+- **Batch reads before writing:** Gather every file you need in a single parallel `Read` batch before writing any code. Sequential, reactive reads — reading one file, deciding what to read next — waste turns and cause mid-implementation rewrites when critical context arrives late.
+- **No Glob→Read round-trips:** If you need a file's content, call `Read` directly. Do not `Glob` or search to locate a file you could infer from the package structure or a path you already have — that is two turns where one suffices.
+- **Trust your own writes:** Do not re-read a file you just edited. `Edit` and `Write` succeed or error — there is no silent corruption. Re-reading is a wasted turn.
 
 ### After a PR is merged
 Do not include tickets labeled `pipeline-test` or `smoketest` in the Confluence impact doc — these tickets exist to exercise the pipeline, not deliver product or infrastructure value.

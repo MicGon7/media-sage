@@ -81,7 +81,15 @@ If the work follows an established pattern, makes a trivial change, or could hav
    The fetch script prints the ticket summary and the exact Relevant Files paths — use those paths directly in step 2. The init script derives the branch slug from `$TICKET_SUMMARY` automatically.
    - `WORKER_BRANCH_STATUS=existing` → diff the existing PR (`gh pr diff "$WORKER_PR_URL"`), check each AC item against it. If all AC items are satisfied, follow the graceful exit rule and stop. If AC is incomplete, the branch is already checked out — continue from step 3.
    - `WORKER_BRANCH_STATUS=new` → branch is ready, proceed to step 2.
-2. Read the files shown in the fetch script output — the exact paths are printed there. Call `Read` on each path directly. Do not use `find`, `Glob`, or any search. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
+2. **Phase 1 – Discovery (one batch turn).** Call `Read` on every file you need, all at once. Do not start implementing until this batch is complete.
+
+   The minimum set is every path printed by the fetch script (Relevant Files). Before issuing the reads, reason about what the ticket scope implies beyond those paths:
+   - ViewModel change → also read the Contract file and any related Screen
+   - DAO change → also read the Entity, the Repository implementation, and every Fake in `commonTest` that implements the DAO interface
+   - New UI component → also read the nearest existing composable and its test file
+   - CLAUDE.md or skill file change → read both `CLAUDE.md` and the target skill file in full
+
+   Fire all `Read` calls in a single parallel batch. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
 3. Implement the changes described in the ticket.
 4. Re-read the acceptance criteria. If any AC item requires unit tests, invoke `/unit-test` now (the branch is already checked out — skip branch creation inside that skill). If any AC item requires UI/composable tests, invoke `/ui-test` now (same — skip branch creation). Both may apply to the same ticket.
 5. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
