@@ -50,7 +50,8 @@ class ReaderViewModel(
             dayAssignmentRepository.observeAssignments(),
             quoteRepository.observeAllQuotes(),
             dailyReflectionRepository.observeByEpochDayRange(monthStartEpoch, monthEndEpoch),
-        ) { figures, assignments, allQuotes, briefingDays ->
+            dayAssignmentRepository.observeOverridesByEpochDayRange(monthStartEpoch, monthEndEpoch),
+        ) { figures, assignments, allQuotes, briefingDays, overridesByDay ->
             val current = _state.value as? ReaderContract.UiState.Ready ?: ReaderContract.UiState.Ready()
             val figuresById = figures.associateBy { it.id }
             val latestQuote = allQuotes.maxByOrNull { it.id }
@@ -60,7 +61,7 @@ class ReaderViewModel(
                 weekSlots = buildWeekSlots(assignments, figuresById),
                 pickerFigures = figures,
                 quoteCard = buildQuoteCard(latestQuote, quoteFigure),
-                calendarDays = buildCalendarDays(briefingByDay, figuresById),
+                calendarDays = buildCalendarDays(briefingByDay, overridesByDay, figuresById),
             )
         }.onEach { _state.value = it }.launchIn(viewModelScope)
     }
@@ -72,7 +73,7 @@ class ReaderViewModel(
                 _state.value = current.copy(pickerOpenForDay = current.weekSlots[intent.index].dayOfWeek.ordinal)
 
             is ReaderContract.Intent.PickerDismissed ->
-                _state.value = current.copy(pickerOpenForDay = null)
+                _state.value = current.copy(pickerOpenForDay = null, pickerOpenForEpochDay = null)
 
             is ReaderContract.Intent.FigureAssigned -> viewModelScope.launch {
                 dayAssignmentRepository.assign(intent.dayOfWeek, intent.figureId, intent.lens)
@@ -82,6 +83,19 @@ class ReaderViewModel(
             is ReaderContract.Intent.AssignmentCleared -> viewModelScope.launch {
                 dayAssignmentRepository.clear(intent.dayOfWeek)
                 _state.value = current.copy(pickerOpenForDay = null)
+            }
+
+            is ReaderContract.Intent.SelectFutureDay ->
+                _state.value = current.copy(pickerOpenForEpochDay = intent.epochDay)
+
+            is ReaderContract.Intent.AssignOverride -> viewModelScope.launch {
+                dayAssignmentRepository.setOverride(intent.epochDay, intent.figureId)
+                _state.value = current.copy(pickerOpenForEpochDay = null)
+            }
+
+            is ReaderContract.Intent.ClearOverride -> viewModelScope.launch {
+                dayAssignmentRepository.clearOverride(intent.epochDay)
+                _state.value = current.copy(pickerOpenForEpochDay = null)
             }
         }
     }
@@ -109,20 +123,25 @@ class ReaderViewModel(
 
     private fun buildCalendarDays(
         briefingByDay: Map<Long, Long>,
+        overridesByDay: Map<Long, Long>,
         figuresById: Map<Long, com.mediasage.domain.model.Figure>,
     ): List<ReaderContract.CalendarDay> {
         return (0 until daysInMonth).map { d ->
             val epochDay = monthStartEpoch + d
             val date = LocalDate.fromEpochDays(epochDay.toInt())
-            val figureId = briefingByDay[epochDay]
+            val isFuture = epochDay > todayEpochDay
+            val overrideFigureId = overridesByDay[epochDay]
+            val figureId = if (isFuture) overrideFigureId else briefingByDay[epochDay]
             val figure = figureId?.let { figuresById[it] }
             ReaderContract.CalendarDay(
                 epochDay = epochDay,
                 dateNumber = date.dayOfMonth,
                 isToday = epochDay == todayEpochDay,
+                isFuture = isFuture,
                 hasData = figureId != null,
                 figurePortraitUrl = figure?.portraitUrl,
                 figureName = figure?.name,
+                overrideFigureId = overrideFigureId,
             )
         }
     }

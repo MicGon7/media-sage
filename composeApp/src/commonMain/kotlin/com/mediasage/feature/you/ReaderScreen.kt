@@ -151,6 +151,25 @@ fun ReaderScreen(
         }
     }
 
+    if (state is ReaderContract.UiState.Ready && state.pickerOpenForEpochDay != null) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val overrideDay = state.calendarDays.find { it.epochDay == state.pickerOpenForEpochDay }
+        ModalBottomSheet(
+            onDismissRequest = { onIntent(ReaderContract.Intent.PickerDismissed) },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            OverridePickerSheet(
+                figures = state.pickerFigures,
+                currentFigureId = overrideDay?.overrideFigureId,
+                onFigureSelected = { figureId ->
+                    onIntent(ReaderContract.Intent.AssignOverride(state.pickerOpenForEpochDay, figureId))
+                },
+                onClear = { onIntent(ReaderContract.Intent.ClearOverride(state.pickerOpenForEpochDay)) },
+            )
+        }
+    }
+
     Surface(modifier = Modifier.fillMaxSize()) {
         val listState = rememberLazyListState()
         LazyColumn(
@@ -208,7 +227,14 @@ fun ReaderScreen(
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         CalendarCard(
                             days = state.calendarDays,
-                            onDayTapped = { epochDay -> onNavigateToHistory(epochDay) },
+                            onDayTapped = { epochDay ->
+                                val day = state.calendarDays.find { it.epochDay == epochDay }
+                                if (day?.isFuture == true) {
+                                    onIntent(ReaderContract.Intent.SelectFutureDay(epochDay))
+                                } else {
+                                    onNavigateToHistory(epochDay)
+                                }
+                            },
                             modifier = Modifier.padding(bottom = 16.dp),
                         )
                     }

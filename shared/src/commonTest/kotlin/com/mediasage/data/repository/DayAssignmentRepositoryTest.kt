@@ -217,6 +217,9 @@ private class FakeScheduleOverrideDao : ScheduleOverrideDao {
     override suspend fun delete(epochDay: Long) { store.remove(epochDay) }
 
     override suspend fun getByEpochDay(epochDay: Long): ScheduleOverrideEntity? = store[epochDay]
+
+    override fun observeByRange(start: Long, end: Long): Flow<List<ScheduleOverrideEntity>> =
+        flowOf(store.values.filter { it.epochDay in start..end })
 }
 
 private class FakeFigureDaoForSeeding(figures: List<FigureEntity> = emptyList()) : FigureDao {

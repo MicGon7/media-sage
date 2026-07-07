@@ -43,7 +43,7 @@
     <!-- You screen -->
     <string name="you_screen_title">Reader</string>
     <string name="you_nav_saved">Saved</string>
-    <string name="you_nav_history">Journal</string>
+    <string name="you_nav_history">History</string>
     <string name="you_settings_icon_description">Settings</string>
     <string name="you_carousel_title">YOUR REPORTERS THIS WEEK</string>
     <string name="you_saved_section_title">FROM THE REPORTERS</string>
@@ -90,7 +90,7 @@
     <string name="bookmark_remove">Remove saved article</string>
 
     <!-- History screen -->
-    <string name="title_history">Journal</string>
+    <string name="title_history">History</string>
     <string name="history_coming_soon">History coming soon</string>
     <string name="history_empty_title">No reading history yet</string>
     <string name="history_empty_subtitle">Articles you read will appear here</string>
@@ -108,7 +108,7 @@
     <string name="history_tab_articles">Articles</string>
 
     <!-- Reader screen calendar card -->
-    <string name="you_calendar_section_title">HISTORY</string>
+    <string name="you_calendar_section_title">YOUR REPORTERS FOR THE MONTH</string>
     <string name="you_calendar_no_data">—</string>
 
     <!-- Figure detail screen -->

@@ -68,6 +68,44 @@ class ReaderViewModelTest {
         assertNull(state.quoteCard)
     }
 
+    @Test
+    fun selectFutureDay_setsPickerOpenForEpochDay() = runTest(testDispatcher) {
+        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
+        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
+
+        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertEquals(futureEpochDay, state.pickerOpenForEpochDay)
+    }
+
+    @Test
+    fun assignOverride_clearsPickerOpenForEpochDay() = runTest(testDispatcher) {
+        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
+        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
+        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
+
+        viewModel.onIntent(ReaderContract.Intent.AssignOverride(futureEpochDay, testFigure.id))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertNull(state.pickerOpenForEpochDay)
+    }
+
+    @Test
+    fun clearOverride_clearsPickerOpenForEpochDay() = runTest(testDispatcher) {
+        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
+        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
+        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
+
+        viewModel.onIntent(ReaderContract.Intent.ClearOverride(futureEpochDay))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertNull(state.pickerOpenForEpochDay)
+    }
+
     private fun buildViewModel(figure: Figure, latestQuote: Quote?): ReaderViewModel = ReaderViewModel(
         figureRepository = FakeFigureRepository(figure),
         dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap())),
@@ -88,12 +126,22 @@ private class FakeFigureRepository(private val figure: Figure) : FigureRepositor
 private class FakeDayAssignmentRepository(
     private val assignmentsFlow: MutableStateFlow<Map<Int, DayAssignment>>
 ) : DayAssignmentRepository {
+    val overrides = mutableMapOf<Long, Long>()
+    private val overridesFlow = MutableStateFlow<Map<Long, Long>>(emptyMap())
+
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = assignmentsFlow
+    override fun observeOverridesByEpochDayRange(start: Long, end: Long): Flow<Map<Long, Long>> = overridesFlow
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
-    override suspend fun setOverride(epochDay: Long, figureId: Long) = Unit
-    override suspend fun clearOverride(epochDay: Long) = Unit
+    override suspend fun setOverride(epochDay: Long, figureId: Long) {
+        overrides[epochDay] = figureId
+        overridesFlow.value = overrides.toMap()
+    }
+    override suspend fun clearOverride(epochDay: Long) {
+        overrides.remove(epochDay)
+        overridesFlow.value = overrides.toMap()
+    }
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = null
 }
 
