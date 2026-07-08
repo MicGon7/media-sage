@@ -13,7 +13,11 @@ populated before the ticket is created.
 If the user has not already provided them, ask:
 
 - **What does this ticket accomplish?** (one sentence — becomes the summary)
-- **Which epic does it belong to?** MS-1 (Server API), MS-2 (Shared Data), MS-3 (App UI), MS-4 (Infrastructure), MS-68 (Agentic Pipeline), or none
+- **Which epic does it belong to?** Before asking, run the following JQL to fetch current open epics:
+  ```
+  project = MS AND issuetype = Epic AND statusCategory != Done ORDER BY created DESC
+  ```
+  Present the returned epic names to the user as a numbered list, always appending "none" as a final option. If the query fails or returns no results, ask the user to provide the epic key manually.
 - **Automation mode:** `assisted` (human drives, AI helps) or `autonomous` (AI executes end-to-end with no human in the loop)
 
 If the user has given you enough context to infer any of these, derive them — don't ask for what
@@ -103,7 +107,7 @@ Reject any item that names a tool, script, or quality gate:
 
 ### 5. Determine the correct Jira fields
 
-- **Parent epic:** use the `parent` field with the epic issue key (e.g. `MS-4`). If no epic applies, omit the field.
+- **Parent epic:** use the `parent` field with the epic issue key resolved from the JQL result in step 1 (e.g. `MS-68`). If the user selected "none", omit the field entirely.
 - **Label:** `assisted` or `autonomous` — set from step 1.
 - **Summary:** concise imperative phrase, e.g. "Add retry logic to CloudRunJobsClient"
 
