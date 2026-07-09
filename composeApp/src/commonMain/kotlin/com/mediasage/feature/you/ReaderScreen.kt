@@ -161,10 +161,7 @@ fun ReaderScreen(
                     )
                 }
                 is ReaderContract.ActiveSheet.HistoryDetail -> {
-                    DayDetailSheetContent(
-                        dayDetail = sheet.detail,
-                        onNavigateToArticle = onNavigateToArticleDetail,
-                    )
+                    DayDetailSheetContent(dayDetail = sheet.detail)
                 }
                 else -> {}
             }

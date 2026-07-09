@@ -1,6 +1,5 @@
 package com.mediasage.feature.you
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,10 +37,7 @@ import mediasage.composeapp.generated.resources.you_day_detail_figure_attributio
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun DayDetailSheetContent(
-    dayDetail: ReaderContract.DayDetail,
-    onNavigateToArticle: (String) -> Unit,
-) {
+internal fun DayDetailSheetContent(dayDetail: ReaderContract.DayDetail) {
     LazyColumn(contentPadding = PaddingValues(bottom = 40.dp)) {
         item { DayDetailHeader(dayDetail) }
         item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) }
@@ -58,9 +54,7 @@ internal fun DayDetailSheetContent(
                 )
             }
             items(dayDetail.articles, key = { it.articleUrl.ifEmpty { it.headlineTitle } }) { article ->
-                DayDetailArticleRow(article, onClick = {
-                    if (article.articleUrl.isNotEmpty()) onNavigateToArticle(article.articleUrl)
-                })
+                DayDetailArticleRow(article)
             }
         }
     }
@@ -156,7 +150,7 @@ private fun DayDetailEmptyState(epochDay: Long) {
 }
 
 @Composable
-private fun DayDetailArticleRow(article: ReaderContract.ArticleItem, onClick: () -> Unit) {
+private fun DayDetailArticleRow(article: ReaderContract.ArticleItem) {
     val quotePreview = if (article.quoteText.length > 100) {
         article.quoteText.take(100) + "…"
     } else {
@@ -165,7 +159,6 @@ private fun DayDetailArticleRow(article: ReaderContract.ArticleItem, onClick: ()
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Text(
