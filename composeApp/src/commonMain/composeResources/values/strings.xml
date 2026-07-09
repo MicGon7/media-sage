@@ -45,7 +45,12 @@
     <string name="you_nav_saved">Saved</string>
     <string name="you_nav_history">History</string>
     <string name="you_settings_icon_description">Settings</string>
-    <string name="you_carousel_title">YOUR REPORTERS THIS WEEK</string>
+    <string name="you_carousel_title">WEEKLY SCHEDULE</string>
+    <string name="you_reporters_section_heading">REPORTERS</string>
+    <string name="you_reporters_this_week">REPORTERS OF THE WEEK</string>
+    <string name="you_reporters_this_month">REPORTERS OF THE MONTH</string>
+    <string name="you_toggle_month_view">Month</string>
+    <string name="you_toggle_week_view">Week</string>
     <string name="you_saved_section_title">FROM THE REPORTERS</string>
     <string name="you_quote_card_header">MEMORY QUOTE</string>
     <string name="you_saved_see_all">Select a quote to memorize →</string>
@@ -104,6 +109,8 @@
     <string name="history_inspiration_label">INSPIRATION</string>
     <string name="history_empty_day_for">No entry for %1$s</string>
     <string name="history_empty_day_subtitle">Readings from this day will appear here</string>
+    <string name="reader_calendar_prev_year">Previous year</string>
+    <string name="reader_calendar_next_year">Next year</string>
     <string name="history_tab_briefing">Briefing</string>
     <string name="history_tab_articles">Articles</string>
 

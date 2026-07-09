@@ -23,6 +23,7 @@ internal fun FigurePortraitImage(
     size: Dp,
     isToday: Boolean,
     isPast: Boolean = false,
+    showRing: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     AsyncImage(
@@ -31,7 +32,7 @@ internal fun FigurePortraitImage(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .then(if (isToday) Modifier.solidCircleBorder(BrandAmber, 2.dp) else Modifier)
+            .then(if (isToday && showRing) Modifier.solidCircleBorder(BrandAmber, 2.dp) else Modifier)
             .then(if (isPast) Modifier.alpha(0.6f) else Modifier),
         contentScale = ContentScale.Crop,
         alignment = Alignment.TopCenter,

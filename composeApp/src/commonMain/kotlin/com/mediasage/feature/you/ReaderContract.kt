@@ -8,6 +8,7 @@ object ReaderContract {
 
     data class DaySlot(
         val dayOfWeek: DayOfWeek,
+        val epochDay: Long,
         val isToday: Boolean,
         val assignedFigureName: String? = null,
         val assignedFigureImageUrl: String? = null,
@@ -33,6 +34,32 @@ object ReaderContract {
         val overrideFigureId: Long? = null,
     )
 
+    data class ReflectionSummary(
+        val scriptureReference: String,
+        val scriptureText: String,
+        val insight: String,
+        val implication: String,
+        val inspiration: String,
+        val sources: List<String>,
+    )
+
+    data class ArticleItem(
+        val headlineTitle: String,
+        val quoteText: String,
+        val figureName: String,
+        val figureRole: String,
+        val figureImageUrl: String?,
+        val articleUrl: String,
+    )
+
+    data class DayDetail(
+        val epochDay: Long,
+        val reflection: ReflectionSummary?,
+        val articles: List<ArticleItem>,
+        val figureName: String?,
+        val figureImageUrl: String?,
+    )
+
     sealed interface UiState {
         data class Ready(
             val weekSlots: List<DaySlot> = emptyList(),
@@ -41,6 +68,8 @@ object ReaderContract {
             val pickerOpenForEpochDay: Long? = null,
             val pickerFigures: List<Figure> = emptyList(),
             val calendarDays: List<CalendarDay> = emptyList(),
+            val isCalendarExpanded: Boolean = false,
+            val dayDetail: DayDetail? = null,
         ) : UiState
     }
 
@@ -52,5 +81,9 @@ object ReaderContract {
         data class SelectFutureDay(val epochDay: Long) : Intent
         data class AssignOverride(val epochDay: Long, val figureId: Long) : Intent
         data class ClearOverride(val epochDay: Long) : Intent
+        data object ToggleCalendarExpanded : Intent
+        data class MonthPageChanged(val year: Int, val month: Int) : Intent
+        data class HistoryDayTapped(val epochDay: Long) : Intent
+        data object DayDetailDismissed : Intent
     }
 }

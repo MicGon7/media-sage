@@ -162,9 +162,9 @@ fun MediaSageScaffold(
                     ReaderScreen(
                         state = state,
                         onIntent = vm::onIntent,
-                        onNavigateToHistory = { epochDay -> appState.navigateToHistory(epochDay) },
                         onNavigateToSettings = { appState.navigateToSettings() },
                         onNavigateToFigureDetail = { id -> appState.navigateToFigureDetail(id) },
+                        onNavigateToArticleDetail = { url -> appState.navigateToHeadlineDetail(url) },
                     )
                 }
                 is Route.Bookmarks -> NavEntry(route) {

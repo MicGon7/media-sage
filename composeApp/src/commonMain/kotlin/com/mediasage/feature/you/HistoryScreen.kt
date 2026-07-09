@@ -70,30 +70,19 @@ fun HistoryScreen(
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
                 HistoryHeader(
-                    mode = (state as? HistoryContract.UiState.Ready)?.mode,
+                    selectedEpochDay = (state as? HistoryContract.UiState.Ready)?.selectedEpochDay,
                     onNavigateBack = onNavigateBack,
-                    onModeSelected = { onIntent(HistoryContract.Intent.SelectMode(it)) },
                 )
             }
             when (state) {
                 is HistoryContract.UiState.Loading -> item { MediaSageLoadingState() }
-                is HistoryContract.UiState.Ready -> {
-                    item {
-                        CalendarSection(
-                            days = state.calendarDays,
-                            mode = state.mode,
-                            selectedEpochDay = state.selectedEpochDay,
-                            onDayTapped = { onIntent(HistoryContract.Intent.SelectDay(it)) },
-                        )
-                    }
-                    renderDayDetail(
-                        state.selectedEpochDay,
-                        state.dayDetail,
-                        state.selectedTab,
-                        onIntent,
-                        onNavigateToDetail
-                    )
-                }
+                is HistoryContract.UiState.Ready -> renderDayDetail(
+                    state.selectedEpochDay,
+                    state.dayDetail,
+                    state.selectedTab,
+                    onIntent,
+                    onNavigateToDetail,
+                )
             }
         }
     }
@@ -101,9 +90,8 @@ fun HistoryScreen(
 
 @Composable
 private fun HistoryHeader(
-    mode: HistoryContract.CalendarMode?,
+    selectedEpochDay: Long?,
     onNavigateBack: () -> Unit,
-    onModeSelected: (HistoryContract.CalendarMode) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
         Row(
@@ -113,19 +101,13 @@ private fun HistoryHeader(
             IconButton(onClick = onNavigateBack) {
                 Icon(
                     Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = stringResource(Res.string.nav_back)
+                    contentDescription = stringResource(Res.string.nav_back),
                 )
             }
             Text(
-                stringResource(Res.string.title_history),
-                style = MaterialTheme.typography.titleLarge
-            )
-        }
-        if (mode != null) {
-            ModeSelector(
-                selected = mode,
-                onSelected = onModeSelected,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                text = if (selectedEpochDay != null) epochDayToName(selectedEpochDay)
+                       else stringResource(Res.string.title_history),
+                style = MaterialTheme.typography.titleMedium,
             )
         }
         HorizontalDivider()

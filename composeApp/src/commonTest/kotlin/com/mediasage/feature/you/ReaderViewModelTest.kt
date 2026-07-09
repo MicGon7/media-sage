@@ -9,8 +9,10 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.model.Quote
+import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
+import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
 import kotlinx.coroutines.Dispatchers
@@ -111,6 +113,7 @@ class ReaderViewModelTest {
         dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap())),
         quoteRepository = FakeQuoteRepository(latestQuote),
         dailyReflectionRepository = FakeDailyReflectionRepository(),
+        encouragementRepository = FakeEncouragementRepository(),
     )
 }
 
@@ -164,4 +167,22 @@ private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteReposi
     override suspend fun getQuoteById(id: Long): Quote? = latestQuote?.takeIf { it.id == id }
     override suspend fun getLatestQuoteForFigure(figureId: Long): Quote? = latestQuote
     override suspend fun saveQuote(text: String, source: String, themes: List<String>, figureId: Long) = Unit
+}
+
+private class FakeEncouragementRepository : EncouragementRepository {
+    override suspend fun getEncouragement(
+        headlineTitle: String,
+        headlineSource: String,
+        headlineImageUrl: String?,
+        articleUrl: String?,
+        articleSnippet: String?,
+    ): Encouragement = throw UnsupportedOperationException()
+    override fun observeAll(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeBookmarked(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeCountByFigureName(): Flow<Map<String, Int>> = MutableStateFlow(emptyMap())
+    override fun observeByFigureId(figureId: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> = MutableStateFlow(false)
+    override suspend fun toggleBookmark(articleUrl: String) = Unit
+    override fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeActiveEpochDays(): Flow<Set<Long>> = MutableStateFlow(emptySet())
 }

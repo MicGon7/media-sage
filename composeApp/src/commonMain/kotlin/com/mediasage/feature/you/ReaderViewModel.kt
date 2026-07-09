@@ -3,16 +3,21 @@ package com.mediasage.feature.you
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
+import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
+import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -24,43 +29,42 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
+@Suppress("TooManyFunctions")
 class ReaderViewModel(
     private val figureRepository: FigureRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val quoteRepository: QuoteRepository,
     private val dailyReflectionRepository: DailyReflectionRepository,
+    private val encouragementRepository: EncouragementRepository,
 ) : ViewModel() {
 
     private val todayDate = Instant.fromEpochMilliseconds(epochMillis())
         .toLocalDateTime(TimeZone.currentSystemDefault()).date
     private val todayEpochDay = todayDate.toEpochDays().toLong()
-    private val monthFirstDay = LocalDate(todayDate.year, todayDate.monthNumber, 1)
-    private val monthStartEpoch = monthFirstDay.toEpochDays().toLong()
-    private val monthEndEpoch = monthFirstDay.plus(1, DateTimeUnit.MONTH).toEpochDays().toLong() - 1
-    private val daysInMonth = (monthEndEpoch - monthStartEpoch + 1).toInt()
 
+    private val _visibleMonth = MutableStateFlow(
+        LocalDate(todayDate.year, todayDate.monthNumber, 1)
+    )
     private val _state = MutableStateFlow<ReaderContract.UiState>(ReaderContract.UiState.Ready())
     val state: StateFlow<ReaderContract.UiState> = _state.asStateFlow()
 
+    private var dayDetailJob: Job? = null
+
     init {
-        combine(
-            figureRepository.observeAllFigures(),
-            dayAssignmentRepository.observeAssignments(),
-            quoteRepository.observeAllQuotes(),
-            dailyReflectionRepository.observeByEpochDayRange(monthStartEpoch, monthEndEpoch),
-            dayAssignmentRepository.observeOverridesByEpochDayRange(monthStartEpoch, monthEndEpoch),
-        ) { figures, assignments, allQuotes, briefingDays, overridesByDay ->
-            val current = _state.value as? ReaderContract.UiState.Ready ?: ReaderContract.UiState.Ready()
-            val figuresById = figures.associateBy { it.id }
-            val latestQuote = allQuotes.maxByOrNull { it.id }
-            val quoteFigure = latestQuote?.let { figuresById[it.figureId] }
-            val briefingByDay = briefingDays.associate { it.epochDay to it.figureId }
-            current.copy(
-                weekSlots = buildWeekSlots(assignments, overridesByDay, figuresById),
-                pickerFigures = figures,
-                quoteCard = buildQuoteCard(latestQuote, quoteFigure),
-                calendarDays = buildCalendarDays(briefingByDay, overridesByDay, figuresById),
-            )
+        _visibleMonth.flatMapLatest { monthDate ->
+            val start = monthDate.toEpochDays().toLong()
+            val end = monthDate.plus(1, DateTimeUnit.MONTH).toEpochDays().toLong() - 1
+            val overrideStart = minOf(start, todayEpochDay - 7)
+            val overrideEnd = maxOf(end, todayEpochDay + 7)
+            combine(
+                figureRepository.observeAllFigures(),
+                dayAssignmentRepository.observeAssignments(),
+                quoteRepository.observeAllQuotes(),
+                dailyReflectionRepository.observeByEpochDayRange(start, end),
+                dayAssignmentRepository.observeOverridesByEpochDayRange(overrideStart, overrideEnd),
+            ) { figures, assignments, allQuotes, briefingDays, overridesByDay ->
+                buildState(figures, assignments, allQuotes, briefingDays, overridesByDay, start, end)
+            }
         }.onEach { _state.value = it }.launchIn(viewModelScope)
     }
 
@@ -95,7 +99,67 @@ class ReaderViewModel(
                 dayAssignmentRepository.clearOverride(intent.epochDay)
                 _state.value = current.copy(pickerOpenForEpochDay = null)
             }
+
+            is ReaderContract.Intent.ToggleCalendarExpanded ->
+                _state.value = current.copy(isCalendarExpanded = !current.isCalendarExpanded)
+
+            is ReaderContract.Intent.MonthPageChanged -> {
+                val newDate = LocalDate(intent.year, intent.month, 1)
+                if (_visibleMonth.value != newDate) _visibleMonth.value = newDate
+            }
+
+            is ReaderContract.Intent.HistoryDayTapped -> {
+                val calDay = current.calendarDays.find { it.epochDay == intent.epochDay }
+                loadDayDetail(intent.epochDay, calDay?.figureName, calDay?.figurePortraitUrl)
+            }
+
+            is ReaderContract.Intent.DayDetailDismissed -> {
+                dayDetailJob?.cancel()
+                _state.value = current.copy(dayDetail = null)
+            }
         }
+    }
+
+    private fun loadDayDetail(epochDay: Long, figureName: String?, figureImageUrl: String?) {
+        dayDetailJob?.cancel()
+        dayDetailJob = viewModelScope.launch {
+            val reflection = dailyReflectionRepository.getForDay(epochDay)
+            encouragementRepository.observeByEpochDay(epochDay).collect { encouragements ->
+                val cur = _state.value as? ReaderContract.UiState.Ready ?: return@collect
+                _state.value = cur.copy(
+                    dayDetail = ReaderContract.DayDetail(
+                        epochDay = epochDay,
+                        reflection = reflection?.toReaderSummary(),
+                        articles = encouragements.map { it.toArticleItem() },
+                        figureName = figureName,
+                        figureImageUrl = figureImageUrl,
+                    )
+                )
+            }
+        }
+    }
+
+    private fun buildState(
+        figures: List<com.mediasage.domain.model.Figure>,
+        assignments: Map<Int, DayAssignment>,
+        allQuotes: List<com.mediasage.domain.model.Quote>,
+        briefingDays: List<com.mediasage.domain.model.BriefingDay>,
+        overridesByDay: Map<Long, Long>,
+        monthStartEpoch: Long,
+        monthEndEpoch: Long,
+    ): ReaderContract.UiState.Ready {
+        val current = _state.value as? ReaderContract.UiState.Ready ?: ReaderContract.UiState.Ready()
+        val figuresById = figures.associateBy { it.id }
+        val latestQuote = allQuotes.maxByOrNull { it.id }
+        val quoteFigure = latestQuote?.let { figuresById[it.figureId] }
+        val briefingByDay = briefingDays.associate { it.epochDay to it.figureId }
+        val daysInMonth = (monthEndEpoch - monthStartEpoch + 1).toInt()
+        return current.copy(
+            weekSlots = buildWeekSlots(assignments, overridesByDay, figuresById),
+            pickerFigures = figures,
+            quoteCard = buildQuoteCard(latestQuote, quoteFigure),
+            calendarDays = buildCalendarDays(monthStartEpoch, daysInMonth, briefingByDay, assignments, overridesByDay, figuresById),
+        )
     }
 
     private fun buildWeekSlots(
@@ -115,6 +179,7 @@ class ReaderViewModel(
             val figure = figureId?.let { figuresById[it] }
             ReaderContract.DaySlot(
                 dayOfWeek = date.dayOfWeek,
+                epochDay = epochDay,
                 isToday = date == today,
                 assignedFigureName = figure?.name,
                 assignedFigureImageUrl = figure?.portraitUrl,
@@ -124,7 +189,10 @@ class ReaderViewModel(
     }
 
     private fun buildCalendarDays(
+        monthStartEpoch: Long,
+        daysInMonth: Int,
         briefingByDay: Map<Long, Long>,
+        assignments: Map<Int, DayAssignment>,
         overridesByDay: Map<Long, Long>,
         figuresById: Map<Long, com.mediasage.domain.model.Figure>,
     ): List<ReaderContract.CalendarDay> {
@@ -133,7 +201,8 @@ class ReaderViewModel(
             val date = LocalDate.fromEpochDays(epochDay.toInt())
             val isFuture = epochDay > todayEpochDay
             val overrideFigureId = overridesByDay[epochDay]
-            val figureId = if (isFuture) overrideFigureId else briefingByDay[epochDay]
+            val figureId = if (isFuture) overrideFigureId
+                           else briefingByDay[epochDay]
             val figure = figureId?.let { figuresById[it] }
             ReaderContract.CalendarDay(
                 epochDay = epochDay,
@@ -162,3 +231,21 @@ class ReaderViewModel(
         )
     }
 }
+
+private fun DailyReflection.toReaderSummary() = ReaderContract.ReflectionSummary(
+    scriptureReference = scriptureReference,
+    scriptureText = scriptureText,
+    insight = insight,
+    implication = implication,
+    inspiration = inspiration,
+    sources = sources,
+)
+
+private fun Encouragement.toArticleItem() = ReaderContract.ArticleItem(
+    headlineTitle = headlineTitle,
+    quoteText = quoteText,
+    figureName = figureName,
+    figureRole = figureRole,
+    figureImageUrl = figureImageUrl,
+    articleUrl = articleUrl ?: "",
+)
