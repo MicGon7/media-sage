@@ -30,6 +30,9 @@ class DayAssignmentRepositoryImpl(
             }
         }
 
+    override fun observeOverridesByEpochDayRange(start: Long, end: Long): Flow<Map<Long, Long>> =
+        overrideDao.observeByRange(start, end).map { list -> list.associate { it.epochDay to it.figureId } }
+
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) {
         dao.upsert(DayAssignmentEntity(dayOfWeek = dayOfWeek, figureId = figureId, lens = lens?.name))
     }

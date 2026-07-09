@@ -1,35 +1,34 @@
 package com.mediasage.feature.you
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.ui.draw.scale
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.you_calendar_section_title
-import org.jetbrains.compose.resources.stringResource
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.mediasage.theme.BrandAmber
 import kotlinx.datetime.LocalDate
 
@@ -37,15 +36,10 @@ import kotlinx.datetime.LocalDate
 fun CalendarCard(
     days: List<ReaderContract.CalendarDay>,
     onDayTapped: (epochDay: Long) -> Unit,
+    sharedElementModifierFor: @Composable (epochDay: Long) -> Modifier = { Modifier },
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.padding(horizontal = 16.dp)) {
-        Text(
-            text = stringResource(Res.string.you_calendar_section_title),
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(vertical = 8.dp),
-        )
         Surface(
             shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth(),
@@ -65,6 +59,7 @@ fun CalendarCard(
                             MonthDayCell(
                                 day = day,
                                 onClick = { day?.let { onDayTapped(it.epochDay) } },
+                                sharedElementModifierFor = sharedElementModifierFor,
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -110,12 +105,24 @@ private fun WeekDayHeaderRow() {
 private fun MonthDayCell(
     day: ReaderContract.CalendarDay?,
     onClick: () -> Unit,
+    sharedElementModifierFor: @Composable (epochDay: Long) -> Modifier = { Modifier },
     modifier: Modifier = Modifier,
 ) {
     if (day == null) {
         Box(modifier = modifier.size(44.dp))
         return
     }
+    val portraitAlpha by animateFloatAsState(
+        targetValue = if (day.hasData) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "portrait_alpha",
+    )
+    val portraitScale by animateFloatAsState(
+        targetValue = if (day.hasData) 1f else 0.6f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "portrait_scale",
+    )
+    val portraitMod = sharedElementModifierFor(day.epochDay)
     Column(
         modifier = modifier.clickable(onClick = onClick).padding(vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -131,31 +138,42 @@ private fun MonthDayCell(
             },
             fontWeight = if (day.isToday) FontWeight.Bold else FontWeight.Normal,
         )
-        when {
-            day.hasData -> DayPortrait(day)
-            day.isToday -> Box(Modifier.size(6.dp).clip(CircleShape).background(BrandAmber))
-            else -> Spacer(Modifier.size(28.dp))
+        Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+            if (day.isToday && !day.hasData) {
+                Box(Modifier.size(6.dp).clip(CircleShape).background(BrandAmber))
+            }
+            if (day.hasData) {
+                Box(modifier = Modifier.scale(portraitScale).alpha(portraitAlpha)) {
+                    DayPortrait(day, portraitMod)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun DayPortrait(day: ReaderContract.CalendarDay) {
-    val ringModifier = if (day.isToday) Modifier.border(2.dp, BrandAmber, CircleShape) else Modifier
+private fun DayPortrait(
+    day: ReaderContract.CalendarDay,
+    sharedModifier: Modifier = Modifier,
+    showRing: Boolean = true,
+) {
+    val isPast = !day.isToday && !day.isFuture
     if (day.figurePortraitUrl != null) {
-        AsyncImage(
-            model = day.figurePortraitUrl,
-            contentDescription = day.figureName,
-            modifier = Modifier.size(28.dp).clip(CircleShape).then(ringModifier),
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.TopCenter,
+        FigurePortraitImage(
+            imageUrl = day.figurePortraitUrl,
+            name = day.figureName,
+            size = 28.dp,
+            isToday = day.isToday,
+            isPast = isPast,
+            showRing = showRing,
+            modifier = sharedModifier,
         )
     } else {
+        val fallbackModifier = sharedModifier.size(28.dp).clip(CircleShape)
+            .then(if (day.isToday && showRing) Modifier.solidCircleBorder(BrandAmber, 2.dp) else Modifier)
+            .then(if (isPast) Modifier.alpha(0.6f) else Modifier)
         Box(
-            modifier = Modifier.size(28.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .then(ringModifier),
+            modifier = fallbackModifier.background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
             Text("†", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)

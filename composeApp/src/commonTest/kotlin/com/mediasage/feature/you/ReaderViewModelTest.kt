@@ -9,8 +9,10 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.model.Quote
+import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
+import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
 import kotlinx.coroutines.Dispatchers
@@ -68,11 +70,52 @@ class ReaderViewModelTest {
         assertNull(state.quoteCard)
     }
 
+    @Test
+    fun selectFutureDay_opensFutureDayPickerSheet() = runTest(testDispatcher) {
+        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
+        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
+
+        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        val sheet = state.activeSheet as? ReaderContract.ActiveSheet.FutureDayPicker
+        assertNotNull(sheet)
+        assertEquals(futureEpochDay, sheet.epochDay)
+    }
+
+    @Test
+    fun assignOverride_closesActiveSheet() = runTest(testDispatcher) {
+        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
+        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
+        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
+
+        viewModel.onIntent(ReaderContract.Intent.AssignOverride(futureEpochDay, testFigure.id))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertNull(state.activeSheet)
+    }
+
+    @Test
+    fun clearOverride_closesActiveSheet() = runTest(testDispatcher) {
+        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
+        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
+        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
+
+        viewModel.onIntent(ReaderContract.Intent.ClearOverride(futureEpochDay))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertNull(state.activeSheet)
+    }
+
     private fun buildViewModel(figure: Figure, latestQuote: Quote?): ReaderViewModel = ReaderViewModel(
         figureRepository = FakeFigureRepository(figure),
         dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap())),
         quoteRepository = FakeQuoteRepository(latestQuote),
         dailyReflectionRepository = FakeDailyReflectionRepository(),
+        encouragementRepository = FakeEncouragementRepository(),
     )
 }
 
@@ -88,12 +131,22 @@ private class FakeFigureRepository(private val figure: Figure) : FigureRepositor
 private class FakeDayAssignmentRepository(
     private val assignmentsFlow: MutableStateFlow<Map<Int, DayAssignment>>
 ) : DayAssignmentRepository {
+    val overrides = mutableMapOf<Long, Long>()
+    private val overridesFlow = MutableStateFlow<Map<Long, Long>>(emptyMap())
+
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = assignmentsFlow
+    override fun observeOverridesByEpochDayRange(start: Long, end: Long): Flow<Map<Long, Long>> = overridesFlow
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
-    override suspend fun setOverride(epochDay: Long, figureId: Long) = Unit
-    override suspend fun clearOverride(epochDay: Long) = Unit
+    override suspend fun setOverride(epochDay: Long, figureId: Long) {
+        overrides[epochDay] = figureId
+        overridesFlow.value = overrides.toMap()
+    }
+    override suspend fun clearOverride(epochDay: Long) {
+        overrides.remove(epochDay)
+        overridesFlow.value = overrides.toMap()
+    }
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = null
 }
 
@@ -116,4 +169,22 @@ private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteReposi
     override suspend fun getQuoteById(id: Long): Quote? = latestQuote?.takeIf { it.id == id }
     override suspend fun getLatestQuoteForFigure(figureId: Long): Quote? = latestQuote
     override suspend fun saveQuote(text: String, source: String, themes: List<String>, figureId: Long) = Unit
+}
+
+private class FakeEncouragementRepository : EncouragementRepository {
+    override suspend fun getEncouragement(
+        headlineTitle: String,
+        headlineSource: String,
+        headlineImageUrl: String?,
+        articleUrl: String?,
+        articleSnippet: String?,
+    ): Encouragement = throw UnsupportedOperationException()
+    override fun observeAll(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeBookmarked(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeCountByFigureName(): Flow<Map<String, Int>> = MutableStateFlow(emptyMap())
+    override fun observeByFigureId(figureId: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> = MutableStateFlow(false)
+    override suspend fun toggleBookmark(articleUrl: String) = Unit
+    override fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeActiveEpochDays(): Flow<Set<Long>> = MutableStateFlow(emptySet())
 }

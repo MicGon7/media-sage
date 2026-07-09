@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.mediasage.data.local.entity.ScheduleOverrideEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ScheduleOverrideDao {
@@ -17,4 +18,7 @@ interface ScheduleOverrideDao {
 
     @Query("SELECT * FROM schedule_override WHERE epochDay = :epochDay LIMIT 1")
     suspend fun getByEpochDay(epochDay: Long): ScheduleOverrideEntity?
+
+    @Query("SELECT * FROM schedule_override WHERE epochDay >= :start AND epochDay <= :end")
+    fun observeByRange(start: Long, end: Long): Flow<List<ScheduleOverrideEntity>>
 }

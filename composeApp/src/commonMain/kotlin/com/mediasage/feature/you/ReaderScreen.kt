@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -21,9 +20,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -86,14 +85,11 @@ import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.ScreenHeader
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.datetime.DayOfWeek
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.headline_nature_image_default
 import mediasage.composeapp.generated.resources.reader_hero_caption
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
-import mediasage.composeapp.generated.resources.you_carousel_title
 import mediasage.composeapp.generated.resources.you_lens_faith
 import mediasage.composeapp.generated.resources.you_lens_grace
 import mediasage.composeapp.generated.resources.you_lens_grief
@@ -124,30 +120,51 @@ import org.jetbrains.compose.resources.stringResource
 fun ReaderScreen(
     state: ReaderContract.UiState,
     onIntent: (ReaderContract.Intent) -> Unit,
-    onNavigateToHistory: (epochDay: Long) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToFigureDetail: (figureId: Long) -> Unit = {},
+    onNavigateToArticleDetail: (url: String) -> Unit = {},
 ) {
-    if (state is ReaderContract.UiState.Ready && state.pickerOpenForDay != null) {
+    val ready = state as? ReaderContract.UiState.Ready
+    val activeSheet = ready?.activeSheet
+    if (ready != null && activeSheet != null) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val isAssigned = state.weekSlots.any {
-            it.dayOfWeek.ordinal == state.pickerOpenForDay && it.assignedFigureName != null
-        }
         ModalBottomSheet(
             onDismissRequest = { onIntent(ReaderContract.Intent.PickerDismissed) },
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
-            FigurePickerSheet(
-                figures = state.pickerFigures,
-                showClearOption = isAssigned,
-                onFigureAndLensSelected = { figure, lens ->
-                    onIntent(ReaderContract.Intent.FigureAssigned(state.pickerOpenForDay, figure.id, lens))
-                },
-                onClearDay = {
-                    onIntent(ReaderContract.Intent.AssignmentCleared(state.pickerOpenForDay))
-                },
-            )
+            when (val sheet = activeSheet) {
+                is ReaderContract.ActiveSheet.WeekSlotPicker -> {
+                    val isAssigned = ready.weekSlots.any {
+                        it.dayOfWeek.ordinal == sheet.dayOfWeek && it.assignedFigureName != null
+                    }
+                    FigurePickerSheet(
+                        figures = ready.pickerFigures,
+                        showClearOption = isAssigned,
+                        onFigureAndLensSelected = { figure, lens ->
+                            onIntent(ReaderContract.Intent.FigureAssigned(sheet.dayOfWeek, figure.id, lens))
+                        },
+                        onClearDay = {
+                            onIntent(ReaderContract.Intent.AssignmentCleared(sheet.dayOfWeek))
+                        },
+                    )
+                }
+                is ReaderContract.ActiveSheet.FutureDayPicker -> {
+                    val overrideDay = ready.calendarDays.find { it.epochDay == sheet.epochDay }
+                    OverridePickerSheet(
+                        figures = ready.pickerFigures,
+                        currentFigureId = overrideDay?.overrideFigureId,
+                        onFigureSelected = { figureId ->
+                            onIntent(ReaderContract.Intent.AssignOverride(sheet.epochDay, figureId))
+                        },
+                        onClear = { onIntent(ReaderContract.Intent.ClearOverride(sheet.epochDay)) },
+                    )
+                }
+                is ReaderContract.ActiveSheet.HistoryDetail -> {
+                    DayDetailSheetContent(dayDetail = sheet.detail)
+                }
+                else -> {}
+            }
         }
     }
 
@@ -190,31 +207,22 @@ fun ReaderScreen(
                 }
             }
 
-            if (state is ReaderContract.UiState.Ready) {
+            if (ready != null) {
                 item {
                     HeroPainting()
                 }
 
                 item {
-                    ReporterCarousel(
-                        slots = state.weekSlots,
-                        onDayTapped = { index -> onIntent(ReaderContract.Intent.DaySlotTapped(index)) },
-                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+                    ReporterScheduleSection(
+                        weekSlots = ready.weekSlots,
+                        calendarDays = ready.calendarDays,
+                        isExpanded = ready.isCalendarExpanded,
+                        onIntent = onIntent,
+                        modifier = Modifier.padding(top = 24.dp),
                     )
                 }
 
-                if (state.calendarDays.isNotEmpty()) {
-                    item {
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        CalendarCard(
-                            days = state.calendarDays,
-                            onDayTapped = { epochDay -> onNavigateToHistory(epochDay) },
-                            modifier = Modifier.padding(bottom = 16.dp),
-                        )
-                    }
-                }
-
-                state.quoteCard?.let { quote ->
+                ready.quoteCard?.let { quote ->
                     item {
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     }
@@ -254,7 +262,7 @@ private fun HeroPainting() {
 }
 
 @Composable
-private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+internal fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
@@ -264,47 +272,12 @@ private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ReporterCarousel(
-    slots: List<ReaderContract.DaySlot>,
-    onDayTapped: (Int) -> Unit,
-    modifier: Modifier = Modifier,
+internal fun DaySlotItem(
+    slot: ReaderContract.DaySlot,
+    onClick: () -> Unit,
+    portraitModifier: Modifier = Modifier,
+    badgeModifier: Modifier = Modifier,
 ) {
-    val todayIndex = remember(slots) { slots.indexOfFirst { it.isToday } }
-    val rowState = rememberLazyListState()
-    val density = LocalDensity.current
-
-    // After first layout, scroll so today's slot is horizontally centered.
-    LaunchedEffect(todayIndex) {
-        if (todayIndex < 0) return@LaunchedEffect
-        snapshotFlow { rowState.layoutInfo.viewportSize.width }
-            .filter { it > 0 }
-            .first()
-            .let { viewportWidth ->
-                val itemWidthPx = with(density) { 72.dp.roundToPx() }
-                val offset = -(viewportWidth / 2 - itemWidthPx / 2)
-                rowState.scrollToItem(index = todayIndex, scrollOffset = offset)
-            }
-    }
-
-    Column(modifier = modifier) {
-        SectionLabel(
-            text = stringResource(Res.string.you_carousel_title),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-        LazyRow(
-            state = rowState,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            items(slots.size) { index ->
-                DaySlotItem(slot = slots[index], onClick = { onDayTapped(index) })
-            }
-        }
-    }
-}
-
-@Composable
-private fun DaySlotItem(slot: ReaderContract.DaySlot, onClick: () -> Unit) {
     val primary = MaterialTheme.colorScheme.primary
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
@@ -326,18 +299,21 @@ private fun DaySlotItem(slot: ReaderContract.DaySlot, onClick: () -> Unit) {
         )
 
         Box(contentAlignment = Alignment.BottomEnd) {
-            ReporterCircle(
-                slot = slot,
-                size = 72.dp,
-                primaryColor = primary,
-                todayRingColor = BrandAmber,
-                surfaceVariantColor = surfaceVariant,
-                onSurfaceVariantColor = onSurfaceVariant,
-            )
+            Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                ReporterCircle(
+                    slot = slot,
+                    size = 72.dp,
+                    primaryColor = primary,
+                    todayRingColor = BrandAmber,
+                    surfaceVariantColor = surfaceVariant,
+                    onSurfaceVariantColor = onSurfaceVariant,
+                    modifier = portraitModifier,
+                )
+            }
             if (slot.assignedLens != null) {
                 LensBadge(
                     lens = slot.assignedLens,
-                    modifier = Modifier
+                    modifier = badgeModifier
                         .size(18.dp)
                         .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
                 )
@@ -355,36 +331,33 @@ private fun DaySlotItem(slot: ReaderContract.DaySlot, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ReporterCircle(
+internal fun ReporterCircle(
     slot: ReaderContract.DaySlot,
     size: Dp,
     primaryColor: Color,
     todayRingColor: Color,
     surfaceVariantColor: Color,
     onSurfaceVariantColor: Color,
+    showRing: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val isAssigned = slot.assignedFigureName != null
 
     when {
         slot.assignedFigureImageUrl != null -> {
-            AsyncImage(
-                model = slot.assignedFigureImageUrl,
-                contentDescription = slot.assignedFigureName,
-                modifier = Modifier
-                    .size(size)
-                    .clip(CircleShape)
-                    .then(
-                        if (slot.isToday) Modifier.solidCircleBorder(todayRingColor, 2.dp)
-                        else Modifier
-                    ),
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.TopCenter,
+            FigurePortraitImage(
+                imageUrl = slot.assignedFigureImageUrl,
+                name = slot.assignedFigureName,
+                size = size,
+                isToday = slot.isToday,
+                showRing = showRing,
+                modifier = modifier,
             )
         }
         isAssigned -> {
             val bgColor = if (slot.isToday) primaryColor else surfaceVariantColor.copy(alpha = 0.6f)
             Box(
-                modifier = Modifier
+                modifier = modifier
                     .size(size)
                     .clip(CircleShape)
                     .background(bgColor)
@@ -404,7 +377,7 @@ private fun ReporterCircle(
         else -> {
             val borderColor = if (slot.isToday) todayRingColor else onSurfaceVariantColor.copy(alpha = 0.4f)
             Box(
-                modifier = Modifier
+                modifier = modifier
                     .size(size)
                     .clip(CircleShape)
                     .dashedCircleBorder(borderColor, 1.5.dp),
@@ -421,7 +394,7 @@ private fun ReporterCircle(
     }
 }
 
-private fun Modifier.dashedCircleBorder(color: Color, strokeWidth: Dp): Modifier = drawBehind {
+internal fun Modifier.dashedCircleBorder(color: Color, strokeWidth: Dp): Modifier = drawBehind {
     val pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
     drawCircle(
         color = color,
@@ -431,17 +404,9 @@ private fun Modifier.dashedCircleBorder(color: Color, strokeWidth: Dp): Modifier
     )
 }
 
-private fun Modifier.solidCircleBorder(color: Color, strokeWidth: Dp): Modifier = drawBehind {
-    drawCircle(
-        color = color,
-        radius = size.minDimension / 2 - strokeWidth.toPx() / 2,
-        center = Offset(size.width / 2, size.height / 2),
-        style = Stroke(width = strokeWidth.toPx()),
-    )
-}
 
 @Composable
-private fun LensBadge(lens: LensFilter, modifier: Modifier = Modifier) {
+internal fun LensBadge(lens: LensFilter, modifier: Modifier = Modifier) {
     val color = lens.color()
     Box(
         modifier = modifier
@@ -450,7 +415,7 @@ private fun LensBadge(lens: LensFilter, modifier: Modifier = Modifier) {
     )
 }
 
-private fun LensFilter.labelRes() = when (this) {
+internal fun LensFilter.labelRes() = when (this) {
     LensFilter.NEWS -> Res.string.you_lens_today
     LensFilter.LOVE -> Res.string.you_lens_love
     LensFilter.GRACE -> Res.string.you_lens_grace
@@ -463,7 +428,7 @@ private fun LensFilter.labelRes() = when (this) {
 }
 
 @Composable
-private fun LensFilter.color(): Color = when (this) {
+internal fun LensFilter.color(): Color = when (this) {
     LensFilter.NEWS -> MaterialTheme.colorScheme.primary
     LensFilter.LOVE -> LensLove
     LensFilter.GRACE -> LensGrace
@@ -848,6 +813,7 @@ private fun previewWeekSlots() = listOf(
 ).mapIndexed { i, (day, figureLens) ->
     ReaderContract.DaySlot(
         dayOfWeek = day,
+        epochDay = 0L,
         isToday = i == 3,
         assignedFigureName = figureLens.first,
         assignedLens = figureLens.second,
