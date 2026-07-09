@@ -1,5 +1,7 @@
 package com.mediasage.feature.you
 
+import kotlinx.datetime.LocalDate
+
 object HistoryContract {
 
     enum class CalendarMode { WEEK, MONTH, YEAR }
@@ -48,6 +50,7 @@ object HistoryContract {
         data class Ready(
             val mode: CalendarMode = CalendarMode.WEEK,
             val selectedTab: DayTab = DayTab.BRIEFING,
+            val calendarAnchor: LocalDate,
             val calendarDays: List<CalendarDay> = emptyList(),
             val selectedEpochDay: Long? = null,
             val dayDetail: DayDetail? = null,
