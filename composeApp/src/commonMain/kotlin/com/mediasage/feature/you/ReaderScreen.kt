@@ -124,53 +124,50 @@ fun ReaderScreen(
     onNavigateToFigureDetail: (figureId: Long) -> Unit = {},
     onNavigateToArticleDetail: (url: String) -> Unit = {},
 ) {
-    if (state is ReaderContract.UiState.Ready && state.pickerOpenForDay != null) {
+    val ready = state as? ReaderContract.UiState.Ready
+    val activeSheet = ready?.activeSheet
+    if (ready != null && activeSheet != null) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val isAssigned = state.weekSlots.any {
-            it.dayOfWeek.ordinal == state.pickerOpenForDay && it.assignedFigureName != null
-        }
         ModalBottomSheet(
             onDismissRequest = { onIntent(ReaderContract.Intent.PickerDismissed) },
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
-            FigurePickerSheet(
-                figures = state.pickerFigures,
-                showClearOption = isAssigned,
-                onFigureAndLensSelected = { figure, lens ->
-                    onIntent(ReaderContract.Intent.FigureAssigned(state.pickerOpenForDay, figure.id, lens))
-                },
-                onClearDay = {
-                    onIntent(ReaderContract.Intent.AssignmentCleared(state.pickerOpenForDay))
-                },
-            )
-        }
-    }
-
-    if (state is ReaderContract.UiState.Ready && state.dayDetail != null) {
-        DayDetailBottomSheet(
-            dayDetail = state.dayDetail,
-            onDismiss = { onIntent(ReaderContract.Intent.DayDetailDismissed) },
-            onNavigateToArticle = onNavigateToArticleDetail,
-        )
-    }
-
-    if (state is ReaderContract.UiState.Ready && state.pickerOpenForEpochDay != null) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val overrideDay = state.calendarDays.find { it.epochDay == state.pickerOpenForEpochDay }
-        ModalBottomSheet(
-            onDismissRequest = { onIntent(ReaderContract.Intent.PickerDismissed) },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            OverridePickerSheet(
-                figures = state.pickerFigures,
-                currentFigureId = overrideDay?.overrideFigureId,
-                onFigureSelected = { figureId ->
-                    onIntent(ReaderContract.Intent.AssignOverride(state.pickerOpenForEpochDay, figureId))
-                },
-                onClear = { onIntent(ReaderContract.Intent.ClearOverride(state.pickerOpenForEpochDay)) },
-            )
+            when (val sheet = activeSheet) {
+                is ReaderContract.ActiveSheet.WeekSlotPicker -> {
+                    val isAssigned = ready.weekSlots.any {
+                        it.dayOfWeek.ordinal == sheet.dayOfWeek && it.assignedFigureName != null
+                    }
+                    FigurePickerSheet(
+                        figures = ready.pickerFigures,
+                        showClearOption = isAssigned,
+                        onFigureAndLensSelected = { figure, lens ->
+                            onIntent(ReaderContract.Intent.FigureAssigned(sheet.dayOfWeek, figure.id, lens))
+                        },
+                        onClearDay = {
+                            onIntent(ReaderContract.Intent.AssignmentCleared(sheet.dayOfWeek))
+                        },
+                    )
+                }
+                is ReaderContract.ActiveSheet.FutureDayPicker -> {
+                    val overrideDay = ready.calendarDays.find { it.epochDay == sheet.epochDay }
+                    OverridePickerSheet(
+                        figures = ready.pickerFigures,
+                        currentFigureId = overrideDay?.overrideFigureId,
+                        onFigureSelected = { figureId ->
+                            onIntent(ReaderContract.Intent.AssignOverride(sheet.epochDay, figureId))
+                        },
+                        onClear = { onIntent(ReaderContract.Intent.ClearOverride(sheet.epochDay)) },
+                    )
+                }
+                is ReaderContract.ActiveSheet.HistoryDetail -> {
+                    DayDetailSheetContent(
+                        dayDetail = sheet.detail,
+                        onNavigateToArticle = onNavigateToArticleDetail,
+                    )
+                }
+                else -> {}
+            }
         }
     }
 
@@ -213,22 +210,22 @@ fun ReaderScreen(
                 }
             }
 
-            if (state is ReaderContract.UiState.Ready) {
+            if (ready != null) {
                 item {
                     HeroPainting()
                 }
 
                 item {
                     ReporterScheduleSection(
-                        weekSlots = state.weekSlots,
-                        calendarDays = state.calendarDays,
-                        isExpanded = state.isCalendarExpanded,
+                        weekSlots = ready.weekSlots,
+                        calendarDays = ready.calendarDays,
+                        isExpanded = ready.isCalendarExpanded,
                         onIntent = onIntent,
                         modifier = Modifier.padding(top = 24.dp),
                     )
                 }
 
-                state.quoteCard?.let { quote ->
+                ready.quoteCard?.let { quote ->
                     item {
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     }

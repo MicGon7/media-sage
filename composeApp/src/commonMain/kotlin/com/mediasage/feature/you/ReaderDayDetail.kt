@@ -1,5 +1,6 @@
 package com.mediasage.feature.you
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,12 +14,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -35,40 +33,34 @@ import kotlinx.datetime.LocalDate
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.history_empty_day_for
 import mediasage.composeapp.generated.resources.history_empty_day_subtitle
+import mediasage.composeapp.generated.resources.you_day_detail_articles_label
+import mediasage.composeapp.generated.resources.you_day_detail_figure_attribution
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun DayDetailBottomSheet(
+internal fun DayDetailSheetContent(
     dayDetail: ReaderContract.DayDetail,
-    onDismiss: () -> Unit,
     onNavigateToArticle: (String) -> Unit,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surface,
-    ) {
-        LazyColumn(contentPadding = PaddingValues(bottom = 40.dp)) {
-            item { DayDetailHeader(dayDetail) }
-            item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) }
-            if (dayDetail.reflection != null) {
-                item { DayDetailReflection(dayDetail.reflection) }
-            } else {
-                item { DayDetailEmptyState(dayDetail.epochDay) }
+    LazyColumn(contentPadding = PaddingValues(bottom = 40.dp)) {
+        item { DayDetailHeader(dayDetail) }
+        item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) }
+        if (dayDetail.reflection != null) {
+            item { DayDetailReflection(dayDetail.reflection) }
+        } else {
+            item { DayDetailEmptyState(dayDetail.epochDay) }
+        }
+        if (dayDetail.articles.isNotEmpty()) {
+            item {
+                SectionLabel(
+                    text = stringResource(Res.string.you_day_detail_articles_label),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                )
             }
-            if (dayDetail.articles.isNotEmpty()) {
-                item {
-                    SectionLabel(
-                        text = "ARTICLES",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    )
-                }
-                items(dayDetail.articles, key = { it.articleUrl }) { article ->
-                    DayDetailArticleRow(article, onClick = {
-                        if (article.articleUrl.isNotEmpty()) onNavigateToArticle(article.articleUrl)
-                    })
-                }
+            items(dayDetail.articles, key = { it.articleUrl.ifEmpty { it.headlineTitle } }) { article ->
+                DayDetailArticleRow(article, onClick = {
+                    if (article.articleUrl.isNotEmpty()) onNavigateToArticle(article.articleUrl)
+                })
             }
         }
     }
@@ -165,9 +157,15 @@ private fun DayDetailEmptyState(epochDay: Long) {
 
 @Composable
 private fun DayDetailArticleRow(article: ReaderContract.ArticleItem, onClick: () -> Unit) {
+    val quotePreview = if (article.quoteText.length > 100) {
+        article.quoteText.take(100) + "…"
+    } else {
+        article.quoteText
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Text(
@@ -176,14 +174,14 @@ private fun DayDetailArticleRow(article: ReaderContract.ArticleItem, onClick: ()
             fontWeight = FontWeight.Medium,
         )
         Text(
-            text = "“${article.quoteText.take(100)}…”",
+            text = "\u201C$quotePreview\u201D",
             style = MaterialTheme.typography.bodySmall.copy(letterSpacing = 0.sp),
             fontStyle = FontStyle.Italic,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 2.dp),
         )
         Text(
-            text = "— ${article.figureName}",
+            text = stringResource(Res.string.you_day_detail_figure_attribution, article.figureName),
             style = MaterialTheme.typography.labelSmall,
             color = BrandAmber,
             modifier = Modifier.padding(top = 2.dp),

@@ -72,32 +72,40 @@ class ReaderViewModel(
         val current = _state.value as? ReaderContract.UiState.Ready ?: return
         when (intent) {
             is ReaderContract.Intent.DaySlotTapped ->
-                _state.value = current.copy(pickerOpenForDay = current.weekSlots[intent.index].dayOfWeek.ordinal)
+                _state.value = current.copy(
+                    activeSheet = ReaderContract.ActiveSheet.WeekSlotPicker(
+                        current.weekSlots[intent.index].dayOfWeek.ordinal
+                    )
+                )
 
-            is ReaderContract.Intent.PickerDismissed ->
-                _state.value = current.copy(pickerOpenForDay = null, pickerOpenForEpochDay = null)
+            is ReaderContract.Intent.PickerDismissed -> {
+                dayDetailJob?.cancel()
+                _state.value = current.copy(activeSheet = null)
+            }
 
             is ReaderContract.Intent.FigureAssigned -> viewModelScope.launch {
                 dayAssignmentRepository.assign(intent.dayOfWeek, intent.figureId, intent.lens)
-                _state.value = current.copy(pickerOpenForDay = null)
+                _state.value = current.copy(activeSheet = null)
             }
 
             is ReaderContract.Intent.AssignmentCleared -> viewModelScope.launch {
                 dayAssignmentRepository.clear(intent.dayOfWeek)
-                _state.value = current.copy(pickerOpenForDay = null)
+                _state.value = current.copy(activeSheet = null)
             }
 
             is ReaderContract.Intent.SelectFutureDay ->
-                _state.value = current.copy(pickerOpenForEpochDay = intent.epochDay)
+                _state.value = current.copy(
+                    activeSheet = ReaderContract.ActiveSheet.FutureDayPicker(intent.epochDay)
+                )
 
             is ReaderContract.Intent.AssignOverride -> viewModelScope.launch {
                 dayAssignmentRepository.setOverride(intent.epochDay, intent.figureId)
-                _state.value = current.copy(pickerOpenForEpochDay = null)
+                _state.value = current.copy(activeSheet = null)
             }
 
             is ReaderContract.Intent.ClearOverride -> viewModelScope.launch {
                 dayAssignmentRepository.clearOverride(intent.epochDay)
-                _state.value = current.copy(pickerOpenForEpochDay = null)
+                _state.value = current.copy(activeSheet = null)
             }
 
             is ReaderContract.Intent.ToggleCalendarExpanded ->
@@ -110,12 +118,15 @@ class ReaderViewModel(
 
             is ReaderContract.Intent.HistoryDayTapped -> {
                 val calDay = current.calendarDays.find { it.epochDay == intent.epochDay }
+                val stub = ReaderContract.DayDetail(
+                    epochDay = intent.epochDay,
+                    reflection = null,
+                    articles = emptyList(),
+                    figureName = calDay?.figureName,
+                    figureImageUrl = calDay?.figurePortraitUrl,
+                )
+                _state.value = current.copy(activeSheet = ReaderContract.ActiveSheet.HistoryDetail(stub))
                 loadDayDetail(intent.epochDay, calDay?.figureName, calDay?.figurePortraitUrl)
-            }
-
-            is ReaderContract.Intent.DayDetailDismissed -> {
-                dayDetailJob?.cancel()
-                _state.value = current.copy(dayDetail = null)
             }
         }
     }
@@ -126,15 +137,14 @@ class ReaderViewModel(
             val reflection = dailyReflectionRepository.getForDay(epochDay)
             encouragementRepository.observeByEpochDay(epochDay).collect { encouragements ->
                 val cur = _state.value as? ReaderContract.UiState.Ready ?: return@collect
-                _state.value = cur.copy(
-                    dayDetail = ReaderContract.DayDetail(
-                        epochDay = epochDay,
-                        reflection = reflection?.toReaderSummary(),
-                        articles = encouragements.map { it.toArticleItem() },
-                        figureName = figureName,
-                        figureImageUrl = figureImageUrl,
-                    )
+                val detail = ReaderContract.DayDetail(
+                    epochDay = epochDay,
+                    reflection = reflection?.toReaderSummary(),
+                    articles = encouragements.map { it.toArticleItem() },
+                    figureName = figureName,
+                    figureImageUrl = figureImageUrl,
                 )
+                _state.value = cur.copy(activeSheet = ReaderContract.ActiveSheet.HistoryDetail(detail))
             }
         }
     }

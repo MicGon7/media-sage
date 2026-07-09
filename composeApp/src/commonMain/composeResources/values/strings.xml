@@ -113,6 +113,8 @@
     <string name="reader_calendar_next_year">Next year</string>
     <string name="history_tab_briefing">Briefing</string>
     <string name="history_tab_articles">Articles</string>
+    <string name="you_day_detail_articles_label">ARTICLES</string>
+    <string name="you_day_detail_figure_attribution">— %1$s</string>
 
     <!-- Reader screen calendar card -->
     <string name="you_calendar_section_title">YOUR REPORTERS FOR THE MONTH</string>

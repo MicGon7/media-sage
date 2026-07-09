@@ -195,10 +195,10 @@ private fun SharedTransitionScope.MonthCarouselContent(
 ) {
     val todayEpochDay = remember(weekSlots) { weekSlots.firstOrNull { it.isToday }?.epochDay ?: 0L }
     val todayDate = remember(todayEpochDay) { LocalDate.fromEpochDays(todayEpochDay.toInt()) }
-    val startYear = remember { todayDate.year - CAROUSEL_START_YEAR_OFFSET }
-    val lastYear = remember { todayDate.year }
-    val totalMonths = remember { (lastYear - startYear + 1) * 12 }
-    val initialPage = remember { (todayDate.year - startYear) * 12 + (todayDate.monthNumber - 1) }
+    val startYear = remember(todayDate) { todayDate.year - CAROUSEL_START_YEAR_OFFSET }
+    val lastYear = remember(todayDate) { todayDate.year + 1 }
+    val totalMonths = remember(todayDate) { (lastYear - startYear + 1) * 12 }
+    val initialPage = remember(todayDate) { (todayDate.year - startYear) * 12 + (todayDate.monthNumber - 1) }
     val pagerState = rememberPagerState(initialPage = initialPage) { totalMonths }
     val coroutineScope = rememberCoroutineScope()
     val currentYear = startYear + pagerState.currentPage / 12

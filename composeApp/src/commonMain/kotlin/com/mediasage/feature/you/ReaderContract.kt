@@ -60,16 +60,20 @@ object ReaderContract {
         val figureImageUrl: String?,
     )
 
+    sealed interface ActiveSheet {
+        data class WeekSlotPicker(val dayOfWeek: Int) : ActiveSheet
+        data class FutureDayPicker(val epochDay: Long) : ActiveSheet
+        data class HistoryDetail(val detail: DayDetail) : ActiveSheet
+    }
+
     sealed interface UiState {
         data class Ready(
             val weekSlots: List<DaySlot> = emptyList(),
             val quoteCard: QuoteCard? = null,
-            val pickerOpenForDay: Int? = null,
-            val pickerOpenForEpochDay: Long? = null,
             val pickerFigures: List<Figure> = emptyList(),
             val calendarDays: List<CalendarDay> = emptyList(),
             val isCalendarExpanded: Boolean = false,
-            val dayDetail: DayDetail? = null,
+            val activeSheet: ActiveSheet? = null,
         ) : UiState
     }
 
@@ -84,6 +88,5 @@ object ReaderContract {
         data object ToggleCalendarExpanded : Intent
         data class MonthPageChanged(val year: Int, val month: Int) : Intent
         data class HistoryDayTapped(val epochDay: Long) : Intent
-        data object DayDetailDismissed : Intent
     }
 }

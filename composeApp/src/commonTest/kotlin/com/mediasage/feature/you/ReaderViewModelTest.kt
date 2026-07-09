@@ -71,7 +71,7 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun selectFutureDay_setsPickerOpenForEpochDay() = runTest(testDispatcher) {
+    fun selectFutureDay_opensFutureDayPickerSheet() = runTest(testDispatcher) {
         val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
         val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
             .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
@@ -79,11 +79,13 @@ class ReaderViewModelTest {
         viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
 
         val state = viewModel.state.value as ReaderContract.UiState.Ready
-        assertEquals(futureEpochDay, state.pickerOpenForEpochDay)
+        val sheet = state.activeSheet as? ReaderContract.ActiveSheet.FutureDayPicker
+        assertNotNull(sheet)
+        assertEquals(futureEpochDay, sheet.epochDay)
     }
 
     @Test
-    fun assignOverride_clearsPickerOpenForEpochDay() = runTest(testDispatcher) {
+    fun assignOverride_closesActiveSheet() = runTest(testDispatcher) {
         val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
         val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
             .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
@@ -92,11 +94,11 @@ class ReaderViewModelTest {
         viewModel.onIntent(ReaderContract.Intent.AssignOverride(futureEpochDay, testFigure.id))
 
         val state = viewModel.state.value as ReaderContract.UiState.Ready
-        assertNull(state.pickerOpenForEpochDay)
+        assertNull(state.activeSheet)
     }
 
     @Test
-    fun clearOverride_clearsPickerOpenForEpochDay() = runTest(testDispatcher) {
+    fun clearOverride_closesActiveSheet() = runTest(testDispatcher) {
         val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
         val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
             .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
@@ -105,7 +107,7 @@ class ReaderViewModelTest {
         viewModel.onIntent(ReaderContract.Intent.ClearOverride(futureEpochDay))
 
         val state = viewModel.state.value as ReaderContract.UiState.Ready
-        assertNull(state.pickerOpenForEpochDay)
+        assertNull(state.activeSheet)
     }
 
     private fun buildViewModel(figure: Figure, latestQuote: Quote?): ReaderViewModel = ReaderViewModel(
