@@ -7,13 +7,13 @@ import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
+import com.mediasage.domain.model.DayDetailData
 import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.Quote
 import com.mediasage.domain.model.ReaderCalendarData
-import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
-import com.mediasage.domain.repository.EncouragementRepository
+import com.mediasage.domain.usecase.ObserveDayDetailUseCase
 import com.mediasage.domain.usecase.ObserveReaderCalendarUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,9 +21,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -49,8 +47,7 @@ import kotlin.time.Instant
  */
 class ReaderViewModel(
     private val observeReaderCalendar: ObserveReaderCalendarUseCase,
-    private val dailyReflectionRepository: DailyReflectionRepository,
-    private val encouragementRepository: EncouragementRepository,
+    private val observeDayDetail: ObserveDayDetailUseCase,
     private val dayAssignmentRepository: DayAssignmentRepository,
 ) : ViewModel() {
 
@@ -87,7 +84,10 @@ class ReaderViewModel(
     private val dayDetail: Flow<ReaderContract.DayDetail?> =
         input.map { (it.activeSheet as? SheetSelection.History)?.epochDay }
             .distinctUntilChanged()
-            .flatMapLatest { epochDay -> if (epochDay == null) flowOf(null) else observeDayDetail(epochDay) }
+            .flatMapLatest { epochDay ->
+                if (epochDay == null) flowOf(null)
+                else observeDayDetail(epochDay).map { it.toReaderDetail(epochDay) }
+            }
 
     val state: StateFlow<ReaderContract.UiState> =
         combine(input, calendarData, dayDetail) { input, data, detail ->
@@ -127,21 +127,6 @@ class ReaderViewModel(
             block()
             input.update { it.copy(activeSheet = null) }
         }
-    }
-
-    private fun observeDayDetail(epochDay: Long): Flow<ReaderContract.DayDetail> = flow {
-        val reflection = dailyReflectionRepository.getForDay(epochDay)
-        emitAll(
-            encouragementRepository.observeByEpochDay(epochDay).map { encouragements ->
-                ReaderContract.DayDetail(
-                    epochDay = epochDay,
-                    reflection = reflection?.toReaderSummary(),
-                    articles = encouragements.map { it.toArticleItem() },
-                    figureName = null,
-                    figureImageUrl = null,
-                )
-            },
-        )
     }
 
     private fun buildReady(
@@ -276,6 +261,14 @@ class ReaderViewModel(
         const val WEEK_WINDOW_DAYS = 7L
     }
 }
+
+private fun DayDetailData.toReaderDetail(epochDay: Long) = ReaderContract.DayDetail(
+    epochDay = epochDay,
+    reflection = reflection?.toReaderSummary(),
+    articles = encouragements.map { it.toArticleItem() },
+    figureName = null,
+    figureImageUrl = null,
+)
 
 private fun DailyReflection.toReaderSummary() = ReaderContract.ReflectionSummary(
     scriptureReference = scriptureReference,

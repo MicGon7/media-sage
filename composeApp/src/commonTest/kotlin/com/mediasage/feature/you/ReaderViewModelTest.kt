@@ -15,6 +15,7 @@ import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
+import com.mediasage.domain.usecase.ObserveDayDetailUseCase
 import com.mediasage.domain.usecase.ObserveReaderCalendarUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -160,8 +161,7 @@ class ReaderViewModelTest {
         val encouragementRepo = FakeEncouragementRepository()
         val viewModel = ReaderViewModel(
             observeReaderCalendar = ObserveReaderCalendarUseCase(figureRepo, dayAssignmentRepo, quoteRepo, reflectionRepo),
-            dailyReflectionRepository = reflectionRepo,
-            encouragementRepository = encouragementRepo,
+            observeDayDetail = ObserveDayDetailUseCase(reflectionRepo, encouragementRepo),
             dayAssignmentRepository = dayAssignmentRepo,
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }

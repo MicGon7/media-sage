@@ -22,6 +22,7 @@ import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.MatchRepository
 import com.mediasage.domain.repository.QuoteRepository
 import com.mediasage.domain.repository.WikipediaRepository
+import com.mediasage.domain.usecase.ObserveDayDetailUseCase
 import com.mediasage.domain.usecase.ObserveReaderCalendarUseCase
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
@@ -72,4 +73,5 @@ fun sharedModule(
 
     // Domain use cases — combine/transform data from multiple repositories (NiA domain layer)
     single { ObserveReaderCalendarUseCase(get(), get(), get(), get()) }
+    single { ObserveDayDetailUseCase(get(), get()) }
 }
