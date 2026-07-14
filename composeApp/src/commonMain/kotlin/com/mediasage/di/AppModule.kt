@@ -10,7 +10,7 @@ import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
-import com.mediasage.domain.repository.QuoteRepository
+import com.mediasage.domain.usecase.ObserveReaderCalendarUseCase
 import com.mediasage.feature.bookmarks.BookmarksViewModel
 import com.mediasage.feature.login.LoginViewModel
 import com.mediasage.feature.settings.SettingsViewModel
@@ -33,7 +33,7 @@ val appModule = module {
     viewModel { (figureId: Long) -> FigureDetailViewModel(figureId, get<FigureRepository>(), get<EncouragementRepository>(), get<DayAssignmentRepository>()) }
     viewModel { LoginViewModel(get<AuthRepository>(), get<AuthPreferencesRepository>()) }
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
-    viewModel { ReaderViewModel(get<FigureRepository>(), get<DayAssignmentRepository>(), get<QuoteRepository>(), get<DailyReflectionRepository>(), get<EncouragementRepository>()) }
+    viewModel { ReaderViewModel(get<ObserveReaderCalendarUseCase>(), get<DailyReflectionRepository>(), get<EncouragementRepository>(), get<DayAssignmentRepository>()) }
     viewModel { HistoryViewModel(get<EncouragementRepository>()) }
     viewModel { BookmarksViewModel(get<EncouragementRepository>()) }
 }

@@ -15,9 +15,12 @@ import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
+import com.mediasage.domain.usecase.ObserveReaderCalendarUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -28,6 +31,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ReaderViewModelTest {
 
@@ -54,7 +58,7 @@ class ReaderViewModelTest {
     @Test
     fun quoteCardIsPopulatedWithMostRecentSavedQuote() = runTest(testDispatcher) {
         val savedQuote = Quote(id = 1L, figureId = 1L, text = "Our heart is restless.", source = "Confessions", themes = emptyList())
-        val viewModel = buildViewModel(figure = testFigure, latestQuote = savedQuote)
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = savedQuote)
 
         val state = viewModel.state.value as ReaderContract.UiState.Ready
         assertNotNull(state.quoteCard)
@@ -64,7 +68,7 @@ class ReaderViewModelTest {
 
     @Test
     fun quoteCardIsNullWhenNoQuotesSaved() = runTest(testDispatcher) {
-        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
 
         val state = viewModel.state.value as ReaderContract.UiState.Ready
         assertNull(state.quoteCard)
@@ -72,7 +76,7 @@ class ReaderViewModelTest {
 
     @Test
     fun selectFutureDay_opensFutureDayPickerSheet() = runTest(testDispatcher) {
-        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
         val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
             .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
 
@@ -86,7 +90,7 @@ class ReaderViewModelTest {
 
     @Test
     fun assignOverride_closesActiveSheet() = runTest(testDispatcher) {
-        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
         val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
             .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
         viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
@@ -99,7 +103,7 @@ class ReaderViewModelTest {
 
     @Test
     fun clearOverride_closesActiveSheet() = runTest(testDispatcher) {
-        val viewModel = buildViewModel(figure = testFigure, latestQuote = null)
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
         val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
             .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
         viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
@@ -110,13 +114,59 @@ class ReaderViewModelTest {
         assertNull(state.activeSheet)
     }
 
-    private fun buildViewModel(figure: Figure, latestQuote: Quote?): ReaderViewModel = ReaderViewModel(
-        figureRepository = FakeFigureRepository(figure),
-        dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap())),
-        quoteRepository = FakeQuoteRepository(latestQuote),
-        dailyReflectionRepository = FakeDailyReflectionRepository(),
-        encouragementRepository = FakeEncouragementRepository(),
-    )
+    @Test
+    fun daySlotTapped_opensWeekSlotPickerForThatDay() = runTest(testDispatcher) {
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
+
+        viewModel.onIntent(ReaderContract.Intent.DaySlotTapped(index = 2))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        val sheet = state.activeSheet as? ReaderContract.ActiveSheet.WeekSlotPicker
+        assertNotNull(sheet)
+        assertEquals(2, sheet.dayOfWeek)
+    }
+
+    @Test
+    fun pickerDismissed_clearsActiveSheet() = runTest(testDispatcher) {
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
+        viewModel.onIntent(ReaderContract.Intent.DaySlotTapped(index = 0))
+
+        viewModel.onIntent(ReaderContract.Intent.PickerDismissed)
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertNull(state.activeSheet)
+    }
+
+    @Test
+    fun toggleCalendarExpanded_flipsExpansion() = runTest(testDispatcher) {
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
+        assertEquals(false, (viewModel.state.value as ReaderContract.UiState.Ready).isCalendarExpanded)
+
+        viewModel.onIntent(ReaderContract.Intent.ToggleCalendarExpanded)
+
+        assertTrue((viewModel.state.value as ReaderContract.UiState.Ready).isCalendarExpanded)
+    }
+
+    /**
+     * Builds the ViewModel and starts collecting its state. `stateIn(WhileSubscribed)` is cold
+     * until a subscriber is present, so an active collector in [backgroundScope] is required for
+     * `state.value` to reflect the pipeline output.
+     */
+    private fun TestScope.readerViewModel(figure: Figure, latestQuote: Quote?): ReaderViewModel {
+        val figureRepo = FakeFigureRepository(figure)
+        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()))
+        val quoteRepo = FakeQuoteRepository(latestQuote)
+        val reflectionRepo = FakeDailyReflectionRepository()
+        val encouragementRepo = FakeEncouragementRepository()
+        val viewModel = ReaderViewModel(
+            observeReaderCalendar = ObserveReaderCalendarUseCase(figureRepo, dayAssignmentRepo, quoteRepo, reflectionRepo),
+            dailyReflectionRepository = reflectionRepo,
+            encouragementRepository = encouragementRepo,
+            dayAssignmentRepository = dayAssignmentRepo,
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        return viewModel
+    }
 }
 
 private class FakeFigureRepository(private val figure: Figure) : FigureRepository {
