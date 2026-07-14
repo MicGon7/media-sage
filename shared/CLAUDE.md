@@ -23,7 +23,7 @@ The domain layer is **optional and added only when needed** — do not create a 
 repository call. Add one when either applies (NiA's rule):
 - A ViewModel needs to **combine or transform data from more than one repository** into a single
   stream. Extract the `combine` into a use case that returns a domain model (e.g.
-  `ObserveReaderCalendarUseCase` → `Flow<ReaderCalendarData>`), so the ViewModel receives one stream, not five.
+  `GetReaderCalendarUseCase` → `Flow<ReaderCalendarData>`), so the ViewModel receives one stream, not five.
 - The same logic is **reused across multiple ViewModels**.
 
 Rules:

@@ -13,8 +13,8 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.Quote
 import com.mediasage.domain.model.ReaderCalendarData
 import com.mediasage.domain.repository.DayAssignmentRepository
-import com.mediasage.domain.usecase.ObserveDayDetailUseCase
-import com.mediasage.domain.usecase.ObserveReaderCalendarUseCase
+import com.mediasage.domain.usecase.GetDayDetailUseCase
+import com.mediasage.domain.usecase.GetReaderCalendarUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,13 +41,13 @@ import kotlin.time.Instant
  * pattern").
  *
  * The user's view selection (visible month, calendar expansion, open sheet) lives in a single
- * [ReaderInput] flow. It is combined with the calendar domain stream ([ObserveReaderCalendarUseCase])
+ * [ReaderInput] flow. It is combined with the calendar domain stream ([GetReaderCalendarUseCase])
  * and the selected-day detail stream to derive [ReaderContract.UiState], exposed via `stateIn`.
  * `UiState` is the *output* of that pipeline — intents update [input]; nothing writes state directly.
  */
 class ReaderViewModel(
-    private val observeReaderCalendar: ObserveReaderCalendarUseCase,
-    private val observeDayDetail: ObserveDayDetailUseCase,
+    private val getReaderCalendar: GetReaderCalendarUseCase,
+    private val getDayDetail: GetDayDetailUseCase,
     private val dayAssignmentRepository: DayAssignmentRepository,
 ) : ViewModel() {
 
@@ -77,7 +77,7 @@ class ReaderViewModel(
     private val calendarData: Flow<ReaderCalendarData> =
         input.map { it.visibleMonth }.distinctUntilChanged().flatMapLatest { month ->
             val range = monthRange(month)
-            observeReaderCalendar(range.monthStart, range.monthEnd, range.overrideStart, range.overrideEnd)
+            getReaderCalendar(range.monthStart, range.monthEnd, range.overrideStart, range.overrideEnd)
         }
 
     /** Detail for the open history day. flatMapLatest cancels the prior day's collection automatically. */
@@ -86,7 +86,7 @@ class ReaderViewModel(
             .distinctUntilChanged()
             .flatMapLatest { epochDay ->
                 if (epochDay == null) flowOf(null)
-                else observeDayDetail(epochDay).map { it.toReaderDetail(epochDay) }
+                else getDayDetail(epochDay).map { it.toReaderDetail(epochDay) }
             }
 
     val state: StateFlow<ReaderContract.UiState> =

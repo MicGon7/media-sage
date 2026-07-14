@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.map
  * receives one stream. The reflection is fetched once, then merged with the encouragement stream so
  * the detail stays live as encouragements are added or bookmarked.
  */
-class ObserveDayDetailUseCase(
+class GetDayDetailUseCase(
     private val reflectionRepository: DailyReflectionRepository,
     private val encouragementRepository: EncouragementRepository,
 ) {

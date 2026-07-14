@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.combine
  * Event handling (assigning reporters, setting overrides) is not part of this — those stay in the
  * ViewModel, which calls the repository directly.
  */
-class ObserveReaderCalendarUseCase(
+class GetReaderCalendarUseCase(
     private val figureRepository: FigureRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val quoteRepository: QuoteRepository,
