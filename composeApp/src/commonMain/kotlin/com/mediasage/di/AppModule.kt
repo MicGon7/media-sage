@@ -17,7 +17,6 @@ import com.mediasage.feature.settings.SettingsViewModel
 import com.mediasage.feature.figures.FigureDetailViewModel
 import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.history.HistoryViewModel
-import com.mediasage.feature.you.HistoryViewModel as YouHistoryViewModel
 import com.mediasage.feature.briefing.BriefingViewModel
 import com.mediasage.feature.headlines.HeadlinesViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
@@ -36,7 +35,6 @@ val appModule = module {
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
     viewModel { ReaderViewModel(get<FigureRepository>(), get<DayAssignmentRepository>(), get<QuoteRepository>(), get<DailyReflectionRepository>(), get<EncouragementRepository>()) }
     viewModel { HistoryViewModel(get<EncouragementRepository>()) }
-    viewModel { (epochDay: Long) -> YouHistoryViewModel(epochDay, get<DailyReflectionRepository>(), get<EncouragementRepository>(), get<FigureRepository>(), get<DayAssignmentRepository>()) }
     viewModel { BookmarksViewModel(get<EncouragementRepository>()) }
 }
 

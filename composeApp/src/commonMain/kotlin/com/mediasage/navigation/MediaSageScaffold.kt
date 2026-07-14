@@ -32,8 +32,6 @@ import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.headlines.HeadlinesContract
 import com.mediasage.feature.headlines.HeadlinesScreen
 import com.mediasage.feature.headlines.HeadlinesViewModel
-import com.mediasage.feature.you.HistoryScreen as YouHistoryScreen
-import com.mediasage.feature.you.HistoryViewModel as YouHistoryViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailScreen
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
 import com.mediasage.feature.settings.SettingsContract
@@ -175,19 +173,6 @@ fun MediaSageScaffold(
                         onIntent = vm::onIntent,
                         onNavigateBack = { appState.navigateBack() },
                         onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) }
-                    )
-                }
-                is Route.History -> NavEntry(route) {
-                    val vm = koinViewModel<YouHistoryViewModel>(
-                        key = "you-history-${route.epochDay}",
-                        parameters = { parametersOf(route.epochDay) },
-                    )
-                    val state by vm.state.collectAsState()
-                    YouHistoryScreen(
-                        state = state,
-                        onIntent = vm::onIntent,
-                        onNavigateBack = { appState.navigateBack() },
-                        onNavigateToDetail = { url -> appState.navigateToHeadlineDetail(url) },
                     )
                 }
                 is Route.Settings -> NavEntry(route) {

@@ -38,10 +38,6 @@ sealed interface Route : NavKey {
     @Serializable
     data object Bookmarks : Route
 
-    /** History journal — calendar view of past briefings and readings. */
-    @Serializable
-    data class History(val epochDay: Long = 0L) : Route
-
     /** Settings screen (shell). */
     @Serializable
     data object Settings : Route
@@ -57,7 +53,6 @@ val navSerializersModule = SerializersModule {
         subclass(Route.FigureDetail::class)
         subclass(Route.You::class)
         subclass(Route.Bookmarks::class)
-        subclass(Route.History::class)
         subclass(Route.Settings::class)
     }
 }
