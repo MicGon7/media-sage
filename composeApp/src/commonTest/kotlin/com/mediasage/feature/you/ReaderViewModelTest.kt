@@ -30,6 +30,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -148,16 +149,94 @@ class ReaderViewModelTest {
         assertTrue((viewModel.state.value as ReaderContract.UiState.Ready).isCalendarExpanded)
     }
 
+    @Test
+    fun upcomingDayWithWeeklyAssignment_showsAssignedReporterInMonthGrid() = runTest(testDispatcher) {
+        val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null, assignments = assignments)
+
+        val futureDay = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { it.isFuture } ?: return@runTest
+        assertTrue(futureDay.hasData)
+        assertEquals("Augustine of Hippo", futureDay.figureName)
+        assertNull(futureDay.overrideFigureId)
+    }
+
+    @Test
+    fun upcomingDayInMonthGridMatchesWeekCarousel() = runTest(testDispatcher) {
+        val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null, assignments = assignments)
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        val todaySlot = state.weekSlots.first { it.isToday }
+        val todayCell = state.calendarDays.first { it.epochDay == todaySlot.epochDay }
+        assertEquals(todaySlot.assignedFigureName, todayCell.figureName)
+    }
+
+    @Test
+    fun futureOverrideTakesPrecedenceOverWeeklyAssignment() = runTest(testDispatcher) {
+        val override = testFigure.copy(id = 2L, name = "Teresa of Avila")
+        val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
+        val viewModel = readerViewModel(
+            figure = testFigure,
+            latestQuote = null,
+            extraFigures = listOf(override),
+            assignments = assignments,
+        )
+        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
+
+        viewModel.onIntent(ReaderContract.Intent.AssignOverride(futureEpochDay, override.id))
+
+        val cell = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.first { it.epochDay == futureEpochDay }
+        assertEquals("Teresa of Avila", cell.figureName)
+        assertEquals(override.id, cell.overrideFigureId)
+    }
+
+    @Test
+    fun pastDayIgnoresWeeklyAssignmentWhenNoBriefingRan() = runTest(testDispatcher) {
+        val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null, assignments = assignments)
+
+        val pastDay = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { !it.isFuture && !it.isToday } ?: return@runTest
+        assertFalse(pastDay.hasData)
+        assertNull(pastDay.figureName)
+    }
+
+    @Test
+    fun pastDayShowsBriefingReporterThatActuallyRan() = runTest(testDispatcher) {
+        val probe = readerViewModel(figure = testFigure, latestQuote = null)
+        val pastEpochDay = (probe.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { !it.isFuture && !it.isToday }?.epochDay ?: return@runTest
+        val viewModel = readerViewModel(
+            figure = testFigure,
+            latestQuote = null,
+            briefings = listOf(BriefingDay(pastEpochDay, testFigure.id)),
+        )
+
+        val cell = (viewModel.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.first { it.epochDay == pastEpochDay }
+        assertTrue(cell.hasData)
+        assertEquals("Augustine of Hippo", cell.figureName)
+    }
+
     /**
      * Builds the ViewModel and starts collecting its state. `stateIn(WhileSubscribed)` is cold
      * until a subscriber is present, so an active collector in [backgroundScope] is required for
      * `state.value` to reflect the pipeline output.
      */
-    private fun TestScope.readerViewModel(figure: Figure, latestQuote: Quote?): ReaderViewModel {
-        val figureRepo = FakeFigureRepository(figure)
-        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()))
+    private fun TestScope.readerViewModel(
+        figure: Figure,
+        latestQuote: Quote?,
+        extraFigures: List<Figure> = emptyList(),
+        assignments: Map<Int, DayAssignment> = emptyMap(),
+        briefings: List<BriefingDay> = emptyList(),
+    ): ReaderViewModel {
+        val figureRepo = FakeFigureRepository(listOf(figure) + extraFigures)
+        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(assignments))
         val quoteRepo = FakeQuoteRepository(latestQuote)
-        val reflectionRepo = FakeDailyReflectionRepository()
+        val reflectionRepo = FakeDailyReflectionRepository(briefings)
         val encouragementRepo = FakeEncouragementRepository()
         val viewModel = ReaderViewModel(
             getReaderCalendar = GetReaderCalendarUseCase(figureRepo, dayAssignmentRepo, quoteRepo, reflectionRepo),
@@ -169,12 +248,12 @@ class ReaderViewModelTest {
     }
 }
 
-private class FakeFigureRepository(private val figure: Figure) : FigureRepository {
-    private val flow = MutableStateFlow(listOf(figure))
+private class FakeFigureRepository(private val figures: List<Figure>) : FigureRepository {
+    private val flow = MutableStateFlow(figures)
     override fun observeAllFigures(): Flow<List<Figure>> = flow
     override fun observeFiguresByCategory(category: FigureCategory): Flow<List<Figure>> = MutableStateFlow(emptyList())
-    override suspend fun getFigureById(id: Long): Figure? = if (figure.id == id) figure else null
-    override suspend fun getFigureByName(name: String): Figure? = if (figure.name == name) figure else null
+    override suspend fun getFigureById(id: Long): Figure? = figures.firstOrNull { it.id == id }
+    override suspend fun getFigureByName(name: String): Figure? = figures.firstOrNull { it.name == name }
     override suspend fun syncFigures() = Unit
 }
 
@@ -200,7 +279,9 @@ private class FakeDayAssignmentRepository(
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = null
 }
 
-private class FakeDailyReflectionRepository : DailyReflectionRepository {
+private class FakeDailyReflectionRepository(
+    private val briefings: List<BriefingDay> = emptyList(),
+) : DailyReflectionRepository {
     override suspend fun getOrFetch(
         figureId: Long,
         figureName: String,
@@ -209,7 +290,7 @@ private class FakeDailyReflectionRepository : DailyReflectionRepository {
         theme: String?,
     ): DailyReflection = throw UnsupportedOperationException()
     override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
-        MutableStateFlow(emptyList())
+        MutableStateFlow(briefings.filter { it.epochDay in startEpochDay..endEpochDay })
     override suspend fun getForDay(epochDay: Long): DailyReflection? = null
 }
 

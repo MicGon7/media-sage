@@ -128,7 +128,14 @@ class ReaderViewModel(
             weekSlots = buildWeekSlots(figuresById, data.assignmentsByDayOfWeek, data.overridesByDay),
             pickerFigures = data.figures,
             quoteCard = buildQuoteCard(data.latestQuote, quoteFigure),
-            calendarDays = buildCalendarDays(range.monthStart, daysInMonth, figuresById, data.briefingByDay, data.overridesByDay),
+            calendarDays = buildCalendarDays(
+                range.monthStart,
+                daysInMonth,
+                figuresById,
+                data.briefingByDay,
+                data.overridesByDay,
+                data.assignmentsByDayOfWeek,
+            ),
             isCalendarExpanded = input.isCalendarExpanded,
             activeSheet = buildActiveSheet(input.activeSheet, figuresById, data, detail),
         )
@@ -158,18 +165,29 @@ class ReaderViewModel(
         }
     }
 
+    /**
+     * Precedence per day cell mirrors [buildWeekSlots] and `DayAssignmentRepository.resolveReporter`
+     * for upcoming days (override > weekly assignment), so the month grid and the week carousel agree.
+     * Past days ignore the schedule and show only the briefing that actually ran; the explicit
+     * override (future only) is carried on the cell so the override picker can prefill it.
+     */
     private fun buildCalendarDays(
         monthStartEpoch: Long,
         daysInMonth: Int,
         figuresById: Map<Long, Figure>,
         briefingByDay: Map<Long, Long>,
         overridesByDay: Map<Long, Long>,
+        assignmentsByDayOfWeek: Map<Int, DayAssignment>,
     ): List<ReaderContract.CalendarDay> = (0 until daysInMonth).map { d ->
         val epochDay = monthStartEpoch + d
         val date = LocalDate.fromEpochDays(epochDay.toInt())
         val isFuture = epochDay > todayEpochDay
-        val overrideFigureId = overridesByDay[epochDay]
-        val figureId = if (isFuture) overrideFigureId else briefingByDay[epochDay]
+        val overrideFigureId = if (isFuture) overridesByDay[epochDay] else null
+        val figureId = if (epochDay < todayEpochDay) {
+            briefingByDay[epochDay]
+        } else {
+            overrideFigureId ?: assignmentsByDayOfWeek[date.dayOfWeek.ordinal]?.figureId
+        }
         val figure = figureId?.let { figuresById[it] }
         ReaderContract.CalendarDay(
             epochDay = epochDay,
