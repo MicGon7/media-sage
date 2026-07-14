@@ -11,6 +11,7 @@ import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.QuoteRepository
+import com.mediasage.domain.usecase.ObserveCalendarDataUseCase
 import com.mediasage.feature.bookmarks.BookmarksViewModel
 import com.mediasage.feature.login.LoginViewModel
 import com.mediasage.feature.settings.SettingsViewModel
@@ -36,7 +37,7 @@ val appModule = module {
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
     viewModel { ReaderViewModel(get<FigureRepository>(), get<DayAssignmentRepository>(), get<QuoteRepository>(), get<DailyReflectionRepository>(), get<EncouragementRepository>()) }
     viewModel { HistoryViewModel(get<EncouragementRepository>()) }
-    viewModel { (epochDay: Long) -> YouHistoryViewModel(epochDay, get<DailyReflectionRepository>(), get<EncouragementRepository>(), get<FigureRepository>(), get<DayAssignmentRepository>()) }
+    viewModel { (epochDay: Long) -> YouHistoryViewModel(epochDay, get<ObserveCalendarDataUseCase>(), get<DailyReflectionRepository>(), get<EncouragementRepository>()) }
     viewModel { BookmarksViewModel(get<EncouragementRepository>()) }
 }
 

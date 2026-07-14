@@ -1,23 +1,30 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.mediasage.feature.you
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.CalendarData
 import com.mediasage.domain.model.DailyReflection
-import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.repository.DailyReflectionRepository
-import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
-import com.mediasage.domain.repository.FigureRepository
-import kotlinx.coroutines.Job
+import com.mediasage.domain.usecase.ObserveCalendarDataUseCase
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -27,174 +34,188 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
+/**
+ * Reference implementation of the Now in Android state-holder pattern for UI state derived from
+ * both user selection and live repository streams (see composeApp/CLAUDE.md, "State-holder pattern").
+ *
+ * The user's view selection lives in a single [CalendarInput] flow. It is combined with the
+ * calendar domain stream (from [ObserveCalendarDataUseCase]) and the selected-day detail stream to
+ * derive [HistoryContract.UiState], exposed via `stateIn`. UiState is the *output* of that pipeline
+ * — intents update [input]; nothing writes to the state directly.
+ */
 class HistoryViewModel(
-    private val initialEpochDay: Long,
+    initialEpochDay: Long,
+    private val observeCalendarData: ObserveCalendarDataUseCase,
     private val reflectionRepository: DailyReflectionRepository,
     private val encouragementRepository: EncouragementRepository,
-    private val figureRepository: FigureRepository,
-    private val dayAssignmentRepository: DayAssignmentRepository,
 ) : ViewModel() {
 
-    private val _mode = MutableStateFlow(HistoryContract.CalendarMode.WEEK)
-    private val _selectedTab = MutableStateFlow(HistoryContract.DayTab.BRIEFING)
-    private val _selectedDay = MutableStateFlow<Long?>(null)
-    private val _dayDetail = MutableStateFlow<HistoryContract.DayDetail?>(null)
-    private val _calendarAnchor = MutableStateFlow(
-        if (initialEpochDay > 0L) LocalDate.fromEpochDays(initialEpochDay.toInt()) else todayLocalDate()
+    /** The user-owned view selection — the single mutable input to the state pipeline. */
+    private data class CalendarInput(
+        val mode: HistoryContract.CalendarMode = HistoryContract.CalendarMode.WEEK,
+        val selectedTab: HistoryContract.DayTab = HistoryContract.DayTab.BRIEFING,
+        val selectedEpochDay: Long? = null,
+        val anchor: LocalDate,
     )
-    private var detailJob: Job? = null
 
-    private val _state = MutableStateFlow<HistoryContract.UiState>(HistoryContract.UiState.Loading)
-    val state: StateFlow<HistoryContract.UiState> = _state.asStateFlow()
+    private val today = todayLocalDate()
 
-    init {
-        val today = todayLocalDate()
-        val yearStart = LocalDate(today.year, 1, 1).toEpochDays().toLong()
-        val yearEnd = LocalDate(today.year, 12, 31).toEpochDays().toLong()
+    private val input = MutableStateFlow(
+        CalendarInput(
+            selectedEpochDay = initialEpochDay.takeIf { it > 0L },
+            anchor = if (initialEpochDay > 0L) LocalDate.fromEpochDays(initialEpochDay.toInt()) else today,
+        ),
+    )
+
+    /** Detail for the selected day. flatMapLatest cancels the prior day's collection automatically. */
+    private val dayDetail: Flow<HistoryContract.DayDetail?> =
+        input.map { it.selectedEpochDay }
+            .distinctUntilChanged()
+            .flatMapLatest { epochDay -> if (epochDay == null) flowOf(null) else observeDayDetail(epochDay) }
+
+    val state: StateFlow<HistoryContract.UiState> =
         combine(
-            combine(_mode, _selectedTab, _calendarAnchor) { m, t, a -> Triple(m, t, a) },
-            combine(_selectedDay, _dayDetail) { d, detail -> d to detail },
-            combine(figureRepository.observeAllFigures(), dayAssignmentRepository.observeAssignments()) { f, a -> f to a },
-            encouragementRepository.observeActiveEpochDays(),
-            reflectionRepository.observeByEpochDayRange(yearStart, yearEnd),
-        ) { modeTabAnchor, selectedPair, figuresAssign, activeEncDays, briefingDays ->
-            val (mode, selectedTab, calendarAnchor) = modeTabAnchor
-            val (selectedDay, dayDetail) = selectedPair
-            val (figures, assignments) = figuresAssign
-            val briefingByDay = briefingDays.associate { it.epochDay to it.figureId }
-            val figuresById = figures.associateBy { it.id }
-            val activeDays = activeEncDays + briefingDays.map { it.epochDay }
-            val figure = selectedDay?.let { briefingByDay[it]?.let { fid -> figuresById[fid] } }
-            HistoryContract.UiState.Ready(
-                mode = mode,
-                selectedTab = selectedTab,
-                calendarDays = buildCalendarDays(mode, todayLocalDate(), calendarAnchor, activeDays, briefingByDay, figuresById, assignments),
-                selectedEpochDay = selectedDay,
-                dayDetail = if (selectedDay != null) {
-                    dayDetail?.copy(figureName = figure?.name, figureImageUrl = figure?.portraitUrl)
-                } else null,
-            )
-        }.onEach { _state.value = it }.launchIn(viewModelScope)
-        if (initialEpochDay > 0L) selectDay(initialEpochDay)
-    }
+            input,
+            observeCalendarData(yearStart(), yearEnd()),
+            dayDetail,
+        ) { input, data, detail ->
+            buildReady(input, data, detail)
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+            initialValue = HistoryContract.UiState.Loading,
+        )
 
     fun onIntent(intent: HistoryContract.Intent) {
         when (intent) {
-            is HistoryContract.Intent.SelectMode -> _mode.value = intent.mode
-            is HistoryContract.Intent.SelectTab -> _selectedTab.value = intent.tab
-            is HistoryContract.Intent.SelectDay -> selectDay(intent.epochDay)
-            is HistoryContract.Intent.ClearSelection -> {
-                _selectedDay.value = null
-                _dayDetail.value = null
-                detailJob?.cancel()
+            is HistoryContract.Intent.SelectMode -> input.update { it.copy(mode = intent.mode) }
+            is HistoryContract.Intent.SelectTab -> input.update { it.copy(selectedTab = intent.tab) }
+            is HistoryContract.Intent.SelectDay -> input.update {
+                it.copy(
+                    selectedEpochDay = intent.epochDay,
+                    anchor = LocalDate.fromEpochDays(intent.epochDay.toInt()),
+                    selectedTab = HistoryContract.DayTab.BRIEFING,
+                )
             }
+            is HistoryContract.Intent.ClearSelection -> input.update { it.copy(selectedEpochDay = null) }
             is HistoryContract.Intent.ToggleBookmark -> viewModelScope.launch {
                 encouragementRepository.toggleBookmark(intent.articleUrl)
             }
         }
     }
 
-    private fun selectDay(epochDay: Long) {
-        _selectedDay.value = epochDay
-        _calendarAnchor.value = LocalDate.fromEpochDays(epochDay.toInt())
-        _selectedTab.value = HistoryContract.DayTab.BRIEFING
-        _dayDetail.value = null
-        detailJob?.cancel()
-        detailJob = viewModelScope.launch {
-            val reflection = reflectionRepository.getForDay(epochDay)
-            encouragementRepository.observeByEpochDay(epochDay).collect { encouragements ->
-                _dayDetail.value = HistoryContract.DayDetail(
+    private fun observeDayDetail(epochDay: Long): Flow<HistoryContract.DayDetail> = flow {
+        val reflection = reflectionRepository.getForDay(epochDay)
+        emitAll(
+            encouragementRepository.observeByEpochDay(epochDay).map { encouragements ->
+                HistoryContract.DayDetail(
                     epochDay = epochDay,
                     reflection = reflection?.toSummary(),
                     encouragements = encouragements.map { it.toItem() },
                 )
-            }
-        }
+            },
+        )
+    }
+
+    private fun buildReady(
+        input: CalendarInput,
+        data: CalendarData,
+        detail: HistoryContract.DayDetail?,
+    ): HistoryContract.UiState.Ready {
+        val figure = input.selectedEpochDay
+            ?.let { data.briefingByDay[it] }
+            ?.let { data.figuresById[it] }
+        return HistoryContract.UiState.Ready(
+            mode = input.mode,
+            selectedTab = input.selectedTab,
+            calendarDays = buildCalendarDays(input.mode, input.anchor, data),
+            selectedEpochDay = input.selectedEpochDay,
+            dayDetail = detail?.copy(figureName = figure?.name, figureImageUrl = figure?.portraitUrl),
+        )
     }
 
     private fun buildCalendarDays(
         mode: HistoryContract.CalendarMode,
-        today: LocalDate,
         anchor: LocalDate,
-        activeDays: Set<Long>,
-        briefingByDay: Map<Long, Long>,
-        figuresById: Map<Long, Figure>,
-        assignments: Map<Int, DayAssignment>,
+        data: CalendarData,
     ): List<HistoryContract.CalendarDay> = when (mode) {
-        HistoryContract.CalendarMode.WEEK -> buildWeekDays(today, anchor, activeDays, briefingByDay, figuresById, assignments)
-        HistoryContract.CalendarMode.MONTH -> buildMonthDays(today, anchor, activeDays, briefingByDay, figuresById, assignments)
-        HistoryContract.CalendarMode.YEAR -> buildYearTiles(today, activeDays)
+        HistoryContract.CalendarMode.WEEK -> buildWeekDays(anchor, data)
+        HistoryContract.CalendarMode.MONTH -> buildMonthDays(anchor, data)
+        HistoryContract.CalendarMode.YEAR -> buildYearTiles(data.activeDays)
     }
 
-    private fun buildWeekDays(
-        today: LocalDate,
-        anchor: LocalDate,
-        activeDays: Set<Long>,
-        briefingByDay: Map<Long, Long>,
-        figuresById: Map<Long, Figure>,
-        assignments: Map<Int, DayAssignment>,
-    ): List<HistoryContract.CalendarDay> {
+    private fun buildWeekDays(anchor: LocalDate, data: CalendarData): List<HistoryContract.CalendarDay> {
         val startOfWeek = anchor.minus(anchor.dayOfWeek.ordinal, DateTimeUnit.DAY)
         val todayEpochDay = today.toEpochDays()
-        return (0..6).map { i ->
-            val date = startOfWeek.plus(i, DateTimeUnit.DAY)
-            val epochDay = date.toEpochDays()
-            val isFuture = epochDay > todayEpochDay
-            val figure = briefingByDay[epochDay]?.let { figuresById[it] }
-                ?: if (isFuture && epochDay <= todayEpochDay + 7) assignments[date.dayOfWeek.ordinal]?.let { figuresById[it.figureId] } else null
-            HistoryContract.CalendarDay(
-                epochDay = epochDay,
-                label = date.dayOfWeek.name.take(3),
-                isToday = date == today,
-                hasData = epochDay in activeDays,
-                isFuture = isFuture,
-                figurePortraitUrl = figure?.portraitUrl,
-                figureName = figure?.name,
-            )
+        return (0 until DAYS_IN_WEEK).map { offset ->
+            val date = startOfWeek.plus(offset, DateTimeUnit.DAY)
+            calendarDay(date, date.dayOfWeek.name.take(LABEL_LENGTH), todayEpochDay, data)
         }
     }
 
-    private fun buildMonthDays(
-        today: LocalDate,
-        anchor: LocalDate,
-        activeDays: Set<Long>,
-        briefingByDay: Map<Long, Long>,
-        figuresById: Map<Long, Figure>,
-        assignments: Map<Int, DayAssignment>,
-    ): List<HistoryContract.CalendarDay> {
+    private fun buildMonthDays(anchor: LocalDate, data: CalendarData): List<HistoryContract.CalendarDay> {
         val firstOfMonth = LocalDate(anchor.year, anchor.month, 1)
         val daysInMonth = firstOfMonth.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY).day
         val todayEpochDay = today.toEpochDays()
-        return (0 until daysInMonth).map { d ->
-            val date = firstOfMonth.plus(d, DateTimeUnit.DAY)
-            val epochDay = date.toEpochDays()
-            val isFuture = epochDay > todayEpochDay
-            val figure = briefingByDay[epochDay]?.let { figuresById[it] }
-                ?: if (isFuture && epochDay <= todayEpochDay + 7) assignments[date.dayOfWeek.ordinal]?.let { figuresById[it.figureId] } else null
-            HistoryContract.CalendarDay(
-                epochDay = epochDay,
-                label = "${date.day}",
-                isToday = date == today,
-                hasData = epochDay in activeDays,
-                isFuture = isFuture,
-                figurePortraitUrl = figure?.portraitUrl,
-                figureName = figure?.name,
-            )
+        return (0 until daysInMonth).map { offset ->
+            val date = firstOfMonth.plus(offset, DateTimeUnit.DAY)
+            calendarDay(date, "${date.day}", todayEpochDay, data)
         }
     }
 
-    private fun buildYearTiles(today: LocalDate, activeDays: Set<Long>): List<HistoryContract.CalendarDay> {
-        return (1..12).map { month ->
+    private fun calendarDay(
+        date: LocalDate,
+        label: String,
+        todayEpochDay: Long,
+        data: CalendarData,
+    ): HistoryContract.CalendarDay {
+        val epochDay = date.toEpochDays()
+        val isFuture = epochDay > todayEpochDay
+        val figure = data.briefingByDay[epochDay]?.let { data.figuresById[it] }
+            ?: futureAssignmentFigure(date, epochDay, isFuture, todayEpochDay, data)
+        return HistoryContract.CalendarDay(
+            epochDay = epochDay,
+            label = label,
+            isToday = date == today,
+            hasData = epochDay in data.activeDays,
+            isFuture = isFuture,
+            figurePortraitUrl = figure?.portraitUrl,
+            figureName = figure?.name,
+        )
+    }
+
+    private fun futureAssignmentFigure(
+        date: LocalDate,
+        epochDay: Long,
+        isFuture: Boolean,
+        todayEpochDay: Long,
+        data: CalendarData,
+    ): Figure? {
+        if (!isFuture || epochDay > todayEpochDay + DAYS_IN_WEEK) return null
+        return data.assignmentsByDayOfWeek[date.dayOfWeek.ordinal]?.let { data.figuresById[it.figureId] }
+    }
+
+    private fun buildYearTiles(activeDays: Set<Long>): List<HistoryContract.CalendarDay> =
+        (1..MONTHS_IN_YEAR).map { month ->
             val firstOfMonth = LocalDate(today.year, month, 1)
             val startEpochDay = firstOfMonth.toEpochDays()
             val endEpochDay = firstOfMonth.plus(1, DateTimeUnit.MONTH).toEpochDays()
             HistoryContract.CalendarDay(
                 epochDay = startEpochDay,
-                label = firstOfMonth.month.name.take(3),
+                label = firstOfMonth.month.name.take(LABEL_LENGTH),
                 isToday = firstOfMonth.month == today.month,
-                hasData = activeDays.any { it >= startEpochDay && it < endEpochDay },
+                hasData = activeDays.any { it in startEpochDay until endEpochDay },
             )
         }
+
+    private fun yearStart(): Long = LocalDate(today.year, 1, 1).toEpochDays()
+    private fun yearEnd(): Long = LocalDate(today.year, 12, 31).toEpochDays()
+
+    private companion object {
+        const val STOP_TIMEOUT_MS = 5_000L
+        const val DAYS_IN_WEEK = 7
+        const val MONTHS_IN_YEAR = 12
+        const val LABEL_LENGTH = 3
     }
 }
 
