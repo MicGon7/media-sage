@@ -49,3 +49,9 @@ DerivedData/
 fastlane/api_key.json
 fastlane/*.p8
 fastlane/.env.default
+
+# Eclipse / Buildship compiled output (per-module bin/main, bin/test)
+bin/
+
+# Claire worktrees scratch dir
+.claire/
