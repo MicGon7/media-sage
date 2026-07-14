@@ -39,10 +39,6 @@ class MediaSageAppState(
         backStack.add(Route.Bookmarks)
     }
 
-    fun navigateToHistory(epochDay: Long = 0L) {
-        backStack.add(Route.History(epochDay))
-    }
-
     fun navigateToSettings() {
         backStack.add(Route.Settings)
     }
