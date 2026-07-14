@@ -51,20 +51,6 @@ class ReaderViewModel(
     private val dayAssignmentRepository: DayAssignmentRepository,
 ) : ViewModel() {
 
-    /** The user-owned view selection — the single mutable input to the state pipeline. */
-    private data class ReaderInput(
-        val visibleMonth: LocalDate,
-        val isCalendarExpanded: Boolean = false,
-        val activeSheet: SheetSelection? = null,
-    )
-
-    /** Which sheet the user opened — pure selection; loaded content is derived, never stored here. */
-    private sealed interface SheetSelection {
-        data class WeekSlot(val dayOfWeek: Int) : SheetSelection
-        data class FutureDay(val epochDay: Long) : SheetSelection
-        data class History(val epochDay: Long) : SheetSelection
-    }
-
     private val today = Instant.fromEpochMilliseconds(epochMillis())
         .toLocalDateTime(TimeZone.currentSystemDefault()).date
     private val todayEpochDay = today.toEpochDays().toLong()
@@ -247,6 +233,20 @@ class ReaderViewModel(
             overrideStart = minOf(start, todayEpochDay - WEEK_WINDOW_DAYS),
             overrideEnd = maxOf(end, todayEpochDay + WEEK_WINDOW_DAYS),
         )
+    }
+
+    /** The user-owned view selection — the single mutable input to the state pipeline. */
+    private data class ReaderInput(
+        val visibleMonth: LocalDate,
+        val isCalendarExpanded: Boolean = false,
+        val activeSheet: SheetSelection? = null,
+    )
+
+    /** Which sheet the user opened — pure selection; loaded content is derived, never stored here. */
+    private sealed interface SheetSelection {
+        data class WeekSlot(val dayOfWeek: Int) : SheetSelection
+        data class FutureDay(val epochDay: Long) : SheetSelection
+        data class History(val epochDay: Long) : SheetSelection
     }
 
     private data class MonthRange(
