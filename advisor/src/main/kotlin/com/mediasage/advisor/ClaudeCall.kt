@@ -43,7 +43,11 @@ internal data class PropertySchema(
 )
 
 @Serializable
-internal data class ToolChoice(val type: String, val name: String)
+internal data class ToolChoice(
+    val type: String,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val name: String? = null,
+)
 
 @Serializable
 internal data class ClaudeRequest(
