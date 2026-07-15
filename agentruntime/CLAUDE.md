@@ -76,10 +76,21 @@ the `result` event's `modelUsage` key alongside the other metrics.
 | `ticket-work` | `JOB_TYPE`, `JOB_ID`, `TICKET_KEY` |
 | `pr-review-work` | `JOB_TYPE`, `JOB_ID`, `PR_NUMBER` |
 | `conflict-resolution-work` | `JOB_TYPE`, `JOB_ID`, `PR_NUMBER` |
+| `pr-quality-work` | `JOB_TYPE`, `JOB_ID`, `PR_NUMBER`, `TICKET_KEY` (=`QUALITY-{n}`), `JIRA_TICKET_KEY` |
 
 The worker entrypoint runs `claude -p "/$JOB_TYPE"` — the skill is the entry point and owns all framing and context fetching.
 
 AC compliance evaluation (`judge-work`) is no longer a Cloud Run Job. It runs inline inside the orchestrator as `ClaudeAgentService` after a successful ticket-work Pub/Sub completion event.
+
+**Post-PR reviews (both fire on a successful `ticket-work` completion, in parallel, advisory-only):**
+- **AC compliance judge** — inline `ClaudeAgentService`, diff-only, single API call.
+- **Code-quality review** (`pr-quality-work`) — a Cloud Run Job with the repo cloned, dispatched via
+  `AgentLaunchService.launchForQualityReview`. Reviews for idiom/reuse and challenges whether repo
+  conventions are correct and code is reachable — the failure mode the diff-only judge can't see.
+  Dedup key `QUALITY-{prNumber}` (distinct from `pr-review-work`'s `PR-{n}` so neither suppresses the
+  other). It posts one GitHub review with state `COMMENT` (never `REQUEST_CHANGES`) prefixed
+  `🤖 **Agent:**`, so it can't trigger `pr-review-work`. `JIRA_TICKET_KEY` is set on its completion
+  event so the `jiraTicketKey == null` recursion guard excludes it from re-judging/re-dispatch.
 
 ## Deployment (Container — Production)
 

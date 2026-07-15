@@ -51,7 +51,7 @@ fun Application.module() {
         if (config.pubSubWebhookSecret.isNotBlank() && cloudRunJobsClient != null && jobRegistry != null) {
             pubSubWebhookRoutes(
                 config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry,
-                agentService, decisionScorer, scope,
+                agentService, decisionScorer, agentLaunchService, scope,
             )
         }
     }

@@ -395,6 +395,68 @@ class JobDispatchTest {
         assertEquals("42", dispatcher.lastIdentifiers["PR_NUMBER"])
     }
 
+    // ── Quality review dispatch ───────────────────────────────────────────────
+
+    @Test
+    fun `launchForQualityReview dispatches Cloud Run job with QUALITY key`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        service.launchForQualityReview(42, "MS-545")
+        advanceUntilIdle()
+
+        assertEquals(listOf("QUALITY-42"), registry.inserted)
+        assertEquals(listOf("QUALITY-42"), dispatcher.executions)
+    }
+
+    @Test
+    fun `launchForQualityReview passes pr-quality-work jobType and identifiers`() = runTest {
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(FakeJobRegistry(), dispatcher, scope = this)
+
+        service.launchForQualityReview(42, "MS-545")
+        advanceUntilIdle()
+
+        assertEquals("pr-quality-work", dispatcher.jobTypes.single())
+        assertEquals("42", dispatcher.lastIdentifiers["PR_NUMBER"])
+        // TICKET_KEY carries the synthetic dedup key so the completion event matches this row.
+        assertEquals("QUALITY-42", dispatcher.lastIdentifiers["TICKET_KEY"])
+        // JIRA_TICKET_KEY carries the real key so the recursion guard excludes this job.
+        assertEquals("MS-545", dispatcher.lastIdentifiers["JIRA_TICKET_KEY"])
+    }
+
+    @Test
+    fun `launchForQualityReview uses a distinct key from pr-review-work for the same PR`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        // Both jobs can target the same PR without one deduping the other away.
+        val review = service.launchForPrReview(42)
+        val quality = service.launchForQualityReview(42, "MS-545")
+        advanceUntilIdle()
+
+        assertTrue(review, "PR review must dispatch")
+        assertTrue(quality, "Quality review must dispatch — distinct key, no collision")
+        assertEquals(listOf("PR-42", "QUALITY-42"), dispatcher.executions)
+    }
+
+    @Test
+    fun `duplicate launchForQualityReview for same PR is ignored`() = runTest {
+        val registry = FakeJobRegistry(shouldDispatchResult = true)
+        val dispatcher = FakeJobDispatcher()
+        val service = cloudRunService(registry, dispatcher, scope = this)
+
+        val first = service.launchForQualityReview(42, "MS-545")
+        val second = service.launchForQualityReview(42, "MS-545")
+        advanceUntilIdle()
+
+        assertTrue(first, "First launch must return true")
+        assertFalse(second, "Second launch for same PR must be deduplicated")
+        assertEquals(1, dispatcher.executions.size, "Only one job must be dispatched")
+    }
+
     @Test
     fun `duplicate launchForPrReview for same PR is ignored`() = runTest {
         val registry = FakeJobRegistry(shouldDispatchResult = true)
