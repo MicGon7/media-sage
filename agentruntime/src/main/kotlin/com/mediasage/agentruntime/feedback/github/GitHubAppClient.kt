@@ -173,44 +173,6 @@ class GitHubAppClient(
         return response.bodyAsText()
     }
 
-    override suspend fun postPrComment(owner: String, repo: String, prNumber: Int, body: String) {
-        val token = installationToken()
-        val reqBody = buildJsonObject { put("body", body) }
-        val response = httpClient.post("$GITHUB_API/repos/$owner/$repo/issues/$prNumber/comments") {
-            ghAuth(token)
-            contentType(ContentType.Application.Json)
-            setBody(reqBody.toString())
-        }
-        check(response.status.isSuccess()) {
-            "GitHub postPrComment failed (${response.status}): ${response.bodyAsText()}"
-        }
-    }
-
-    override suspend fun postInlineReviewComment(
-        owner: String,
-        repo: String,
-        prNumber: Int,
-        path: String,
-        line: Int,
-        body: String,
-    ) {
-        val token = installationToken()
-        val reqBody = buildJsonObject {
-            put("body", body)
-            put("path", path)
-            put("line", line)
-            put("side", "RIGHT")
-        }
-        val response = httpClient.post("$GITHUB_API/repos/$owner/$repo/pulls/$prNumber/comments") {
-            ghAuth(token)
-            contentType(ContentType.Application.Json)
-            setBody(reqBody.toString())
-        }
-        check(response.status.isSuccess()) {
-            "GitHub postInlineReviewComment failed (${response.status}): ${response.bodyAsText()}"
-        }
-    }
-
     // Global requestTimeoutMillis is 60s, but this call fires after ~4–5 min of DB work on a cold
     // instance. Override to 15s — the endpoint normally responds in <1s.
     private suspend fun installationToken(): String {
