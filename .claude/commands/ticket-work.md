@@ -81,15 +81,18 @@ If the work follows an established pattern, makes a trivial change, or could hav
    The fetch script prints the ticket summary and the exact Relevant Files paths — use those paths directly in step 2. The init script derives the branch slug from `$TICKET_SUMMARY` automatically.
    - `WORKER_BRANCH_STATUS=existing` → diff the existing PR (`gh pr diff "$WORKER_PR_URL"`), check each AC item against it. If all AC items are satisfied, follow the graceful exit rule and stop. If AC is incomplete, the branch is already checked out — continue from step 3.
    - `WORKER_BRANCH_STATUS=new` → branch is ready, proceed to step 2.
-2. **Phase 1 – Discovery (one batch turn).** Call `Read` on every file you need, all at once. Do not start implementing until this batch is complete.
+2. **Phase 1 – Discovery (one batch turn).** Call `Read` on every file you need, all at once. Do not start implementing until this batch is complete. Any file you will edit must be in this batch — including docs like `CLAUDE.md`, module `CLAUDE.md` files, and skill files — so that no later `Edit` hits the "file has not been read yet" guard.
 
    The minimum set is every path printed by the fetch script (Relevant Files). Before issuing the reads, reason about what the ticket scope implies beyond those paths:
    - ViewModel change → also read the Contract file and any related Screen
    - DAO change → also read the Entity, the Repository implementation, and every Fake in `commonTest` that implements the DAO interface
    - New UI component → also read the nearest existing composable and its test file
+   - Rename/refactor of a symbol → `grep` for the symbol once, then read every referencing file — source, tests, and docs (root and module `CLAUDE.md`, skills) — in this same batch. Renames silently fan out into docs and tests; do not discover those edit targets reactively after the rename.
    - CLAUDE.md or skill file change → read both `CLAUDE.md` and the target skill file in full
 
    Fire all `Read` calls in a single parallel batch. If the task is already done, follow the graceful exit rule in CLAUDE.md Agent Guidelines.
+
+   When you reach Phase 2 for a rename, apply one `replace_all` `Edit` per file covering the import and every usage site at once — never a separate import-only pass followed by a body pass.
 3. Implement the changes described in the ticket.
 4. Re-read the acceptance criteria. If any AC item requires unit tests, invoke `/unit-test` now (the branch is already checked out — skip branch creation inside that skill). If any AC item requires UI/composable tests, invoke `/ui-test` now (same — skip branch creation). Both may apply to the same ticket.
 5. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
