@@ -150,26 +150,33 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun upcomingDayWithWeeklyAssignment_showsAssignedReporterInMonthGrid() = runTest(testDispatcher) {
-        val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
-        val viewModel = readerViewModel(figure = testFigure, latestQuote = null, assignments = assignments)
-
-        val futureDay = (viewModel.state.value as ReaderContract.UiState.Ready)
-            .calendarDays.firstOrNull { it.isFuture } ?: return@runTest
-        assertTrue(futureDay.hasData)
-        assertEquals("Augustine of Hippo", futureDay.figureName)
-        assertNull(futureDay.overrideFigureId)
-    }
-
-    @Test
-    fun upcomingDayInMonthGridMatchesWeekCarousel() = runTest(testDispatcher) {
+    fun inWeekUpcomingDaysShowAssignedReporterMatchingWeekCarousel() = runTest(testDispatcher) {
         val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
         val viewModel = readerViewModel(figure = testFigure, latestQuote = null, assignments = assignments)
 
         val state = viewModel.state.value as ReaderContract.UiState.Ready
-        val todaySlot = state.weekSlots.first { it.isToday }
-        val todayCell = state.calendarDays.first { it.epochDay == todaySlot.epochDay }
-        assertEquals(todaySlot.assignedFigureName, todayCell.figureName)
+        val todayEpochDay = state.weekSlots.first { it.isToday }.epochDay
+        val upcomingSlots = state.weekSlots.filter { it.epochDay >= todayEpochDay }
+        assertTrue(upcomingSlots.isNotEmpty())
+        upcomingSlots.forEach { slot ->
+            val cell = state.calendarDays.first { it.epochDay == slot.epochDay }
+            assertTrue(cell.hasData)
+            assertEquals("Augustine of Hippo", cell.figureName)
+            assertEquals(slot.assignedFigureName, cell.figureName)
+            assertNull(cell.overrideFigureId)
+        }
+    }
+
+    @Test
+    fun futureDayBeyondCurrentWeekDoesNotShowWeeklyAssignment() = runTest(testDispatcher) {
+        val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
+        val viewModel = readerViewModel(figure = testFigure, latestQuote = null, assignments = assignments)
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        val endOfWeekEpochDay = state.weekSlots.maxOf { it.epochDay }
+        val beyondWeek = state.calendarDays.firstOrNull { it.epochDay > endOfWeekEpochDay } ?: return@runTest
+        assertFalse(beyondWeek.hasData)
+        assertNull(beyondWeek.figureName)
     }
 
     @Test
