@@ -12,8 +12,6 @@ Regression surface: ✅ if empty | ⚠️ name each shared infra file and explai
 PR description: ✅ if body describes what the diff does | ❌ if body claims changes not in the diff | ⚠️ if vague or omits significant changes
 Overall: PASS (all verifiable AC ✅) | FAIL (any verifiable AC ❌) | PARTIAL (any verifiable AC ⚠️) — skipped items do not affect the verdict
 
-Code observations: scan the diff for non-blocking code quality issues (e.g. JSON built via string interpolation instead of kotlinx.serialization, hardcoded string literals that should be constants, layer boundary violations visible in imports). Cite specific file:line from the diff. Cap at 3. Never affects the verdict. Omit this section entirely if there is nothing notable.
-
 Return exactly this format — nothing before or after:
 🤖 Agent: Judge verdict for {TICKET_KEY}
 
@@ -27,6 +25,3 @@ Regression surface: ✅/⚠️ [result]
 PR description: ✅/❌/⚠️ [result]
 
 Overall: PASS / FAIL / PARTIAL
-
-Code observations: (omit section if none)
-- file.kt:42 — [non-blocking observation]

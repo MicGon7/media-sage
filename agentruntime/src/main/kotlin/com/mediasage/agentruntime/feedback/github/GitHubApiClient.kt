@@ -23,8 +23,6 @@ interface GitHubApiClient {
     ): String
     suspend fun getPrDetails(owner: String, repo: String, prNumber: Int): PrDetails
     suspend fun getPrDiff(owner: String, repo: String, prNumber: Int): String
-    suspend fun postPrComment(owner: String, repo: String, prNumber: Int, body: String)
-    suspend fun postInlineReviewComment(owner: String, repo: String, prNumber: Int, path: String, line: Int, body: String)
 }
 
 data class FileContents(val content: String, val sha: String)

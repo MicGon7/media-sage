@@ -194,13 +194,4 @@ private class FakeGitHubApiClient(
     override suspend fun getPrDetails(owner: String, repo: String, prNumber: Int) =
         com.mediasage.agentruntime.feedback.github.PrDetails("", "", "", "")
     override suspend fun getPrDiff(owner: String, repo: String, prNumber: Int) = ""
-    override suspend fun postPrComment(owner: String, repo: String, prNumber: Int, body: String) = Unit
-    override suspend fun postInlineReviewComment(
-        owner: String,
-        repo: String,
-        prNumber: Int,
-        path: String,
-        line: Int,
-        body: String,
-    ) = Unit
 }
