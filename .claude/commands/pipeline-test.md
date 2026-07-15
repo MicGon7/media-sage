@@ -5,7 +5,7 @@ The variant to bump (a, b, or c) should be provided as an argument, e.g. `/pipel
 ## Steps
 
 1. **Read the current version**
-   Read `orchestrator/src/main/kotlin/com/mediasage/agentruntime/smoketest/SmokeTest.kt` and find the line:
+   Read `agentruntime/src/main/kotlin/com/mediasage/agentruntime/smoketest/SmokeTest.kt` and find the line:
    ```
    // smoke-test-version-{variant}: N
    ```
@@ -30,7 +30,7 @@ The variant to bump (a, b, or c) should be provided as an argument, e.g. `/pipel
 
    ## Relevant Files
 
-   - `orchestrator/src/main/kotlin/com/mediasage/agentruntime/smoketest/SmokeTest.kt` — the only file that needs to change; bump the version-{variant} line
+   - `agentruntime/src/main/kotlin/com/mediasage/agentruntime/smoketest/SmokeTest.kt` — the only file that needs to change; bump the version-{variant} line
    ```
 
 3. **Transition to In Progress**
