@@ -111,6 +111,7 @@
     <string name="history_empty_day_subtitle">Readings from this day will appear here</string>
     <string name="reader_calendar_prev_year">Previous year</string>
     <string name="reader_calendar_next_year">Next year</string>
+    <string name="reader_calendar_today">Today</string>
     <string name="history_tab_briefing">Briefing</string>
     <string name="history_tab_articles">Articles</string>
     <string name="you_day_detail_articles_label">ARTICLES</string>
