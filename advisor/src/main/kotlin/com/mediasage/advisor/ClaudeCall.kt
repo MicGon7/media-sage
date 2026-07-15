@@ -29,6 +29,7 @@ internal data class ToolDefinition(
 internal data class ToolInputSchema(
     val type: String = "object",
     val properties: Map<String, PropertySchema>,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
     val required: List<String> = emptyList(),
 )
 
