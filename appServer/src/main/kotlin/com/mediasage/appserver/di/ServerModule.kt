@@ -3,10 +3,10 @@ package com.mediasage.appserver.di
 import com.mediasage.appserver.repository.FigureRepository
 import com.mediasage.appserver.repository.QuoteRepository
 import com.mediasage.appserver.service.ArticleScraperService
-import com.mediasage.appserver.service.ClaudeApiService
+import com.mediasage.appserver.service.ClaudeApiClient
 import com.mediasage.appserver.service.DailyReflectionService
-import com.mediasage.appserver.service.NewsApiService
-import com.mediasage.appserver.service.ScriptureApiService
+import com.mediasage.appserver.service.NewsApiClient
+import com.mediasage.appserver.service.ScriptureApiClient
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
@@ -37,9 +37,9 @@ fun serverModule(
         }
     }
 
-    single { ClaudeApiService(get(), claudeApiKey) }
-    single { NewsApiService(get(), newsApiKey) }
-    single { ScriptureApiService(get(), scriptureApiKey) }
+    single { ClaudeApiClient(get(), claudeApiKey) }
+    single { NewsApiClient(get(), newsApiKey) }
+    single { ScriptureApiClient(get(), scriptureApiKey) }
     single { ArticleScraperService() }
     single { FigureRepository(baseUrl) }
     single { QuoteRepository() }

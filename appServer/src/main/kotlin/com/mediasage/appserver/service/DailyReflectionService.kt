@@ -6,7 +6,7 @@ import com.mediasage.appserver.repository.QuoteData
 import com.mediasage.appserver.repository.QuoteRepository
 
 class DailyReflectionService(
-    private val claudeApiService: ClaudeApiService,
+    private val claudeApiClient: ClaudeApiClient,
     private val quoteRepository: QuoteRepository
 ) {
     suspend fun generate(request: DailyReflectionRequest): DailyReflectionResult {
@@ -28,7 +28,7 @@ class DailyReflectionService(
             )
         )
 
-        return claudeApiService.generateDailyReflection(systemPrompt, userMessage, request.tone)
+        return claudeApiClient.generateDailyReflection(systemPrompt, userMessage, request.tone)
     }
 
     data class DailyReflectionRequest(

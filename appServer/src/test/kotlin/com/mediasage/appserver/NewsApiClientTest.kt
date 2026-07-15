@@ -1,7 +1,7 @@
 package com.mediasage.appserver
 
 import com.mediasage.appserver.service.NewsApiException
-import com.mediasage.appserver.service.NewsApiService
+import com.mediasage.appserver.service.NewsApiClient
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-class NewsApiServiceTest {
+class NewsApiClientTest {
 
     private fun createMockClient(responseBody: String, status: HttpStatusCode = HttpStatusCode.OK): HttpClient {
         return HttpClient(MockEngine { _ ->
@@ -59,9 +59,9 @@ class NewsApiServiceTest {
 
     @Test
     fun getTopHeadlinesReturnsArticles() = runTest {
-        val service = NewsApiService(createMockClient(sampleResponse), "test-api-key")
+        val client = NewsApiClient(createMockClient(sampleResponse), "test-api-key")
 
-        val articles = service.getTopHeadlines()
+        val articles = client.getTopHeadlines()
 
         assertEquals(2, articles.size)
         assertEquals("Global markets rally on trade deal hopes", articles[0].title)
@@ -71,20 +71,20 @@ class NewsApiServiceTest {
 
     @Test
     fun searchNewsReturnsArticles() = runTest {
-        val service = NewsApiService(createMockClient(sampleResponse), "test-api-key")
+        val client = NewsApiClient(createMockClient(sampleResponse), "test-api-key")
 
-        val articles = service.searchNews("earthquake")
+        val articles = client.searchNews("earthquake")
 
         assertEquals(2, articles.size)
     }
 
     @Test
     fun getTopHeadlinesThrowsOnApiError() = runTest {
-        val client = createMockClient("""{"message":"Invalid API token"}""", HttpStatusCode.Unauthorized)
-        val service = NewsApiService(client, "bad-key")
+        val httpClient = createMockClient("""{"message":"Invalid API token"}""", HttpStatusCode.Unauthorized)
+        val client = NewsApiClient(httpClient, "bad-key")
 
         val exception = assertFailsWith<NewsApiException> {
-            service.getTopHeadlines()
+            client.getTopHeadlines()
         }
 
         assertEquals(401, exception.statusCode)
@@ -127,9 +127,9 @@ class NewsApiServiceTest {
 
     @Test
     fun getTopHeadlinesDeduplicatesByUrl() = runTest {
-        val service = NewsApiService(createMockClient(duplicateUrlResponse), "test-api-key")
+        val client = NewsApiClient(createMockClient(duplicateUrlResponse), "test-api-key")
 
-        val articles = service.getTopHeadlines()
+        val articles = client.getTopHeadlines()
 
         assertEquals(2, articles.size)
         assertEquals("https://example.com/markets", articles[0].url)
@@ -164,9 +164,9 @@ class NewsApiServiceTest {
 
     @Test
     fun searchNewsDeduplicatesByUrl() = runTest {
-        val service = NewsApiService(createMockClient(duplicateSearchResponse), "test-api-key")
+        val client = NewsApiClient(createMockClient(duplicateSearchResponse), "test-api-key")
 
-        val articles = service.searchNews("climate")
+        val articles = client.searchNews("climate")
 
         assertEquals(1, articles.size)
         assertEquals("https://example.com/climate", articles[0].url)
@@ -174,9 +174,9 @@ class NewsApiServiceTest {
 
     @Test
     fun articleFieldsMappedCorrectly() = runTest {
-        val service = NewsApiService(createMockClient(sampleResponse), "test-api-key")
+        val client = NewsApiClient(createMockClient(sampleResponse), "test-api-key")
 
-        val article = service.getTopHeadlines().first()
+        val article = client.getTopHeadlines().first()
 
         assertEquals("https://example.com/markets", article.url)
         assertEquals("https://example.com/img.jpg", article.imageUrl)
@@ -188,9 +188,9 @@ class NewsApiServiceTest {
 
     @Test
     fun getTopHeadlinesPassesTopicParam() = runTest {
-        val service = NewsApiService(createMockClient(sampleResponse), "test-api-key")
+        val client = NewsApiClient(createMockClient(sampleResponse), "test-api-key")
 
-        val articles = service.getTopHeadlines(topic = "world")
+        val articles = client.getTopHeadlines(topic = "world")
 
         assertEquals(2, articles.size)
     }

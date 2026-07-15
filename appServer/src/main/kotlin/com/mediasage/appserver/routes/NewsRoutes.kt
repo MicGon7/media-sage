@@ -1,13 +1,13 @@
 package com.mediasage.appserver.routes
 
 import com.mediasage.appserver.service.ArticleScraperService
-import com.mediasage.appserver.service.NewsApiService
+import com.mediasage.appserver.service.NewsApiClient
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
 
 fun Route.newsRoutes() {
-    val newsService by inject<NewsApiService>()
+    val newsService by inject<NewsApiClient>()
     val scraperService by inject<ArticleScraperService>()
 
     route("/api/news") {

@@ -1,6 +1,6 @@
 package com.mediasage.appserver.routes
 
-import com.mediasage.appserver.service.ScriptureApiService
+import com.mediasage.appserver.service.ScriptureApiClient
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -8,7 +8,7 @@ import org.koin.ktor.ext.inject
 
 /** Scripture API endpoints — search and lookup Bible verses. */
 fun Route.scriptureRoutes() {
-    val scriptureService by inject<ScriptureApiService>()
+    val scriptureService by inject<ScriptureApiClient>()
 
     route("/api/scripture") {
         get("/search") {

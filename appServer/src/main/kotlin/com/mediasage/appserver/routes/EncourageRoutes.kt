@@ -3,7 +3,7 @@ package com.mediasage.appserver.routes
 import com.mediasage.appserver.db.ServerDatabase
 import com.mediasage.appserver.repository.FigureRepository
 import com.mediasage.appserver.service.ArticleScraperService
-import com.mediasage.appserver.service.ClaudeApiService
+import com.mediasage.appserver.service.ClaudeApiClient
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -21,7 +21,7 @@ private data class EncourageRequest(
 
 /** Analysis endpoints — Claude AI provides encouragement for headlines. */
 fun Route.analysisRoutes() {
-    val claudeService by inject<ClaudeApiService>()
+    val claudeService by inject<ClaudeApiClient>()
     val scraperService by inject<ArticleScraperService>()
     val figureRepository by inject<FigureRepository>()
 
@@ -31,7 +31,7 @@ fun Route.analysisRoutes() {
 }
 
 private fun Route.encourageRoute(
-    claudeService: ClaudeApiService,
+    claudeService: ClaudeApiClient,
     scraperService: ArticleScraperService,
     figureRepository: FigureRepository
 ) {
