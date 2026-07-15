@@ -1,4 +1,4 @@
-name: Build and Push Worker Image
+name: Build and Deploy Worker
 
 on:
   workflow_dispatch:
@@ -51,3 +51,60 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:latest
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      # Declarative deploy: this workflow is the source of truth for the worker
+      # Cloud Run Job's config, mirroring deploy-orchestrator.yml (MS-392). The job
+      # is redeployed with the freshly built image on every run. `overwrite` update
+      # strategies make the workflow authoritative — anything not listed here is
+      # removed from the job's static definition on deploy.
+      #
+      # These are the STATIC job env vars only. Per-run values (JOB_TYPE, JOB_ID,
+      # TICKET_KEY, PR_NUMBER) are injected at dispatch time via containerOverrides
+      # by AgentLaunchService — they must NOT be declared here.
+      #
+      # Per-target values (swap these + the matching secrets to stand up a new
+      # client target): GITHUB_OWNER, GITHUB_REPO, SUPABASE_REST_URL, and the
+      # SUPABASE_SERVICE_ROLE_KEY / JIRA_* secret bindings. Everything else is
+      # shared across targets.
+      - name: Deploy worker job
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          job: media-sage-agent-worker
+          image: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:latest
+          region: us-central1
+          env_vars: |
+            ANTHROPIC_BASE_URL=https://api.fuelix.ai
+            ANTHROPIC_MODEL=claude-sonnet-4
+            CLAUDE_MODEL=claude-sonnet-4
+            GCP_PROJECT_ID=media-sage-agent
+            PUBSUB_TOPIC=cloud-run-job-completions
+            GITHUB_APP_ID=3848870
+            GITHUB_APP_INSTALLATION_ID=135953548
+            GITHUB_BOT_LOGIN=media-sage-worker[bot]
+            GITHUB_BOT_NAME=media-sage-worker
+            GITHUB_BOT_EMAIL=mediasage.bot@gmail.com
+            JIRA_EMAIL=micgon7@gmail.com
+            JIRA_BOT_EMAIL=mediasage.bot@gmail.com
+            GITHUB_OWNER=michael-gonzalez-dev
+            GITHUB_REPO=media-sage
+            SUPABASE_REST_URL=https://sfocythzurfdpkegjlsl.supabase.co/rest/v1
+          env_vars_update_strategy: overwrite
+          secrets: |
+            ANTHROPIC_AUTH_TOKEN=anthropic-auth-token:latest
+            GITHUB_APP_PRIVATE_KEY_BASE64=github-app-private-key-base64:latest
+            JIRA_API_TOKEN=jira-api-token:latest
+            JIRA_BOT_API_TOKEN=orchestrator-jira-bot-api-token:latest
+            SUPABASE_SERVICE_ROLE_KEY=supabase-service-role-key:latest
+          secrets_update_strategy: overwrite
+          flags: >-
+            --service-account=media-sage-orchestrator@media-sage-agent.iam.gserviceaccount.com
+            --cpu=2
+            --memory=4Gi
+            --task-timeout=1800
+            --max-retries=0
+            --tasks=1
