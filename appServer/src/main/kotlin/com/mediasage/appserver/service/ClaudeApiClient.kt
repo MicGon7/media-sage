@@ -15,7 +15,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-class ClaudeApiClient(
+open class ClaudeApiClient(
     private val httpClient: HttpClient,
     private val apiKey: String
 ) {

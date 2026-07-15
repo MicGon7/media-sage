@@ -21,17 +21,17 @@ private data class EncourageRequest(
 
 /** Analysis endpoints — Claude AI provides encouragement for headlines. */
 fun Route.analysisRoutes() {
-    val claudeService by inject<ClaudeApiClient>()
+    val claudeClient by inject<ClaudeApiClient>()
     val scraperService by inject<ArticleScraperService>()
     val figureRepository by inject<FigureRepository>()
 
     route("/api/analysis") {
-        encourageRoute(claudeService, scraperService, figureRepository)
+        encourageRoute(claudeClient, scraperService, figureRepository)
     }
 }
 
 private fun Route.encourageRoute(
-    claudeService: ClaudeApiClient,
+    claudeClient: ClaudeApiClient,
     scraperService: ArticleScraperService,
     figureRepository: FigureRepository
 ) {
@@ -50,7 +50,7 @@ private fun Route.encourageRoute(
             ?: request.articleUrl?.let { scraperService.getArticleText(it) }
 
         val candidates = ServerDatabase.fetchQuoteCandidates()
-        val result = claudeService.encourageHeadline(
+        val result = claudeClient.encourageHeadline(
             headlineTitle = request.headlineTitle,
             candidates = candidates,
             locale = request.locale,
