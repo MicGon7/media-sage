@@ -1,5 +1,17 @@
 # MS-262: Pipeline Portability — Second Target (PIPE)
 
+> **Status (MS-558, retired):** The live PIPE instance — the `agent-orchestrator-pipe`
+> Cloud Run Service, the `pipeline-sandbox` GitHub repo, and the dedicated PIPE Supabase
+> project — has been retired. Running two orchestrator environments in parallel proved to
+> be sync overhead (two services, two Supabase projects, two secret sets) that delivered
+> little beyond what CI unit tests, the `:pipelineScenarios` e2e harness, and `pipeline-test`
+> smoke runs already cover. **The portability claim stands** — it was demonstrated
+> end-to-end and is codified in this doc. Nothing in the pipeline hardcodes a target; a new
+> client is still just a new Jira + GitHub + Supabase triple plus a Cloud Run Job definition.
+> Standing up a live second target again requires only re-creating those resources and a
+> `TargetConfig` entry in `pipelineScenarios/build.gradle.kts`. The sections below are kept
+> as the record of what was built and verified.
+
 ## What Was Built
 
 Made the agentic pipeline demonstrably reusable by pointing it at a second independent target:

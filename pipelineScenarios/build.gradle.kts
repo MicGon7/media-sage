@@ -29,7 +29,7 @@ data class TargetConfig(
     val githubOwner: String,
     val githubRepo: String,
     val fixtureTicketKey: String,
-    /** Machine env var name to read SUPABASE_DB_URL from (e.g. "SUPABASE_DB_URL", "PIPE_SUPABASE_DB_URL"). */
+    /** Machine env var name to read SUPABASE_DB_URL from (e.g. "SUPABASE_DB_URL", "<CLIENT>_SUPABASE_DB_URL"). */
     val supabaseEnvVar: String,
     val orchestratorEnvVar: String = "ORCHESTRATOR_URL",
     val webhookSecretEnvVar: String = "GITHUB_WEBHOOK_SECRET"
@@ -41,16 +41,6 @@ val msTarget = TargetConfig(
     githubRepo = "media-sage",
     fixtureTicketKey = "MS-262",
     supabaseEnvVar = "SUPABASE_DB_URL"
-)
-
-val pipeTarget = TargetConfig(
-    jiraProjectKey = "PIPE",
-    githubOwner = "michael-gonzalez-dev",
-    githubRepo = "pipeline-sandbox",
-    fixtureTicketKey = "PIPE-1",
-    supabaseEnvVar = "PIPE_SUPABASE_DB_URL",
-    orchestratorEnvVar = "PIPE_ORCHESTRATOR_URL",
-    webhookSecretEnvVar = "PIPE_GITHUB_WEBHOOK_SECRET"
 )
 
 // ── Scenario registry ─────────────────────────────────────────────────────────
@@ -108,49 +98,6 @@ val scenarios = listOf(
         pipelineGroup,
         "Full pipeline: orchestrator restart with RUNNING job → recoverInterruptedJobs() → INTERRUPTED",
         msTarget
-    ),
-    // PIPE target — same test classes, different target config
-    Scenario(
-        "pipeE2eDedupRunning",
-        "com.mediasage.pipeline.dedup.DedupRunningE2eTest",
-        dedupGroup,
-        "PIPE target: verifies the dedup gate skips dispatch when a job is already RUNNING",
-        pipeTarget
-    ),
-    Scenario(
-        "pipeE2eDedupCompleted",
-        "com.mediasage.pipeline.dedup.DedupCompletedE2eTest",
-        dedupGroup,
-        "PIPE target: verifies the dedup gate permanently blocks dispatch for a COMPLETED job",
-        pipeTarget
-    ),
-    Scenario(
-        "pipeE2eDedupFailedRetry",
-        "com.mediasage.pipeline.dedup.DedupFailedRetryE2eTest",
-        dedupGroup,
-        "PIPE target: verifies a FAILED job is retried on re-trigger",
-        pipeTarget
-    ),
-    Scenario(
-        "pipeE2ePrReviewResponse",
-        "com.mediasage.pipeline.pipeline.PrReviewResponseE2eTest",
-        pipelineGroup,
-        "PIPE target: full pipeline — changes_requested review → agent dispatched → fix committed",
-        pipeTarget
-    ),
-    Scenario(
-        "pipeE2eConflictResolution",
-        "com.mediasage.pipeline.pipeline.ConflictResolutionE2eTest",
-        pipelineGroup,
-        "PIPE target: full pipeline — PR dequeued merge conflict → worker rebases → conflict resolved",
-        pipeTarget
-    ),
-    Scenario(
-        "pipeE2eFailureRecovery",
-        "com.mediasage.pipeline.pipeline.FailureRecoveryE2eTest",
-        pipelineGroup,
-        "PIPE target: orchestrator restart with RUNNING job → recoverInterruptedJobs() → INTERRUPTED",
-        pipeTarget
     )
 )
 
