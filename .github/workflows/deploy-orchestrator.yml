@@ -29,7 +29,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push orchestrator image
+      - name: Build and push agentruntime image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -43,7 +43,7 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
-      - name: Deploy media-sage orchestrator
+      - name: Deploy agentruntime service
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: media-sage-orchestrator
