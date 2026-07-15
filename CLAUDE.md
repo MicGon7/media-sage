@@ -179,7 +179,7 @@ docker run -p 8081:8081 \
 #### Client vs Service
 
 **Client** — a class that wraps a single `HttpClient` to communicate with one external API provider.
-- No interface. Declared `open` so tests can subclass it with no-IO overrides (preferred over `MockEngine` in unit tests where `StandardTestDispatcher` is in use — `MockEngine` uses `Dispatchers.IO` internally and causes `advanceUntilIdle()` to return before HTTP work completes when calls happen inside nested `launch` coroutines).
+- No interface. `open` is **conditional, not the default** — Kotlin classes are `final` by design, so keep a Client `final` unless a test needs to subclass it. Declare it `open` (with `open suspend fun` methods) only when its behavior is exercised *through a service or coroutine under `runTest` + `advanceUntilIdle`*, where `MockEngine` would escape virtual time: `MockEngine` runs on `Dispatchers.IO`, so `advanceUntilIdle()` returns before HTTP work completes when the call happens inside a nested `launch`. In that case a no-IO subclass override is preferred over `MockEngine`. A Client tested directly with `MockEngine` — a suspend call awaited in the test with no nested `launch` — stays `final`. Positive example: `JiraApiClient` (agentruntime) is `open` and subclassed by `FakeJiraApiClient` / `RecordingJiraApiClient`, injected into `cloudRunService` and driven under `runTest` + `advanceUntilIdle`. Negative example: the appServer clients (`NewsApiClient`, `ScriptureApiClient`) are tested directly with `MockEngine` and correctly stay `final`.
 - Named `{Provider}ApiClient` (e.g. `JiraApiClient`, `ClaudeApiClient`, `NewsApiClient`).
 - Methods are thin HTTP calls: authenticate, serialize request, deserialize response, return result.
 
