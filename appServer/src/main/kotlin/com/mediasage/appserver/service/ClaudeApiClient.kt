@@ -15,7 +15,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-class ClaudeApiService(
+open class ClaudeApiClient(
     private val httpClient: HttpClient,
     private val apiKey: String
 ) {
@@ -207,5 +207,3 @@ class ClaudeApiException(
     val statusCode: Int,
     override val message: String
 ) : RuntimeException(message)
-
-

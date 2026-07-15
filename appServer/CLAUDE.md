@@ -7,7 +7,7 @@ appServer/src/main/kotlin/com/mediasage/appserver/
 ├── Application.kt       — Entry point, Koin setup
 ├── plugins/             — ContentNegotiation, CORS, CallLogging, StatusPages
 ├── routes/              — Health, News, Encourage, Scripture, Figures, DailyReflection
-├── service/             — ClaudeApiService, NewsApiService, ScriptureApiService
+├── service/             — ClaudeApiClient, NewsApiClient, ScriptureApiClient
 └── di/                  — ServerModule
 ```
 

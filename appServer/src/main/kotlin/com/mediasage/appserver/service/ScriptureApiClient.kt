@@ -6,7 +6,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 
-class ScriptureApiService(
+open class ScriptureApiClient(
     private val httpClient: HttpClient,
     private val apiKey: String
 ) {

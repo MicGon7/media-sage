@@ -7,7 +7,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import java.util.UUID
 
-class NewsApiService(
+open class NewsApiClient(
     private val httpClient: HttpClient,
     private val apiKey: String
 ) {

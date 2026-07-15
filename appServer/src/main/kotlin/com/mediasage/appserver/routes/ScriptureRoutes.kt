@@ -1,6 +1,6 @@
 package com.mediasage.appserver.routes
 
-import com.mediasage.appserver.service.ScriptureApiService
+import com.mediasage.appserver.service.ScriptureApiClient
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -8,7 +8,7 @@ import org.koin.ktor.ext.inject
 
 /** Scripture API endpoints — search and lookup Bible verses. */
 fun Route.scriptureRoutes() {
-    val scriptureService by inject<ScriptureApiService>()
+    val scriptureClient by inject<ScriptureApiClient>()
 
     route("/api/scripture") {
         get("/search") {
@@ -19,7 +19,7 @@ fun Route.scriptureRoutes() {
                 )
             val limit = call.parameters["limit"]?.toIntOrNull() ?: 10
 
-            val verses = scriptureService.searchVerses(query = query, limit = limit)
+            val verses = scriptureClient.searchVerses(query = query, limit = limit)
             call.respond(verses)
         }
 
@@ -30,7 +30,7 @@ fun Route.scriptureRoutes() {
                     mapOf("error" to "passageId path parameter is required")
                 )
 
-            val passage = scriptureService.getPassage(passageId)
+            val passage = scriptureClient.getPassage(passageId)
             call.respond(passage)
         }
     }

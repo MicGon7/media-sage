@@ -1,7 +1,7 @@
 package com.mediasage.appserver
 
 import com.mediasage.appserver.service.ScriptureApiException
-import com.mediasage.appserver.service.ScriptureApiService
+import com.mediasage.appserver.service.ScriptureApiClient
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -14,7 +14,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class ScriptureApiServiceTest {
+class ScriptureApiClientTest {
 
     private fun createMockClient(responseBody: String, status: HttpStatusCode = HttpStatusCode.OK): HttpClient {
         return HttpClient(MockEngine { _ ->
@@ -78,10 +78,9 @@ class ScriptureApiServiceTest {
 
     @Test
     fun searchVersesReturnsResults() = runTest {
-        val client = createMockClient(searchResponse)
-        val service = ScriptureApiService(client, "test-api-key")
+        val client = ScriptureApiClient(createMockClient(searchResponse), "test-api-key")
 
-        val verses = service.searchVerses("hope")
+        val verses = client.searchVerses("hope")
 
         assertEquals(2, verses.size)
         assertEquals("Romans 8:24", verses[0].reference)
@@ -91,10 +90,9 @@ class ScriptureApiServiceTest {
 
     @Test
     fun getPassageReturnsContent() = runTest {
-        val client = createMockClient(passageResponse)
-        val service = ScriptureApiService(client, "test-api-key")
+        val client = ScriptureApiClient(createMockClient(passageResponse), "test-api-key")
 
-        val passage = service.getPassage("JHN.3.16")
+        val passage = client.getPassage("JHN.3.16")
 
         assertEquals("John 3:16", passage.reference)
         assertTrue(passage.content.contains("God so loved"))
@@ -102,11 +100,11 @@ class ScriptureApiServiceTest {
 
     @Test
     fun searchVersesThrowsOnApiError() = runTest {
-        val client = createMockClient("""{"error":"Unauthorized"}""", HttpStatusCode.Unauthorized)
-        val service = ScriptureApiService(client, "bad-key")
+        val httpClient = createMockClient("""{"error":"Unauthorized"}""", HttpStatusCode.Unauthorized)
+        val client = ScriptureApiClient(httpClient, "bad-key")
 
         val exception = assertFailsWith<ScriptureApiException> {
-            service.searchVerses("hope")
+            client.searchVerses("hope")
         }
 
         assertEquals(401, exception.statusCode)
@@ -114,10 +112,9 @@ class ScriptureApiServiceTest {
 
     @Test
     fun verseFieldsMappedCorrectly() = runTest {
-        val client = createMockClient(searchResponse)
-        val service = ScriptureApiService(client, "test-api-key")
+        val client = ScriptureApiClient(createMockClient(searchResponse), "test-api-key")
 
-        val verse = service.searchVerses("hope").first()
+        val verse = client.searchVerses("hope").first()
 
         assertEquals("ROM.8.24", verse.id)
         assertEquals("ROM", verse.bookId)
