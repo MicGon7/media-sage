@@ -1,9 +1,5 @@
 package com.mediasage.feature.you
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,15 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.scale
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 
 import androidx.compose.ui.Alignment
@@ -31,6 +26,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mediasage.theme.BrandAmber
 import kotlinx.datetime.LocalDate
+
+// A month spans at most six week rows. Reserving a fixed six-row grid area keeps
+// every month card the same height, so the carousel does not jump when scrolling
+// between months with different week counts (e.g. a 5-row month next to a 6-row one).
+private const val CALENDAR_WEEK_ROWS = 6
+
+// Fixed height for every day cell (date label + 28.dp portrait + padding) so filled
+// and empty rows measure identically and month heights stay constant.
+private val MonthDayCellHeight = 50.dp
+
+// The grid always reserves six rows so the card height never changes between months.
+// Shorter months leave a small gap at the bottom — intentional space held for future
+// Reader features.
+private val CalendarBodyHeight = MonthDayCellHeight * CALENDAR_WEEK_ROWS
 
 @Composable
 fun CalendarCard(
@@ -49,19 +58,21 @@ fun CalendarCard(
             Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                 MonthHeader(days)
                 WeekDayHeaderRow()
-                val firstDayOffset = days.firstOrNull()?.let {
-                    LocalDate.fromEpochDays(it.epochDay.toInt()).dayOfWeek.ordinal
-                } ?: 0
-                val cells = buildMonthCells(days, firstDayOffset)
-                cells.chunked(7).forEach { week ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        week.forEach { day ->
-                            MonthDayCell(
-                                day = day,
-                                onClick = { day?.let { onDayTapped(it.epochDay) } },
-                                sharedElementModifierFor = sharedElementModifierFor,
-                                modifier = Modifier.weight(1f),
-                            )
+                Column(modifier = Modifier.height(CalendarBodyHeight)) {
+                    val firstDayOffset = days.firstOrNull()?.let {
+                        LocalDate.fromEpochDays(it.epochDay.toInt()).dayOfWeek.ordinal
+                    } ?: 0
+                    val cells = buildMonthCells(days, firstDayOffset)
+                    cells.chunked(7).forEach { week ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            week.forEach { day ->
+                                MonthDayCell(
+                                    day = day,
+                                    onClick = { day?.let { onDayTapped(it.epochDay) } },
+                                    sharedElementModifierFor = sharedElementModifierFor,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                         }
                     }
                 }
@@ -109,24 +120,14 @@ private fun MonthDayCell(
     modifier: Modifier = Modifier,
 ) {
     if (day == null) {
-        Box(modifier = modifier.size(44.dp))
+        Box(modifier = modifier.height(MonthDayCellHeight))
         return
     }
-    val portraitAlpha by animateFloatAsState(
-        targetValue = if (day.hasData) 1f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "portrait_alpha",
-    )
-    val portraitScale by animateFloatAsState(
-        targetValue = if (day.hasData) 1f else 0.6f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-        label = "portrait_scale",
-    )
     val portraitMod = sharedElementModifierFor(day.epochDay)
     Column(
-        modifier = modifier.clickable(onClick = onClick).padding(vertical = 2.dp),
+        modifier = modifier.height(MonthDayCellHeight).clickable(onClick = onClick).padding(vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
     ) {
         Text(
             text = "${day.dateNumber}",
@@ -143,9 +144,7 @@ private fun MonthDayCell(
                 Box(Modifier.size(6.dp).clip(CircleShape).background(BrandAmber))
             }
             if (day.hasData) {
-                Box(modifier = Modifier.scale(portraitScale).alpha(portraitAlpha)) {
-                    DayPortrait(day, portraitMod)
-                }
+                DayPortrait(day, portraitMod)
             }
         }
     }

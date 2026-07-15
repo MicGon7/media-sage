@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +45,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.mutableStateMapOf
+import com.mediasage.LocalIsDebugBuild
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -56,9 +59,13 @@ import mediasage.composeapp.generated.resources.you_toggle_month_view
 import mediasage.composeapp.generated.resources.you_toggle_week_view
 import mediasage.composeapp.generated.resources.reader_calendar_next_year
 import mediasage.composeapp.generated.resources.reader_calendar_prev_year
+import mediasage.composeapp.generated.resources.reader_calendar_today
 import org.jetbrains.compose.resources.stringResource
 
-private const val CAROUSEL_START_YEAR_OFFSET = 3
+// Earliest year the carousel scrolls back to. Debug/pre-release builds expose seed
+// data from 2025; release builds only carry production data from 2026 onward.
+private const val PRE_RELEASE_START_YEAR = 2025
+private const val RELEASE_START_YEAR = 2026
 
 @Composable
 fun ReporterScheduleSection(
@@ -195,8 +202,12 @@ private fun SharedTransitionScope.MonthCarouselContent(
 ) {
     val todayEpochDay = remember(weekSlots) { weekSlots.firstOrNull { it.isToday }?.epochDay ?: 0L }
     val todayDate = remember(todayEpochDay) { LocalDate.fromEpochDays(todayEpochDay.toInt()) }
-    val startYear = remember(todayDate) { todayDate.year - CAROUSEL_START_YEAR_OFFSET }
-    val lastYear = remember(todayDate) { todayDate.year + 1 }
+    val isDebugBuild = LocalIsDebugBuild.current
+    val startYear = remember(todayDate, isDebugBuild) {
+        val earliest = if (isDebugBuild) PRE_RELEASE_START_YEAR else RELEASE_START_YEAR
+        minOf(earliest, todayDate.year)
+    }
+    val lastYear = remember(todayDate) { todayDate.year }
     val totalMonths = remember(todayDate) { (lastYear - startYear + 1) * 12 }
     val initialPage = remember(todayDate) { (todayDate.year - startYear) * 12 + (todayDate.monthNumber - 1) }
     val pagerState = rememberPagerState(initialPage = initialPage) { totalMonths }
@@ -231,6 +242,7 @@ private fun SharedTransitionScope.MonthCarouselContent(
                 val target = ((currentYear + 1 - startYear) * 12).coerceAtMost(totalMonths - 1)
                 coroutineScope.launch { pagerState.animateScrollToPage(target) }
             },
+            onToday = { coroutineScope.launch { pagerState.animateScrollToPage(initialPage) } },
         )
         HorizontalPager(state = pagerState) { page ->
             val daysForPage = pageCache[page] ?: buildSkeletonDays(page, startYear, todayEpochDay)
@@ -283,40 +295,54 @@ private fun YearSelector(
     nextYearDescription: String,
     onPrevYear: () -> Unit,
     onNextYear: () -> Unit,
+    onToday: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(
-            onClick = onPrevYear,
-            enabled = prevEnabled,
-            modifier = Modifier.alpha(if (prevEnabled) 1f else 0f),
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+        Row(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = prevYearDescription,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            IconButton(
+                onClick = onPrevYear,
+                enabled = prevEnabled,
+                modifier = Modifier.alpha(if (prevEnabled) 1f else 0f),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = prevYearDescription,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = year.toString(),
+                style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp),
             )
+            IconButton(
+                onClick = onNextYear,
+                enabled = nextEnabled,
+                modifier = Modifier.alpha(if (nextEnabled) 1f else 0f),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = nextYearDescription,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
-        Text(
-            text = year.toString(),
-            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 8.dp),
-        )
         IconButton(
-            onClick = onNextYear,
-            enabled = nextEnabled,
-            modifier = Modifier.alpha(if (nextEnabled) 1f else 0f),
+            onClick = onToday,
+            modifier = Modifier.align(Alignment.CenterEnd),
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = nextYearDescription,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                imageVector = Icons.Outlined.Today,
+                contentDescription = stringResource(Res.string.reader_calendar_today),
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
     }
