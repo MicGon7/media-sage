@@ -3,6 +3,10 @@ package com.mediasage.advisor.tools
 import com.mediasage.advisor.AnthropicApi
 import com.mediasage.advisor.ClaudeMessage
 import com.mediasage.advisor.ClaudeRequest
+import com.mediasage.advisor.PropertySchema
+import com.mediasage.advisor.ToolChoice
+import com.mediasage.advisor.ToolDefinition
+import com.mediasage.advisor.ToolInputSchema
 import com.mediasage.advisor.callClaudeWithRetry
 import com.mediasage.pipeline.core.JobsTable
 import com.mediasage.pipeline.core.TranscriptsTable
@@ -12,7 +16,6 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -25,31 +28,21 @@ import java.util.UUID
 private const val EXPLAIN_TOOL_NAME = "record_explanation"
 private const val MODEL = "claude-sonnet-4-6"
 
-private val EXPLAIN_TOOL = buildJsonObject {
-    put("name", EXPLAIN_TOOL_NAME)
-    put("description", "Record failure root cause and proposed fix")
-    putJsonObject("input_schema") {
-        put("type", "object")
-        putJsonObject("properties") {
-            putJsonObject("failed_gate") { put("type", "string") }
-            putJsonObject("root_cause") { put("type", "string") }
-            putJsonObject("proposed_fix") { put("type", "string") }
-            putJsonObject("confidence") {
-                put("type", "string")
-                put("description", "high / medium / low")
-            }
-        }
-        put("required", kotlinx.serialization.json.buildJsonArray {
-            add(JsonPrimitive("root_cause"))
-            add(JsonPrimitive("proposed_fix"))
-        })
-    }
-}
+private val EXPLAIN_TOOL = ToolDefinition(
+    name = EXPLAIN_TOOL_NAME,
+    description = "Record failure root cause and proposed fix",
+    inputSchema = ToolInputSchema(
+        properties = mapOf(
+            "failed_gate" to PropertySchema(type = "string"),
+            "root_cause" to PropertySchema(type = "string"),
+            "proposed_fix" to PropertySchema(type = "string"),
+            "confidence" to PropertySchema(type = "string", description = "high / medium / low"),
+        ),
+        required = listOf("root_cause", "proposed_fix"),
+    ),
+)
 
-private val TOOL_CHOICE = buildJsonObject {
-    put("type", "tool")
-    put("name", EXPLAIN_TOOL_NAME)
-}
+private val TOOL_CHOICE = ToolChoice(type = "tool", name = EXPLAIN_TOOL_NAME)
 
 internal fun Server.registerExplainFailureTool(client: HttpClient, baseUrl: String, authToken: String) {
     addTool(
