@@ -3,6 +3,10 @@ package com.mediasage.advisor.tools
 import com.mediasage.advisor.AnthropicApi
 import com.mediasage.advisor.ClaudeMessage
 import com.mediasage.advisor.ClaudeRequest
+import com.mediasage.advisor.PropertySchema
+import com.mediasage.advisor.ToolChoice
+import com.mediasage.advisor.ToolDefinition
+import com.mediasage.advisor.ToolInputSchema
 import com.mediasage.advisor.callClaudeWithRetry
 import com.mediasage.pipeline.core.DecisionScoresTable
 import com.mediasage.pipeline.core.TranscriptsTable
@@ -12,7 +16,6 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -25,32 +28,22 @@ import java.util.UUID
 private const val ANALYZE_TOOL_NAME = "record_analysis"
 private const val MODEL = "claude-sonnet-4-6"
 
-private val ANALYZE_TOOL = buildJsonObject {
-    put("name", ANALYZE_TOOL_NAME)
-    put("description", "Record session efficiency analysis")
-    putJsonObject("input_schema") {
-        put("type", "object")
-        putJsonObject("properties") {
-            putJsonObject("total_turns") { put("type", "integer") }
-            putJsonObject("discovery_turns") { put("type", "integer") }
-            putJsonObject("wasted_turn_count") { put("type", "integer") }
-            putJsonObject("wasted_turn_causes") {
-                put("type", "array")
-                putJsonObject("items") { put("type", "string") }
-            }
-            putJsonObject("recommendation") { put("type", "string") }
-        }
-        put("required", kotlinx.serialization.json.buildJsonArray {
-            add(JsonPrimitive("total_turns"))
-            add(JsonPrimitive("recommendation"))
-        })
-    }
-}
+private val ANALYZE_TOOL = ToolDefinition(
+    name = ANALYZE_TOOL_NAME,
+    description = "Record session efficiency analysis",
+    inputSchema = ToolInputSchema(
+        properties = mapOf(
+            "total_turns" to PropertySchema(type = "integer"),
+            "discovery_turns" to PropertySchema(type = "integer"),
+            "wasted_turn_count" to PropertySchema(type = "integer"),
+            "wasted_turn_causes" to PropertySchema(type = "array", items = PropertySchema(type = "string")),
+            "recommendation" to PropertySchema(type = "string"),
+        ),
+        required = listOf("total_turns", "recommendation"),
+    ),
+)
 
-private val TOOL_CHOICE = buildJsonObject {
-    put("type", "tool")
-    put("name", ANALYZE_TOOL_NAME)
-}
+private val TOOL_CHOICE = ToolChoice(type = "tool", name = ANALYZE_TOOL_NAME)
 
 private val SYSTEM_PROMPT = """
 You are analyzing a Claude Code worker session transcript (JSONL format).

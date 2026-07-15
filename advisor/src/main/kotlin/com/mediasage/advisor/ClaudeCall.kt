@@ -8,6 +8,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.delay
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -17,13 +18,47 @@ private const val MAX_ATTEMPTS = 3
 private val RETRY_DELAYS_MS = listOf(1_000L, 2_000L)
 
 @Serializable
+internal data class ToolDefinition(
+    val name: String,
+    val description: String,
+    @SerialName("input_schema")
+    val inputSchema: ToolInputSchema,
+)
+
+@Serializable
+internal data class ToolInputSchema(
+    val type: String = "object",
+    val properties: Map<String, PropertySchema>,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val required: List<String> = emptyList(),
+)
+
+@Serializable
+internal data class PropertySchema(
+    val type: String,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val description: String? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val items: PropertySchema? = null,
+)
+
+@Serializable
+internal data class ToolChoice(
+    val type: String,
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val name: String? = null,
+)
+
+@Serializable
 internal data class ClaudeRequest(
     val model: String,
-    @SerialName("max_tokens") val maxTokens: Int,
+    @SerialName("max_tokens")
+    val maxTokens: Int,
     val system: String,
     val messages: List<ClaudeMessage>,
-    val tools: List<JsonObject>,
-    @SerialName("tool_choice") val toolChoice: JsonObject,
+    val tools: List<ToolDefinition>,
+    @SerialName("tool_choice")
+    val toolChoice: ToolChoice,
 )
 
 @Serializable
