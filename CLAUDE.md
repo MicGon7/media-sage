@@ -139,7 +139,9 @@ source ~/.zshrc && ./gradlew :agentruntime:run
 # Build agent container image locally
 docker build -f agentruntime/Dockerfile -t media-sage-agent .
 
-# Build worker image for Cloud Run (automated via .github/workflows/build-worker-image.yml on merge to main)
+# Build worker image AND declaratively deploy the media-sage-agent-worker Cloud Run Job
+# (automated via .github/workflows/build-worker-image.yml on merge to main — the job's SA,
+# env vars, secrets, and sizing are declared in that workflow, mirroring deploy-orchestrator.yml)
 # Manual build only needed when testing Dockerfile.worker changes locally before pushing:
 docker build --platform linux/amd64 -f Dockerfile.worker \
   -t us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/worker:latest .
