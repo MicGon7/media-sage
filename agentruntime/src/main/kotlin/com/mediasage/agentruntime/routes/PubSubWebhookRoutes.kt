@@ -2,6 +2,7 @@ package com.mediasage.agentruntime.routes
 
 import com.mediasage.agentruntime.evaluation.AgentService
 import com.mediasage.agentruntime.evaluation.scoring.DecisionScorer
+import com.mediasage.agentruntime.service.AgentLauncher
 import com.mediasage.pipeline.core.JobCompletionEvent
 import com.mediasage.pipeline.core.JobRegistry
 import com.mediasage.pipeline.core.WorkerMetrics
@@ -51,6 +52,7 @@ fun Route.pubSubWebhookRoutes(
     jobRegistry: JobRegistry,
     agentService: AgentService,
     decisionScorer: DecisionScorer,
+    agentLauncher: AgentLauncher,
     scope: CoroutineScope,
 ) {
     post("/webhook/pubsub") {
@@ -66,7 +68,7 @@ fun Route.pubSubWebhookRoutes(
         log.info("[${event.ticketKey}] Pub/Sub completion event: status=${event.status}, execution=${event.executionName}")
         // Acknowledge immediately — Pub/Sub retries on non-2xx. Metrics fetch (~15s) runs in background.
         call.respond(HttpStatusCode.OK)
-        scope.launch { processCompletion(event, jobRegistry, cloudRunJobsClient, agentService, decisionScorer) }
+        scope.launch { processCompletion(event, jobRegistry, cloudRunJobsClient, agentService, decisionScorer, agentLauncher) }
     }
 }
 
@@ -105,6 +107,7 @@ private suspend fun processCompletion(
     cloudRunJobsClient: CloudRunJobsClient,
     agentService: AgentService,
     decisionScorer: DecisionScorer,
+    agentLauncher: AgentLauncher,
 ) {
     val job = jobRegistry.findRunningByTicketKey(event.ticketKey)
     if (job == null) {
@@ -119,13 +122,17 @@ private suspend fun processCompletion(
         metrics = event.toWorkerMetrics(),
     )
     decisionScorer.score(job.jobId)
-    // Run AC compliance evaluation inline after a successful ticket-work completion.
-    // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key).
-    // PR review and conflict jobs set jiraTicketKey to the real key and use a synthetic ticketKey.
+    // After a successful ticket-work completion, run the two independent post-PR reviews.
+    // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key). PR review,
+    // conflict, and quality jobs set jiraTicketKey to the real key and use a synthetic ticketKey,
+    // so this branch never fires for them — the recursion guard that keeps reviews from re-reviewing.
     val prNumber = event.prNumber
     if (event.jiraTicketKey == null && event.status == "success" && prNumber != null) {
         log.info("[${event.ticketKey}] ticket-work succeeded — running AC compliance evaluation (PR #$prNumber)")
         agentService.evaluate(event.ticketKey, prNumber)
+        // Independent code-quality review (advisory, parallel). Never gates merge.
+        log.info("[${event.ticketKey}] ticket-work succeeded — dispatching quality review (PR #$prNumber)")
+        agentLauncher.launchForQualityReview(prNumber, event.ticketKey)
     }
 }
 

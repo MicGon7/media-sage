@@ -180,6 +180,32 @@ class AgentLaunchService(
     }
 
     /**
+     * Launches a Cloud Run Job that independently reviews a bot-authored PR for code quality.
+     *
+     * Deduplicates by [prNumber] using the key `QUALITY-{prNumber}` — distinct from
+     * `pr-review-work`'s `PR-{prNumber}` so neither suppresses the other. Passes `TICKET_KEY`
+     * as the same synthetic dedup key so the worker's completion event matches this job row and
+     * closes it out COMPLETED. [jiraTicketKey] is forwarded as `JIRA_TICKET_KEY`: the entrypoint
+     * uses it for the Jira comment and stamps it on the completion event so the recursion guard
+     * (`jiraTicketKey == null`) excludes this job from re-judging or re-dispatch.
+     *
+     * @param prNumber GitHub PR number to review. Used as the dedup key and passed as `PR_NUMBER`.
+     * @param jiraTicketKey Real Jira key of the ticket whose `ticket-work` opened the PR.
+     * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
+     */
+    override fun launchForQualityReview(prNumber: Int, jiraTicketKey: String): Boolean {
+        val cloudRun = cloudRun ?: return false
+        val key = "QUALITY-$prNumber"
+        val payload = json.encodeToString(mapOf("prNumber" to prNumber.toString(), "jiraTicketKey" to jiraTicketKey))
+        val identifiers = mapOf(
+            "PR_NUMBER" to prNumber.toString(),
+            "TICKET_KEY" to key,
+            "JIRA_TICKET_KEY" to jiraTicketKey,
+        )
+        return dispatchToCloudRun(key, "pr-quality-work", payload, identifiers, cloudRun)
+    }
+
+    /**
      * Launches a Cloud Run Job for [ticketKey] that was unblocked when [blockerKey]'s PR merged.
      *
      * Posts a Jira comment on [ticketKey] citing [blockerKey] as the trigger, then dispatches.

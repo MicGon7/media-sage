@@ -48,6 +48,22 @@ interface AgentLauncher {
     fun launchForConflictResolution(prNumber: Int): Boolean
 
     /**
+     * Launches a Cloud Run Job that independently reviews a bot-authored PR for code quality.
+     *
+     * Dispatched after a successful `ticket-work` completion (advisory, in parallel — it never
+     * gates PR visibility or merge). Deduplicates by [prNumber] (`QUALITY-{prNumber}`), a key
+     * distinct from `pr-review-work`'s `PR-{prNumber}` so the two never suppress each other in
+     * [JobRegistry.shouldDispatch]. [jiraTicketKey] rides along as the real Jira key: it is set
+     * on the worker's completion event so the recursion guard (`jiraTicketKey == null`) excludes
+     * this job from re-judging or re-dispatch.
+     *
+     * @param prNumber GitHub PR number to review. Used as the dedup key and passed as `PR_NUMBER`.
+     * @param jiraTicketKey Real Jira key of the ticket whose `ticket-work` opened the PR (e.g. "MS-545").
+     * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
+     */
+    fun launchForQualityReview(prNumber: Int, jiraTicketKey: String): Boolean
+
+    /**
      * Launches a Cloud Run Job for [ticketKey] after its last blocker merged.
      *
      * Posts a Jira comment on [ticketKey] citing [blockerKey] as the trigger before

@@ -454,6 +454,11 @@ private class FakeAgentLauncher : AgentLauncher {
         return true
     }
 
+    override fun launchForQualityReview(prNumber: Int, jiraTicketKey: String): Boolean {
+        lastPrNumber = prNumber
+        return true
+    }
+
     override fun launchForUnblockedTicket(ticketKey: String, blockerKey: String): Boolean {
         unblockedLaunches++
         lastUnblockedTicket = ticketKey
