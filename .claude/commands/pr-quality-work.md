@@ -55,6 +55,13 @@ the next; a text response is appropriate only when a step fails or genuinely req
      Do **not** merely confirm the diff follows `CLAUDE.md`. Actively challenge:
      - *Is this convention actually correct here, or does it contradict the reference (e.g. NowInAndroid)?*
      - *Is this code reachable?* A faithful refactor of a dead/unreachable screen is still wasted work.
+     - *Does the convention state a precondition or rationale?* Before flagging a diff as violating a
+       repo convention, re-read that convention and confirm its stated precondition actually holds in
+       the diff under review. A **conditional** convention must not be reported as violated when its
+       precondition is absent — e.g. the Client `open` rule applies only when the client is exercised
+       through a service/coroutine under `runTest`+`advanceUntilIdle`; a client tested directly with
+       `MockEngine` correctly stays `final`. If you surface such a finding anyway, name the unmet
+       precondition explicitly and frame the change as *optional*, not required.
      If a rule looks wrong or misapplied, say so — that is the most valuable thing you can surface.
 
 3. Classify each finding:
