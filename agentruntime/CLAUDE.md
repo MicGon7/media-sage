@@ -96,6 +96,8 @@ AC compliance evaluation (`judge-work`) is no longer a Cloud Run Job. It runs in
 
 The `:agentruntime` server runs as a GCP Cloud Run Service (`media-sage-orchestrator`). It is a stateless HTTP server — it receives webhooks, builds prompts, and dispatches Cloud Run Jobs. It does not clone any repo.
 
+**The deploy is declarative — `.github/workflows/deploy-orchestrator.yml` is the source of truth** for the service account, env vars, secrets, scaling, and resources. It uses `overwrite` update strategies, so any env var or secret not listed in the workflow is removed on the next deploy. The tables below mirror the workflow; keep them in sync. Only vars the app actually consumes (see `src/main/resources/application.conf`) are declared — historical drift (`AGENT_REPO_PATH`, `ATLASSIAN_EMAIL`, `GITHUB_BOT_EMAIL`, `GITHUB_BOT_NAME`, `GCP_JUDGE_JOB_NAME`, `GCP_COMMENT_JOB_NAME`, and the `atlassian-api-token` / `github-bot-token` secrets) was pruned in MS-392.
+
 - **Service:** `media-sage-orchestrator`
 - **URL:** `https://media-sage-orchestrator-924166357877.us-central1.run.app`
 - **Project:** `media-sage-agent` · **Region:** `us-central1`
@@ -108,15 +110,19 @@ The `:agentruntime` server runs as a GCP Cloud Run Service (`media-sage-orchestr
 | Variable | Value |
 |---|---|
 | `GITHUB_BOT_LOGIN` | `media-sage-worker[bot]` (GitHub App identity — note `[bot]` suffix) |
+| `GITHUB_APP_ID` | `3848870` (feedback-scan auto-PR) |
+| `GITHUB_APP_INSTALLATION_ID` | `135953548` (feedback-scan auto-PR) |
+| `GITHUB_OWNER` | `michael-gonzalez-dev` |
+| `GITHUB_REPO` | `media-sage` |
 | `JIRA_EMAIL` | `micgon7@gmail.com` |
 | `JIRA_BOT_EMAIL` | Bot Jira account email |
-| `JIRA_CLOUD_ID` | `ad358528-f7e9-4e40-9531-c51049908d6d` |
 | `JIRA_BOT_ACCOUNT_ID` | Jira account ID of the bot user |
 | `GCP_PROJECT_ID` | `media-sage-agent` |
 | `GCP_REGION` | `us-central1` |
-| `GCP_JOB_NAME` | `media-sage-agent-worker` |
 | `ANTHROPIC_BASE_URL` | `https://api.fuelix.ai` (Fuelix proxy) |
-| `CLAUDE_MODEL` | `claude-sonnet-4` (short-form alias required by Fuelix; also read by entrypoint to record `model_version`) |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4` (short-form alias required by Fuelix) |
+
+> `JIRA_CLOUD_ID` and `GCP_JOB_NAME` are **not** set — the app falls back to the correct hardcoded defaults in `application.conf` (`ad358528-…` and `media-sage-agent-worker`), so the declarative deploy leaves them unset to match production.
 
 **Secrets (Secret Manager):**
 
@@ -129,15 +135,13 @@ The `:agentruntime` server runs as a GCP Cloud Run Service (`media-sage-orchestr
 | `supabase-db-url` | `SUPABASE_DB_URL` | Postgres URI with credentials |
 | `pubsub-webhook-secret` | `PUBSUB_WEBHOOK_SECRET` | Shared secret for Pub/Sub push URL auth |
 | `google-credentials-base64` | `GOOGLE_CREDENTIALS_BASE64` | Base64-encoded GCP SA JSON (worker dispatch) |
+| `github-app-private-key-base64` | `GITHUB_APP_PRIVATE_KEY_BASE64` | Base64-encoded GitHub App RSA key (feedback-scan auto-PR) |
+
+> All secrets except `github-app-private-key-base64` are prefixed `orchestrator-` in Secret Manager (e.g. `orchestrator-anthropic-auth-token`); the workflow references the full names.
 
 **GitHub App auth pattern:** Workers authenticate as `media-sage-worker[bot]` using short-lived installation tokens (1-hour TTL) generated at job startup. The orchestrator does not use GitHub App auth — it is a stateless event router with no GitHub API calls. The git commit email for workers is derived automatically from the App ID: `{GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com`.
 
-**To redeploy** after a new image push:
-```bash
-gcloud run deploy media-sage-orchestrator \
-  --image us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest \
-  --region us-central1 --project media-sage-agent
-```
+**To redeploy:** push to `main` with changes under `agentruntime/**` — `deploy-orchestrator.yml` builds the image and deploys the service declaratively (SA, env vars, secrets, scaling, resources). No manual `gcloud run deploy` is needed; running one by hand risks re-introducing the out-of-band drift this workflow exists to prevent. Trigger a config-only redeploy via the workflow's **Run workflow** button or an empty commit under `agentruntime/`.
 
 **Manual fallback (Railway):** The Railway `media-sage-orchestrator` service retains all env vars and is kept deactivated. To switch back: redeploy Railway service → update Jira + GitHub webhook URLs to the Railway URL.
 

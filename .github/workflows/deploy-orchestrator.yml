@@ -6,7 +6,11 @@ on:
     paths:
       - 'agentruntime/**'
       - 'settings-agentruntime.gradle.kts'
+      - '.github/workflows/deploy-orchestrator.yml'
       - '!agentruntime/src/main/kotlin/com/mediasage/agentruntime/smoketest/**'
+  # Allow config-only redeploys (e.g. a secret rotation or scaling change with no
+  # agentruntime/** code change) from the Actions tab.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,9 +47,50 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
 
+      # Declarative deploy: this workflow is the source of truth for the service's
+      # runtime config. `overwrite` update strategies mean any env var or secret NOT
+      # listed here is removed from the service on deploy — reproduce every value the
+      # app actually consumes (see agentruntime/src/main/resources/application.conf).
+      # The service account goes through `flags` because deploy-cloudrun@v2 has no
+      # `service_account:` input (MS-391).
       - name: Deploy agentruntime service
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: media-sage-orchestrator
           image: us-central1-docker.pkg.dev/media-sage-agent/media-sage-agent/orchestrator:latest
           region: us-central1
+          env_vars: |
+            GITHUB_BOT_LOGIN=media-sage-worker[bot]
+            GITHUB_APP_ID=3848870
+            GITHUB_APP_INSTALLATION_ID=135953548
+            GITHUB_OWNER=michael-gonzalez-dev
+            GITHUB_REPO=media-sage
+            JIRA_EMAIL=micgon7@gmail.com
+            JIRA_BOT_EMAIL=mediasage.bot@gmail.com
+            JIRA_BOT_ACCOUNT_ID=712020:a3ca2e0d-e09f-4117-bf9b-dcbd095be454
+            GCP_PROJECT_ID=media-sage-agent
+            GCP_REGION=us-central1
+            ANTHROPIC_BASE_URL=https://api.fuelix.ai
+            ANTHROPIC_MODEL=claude-sonnet-4
+          env_vars_update_strategy: overwrite
+          secrets: |
+            ANTHROPIC_AUTH_TOKEN=orchestrator-anthropic-auth-token:latest
+            GITHUB_WEBHOOK_SECRET=orchestrator-github-webhook-secret:latest
+            GITHUB_APP_PRIVATE_KEY_BASE64=github-app-private-key-base64:latest
+            JIRA_API_TOKEN=orchestrator-jira-api-token:latest
+            JIRA_BOT_API_TOKEN=orchestrator-jira-bot-api-token:latest
+            PUBSUB_WEBHOOK_SECRET=orchestrator-pubsub-webhook-secret:latest
+            SUPABASE_DB_URL=orchestrator-supabase-db-url:latest
+            GOOGLE_CREDENTIALS_BASE64=orchestrator-google-credentials-base64:latest
+          secrets_update_strategy: overwrite
+          flags: >-
+            --service-account=media-sage-orchestrator@media-sage-agent.iam.gserviceaccount.com
+            --min-instances=1
+            --max-instances=3
+            --cpu=1
+            --memory=2Gi
+            --port=8081
+            --timeout=3600
+            --concurrency=80
+            --no-cpu-throttling
+            --cpu-boost
