@@ -19,6 +19,8 @@ import com.mediasage.agentruntime.service.AgentLaunchService
 import com.mediasage.agentruntime.service.CloudRunDispatch
 import com.mediasage.agentruntime.service.CloudRunJobsClient
 import com.mediasage.agentruntime.service.JiraApiClient
+import com.mediasage.agentruntime.service.JobCompletionNotifier
+import com.mediasage.agentruntime.service.SlackApiClient
 import com.mediasage.agentruntime.service.JiraTicketClient
 import com.mediasage.agentruntime.service.TicketSystemClient
 import io.ktor.client.*
@@ -51,6 +53,8 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single { buildJiraTicketClient(config, get()) }
     single<JiraApiClient> { get<JiraTicketClient>() }
     single<TicketSystemClient> { get<JiraTicketClient>() }
+    single { SlackApiClient(get(), config.slackWebhookUrl) }
+    single { JobCompletionNotifier(get(), get(), config.githubRepoOwner, config.githubRepoName) }
     single {
         val cloudRun = buildCloudRunDispatch(config, get())
         AgentLaunchService(scope, cloudRun, get<JiraApiClient>())

@@ -8,9 +8,11 @@ import com.mediasage.agentruntime.feedback.pr.FeedbackPrService
 import com.mediasage.agentruntime.plugins.*
 import com.mediasage.agentruntime.routes.feedbackScanRoutes
 import com.mediasage.agentruntime.routes.githubWebhookRoutes
+import com.mediasage.agentruntime.routes.PostCompletionActions
 import com.mediasage.agentruntime.routes.pubSubWebhookRoutes
 import com.mediasage.agentruntime.routes.webhookRoutes
 import com.mediasage.agentruntime.service.AgentLaunchService
+import com.mediasage.agentruntime.service.JobCompletionNotifier
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
 import io.ktor.server.netty.EngineMain
@@ -39,6 +41,7 @@ fun Application.module() {
     val jobRegistry = agentLaunchService.cloudRun?.jobs
     val decisionScorer = get<DecisionScorer>()
     val agentService: AgentService = get()
+    val jobCompletionNotifier = get<JobCompletionNotifier>()
     val feedbackPrService: FeedbackPrService? = getKoin().getOrNull()
     configureContentNegotiation()
     configureCallLogging()
@@ -51,7 +54,7 @@ fun Application.module() {
         if (config.pubSubWebhookSecret.isNotBlank() && cloudRunJobsClient != null && jobRegistry != null) {
             pubSubWebhookRoutes(
                 config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry,
-                agentService, decisionScorer, agentLaunchService, scope,
+                PostCompletionActions(agentService, decisionScorer, agentLaunchService, jobCompletionNotifier), scope,
             )
         }
     }
@@ -84,6 +87,7 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         githubAppInstallationId = config.str("app.feedbackScan.githubInstallationId"),
         githubRepoOwner = config.str("app.feedbackScan.githubRepoOwner"),
         githubRepoName = config.str("app.feedbackScan.githubRepoName"),
+        slackWebhookUrl = config.str("app.slack.webhookUrl"),
     )
 
 private fun decodeBase64(encoded: String): String =

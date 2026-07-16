@@ -3,6 +3,7 @@ package com.mediasage.agentruntime.routes
 import com.mediasage.agentruntime.evaluation.AgentService
 import com.mediasage.agentruntime.evaluation.scoring.DecisionScorer
 import com.mediasage.agentruntime.service.AgentLauncher
+import com.mediasage.agentruntime.service.JobCompletionNotifier
 import com.mediasage.pipeline.core.JobCompletionEvent
 import com.mediasage.pipeline.core.JobRegistry
 import com.mediasage.pipeline.core.WorkerMetrics
@@ -46,13 +47,23 @@ private data class PubSubPushRequest(
  * Authentication: the push subscription URL includes `?token=<secret>` which is verified on
  * every delivery. Requests with a missing or wrong token are rejected with 401.
  */
+/**
+ * The reactions fired when a completion event is processed: decision scoring, the Slack
+ * completion notification, AC-compliance evaluation, and the code-quality review launcher.
+ * Bundled into one object so the route and [processCompletion] stay within the parameter limit.
+ */
+class PostCompletionActions(
+    val agentService: AgentService,
+    val decisionScorer: DecisionScorer,
+    val agentLauncher: AgentLauncher,
+    val jobCompletionNotifier: JobCompletionNotifier,
+)
+
 fun Route.pubSubWebhookRoutes(
     webhookSecret: String,
     cloudRunJobsClient: CloudRunJobsClient,
     jobRegistry: JobRegistry,
-    agentService: AgentService,
-    decisionScorer: DecisionScorer,
-    agentLauncher: AgentLauncher,
+    actions: PostCompletionActions,
     scope: CoroutineScope,
 ) {
     post("/webhook/pubsub") {
@@ -68,7 +79,7 @@ fun Route.pubSubWebhookRoutes(
         log.info("[${event.ticketKey}] Pub/Sub completion event: status=${event.status}, execution=${event.executionName}")
         // Acknowledge immediately — Pub/Sub retries on non-2xx. Metrics fetch (~15s) runs in background.
         call.respond(HttpStatusCode.OK)
-        scope.launch { processCompletion(event, jobRegistry, cloudRunJobsClient, agentService, decisionScorer, agentLauncher) }
+        scope.launch { processCompletion(event, jobRegistry, cloudRunJobsClient, actions) }
     }
 }
 
@@ -105,9 +116,7 @@ private suspend fun processCompletion(
     event: JobCompletionEvent,
     jobRegistry: JobRegistry,
     cloudRunJobsClient: CloudRunJobsClient,
-    agentService: AgentService,
-    decisionScorer: DecisionScorer,
-    agentLauncher: AgentLauncher,
+    actions: PostCompletionActions,
 ) {
     val job = jobRegistry.findRunningByTicketKey(event.ticketKey)
     if (job == null) {
@@ -121,7 +130,8 @@ private suspend fun processCompletion(
         failedGate = event.failedGate,
         metrics = event.toWorkerMetrics(),
     )
-    decisionScorer.score(job.jobId)
+    actions.decisionScorer.score(job.jobId)
+    actions.jobCompletionNotifier.notifyCompletion(event)
     // After a successful ticket-work completion, run the two independent post-PR reviews.
     // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key). PR review,
     // conflict, and quality jobs set jiraTicketKey to the real key and use a synthetic ticketKey,
@@ -129,10 +139,10 @@ private suspend fun processCompletion(
     val prNumber = event.prNumber
     if (event.jiraTicketKey == null && event.status == "success" && prNumber != null) {
         log.info("[${event.ticketKey}] ticket-work succeeded — running AC compliance evaluation (PR #$prNumber)")
-        agentService.evaluate(event.ticketKey, prNumber)
+        actions.agentService.evaluate(event.ticketKey, prNumber)
         // Independent code-quality review (advisory, parallel). Never gates merge.
         log.info("[${event.ticketKey}] ticket-work succeeded — dispatching quality review (PR #$prNumber)")
-        agentLauncher.launchForQualityReview(prNumber, event.ticketKey)
+        actions.agentLauncher.launchForQualityReview(prNumber, event.ticketKey)
     }
 }
 

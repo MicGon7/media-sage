@@ -56,6 +56,8 @@ package com.mediasage.agentruntime.di
  *   `GITHUB_APP_INSTALLATION_ID`.
  * @property githubRepoOwner Repository owner for the auto-PR feature. Sourced from `GITHUB_OWNER`.
  * @property githubRepoName Repository name for the auto-PR feature. Sourced from `GITHUB_REPO`.
+ * @property slackWebhookUrl Slack incoming-webhook URL for job-completion notifications. Sourced
+ *   from `SLACK_WEBHOOK_URL`. When blank, no Slack messages are posted.
  */
 data class AgentConfig(
     val githubWebhookSecret: String,
@@ -80,4 +82,5 @@ data class AgentConfig(
     val githubAppInstallationId: String = "",
     val githubRepoOwner: String = "",
     val githubRepoName: String = "",
+    val slackWebhookUrl: String = "",
 )
