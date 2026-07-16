@@ -82,6 +82,7 @@ jobs:
             PUBSUB_WEBHOOK_SECRET=orchestrator-pubsub-webhook-secret:latest
             SUPABASE_DB_URL=orchestrator-supabase-db-url:latest
             GOOGLE_CREDENTIALS_BASE64=orchestrator-google-credentials-base64:latest
+            SLACK_WEBHOOK_URL=orchestrator-slack-webhook-url:latest
           secrets_update_strategy: overwrite
           flags: >-
             --service-account=media-sage-orchestrator@media-sage-agent.iam.gserviceaccount.com

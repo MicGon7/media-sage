@@ -12,7 +12,8 @@ agentruntime/src/main/kotlin/com/mediasage/agentruntime/
 ├── feedback/            — PatternDetector, GitHubApiClient, FeedbackPrService
 ├── plugins/             — ContentNegotiation, CallLogging, StatusPages
 ├── routes/              — JiraWebhookRoutes, GitHubWebhookRoutes, PubSubWebhookRoutes
-└── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiClient
+└── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiClient,
+                            SlackApiClient, JobCompletionNotifier
 ```
 
 ## Prompts
@@ -136,6 +137,7 @@ The `:agentruntime` server runs as a GCP Cloud Run Service (`media-sage-orchestr
 | `pubsub-webhook-secret` | `PUBSUB_WEBHOOK_SECRET` | Shared secret for Pub/Sub push URL auth |
 | `google-credentials-base64` | `GOOGLE_CREDENTIALS_BASE64` | Base64-encoded GCP SA JSON (worker dispatch) |
 | `github-app-private-key-base64` | `GITHUB_APP_PRIVATE_KEY_BASE64` | Base64-encoded GitHub App RSA key (feedback-scan auto-PR) |
+| `slack-webhook-url` | `SLACK_WEBHOOK_URL` | Slack incoming-webhook URL for job-completion notifications (blank disables) |
 
 > All secrets except `github-app-private-key-base64` are prefixed `orchestrator-` in Secret Manager (e.g. `orchestrator-anthropic-auth-token`); the workflow references the full names.
 
