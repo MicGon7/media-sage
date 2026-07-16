@@ -1,5 +1,9 @@
 package com.mediasage.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,6 +79,12 @@ fun MediaSageScaffold(
         NavDisplay(
             backStack = appState.backStack,
             modifier = Modifier.padding(padding),
+            // The navigation3-ui default transition specs are expect/actual: iOS slides
+            // (slideIntoContainer) while Android fades. Pin an explicit fade on all three
+            // specs so top-level destination switches feel identical across platforms.
+            transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
+            popTransitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
+            predictivePopTransitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
         ) { route ->
             when (route) {
                 is Route.Briefing -> NavEntry(route) {
