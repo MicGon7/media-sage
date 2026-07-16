@@ -98,6 +98,12 @@ the next; a text response is appropriate only when a step fails or genuinely req
      suggestion, add `"start_line"` above `"line"`.
    - If you found nothing worth flagging, post the review with an empty `comments` array and a summary
      saying the change looks good — the review must run and post for every PR.
+   - Immediately after posting, record how many review comments you posted so the Slack completion
+     notification can show a `clean` / `N comments` signal (programmatic count, no prose):
+     ```bash
+     python3 -c "import json;print(len(json.load(open('/tmp/review.json')).get('comments',[])))" \
+       > /tmp/review_comment_count.txt
+     ```
 
 5. Write `/tmp/jira_comment.txt` — a plain-text summary of what the review found (see the Jira comment
    file rule in CLAUDE.md Agent Guidelines). Do NOT post via the Jira REST API — the entrypoint appends
