@@ -47,8 +47,29 @@ advisor/src/main/kotlin/com/mediasage/advisor/
     ├── FetchTranscriptTool.kt
     ├── AnalyzeRunTool.kt      — loads DecisionScoresTable + TranscriptsTable
     ├── CompareRunsTool.kt
-    └── ExplainFailureTool.kt
+    ├── ExplainFailureTool.kt
+    └── TranscriptPreprocessor.kt — read-time transcript slimming for analyze_run / explain_failure
 ```
+
+## Transcript preprocessing
+
+`analyze_run` and `explain_failure` feed the transcript through `preprocessTranscript`
+before sending it to Claude. This is a **read-time, advisor-only** transform — the raw
+JSONL in the `transcripts` table is never mutated.
+
+What it keeps:
+
+- `system`, `result`, and `assistant` lines (thinking blocks are stripped from assistant
+  turns to save tokens).
+- `user`/tool_result lines are **condensed, not dropped**. Small results pass through
+  verbatim; large ones keep their head and tail plus any "signal" lines (errors, exceptions,
+  test pass/fail, exit status, `BUILD`, detekt) while the bulky middle is replaced with a
+  `... [N middle lines condensed, M signal lines kept] ...` marker. This keeps the advisor
+  able to see *tool outcomes* — the thing it needs to diagnose a run — without blowing the
+  context budget.
+
+If the whole filtered transcript still exceeds the size threshold, it falls back to a
+head/tail trim of the entire document.
 
 ## Adding a tool
 
