@@ -1,5 +1,9 @@
 package com.mediasage.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +47,18 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
+private const val NAV_FADE_IN_MILLIS = 300
+private const val NAV_FADE_OUT_MILLIS = 200
+
+/**
+ * Fade applied to every top-level destination switch. The navigation3-ui default transition
+ * specs are expect/actual — the iOS (uikit) actual slides (slideIntoContainer) while Android
+ * fades — so we pin this explicit fade on all three [NavDisplay] specs to keep the animation
+ * identical across platforms.
+ */
+private val navTabTransition =
+    fadeIn(tween(NAV_FADE_IN_MILLIS)) togetherWith fadeOut(tween(NAV_FADE_OUT_MILLIS))
+
 @Composable
 fun MediaSageScaffold(
     onSignedOut: () -> Unit = {},
@@ -75,6 +91,9 @@ fun MediaSageScaffold(
         NavDisplay(
             backStack = appState.backStack,
             modifier = Modifier.padding(padding),
+            transitionSpec = { navTabTransition },
+            popTransitionSpec = { navTabTransition },
+            predictivePopTransitionSpec = { navTabTransition },
         ) { route ->
             when (route) {
                 is Route.Briefing -> NavEntry(route) {
