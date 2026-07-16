@@ -47,6 +47,18 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
+private const val NAV_FADE_IN_MILLIS = 300
+private const val NAV_FADE_OUT_MILLIS = 200
+
+/**
+ * Fade applied to every top-level destination switch. The navigation3-ui default transition
+ * specs are expect/actual — the iOS (uikit) actual slides (slideIntoContainer) while Android
+ * fades — so we pin this explicit fade on all three [NavDisplay] specs to keep the animation
+ * identical across platforms.
+ */
+private val navTabTransition =
+    fadeIn(tween(NAV_FADE_IN_MILLIS)) togetherWith fadeOut(tween(NAV_FADE_OUT_MILLIS))
+
 @Composable
 fun MediaSageScaffold(
     onSignedOut: () -> Unit = {},
@@ -79,12 +91,9 @@ fun MediaSageScaffold(
         NavDisplay(
             backStack = appState.backStack,
             modifier = Modifier.padding(padding),
-            // The navigation3-ui default transition specs are expect/actual: iOS slides
-            // (slideIntoContainer) while Android fades. Pin an explicit fade on all three
-            // specs so top-level destination switches feel identical across platforms.
-            transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
-            popTransitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
-            predictivePopTransitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
+            transitionSpec = { navTabTransition },
+            popTransitionSpec = { navTabTransition },
+            predictivePopTransitionSpec = { navTabTransition },
         ) { route ->
             when (route) {
                 is Route.Briefing -> NavEntry(route) {
