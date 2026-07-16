@@ -1,5 +1,7 @@
 package com.mediasage.advisor.tools
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertFalse
@@ -14,8 +16,10 @@ class TranscriptPreprocessorTest {
     private fun assistantWithThinking(tool: String = "Bash", thinking: String = "long reasoning") =
         """{"type":"assistant","message":{"role":"assistant","content":""" +
             """[{"type":"thinking","thinking":"$thinking"},{"type":"tool_use","name":"$tool","input":{}}]}}"""
-    private fun userEvent(content: String = "file contents") =
-        """{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"$content"}]}}"""
+    private fun userEvent(content: String = "file contents"): String {
+        val escaped = Json.encodeToString(JsonPrimitive.serializer(), JsonPrimitive(content))
+        return """{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":$escaped}]}}"""
+    }
 
     @Test
     fun `keeps system and result events`() {
@@ -46,15 +50,32 @@ class TranscriptPreprocessorTest {
     }
 
     @Test
-    fun `drops user events`() {
+    fun `keeps small tool_result content alongside the tool_use call`() {
         val transcript = listOf(
             assistantEvent(),
-            userEvent("large file dump here"),
+            userEvent("BUILD SUCCESSFUL"),
             resultEvent,
         ).joinToString("\n")
         val result = preprocessTranscript(transcript)
-        assertFalse(result.contains("large file dump here"))
         assertContains(result, "tool_use")
+        assertContains(result, "tool_result")
+        assertContains(result, "BUILD SUCCESSFUL")
+    }
+
+    @Test
+    fun `condenses large tool_result but preserves signal lines and trims the middle`() {
+        val big = buildString {
+            repeat(20) { appendLine("head line $it") }
+            repeat(2000) { appendLine("filler filler filler $it") }
+            appendLine("Tests FAILED: 3 tests failed")
+            repeat(2000) { appendLine("more filler $it") }
+            repeat(20) { appendLine("tail line $it") }
+        }
+        val transcript = listOf(assistantEvent(), userEvent(big), resultEvent).joinToString("\n")
+        val result = preprocessTranscript(transcript)
+        assertContains(result, "Tests FAILED: 3 tests failed")
+        assertContains(result, "middle lines condensed")
+        assertFalse(result.contains("filler filler filler 1000"))
     }
 
     @Test
