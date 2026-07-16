@@ -145,6 +145,12 @@ payload = {
   'status': '$status'
 }
 
+# jobType identifies the job family (ticket-work, pr-quality-work, ...) so the notifier can name
+# each completion without string-parsing the dedup key. Published verbatim from JOB_TYPE.
+job_type = os.environ.get('JOB_TYPE', '').strip()
+if job_type:
+    payload['jobType'] = job_type
+
 # jiraTicketKey is set when TICKET_KEY is a synthetic dedup key (e.g. PR-200, CONFLICT-199).
 jira_key = os.environ.get('JIRA_TICKET_KEY', '').strip()
 if jira_key:
@@ -156,6 +162,23 @@ try:
     m = re.search(r'/pull/(\d+)', pr_url)
     if m:
         payload['prNumber'] = int(m.group(1))
+except Exception:
+    pass
+
+# PR-scoped jobs that review an existing PR (e.g. pr-quality-work) never open one, so no
+# worker_pr_url.txt is written. Fall back to the dispatched PR_NUMBER so the PR link still renders.
+if 'prNumber' not in payload:
+    pr_env = os.environ.get('PR_NUMBER', '').strip()
+    if pr_env.isdigit():
+        payload['prNumber'] = int(pr_env)
+
+# reviewCommentCount: a review-type job writes the number of review comments it posted to
+# /tmp/review_comment_count.txt after posting its GitHub review (same /tmp handoff as failed_gate).
+# Programmatic count of output already produced — no summarization pass.
+try:
+    count = open('/tmp/review_comment_count.txt').read().strip()
+    if count:
+        payload['reviewCommentCount'] = int(count)
 except Exception:
     pass
 

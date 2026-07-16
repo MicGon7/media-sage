@@ -7,6 +7,9 @@ import org.slf4j.LoggerFactory
 
 private const val SUCCESS_STATUS = "success"
 
+/** Job types that post findings to a PR and therefore carry a programmatic review signal. */
+private val REVIEW_JOB_TYPES = setOf("pr-quality-work", "pr-review-work")
+
 /**
  * Builds a facts-only Slack message for each job completion and posts it via [SlackApiClient].
  *
@@ -53,9 +56,10 @@ class JobCompletionNotifier(
 }
 
 /**
- * Renders the facts-only completion message: status header followed by turns, cost, duration,
- * failed gate, and PR link, then one ⚠️ line per gate-failure trend that crossed threshold.
- * Missing metrics (old worker or recovery path) render as `n/a`.
+ * Renders the facts-only completion message: status header (with the job type when known) followed
+ * by turns, cost, duration, failed gate, a review signal for review-type jobs, and the PR link, then
+ * one ⚠️ line per gate-failure trend that crossed threshold. Missing metrics (old worker or recovery
+ * path) render as `n/a`; a missing job type or review signal is simply omitted.
  */
 internal fun buildCompletionMessage(
     event: JobCompletionEvent,
@@ -64,14 +68,27 @@ internal fun buildCompletionMessage(
 ): String {
     val key = event.jiraTicketKey ?: event.ticketKey
     val icon = if (event.status == SUCCESS_STATUS) "✅" else "❌"
-    val lines = mutableListOf("$icon *$key* — ${event.status}")
+    val header = event.jobType?.let { "$icon *$key* — $it — ${event.status}" }
+        ?: "$icon *$key* — ${event.status}"
+    val lines = mutableListOf(header)
     lines += "• turns: ${event.numTurns?.toString() ?: "n/a"}"
     lines += "• cost: ${event.totalCostUsd?.let(::formatCost) ?: "n/a"}"
     lines += "• duration: ${event.durationMs?.let(::formatDuration) ?: "n/a"}"
     lines += "• gate: ${event.failedGate ?: "none"}"
+    reviewSignal(event)?.let { lines += "• review: $it" }
     prUrl?.let { lines += "• PR: $it" }
     gatePatterns.forEach { lines += formatGateTrend(it) }
     return lines.joinToString("\n")
+}
+
+/**
+ * Programmatic review signal for review-type jobs: `clean` when zero comments were posted, otherwise
+ * `N comments`. Null (line omitted) for non-review jobs or when the worker did not report a count.
+ */
+private fun reviewSignal(event: JobCompletionEvent): String? {
+    if (event.jobType !in REVIEW_JOB_TYPES) return null
+    val count = event.reviewCommentCount ?: return null
+    return if (count == 0) "clean" else "$count comment${if (count == 1) "" else "s"}"
 }
 
 internal fun formatGateTrend(pattern: DetectedPattern.GateFailure): String =

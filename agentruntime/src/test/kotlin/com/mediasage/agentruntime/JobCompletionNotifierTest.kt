@@ -70,6 +70,58 @@ class JobCompletionNotifierTest {
         assertTrue(msg.contains("success"), "status present")
         assertFalse(msg.contains("⚠️"), "no gate trend line for a clean success")
     }
+
+    @Test
+    fun namesJobTypeInHeaderForTicketWork() = runTest {
+        val msg = render(successEvent().copy(jobType = "ticket-work"))
+        assertTrue(msg.contains("*MS-300* — ticket-work — success"), "job type named in header")
+    }
+
+    @Test
+    fun rendersPrLinkAndCleanSignalForQualityReviewWithNoComments() = runTest {
+        val msg = render(
+            successEvent().copy(jobType = "pr-quality-work", prNumber = 314, reviewCommentCount = 0),
+        )
+        assertTrue(msg.contains("pr-quality-work"), "job type named")
+        assertTrue(msg.contains("review: clean"), "clean signal when no comments")
+        assertTrue(msg.contains("github.com/michael-gonzalez-dev/media-sage/pull/314"), "PR link present")
+    }
+
+    @Test
+    fun rendersCommentCountSignalForQualityReviewWithComments() = runTest {
+        val single = render(successEvent().copy(jobType = "pr-quality-work", reviewCommentCount = 1))
+        assertTrue(single.contains("review: 1 comment"), "singular comment signal")
+        assertFalse(single.contains("1 comments"), "no plural for a single comment")
+
+        val many = render(successEvent().copy(jobType = "pr-quality-work", reviewCommentCount = 3))
+        assertTrue(many.contains("review: 3 comments"), "plural comment count signal")
+    }
+
+    @Test
+    fun omitsReviewSignalForNonReviewJobAndMissingJobType() = runTest {
+        val ticketWork = render(successEvent().copy(jobType = "ticket-work", reviewCommentCount = 5))
+        assertFalse(ticketWork.contains("review:"), "no review signal for non-review job type")
+
+        // Null jobType (older worker / recovery path) still produces a valid message.
+        val legacy = render(successEvent())
+        assertTrue(legacy.contains("*MS-300* — success"), "header renders without a job type")
+        assertFalse(legacy.contains("review:"), "no review signal without a job type")
+    }
+
+    private suspend fun render(event: JobCompletionEvent): String {
+        var body: String? = null
+        val engine = MockEngine { request ->
+            body = (request.body as TextContent).text
+            respond("ok", HttpStatusCode.OK)
+        }
+        JobCompletionNotifier(
+            slackClient = SlackApiClient(HttpClient(engine), "https://hooks.slack.com/x"),
+            patternDetector = FakePatternDetector(emptyList()),
+            repoOwner = "michael-gonzalez-dev",
+            repoName = "media-sage",
+        ).notifyCompletion(event)
+        return body!!
+    }
 }
 
 private fun failureEvent() = JobCompletionEvent(
