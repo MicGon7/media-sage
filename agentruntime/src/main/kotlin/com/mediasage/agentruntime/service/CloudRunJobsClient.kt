@@ -55,7 +55,7 @@ private data class OperationError(
  *
  * Dispatches the job and marks it RUNNING, then returns immediately. Completion is signalled
  * by the worker itself via a Pub/Sub push event to [POST /webhook/pubsub], which calls
- * [onJobCompleted] with metrics already embedded in the event payload (MS-412).
+ * [onJobCompleted] with metrics already embedded in the event payload.
  *
  * [recoverJob] is the startup safety net: on restart it checks RUNNING jobs whose Pub/Sub
  * event may have been missed while the orchestrator was down.
@@ -172,7 +172,7 @@ class CloudRunJobsClient(
      * Called by the Pub/Sub webhook route when the worker signals completion.
      *
      * Worker metrics are read directly from [metrics] (embedded in the Pub/Sub payload by
-     * the worker, MS-412) and passed to [JobRepository.markCompleted]. No Cloud Logging fetch.
+     * the worker) and passed to [JobRepository.markCompleted]. No Cloud Logging fetch.
      *
      * @param metrics Parsed from the worker's Pub/Sub event payload. Null for old workers or
      *   the recovery path; the job row is still marked COMPLETED with null metric columns.
@@ -181,14 +181,13 @@ class CloudRunJobsClient(
         jobId: UUID,
         ticketKey: String,
         succeeded: Boolean,
-        failedGate: String? = null,
         metrics: WorkerMetrics? = null,
     ): Boolean {
         return if (succeeded) {
             handleSuccess(jobId, ticketKey, metrics)
         } else {
-            log.warn("[$ticketKey] Worker reported failure via Pub/Sub" + (failedGate?.let { " (gate=$it)" } ?: ""))
-            jobRepository.markFailed(jobId, failedGate, metrics?.modelVersion)
+            log.warn("[$ticketKey] Worker reported failure via Pub/Sub")
+            jobRepository.markFailed(jobId, metrics?.modelVersion)
             false
         }
     }

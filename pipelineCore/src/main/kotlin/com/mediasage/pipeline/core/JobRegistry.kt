@@ -21,12 +21,11 @@ interface JobRegistry {
     suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics? = null)
 
     /**
-     * Marks [jobId] FAILED, optionally recording the [failedGate] that caused the failure
-     * (reported by the worker) and the [modelVersion] that ran (MS-386). Both are nullable —
-     * paths with no gate info (LRO/dispatch failures) and runs where the model is unavailable
+     * Marks [jobId] FAILED, optionally recording the [modelVersion] that ran.
+     * [modelVersion] is nullable — runs where the model is unavailable (LRO/dispatch failures)
      * pass null.
      */
-    suspend fun markFailed(jobId: UUID, failedGate: String? = null, modelVersion: String? = null)
+    suspend fun markFailed(jobId: UUID, modelVersion: String? = null)
     suspend fun markInterrupted(jobId: UUID)
     suspend fun findRunningJobs(): List<JobRow>
 

@@ -168,15 +168,13 @@ class JobRepository : JobRegistry {
     /**
      * Transitions [jobId] to FAILED and stamps [JobsTable.completedAt].
      *
-     * Records [failedGate] (the quality gate the worker reported as the failure cause) and
-     * [modelVersion] (best-effort from the result event) when provided; both stay null on
-     * paths with no such info, e.g. LRO/dispatch failures (MS-386).
+     * Records [modelVersion] (best-effort from the result event) when provided; it stays null on
+     * paths with no such info, e.g. LRO/dispatch failures.
      */
-    override suspend fun markFailed(jobId: UUID, failedGate: String?, modelVersion: String?) = withContext(Dispatchers.IO) {
+    override suspend fun markFailed(jobId: UUID, modelVersion: String?) = withContext(Dispatchers.IO) {
         transaction {
             JobsTable.update({ JobsTable.jobId eq jobId }) {
                 it[JobsTable.status] = JobStatus.FAILED.name
-                if (failedGate != null) it[JobsTable.failedGate] = failedGate
                 if (modelVersion != null) it[JobsTable.modelVersion] = modelVersion
                 it[JobsTable.completedAt] = Instant.now()
             }

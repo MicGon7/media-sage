@@ -22,7 +22,6 @@ class QueryRunsToolTest {
                 createdAt = "2026-01-01T10:00:00",
                 totalCostUsd = "0.042",
                 numTurns = 12,
-                failedGate = null,
             ),
         )
         val result = formatJobRows(rows)
@@ -43,11 +42,10 @@ class QueryRunsToolTest {
                 createdAt = "2026-01-01T00:00:00",
                 totalCostUsd = "-",
                 numTurns = null,
-                failedGate = "tests",
             ),
         )
         val result = formatJobRows(rows)
         assertContains(result, "FAILED")
-        assertContains(result, "tests")
+        assertContains(result, "-")
     }
 }

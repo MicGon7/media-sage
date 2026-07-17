@@ -39,13 +39,6 @@ data class JobCompletionEvent(
     @SerialName("prNumber")
     val prNumber: Int? = null,
     /**
-     * Quality gate the worker reported as the cause of a failed run (e.g. `compile`, `tests`,
-     * `detekt`, `ci`). Set only when [status] is `failure` and the worker wrote a gate name;
-     * null otherwise. Persisted to `jobs.failed_gate` for failure attribution (MS-386).
-     */
-    @SerialName("failedGate")
-    val failedGate: String? = null,
-    /**
      * Number of review comments a review-type job (`pr-quality-work`, `pr-review-work`) posted to
      * the PR. `0` renders as `clean`; a positive count as `N comments`. Null for non-review jobs and
      * for older workers that did not report it — the notifier omits the signal in that case.
@@ -54,8 +47,8 @@ data class JobCompletionEvent(
     val reviewCommentCount: Int? = null,
     /**
      * Worker efficiency metrics parsed from the Claude Code `result` event and embedded in
-     * the payload by the worker (MS-412). All null when the event was published by an older
-     * worker that did not include metrics.
+     * the payload by the worker. All null when the event was published by an older worker that
+     * did not include metrics.
      */
     @SerialName("numTurns")
     val numTurns: Int? = null,

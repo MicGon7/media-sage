@@ -125,7 +125,6 @@ private suspend fun processCompletion(
         jobId = job.jobId,
         ticketKey = event.ticketKey,
         succeeded = event.status == "success",
-        failedGate = event.failedGate,
         metrics = event.toWorkerMetrics(),
     )
     actions.jobCompletionNotifier.notifyCompletion(event)
@@ -144,8 +143,8 @@ private suspend fun processCompletion(
 }
 
 /**
- * Builds [WorkerMetrics] from the nullable fields embedded in the worker's Pub/Sub payload
- * (MS-412). Returns null when the core fields are absent — old workers or failure runs where
+ * Builds [WorkerMetrics] from the nullable fields embedded in the worker's Pub/Sub payload.
+ * Returns null when the core fields are absent — old workers or failure runs where
  * the result event was never written. Token fields default to 0 when missing.
  */
 private fun JobCompletionEvent.toWorkerMetrics(): WorkerMetrics? {

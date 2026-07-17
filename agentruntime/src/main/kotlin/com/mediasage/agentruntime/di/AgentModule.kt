@@ -2,8 +2,6 @@ package com.mediasage.agentruntime.di
 
 import com.mediasage.agentruntime.AnthropicClient
 import com.mediasage.agentruntime.db.AgentDatabase
-import com.mediasage.agentruntime.feedback.detector.DatabasePatternDetector
-import com.mediasage.agentruntime.feedback.detector.PatternDetector
 import com.mediasage.agentruntime.evaluation.AgentService
 import com.mediasage.agentruntime.evaluation.ClaudeAgentService
 import com.mediasage.agentruntime.evaluation.NoOpAgentService
@@ -50,7 +48,7 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single<JiraApiClient> { get<JiraTicketClient>() }
     single<TicketSystemClient> { get<JiraTicketClient>() }
     single { SlackApiClient(get(), config.slackWebhookUrl) }
-    single { JobCompletionNotifier(get(), get(), config.githubRepoOwner, config.githubRepoName) }
+    single { JobCompletionNotifier(get(), config.githubRepoOwner, config.githubRepoName) }
     single {
         val cloudRun = buildCloudRunDispatch(config, get())
         AgentLaunchService(scope, cloudRun, get<JiraApiClient>())
@@ -59,7 +57,6 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
 }
 
 private fun judgeModule(config: AgentConfig) = module {
-    single<PatternDetector> { DatabasePatternDetector() }
     if (isJudgeEnabled(config)) {
         log.info("AC-compliance judge enabled — repo={}/{}", config.githubRepoOwner, config.githubRepoName)
         single { AnthropicClient(get(), config.claudeAuthToken, config.claudeBaseUrl) }

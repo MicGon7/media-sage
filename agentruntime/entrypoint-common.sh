@@ -173,7 +173,7 @@ if 'prNumber' not in payload:
         payload['prNumber'] = int(pr_env)
 
 # reviewCommentCount: a review-type job writes the number of review comments it posted to
-# /tmp/review_comment_count.txt after posting its GitHub review (same /tmp handoff as failed_gate).
+# /tmp/review_comment_count.txt after posting its GitHub review.
 # Programmatic count of output already produced — no summarization pass.
 try:
     count = open('/tmp/review_comment_count.txt').read().strip()
@@ -182,18 +182,7 @@ try:
 except Exception:
     pass
 
-# failedGate: on a failed run the worker writes the quality gate that blocked it
-# (e.g. compile, tests, detekt, ci) to /tmp/failed_gate.txt. The orchestrator persists
-# it to jobs.failed_gate for failure attribution (MS-386). Only sent on failure.
-if '$status' == 'failure':
-    try:
-        gate = open('/tmp/failed_gate.txt').read().strip()
-        if gate:
-            payload['failedGate'] = gate
-    except Exception:
-        pass
-
-# Worker metrics from the Claude Code result event (MS-412).
+# Worker metrics from the Claude Code result event.
 # Embedded here so the orchestrator can persist them without a Cloud Logging fetch.
 try:
     for line in open('/tmp/claude-output.jsonl'):

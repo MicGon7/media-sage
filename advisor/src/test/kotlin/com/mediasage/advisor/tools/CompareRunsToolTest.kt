@@ -13,7 +13,6 @@ class CompareRunsToolTest {
         cost: BigDecimal? = null,
         turns: Int? = null,
         durationMs: Long? = null,
-        failedGate: String? = null,
     ) = JobSummary(
         jobId = jobId,
         ticketKey = ticketKey,
@@ -23,13 +22,12 @@ class CompareRunsToolTest {
         claudeDurationMs = durationMs,
         inputTokens = null,
         outputTokens = null,
-        failedGate = failedGate,
     )
 
     @Test
     fun `formatComparison includes both job IDs`() {
         val a = buildSummary("aaa", "MS-1", "COMPLETED", BigDecimal("0.030"), 8)
-        val b = buildSummary("bbb", "MS-2", "FAILED", null, null, failedGate = "detekt")
+        val b = buildSummary("bbb", "MS-2", "FAILED", null, null)
         val result = formatComparison(a, b)
         assertContains(result, "aaa")
         assertContains(result, "bbb")
@@ -48,9 +46,9 @@ class CompareRunsToolTest {
     @Test
     fun `formatComparison uses dash for null optional fields`() {
         val a = buildSummary("a2", "MS-5", "INTERRUPTED")
-        val b = buildSummary("b2", "MS-5", "FAILED", failedGate = "compile")
+        val b = buildSummary("b2", "MS-5", "FAILED")
         val result = formatComparison(a, b)
-        assertContains(result, "compile")
+        assertContains(result, "-")
         assertContains(result, "INTERRUPTED")
     }
 }

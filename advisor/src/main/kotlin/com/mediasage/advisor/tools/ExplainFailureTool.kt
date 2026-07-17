@@ -33,7 +33,6 @@ private val EXPLAIN_TOOL = ToolDefinition(
     description = "Record failure root cause and proposed fix",
     inputSchema = ToolInputSchema(
         properties = mapOf(
-            "failed_gate" to PropertySchema(type = "string"),
             "root_cause" to PropertySchema(type = "string"),
             "proposed_fix" to PropertySchema(type = "string"),
             "confidence" to PropertySchema(type = "string", description = "high / medium / low"),
@@ -71,7 +70,7 @@ internal fun Server.registerExplainFailureTool(client: HttpClient, baseUrl: Stri
     }
 }
 
-private data class FailureContext(val gate: String?, val ticketKey: String, val transcript: String)
+private data class FailureContext(val ticketKey: String, val transcript: String)
 
 private fun loadFailureContext(jobId: UUID): FailureContext? = transaction {
     val job = JobsTable.selectAll().where { JobsTable.jobId eq jobId }.singleOrNull()
@@ -81,7 +80,6 @@ private fun loadFailureContext(jobId: UUID): FailureContext? = transaction {
         .singleOrNull()
         ?.get(TranscriptsTable.content) ?: return@transaction null
     FailureContext(
-        gate = job[JobsTable.failedGate],
         ticketKey = job[JobsTable.ticketKey],
         transcript = transcript,
     )
@@ -95,7 +93,6 @@ private suspend fun runExplanation(
 ): String {
     val system = buildString {
         appendLine("You are diagnosing a failed Claude Code worker session.")
-        if (context.gate != null) appendLine("The worker stopped because the '${context.gate}' quality gate failed.")
         appendLine("Ticket: ${context.ticketKey}")
         appendLine("Review the transcript to identify root cause and propose a concrete fix.")
         appendLine("Report via the $EXPLAIN_TOOL_NAME tool.")
@@ -115,7 +112,6 @@ private suspend fun runExplanation(
 
 private fun formatExplanation(data: JsonObject): String = buildString {
     appendLine("## Failure Analysis")
-    appendLine("Gate        : ${data["failed_gate"]?.jsonPrimitive?.content ?: "unknown"}")
     appendLine("Root cause  : ${data["root_cause"]?.jsonPrimitive?.content ?: "-"}")
     appendLine("Proposed fix: ${data["proposed_fix"]?.jsonPrimitive?.content ?: "-"}")
     appendLine("Confidence  : ${data["confidence"]?.jsonPrimitive?.content ?: "-"}")

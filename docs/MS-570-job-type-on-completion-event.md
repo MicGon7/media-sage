@@ -1,5 +1,11 @@
 # MS-570: Carry job type on the completion event so Slack notifications identify each job
 
+> **Note (MS-576).** This doc originally described the `reviewCommentCount` `/tmp`-file handoff by
+> analogy to the `/tmp/failed_gate.txt` handoff. That gate handoff was retired in MS-576 (run death
+> is not a gate failure; the hardened pipeline suppresses gate failures by design, so `failed_gate`
+> was never populated — see `docs/MS-386-jobs-failure-attribution-model.md`). The analogies below
+> have been rephrased; `reviewCommentCount` is unchanged.
+
 ## Problem
 
 Two jobs can complete for a single ticket — the `ticket-work` run and the downstream
@@ -20,7 +26,7 @@ Three thin additions across the pipeline layers, all backward-compatible:
    dispatched `$PR_NUMBER` env var when no PR URL file is present, so the link renders for it too.
 3. **Programmatic review signal.** The `pr-quality-work` skill counts the comments in the review
    payload it just posted (`/tmp/review.json`) and writes the number to
-   `/tmp/review_comment_count.txt` — the same `/tmp`-file handoff `failed_gate` uses.
+   `/tmp/review_comment_count.txt` — a purpose-named `/tmp`-file handoff to the entrypoint.
    `publish_completion()` reads it into `reviewCommentCount`. The notifier renders `clean` for 0,
    `N comments` otherwise. **No LLM summary** — it is a count of output the job already produced.
 
@@ -49,8 +55,7 @@ The ticket named `scripts/worker-quality.sh` as the writer, but that script runs
 gates — it never posts a review. The review is posted by the `pr-quality-work` **skill** via
 `gh api .../reviews --input /tmp/review.json`, so the count is written there, immediately after the
 post, by counting that same payload file. This keeps `entrypoint-common.sh` decoupled from the
-skill's internal filename (it reads only the purpose-named `/tmp/review_comment_count.txt`, exactly
-as it reads `/tmp/failed_gate.txt`).
+skill's internal filename (it reads only the purpose-named `/tmp/review_comment_count.txt`).
 
 `pr-review-work` responds to a review by pushing a fix or posting a single explanation rather than
 emitting a review-comment array, so it writes no count file; its `reviewCommentCount` stays null and

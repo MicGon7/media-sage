@@ -37,8 +37,8 @@ object JobsTable : Table("jobs") {
     /** Timestamp when the job reached a terminal state (COMPLETED, FAILED, or INTERRUPTED). */
     val completedAt = timestamp("completed_at").nullable()
 
-    // Worker efficiency metrics (MS-210) — populated from the Claude Code `result` event
-    // via Cloud Logging after job completion. Nullable so pre-MS-210 rows are unaffected.
+    // Worker efficiency metrics — populated from the Claude Code `result` event via Cloud Logging
+    // after job completion. Nullable so rows written before these columns existed are unaffected.
 
     /** Total input tokens consumed by the Claude Code worker session. */
     val inputTokens = integer("input_tokens").nullable()
@@ -61,15 +61,12 @@ object JobsTable : Table("jobs") {
     /** Number of agentic turns (tool-use + response cycles) in the worker session. */
     val numTurns = integer("num_turns").nullable()
 
-    // Failure attribution + model tracking (MS-386). Nullable so successful runs, pre-MS-386
-    // rows, and runs where the value is unavailable degrade gracefully.
-
-    /**
-     * Quality gate that caused a FAILED run, as reported by the worker
-     * (e.g. `compile`, `tests`, `detekt`, `ci`). Null on success or when the worker
-     * did not report a gate.
-     */
-    val failedGate = text("failed_gate").nullable()
+    // Model tracking. Nullable so older rows and runs where the value is unavailable degrade
+    // gracefully.
+    //
+    // A sibling `failed_gate` column was retired: run death (`status = FAILED`) is not a gate
+    // failure, and the hardened pipeline suppresses gate failures by design, so the column was
+    // never populated. See docs/MS-386-jobs-failure-attribution-model.md for the full rationale.
 
     /**
      * Claude model that ran the worker session (e.g. `claude-sonnet-4-5-20250929`),
