@@ -27,6 +27,9 @@ internal data class ToolDefinition(
 
 @Serializable
 internal data class ToolInputSchema(
+    // Anthropic requires input_schema.type; it must be emitted even though it equals the
+    // default, which kotlinx would otherwise omit (encodeDefaults is off on the client Json).
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val type: String = "object",
     val properties: Map<String, PropertySchema>,
     @EncodeDefault(EncodeDefault.Mode.NEVER)
