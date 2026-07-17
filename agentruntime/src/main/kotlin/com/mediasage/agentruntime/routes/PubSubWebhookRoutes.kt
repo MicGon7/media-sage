@@ -1,7 +1,6 @@
 package com.mediasage.agentruntime.routes
 
 import com.mediasage.agentruntime.evaluation.AgentService
-import com.mediasage.agentruntime.evaluation.scoring.DecisionScorer
 import com.mediasage.agentruntime.service.AgentLauncher
 import com.mediasage.agentruntime.service.JobCompletionNotifier
 import com.mediasage.pipeline.core.JobCompletionEvent
@@ -48,13 +47,12 @@ private data class PubSubPushRequest(
  * every delivery. Requests with a missing or wrong token are rejected with 401.
  */
 /**
- * The reactions fired when a completion event is processed: decision scoring, the Slack
- * completion notification, AC-compliance evaluation, and the code-quality review launcher.
+ * The reactions fired when a completion event is processed: the Slack completion notification,
+ * AC-compliance evaluation, and the code-quality review launcher.
  * Bundled into one object so the route and [processCompletion] stay within the parameter limit.
  */
 class PostCompletionActions(
     val agentService: AgentService,
-    val decisionScorer: DecisionScorer,
     val agentLauncher: AgentLauncher,
     val jobCompletionNotifier: JobCompletionNotifier,
 )
@@ -130,7 +128,6 @@ private suspend fun processCompletion(
         failedGate = event.failedGate,
         metrics = event.toWorkerMetrics(),
     )
-    actions.decisionScorer.score(job.jobId)
     actions.jobCompletionNotifier.notifyCompletion(event)
     // After a successful ticket-work completion, run the two independent post-PR reviews.
     // ticket-work jobs have jiraTicketKey == null (ticketKey IS the real Jira key). PR review,

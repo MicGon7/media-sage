@@ -8,8 +8,7 @@ agentruntime/src/main/kotlin/com/mediasage/agentruntime/
 ├── di/                  — AgentConfig, AgentModule
 ├── db/                  — AgentDatabase, JobsTable, JobRepository (Supabase Postgres)
 ├── evaluation/          — AgentService, ClaudeAgentService, NoOpAgentService
-│   └── scoring/         — DecisionScorer, ScoringService, NoOpScoringService
-├── feedback/            — PatternDetector, GitHubApiClient, FeedbackPrService
+├── feedback/            — PatternDetector, GitHubApiClient, GitHubAppClient
 ├── plugins/             — ContentNegotiation, CallLogging, StatusPages
 ├── routes/              — JiraWebhookRoutes, GitHubWebhookRoutes, PubSubWebhookRoutes
 └── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiClient,
@@ -18,7 +17,7 @@ agentruntime/src/main/kotlin/com/mediasage/agentruntime/
 
 ## Prompts
 
-System prompts must never be hardcoded in Kotlin. Define them in `src/main/resources/prompts/` and load at runtime via classpath (same pattern as `rubrics/decision-scoring.md`). Plain language only — avoid technical AI jargon in file and variable names so anyone maintaining the code can follow them.
+System prompts must never be hardcoded in Kotlin. Define them in `src/main/resources/prompts/` and load at runtime via classpath. Plain language only — avoid technical AI jargon in file and variable names so anyone maintaining the code can follow them.
 
 ## Dependency Injection
 
@@ -111,8 +110,8 @@ The `:agentruntime` server runs as a GCP Cloud Run Service (`media-sage-orchestr
 | Variable | Value |
 |---|---|
 | `GITHUB_BOT_LOGIN` | `media-sage-worker[bot]` (GitHub App identity — note `[bot]` suffix) |
-| `GITHUB_APP_ID` | `3848870` (feedback-scan auto-PR) |
-| `GITHUB_APP_INSTALLATION_ID` | `135953548` (feedback-scan auto-PR) |
+| `GITHUB_APP_ID` | `3848870` (AC judge — reads PR details/diffs) |
+| `GITHUB_APP_INSTALLATION_ID` | `135953548` (AC judge — reads PR details/diffs) |
 | `GITHUB_OWNER` | `michael-gonzalez-dev` |
 | `GITHUB_REPO` | `media-sage` |
 | `JIRA_EMAIL` | `micgon7@gmail.com` |
@@ -136,12 +135,12 @@ The `:agentruntime` server runs as a GCP Cloud Run Service (`media-sage-orchestr
 | `supabase-db-url` | `SUPABASE_DB_URL` | Postgres URI with credentials |
 | `pubsub-webhook-secret` | `PUBSUB_WEBHOOK_SECRET` | Shared secret for Pub/Sub push URL auth |
 | `google-credentials-base64` | `GOOGLE_CREDENTIALS_BASE64` | Base64-encoded GCP SA JSON (worker dispatch) |
-| `github-app-private-key-base64` | `GITHUB_APP_PRIVATE_KEY_BASE64` | Base64-encoded GitHub App RSA key (feedback-scan auto-PR) |
+| `github-app-private-key-base64` | `GITHUB_APP_PRIVATE_KEY_BASE64` | Base64-encoded GitHub App RSA key (AC judge PR reads) |
 | `slack-webhook-url` | `SLACK_WEBHOOK_URL` | Slack incoming-webhook URL for job-completion notifications (blank disables) |
 
 > All secrets except `github-app-private-key-base64` are prefixed `orchestrator-` in Secret Manager (e.g. `orchestrator-anthropic-auth-token`); the workflow references the full names.
 
-**GitHub App auth pattern:** Workers authenticate as `media-sage-worker[bot]` using short-lived installation tokens (1-hour TTL) generated at job startup. The orchestrator does not use GitHub App auth — it is a stateless event router with no GitHub API calls. The git commit email for workers is derived automatically from the App ID: `{GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com`.
+**GitHub App auth pattern:** Workers authenticate as `media-sage-worker[bot]` using short-lived installation tokens (1-hour TTL) generated at job startup. The orchestrator also uses GitHub App auth for one narrow purpose: the inline AC-compliance judge (`ClaudeAgentService`) reads PR details/diffs via `GitHubAppClient`. It makes no GitHub *write* calls. The git commit email for workers is derived automatically from the App ID: `{GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com`.
 
 **To redeploy:** push to `main` with changes under `agentruntime/**` — `deploy-orchestrator.yml` builds the image and deploys the service declaratively (SA, env vars, secrets, scaling, resources). No manual `gcloud run deploy` is needed; running one by hand risks re-introducing the out-of-band drift this workflow exists to prevent. Trigger a config-only redeploy via the workflow's **Run workflow** button or an empty commit under `agentruntime/`.
 

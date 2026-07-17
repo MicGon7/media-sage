@@ -42,20 +42,22 @@ package com.mediasage.agentruntime.di
  *@property pubSubWebhookSecret Shared secret token appended as `?token=` to the Pub/Sub push
  *   subscription URL. The orchestrator verifies this on every push delivery to reject spoofed
  *   requests. Sourced from env var `PUBSUB_WEBHOOK_SECRET`.
- * @property claudeAuthToken Auth token for [com.mediasage.agentruntime.evaluation.scoring.ClaudeDecisionScorer].
- *   Sourced from env var `ANTHROPIC_AUTH_TOKEN`. When blank, decision scoring is disabled.
+ * @property claudeAuthToken Auth token for the Anthropic API, used by the AC-compliance judge
+ *   ([com.mediasage.agentruntime.evaluation.ClaudeAgentService]). Sourced from env var
+ *   `ANTHROPIC_AUTH_TOKEN`. When blank (along with the GitHub App vars), the judge is disabled.
  * @property claudeBaseUrl Anthropic API base URL. Defaults to `https://api.anthropic.com`.
  *   Sourced from env var `ANTHROPIC_BASE_URL`. Set to the Fuelix proxy URL on Cloud Run.
  * @property claudeModel Model ID for Claude calls. Defaults to `claude-sonnet-4-6`.
  *   Sourced from env var `ANTHROPIC_MODEL`.
- * @property githubAppId GitHub App ID for the feedback-scan auto-PR feature. Sourced from
- *   `GITHUB_APP_ID`. When blank, the auto-PR feature is disabled.
+ * @property githubAppId GitHub App ID. Used by [com.mediasage.agentruntime.feedback.github.GitHubAppClient]
+ *   to mint installation tokens so the AC judge can read PR details/diffs. Sourced from
+ *   `GITHUB_APP_ID`. When blank, the judge is disabled.
  * @property githubAppPrivateKey PEM-encoded RSA private key for the GitHub App. Sourced from
  *   `GITHUB_APP_PRIVATE_KEY_BASE64`.
  * @property githubAppInstallationId GitHub App installation ID for this repo. Sourced from
  *   `GITHUB_APP_INSTALLATION_ID`.
- * @property githubRepoOwner Repository owner for the auto-PR feature. Sourced from `GITHUB_OWNER`.
- * @property githubRepoName Repository name for the auto-PR feature. Sourced from `GITHUB_REPO`.
+ * @property githubRepoOwner Repository owner the judge reads PRs from. Sourced from `GITHUB_OWNER`.
+ * @property githubRepoName Repository name the judge reads PRs from. Sourced from `GITHUB_REPO`.
  * @property slackWebhookUrl Slack incoming-webhook URL for job-completion notifications. Sourced
  *   from `SLACK_WEBHOOK_URL`. When blank, no Slack messages are posted.
  */
