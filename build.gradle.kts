@@ -13,6 +13,7 @@ plugins {
     alias(libs.plugins.room) apply false
     alias(libs.plugins.detekt) apply false
     alias(libs.plugins.kover) apply false
+    alias(libs.plugins.roborazzi) apply false
 }
 
 subprojects {

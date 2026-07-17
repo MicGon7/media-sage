@@ -95,8 +95,15 @@ If the work follows an established pattern, makes a trivial change, or could hav
    When you reach Phase 2 for a rename, apply one `replace_all` `Edit` per file covering the import and every usage site at once — never a separate import-only pass followed by a body pass.
 3. Implement the changes described in the ticket.
 4. Re-read the acceptance criteria. If any AC item requires unit tests, invoke `/unit-test` now (the branch is already checked out — skip branch creation inside that skill). If any AC item requires UI/composable tests, invoke `/ui-test` now (same — skip branch creation). Both may apply to the same ticket.
-5. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
-6. Write the PR body and ship in one call:
+5. **If the change touches any `composeApp` composable, render it and self-critique before shipping.** You cannot see the UI otherwise, so this is the only proofing step before a human pulls the branch.
+   - For each affected screen, add one `captureRoboImage("build/outputs/roborazzi/<name>.png") { MediaSageTheme { <Screen>(sampleState) } }` block to an `androidUnitTest` render test — model it on `SmokeTestScreenRenderTest`. One block per screen: a ticket touching a main screen and a detail screen gets two blocks. Prefer representative state that exposes layout risk (long text, missing image, populated lists), not empty/loading state.
+   - Run `./scripts/capture-ui.sh`. It renders every block, stages the PNGs, and prints a `## UI screenshots` Markdown block. If it exits 3 with a "no Android SDK" notice, the render is *skipped, not failed* — continue the run without screenshots.
+   - `Read` each PNG under `docs/ui-screenshots/` and critique it: padding, alignment, spacing, truncation, theme colours, missing-image fallback. If anything is off, fix the composable and re-run the script. Do not ship UI you have not looked at.
+   - Paste the printed `## UI screenshots` block into the PR body.
+
+   Skip this entire step for non-UI changes.
+6. Write a learning doc under `docs/` if warranted — see the learning doc rule in CLAUDE.md Agent Guidelines.
+7. Write the PR body and ship in one call:
    ```bash
    cat > /tmp/pr_body.md << 'PRBODY'
    ## Summary

@@ -9,7 +9,16 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.roborazzi)
 }
+
+// The Cloud Run worker only builds the Android target (to render Compose UI headlessly
+// via Robolectric — see docs/MS-581-headless-ui-render-loop.md). Registering the iOS
+// targets forces the Kotlin/Native toolchain (~3 GB extracted) to download during
+// configuration even though it is never used on Linux, so the worker skips them by
+// passing -Pmediasage.worker=true. Local and CI builds leave the property unset and
+// build all targets normally.
+val buildIosTargets = providers.gradleProperty("mediasage.worker").orNull != "true"
 
 kotlin {
     androidTarget {
@@ -18,24 +27,26 @@ kotlin {
         }
     }
 
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
-            binaryOption("bundleId", "com.thecouragepost.app")
-        }
-        iosTarget.compilations.all {
-            compileTaskProvider.configure {
-                compilerOptions {
-                    freeCompilerArgs.add("-Xexpect-actual-classes")
+    if (buildIosTargets) {
+        listOf(
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach { iosTarget ->
+            iosTarget.binaries.framework {
+                baseName = "ComposeApp"
+                isStatic = true
+                binaryOption("bundleId", "com.thecouragepost.app")
+            }
+            iosTarget.compilations.all {
+                compileTaskProvider.configure {
+                    compilerOptions {
+                        freeCompilerArgs.add("-Xexpect-actual-classes")
+                    }
                 }
             }
         }
     }
-    
+
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
@@ -67,6 +78,16 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
+        }
+        androidUnitTest.dependencies {
+            // Headless Compose render loop (MS-581): render a composable to a PNG on the
+            // JVM via Robolectric — no emulator or device required.
+            implementation(libs.roborazzi)
+            implementation(libs.roborazzi.compose)
+            implementation(libs.roborazzi.junit.rule)
+            implementation(libs.robolectric)
+            implementation(libs.junit)
+            implementation(libs.androidx.testExt.junit)
         }
     }
 }
@@ -117,6 +138,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
         isCoreLibraryDesugaringEnabled = true
+    }
+    testOptions {
+        unitTests {
+            // Robolectric needs merged Android resources to render Compose on the JVM.
+            isIncludeAndroidResources = true
+        }
     }
 }
 
