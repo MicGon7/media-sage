@@ -98,11 +98,13 @@ the next; a text response is appropriate only when a step fails or genuinely req
      suggestion, add `"start_line"` above `"line"`.
    - If you found nothing worth flagging, post the review with an empty `comments` array and a summary
      saying the change looks good — the review must run and post for every PR.
-   - Immediately after posting, record how many review comments you posted so the Slack completion
-     notification can show a `clean` / `N comments` signal (programmatic count, no prose):
+   - Immediately after posting, record how many review comments you posted to
+     `/tmp/review_comment_count.txt`. This is not self-verification — you already know the count. It
+     is a required output artifact: the entrypoint forwards it on the completion event so downstream
+     consumers can render a `clean` / `N comments` signal. Write the integer directly (you authored
+     the array, so no parsing is needed):
      ```bash
-     python3 -c "import json;print(len(json.load(open('/tmp/review.json')).get('comments',[])))" \
-       > /tmp/review_comment_count.txt
+     echo "<number of comments in /tmp/review.json>" > /tmp/review_comment_count.txt
      ```
 
 5. Write `/tmp/jira_comment.txt` — a plain-text summary of what the review found (see the Jira comment
