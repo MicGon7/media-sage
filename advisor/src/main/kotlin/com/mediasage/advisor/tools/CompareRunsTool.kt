@@ -15,6 +15,9 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.math.BigDecimal
 import java.util.UUID
 
+/** Column layout shared by the header and every field row so the two can't drift apart. */
+private const val ROW_FORMAT = "%-20s  %-38s  %-38s"
+
 internal fun Server.registerCompareRunsTool() {
     addTool(
         name = "compare_runs",
@@ -84,19 +87,16 @@ private fun loadJobSummary(jobId: UUID): JobSummary? = transaction {
 }
 
 internal fun formatComparison(a: JobSummary, b: JobSummary): String = buildString {
-    appendLine("%-20s  %-38s  %-38s".format("Field", "Run A", "Run B"))
-    appendLine("-".repeat(100))
-    appendLine("%-20s  %-38s  %-38s".format("job_id", a.jobId.take(36), b.jobId.take(36)))
-    appendLine("%-20s  %-38s  %-38s".format("ticket", a.ticketKey, b.ticketKey))
-    appendLine("%-20s  %-38s  %-38s".format("status", a.status, b.status))
-    appendLine("%-20s  %-38s  %-38s".format("cost_usd",
-        a.totalCostUsd?.toPlainString() ?: "-", b.totalCostUsd?.toPlainString() ?: "-"))
-    appendLine("%-20s  %-38s  %-38s".format("turns",
-        a.numTurns?.toString() ?: "-", b.numTurns?.toString() ?: "-"))
-    appendLine("%-20s  %-38s  %-38s".format("duration_ms",
-        a.claudeDurationMs?.toString() ?: "-", b.claudeDurationMs?.toString() ?: "-"))
-    appendLine("%-20s  %-38s  %-38s".format("input_tokens",
-        a.inputTokens?.toString() ?: "-", b.inputTokens?.toString() ?: "-"))
-    appendLine("%-20s  %-38s  %-38s".format("output_tokens",
-        a.outputTokens?.toString() ?: "-", b.outputTokens?.toString() ?: "-"))
+    fun row(label: String, valueA: String, valueB: String) = appendLine(ROW_FORMAT.format(label, valueA, valueB))
+    val header = ROW_FORMAT.format("Field", "Run A", "Run B")
+    appendLine(header)
+    appendLine("-".repeat(header.length))
+    row("job_id", a.jobId.take(36), b.jobId.take(36))
+    row("ticket", a.ticketKey, b.ticketKey)
+    row("status", a.status, b.status)
+    row("cost_usd", a.totalCostUsd?.toPlainString() ?: "-", b.totalCostUsd?.toPlainString() ?: "-")
+    row("turns", a.numTurns?.toString() ?: "-", b.numTurns?.toString() ?: "-")
+    row("duration_ms", a.claudeDurationMs?.toString() ?: "-", b.claudeDurationMs?.toString() ?: "-")
+    row("input_tokens", a.inputTokens?.toString() ?: "-", b.inputTokens?.toString() ?: "-")
+    row("output_tokens", a.outputTokens?.toString() ?: "-", b.outputTokens?.toString() ?: "-")
 }
