@@ -1,9 +1,9 @@
-# /pattern-sweep — Surface recurring worker mistakes and recommend how to enforce them
+# /pattern-sweep — Surface recurring gate failures and recommend how to enforce them
 
-Reads recent pipeline runs and quality reviews, finds the same *class* of mistake repeating
-across runs, and — for each recurrence — recommends **how strongly to enforce it**: a
-`CLAUDE.md` prose note (weakest), a test, or a `detekt` rule (strongest, statically-checkable
-patterns only).
+Reads recent **failed** pipeline runs, finds the same *class* of gate failure repeating across
+runs, and — for each recurrence — recommends **how strongly to enforce it**: a `CLAUDE.md`
+prose note (weakest), a test, or a `detekt` rule (strongest, statically-checkable patterns
+only).
 
 This is the surviving, advisory-only half of the retired learning loop (MS-567). It is a
 **detective, not an implementer**: it never opens a PR, never dispatches a worker, and never
@@ -12,125 +12,74 @@ edits a rule. The human is the decider — and, for small changes, the implement
 > ⚠️ Do **not** resurrect the auto-PR path. `FeedbackPrService` was deleted in MS-567 on
 > purpose. This skill's only output is a recommendation.
 
-**Usage:**
-- `/pattern-sweep` — full sweep: both gate-failure and review-comment recurrences
-- `/pattern-sweep gates` — only type-1 (gate-failure) recurrences
-- `/pattern-sweep reviews` — only type-2 (review-comment) recurrences
+**Usage:** `/pattern-sweep` — run it on demand.
 
-**When to run it (pull-based — there is no automatic trigger for this skill):**
-- **Type-1 (gate failures)** are *nudged* by the existing Slack gate-failure trend line
-  (`JobCompletionNotifier` posts `⚠️ gate \`X\` failed in N runs over the last M days` when a
-  gate fails ≥ 3× in 7 days). When you see that line, run `/pattern-sweep gates`.
-- **Type-2 (review comments)** have no nudge and need none — you are already in the PR. Run
-  `/pattern-sweep reviews` when a `pr-quality-work` comment feels familiar. Do **not** build a
-  type-2 push trigger.
+**When to run it (pull-based — there is no automatic trigger):** the existing Slack
+gate-failure trend line nudges you. `JobCompletionNotifier` posts `⚠️ gate \`X\` failed in N
+runs over the last M days` when a gate fails ≥ 3× in 7 days; when you see that line, run this.
+
+**Scope:** gate failures only (type-1). Detecting recurring `pr-quality-work` *review comments*
+(type-2 — reading merged-PR comment text via `gh` and clustering it) is deliberately **out of
+scope for v1** and tracked as a follow-up. Ship the cheap, bounded half first; add the
+comment-scraping half only if on-demand gate sweeps prove insufficient.
 
 ---
 
-## What "recurring pattern" means
+## What "recurring gate failure" means
 
-The same *class* of mistake showing up across multiple runs, in two flavors:
-
-1. **Gate-failure recurrence** — the same gate (`tests` / `detekt` / `compile`) fails
-   repeatedly for the same underlying reason (e.g. `MaxLineLength` keeps tripping). The
-   `DatabasePatternDetector` already flags *that a gate* recurs; this skill reads the
-   transcripts to identify the *specific* cause.
-2. **Review-comment recurrence** — the `pr-quality-work` reviewer keeps leaving the same kind
-   of comment (e.g. hardcoded UI strings, `expect/actual` for build config, a null guard in a
-   `SideEffect`). These runs **succeed**, so no gate flags them — only reading across recent
-   quality-review PRs surfaces them.
+The same gate (`tests` / `detekt` / `compile`) fails repeatedly for the same *underlying
+reason* — e.g. `detekt` keeps tripping on `MaxLineLength`, not a scattering of unrelated rules.
+The `DatabasePatternDetector` already flags *that a gate* recurs; this skill reads the run
+summaries to identify the *specific* cause, then recommends how to stop it recurring.
 
 ---
 
 ## Steps
 
-### 1. Determine the mode
+### 1. List recent failed runs, window to the last 7 days
 
-Read the argument (if any):
-- No argument or `all` → both types
-- `gates` → type-1 only (skip step 3)
-- `reviews` → type-2 only (skip step 2)
+The advisor MCP server is the data source. It is a passive tool provider — **this session does
+the cross-run reasoning in its own context.** Use the tools that already exist; add no new
+advisor capability.
 
-### 2. Type-1: gate-failure recurrences (advisor MCP)
+```
+query_runs(status="FAILED", limit=30)
+```
 
-The advisor MCP server is the data source for gate failures and transcripts. It is a passive
-tool provider — **this session does the cross-run reasoning in its own context.** Do not add
-any new advisor capability; use the tools that already exist.
+`query_runs` has no date filter — pull the most recent 30 and **drop rows whose `created_at` is
+older than 7 days** in this session, so the window matches the Slack nudge (`≥ 3× in 7 days`).
+Each row carries `failed_gate` (`tests` / `detekt` / `compile`). Group the remaining rows by
+`failed_gate`; any gate with **≥ 3** failures in the window is a candidate recurrence.
 
-1. List recent failed runs, then window to the last 7 days:
-   ```
-   query_runs(status="FAILED", limit=30)
-   ```
-   `query_runs` has no date filter — pull the most recent 30 and **drop rows whose
-   `created_at` is older than 7 days** in this session, so the window matches the type-1 Slack
-   nudge (`gate failed ≥ 3× in 7 days`). Each row carries `failed_gate` (`tests` / `detekt` /
-   `compile`) — that tells you *which* gate, not *why*. Group the remaining rows by
-   `failed_gate`. Any gate with ≥ 3 failures in the window is a candidate recurrence.
+### 2. Find the specific cause — server-slimmed summaries only
 
-2. For each candidate gate, find the *specific* shared cause — **stay on the server-slimmed
-   tools; never dump a raw transcript into this session:**
-   ```
-   analyze_run(job_id="<uuid>")        # START HERE — advisor slims the transcript server-side
-                                       # (head/tail + error/test/exit-status lines, with a
-                                       # whole-document head/tail trim as a hard ceiling) and
-                                       # returns a root-cause summary. Bounded regardless of run
-                                       # size; only the summary lands in this session.
-   explain_failure(job_id="<uuid>")    # ESCALATE HERE if analyze_run is inconclusive — same
-                                       # server-side slimming, tuned for failed runs (root cause
-                                       # + proposed fix). Still bounded; still just a summary.
-   fetch_transcript(job_id="<uuid>")   # LAST RESORT, SHORT RUNS ONLY. Returns the ENTIRE raw
-                                       # JSONL straight into this session — a 90-turn run is
-                                       # 200k-500k+ tokens, costly and able to overflow the turn.
-   ```
-   **The raw-fetch guard is turn count, not a transcript budget.** `query_runs` already prints
-   `numTurns` per row — check it *before* fetching. Only ever `fetch_transcript` a run with
-   `numTurns` ≲ 15, and only when both `analyze_run` and `explain_failure` left an exact line
-   ambiguous. For a large run, do **not** raw-fetch it at all — if the two summaries can't pin
-   the cause, report "cause unclear from summaries — inspect job `<uuid>` manually" and move on.
-   The advisor's slimming is coupled inside `analyze_run`/`explain_failure` (there is no
-   `fetch_transcript_slimmed`), so those two tools *are* the safe path on big runs.
+For each candidate gate, read the runs' root-cause summaries. Use **only** the advisor's
+summary tools, which slim the transcript server-side and return a compact summary — never the
+raw transcript:
 
-   Read enough per gate to confirm the *same* underlying cause repeats (e.g. every `detekt`
-   failure is `MaxLineLength`, not a scattering of unrelated rules) — usually 3–5 summaries. Keep
-   the sweep to **≤ 8 runs inspected total**; if more gates still qualify, name them and stop
-   rather than sweeping unbounded. If the causes are unrelated, it is **not** a single pattern —
-   do not merge them.
+```
+analyze_run(job_id="<uuid>")      # START HERE — root-cause summary of the run
+explain_failure(job_id="<uuid>")  # ESCALATE HERE if analyze_run is inconclusive — root cause
+                                   # + proposed fix, tuned for failed runs
+```
 
-### 3. Type-2: review-comment recurrences (GitHub via `gh`)
+Both are **bounded regardless of run size** — the advisor slims each transcript before calling
+Claude (head/tail + error/test/exit-status "signal" lines, with a whole-document head/tail trim
+as a hard ceiling), and only the summary lands in this session. There is deliberately **no**
+raw-transcript path here: a raw 90-turn transcript is 200k–500k+ tokens dumped straight into
+context — costly and able to overflow the turn — and the summary tools already give you the
+cause without that risk. If both summaries leave the exact cause ambiguous, report
+*"cause unclear from summaries — inspect job `<uuid>` manually"* and move on; do not pull the
+raw log to chase it.
 
-`pr-quality-work` posts its findings as GitHub PR reviews with state `COMMENT`, summary
-prefixed `🤖 **Agent:**`. **GitHub is the source of truth — read it live.** Do **not** store a
-copy of the comments in Supabase; that duplicates GitHub and adds a drift-prone write path.
-(The completion event already records `reviewCommentCount` per run, but not the text — the
-text stays on GitHub.)
+Read enough summaries per gate to confirm the *same* cause repeats (usually 3–5). Keep the
+sweep to **≤ 8 runs inspected total**; if more gates still qualify, name them and stop. If the
+causes are unrelated, it is **not** a single pattern — do not merge them.
 
-1. List PRs merged in the **last 7 days** (a time window, to match type-1 — not a fixed PR
-   count, which drifts with merge velocity), then pull their agent review comments:
-   ```bash
-   # 7-day window; GNU date first, BSD/macOS date as fallback
-   SINCE=$(date -u -d '7 days ago' +%F 2>/dev/null || date -u -v-7d +%F)
-   gh pr list --state merged --search "merged:>=$SINCE" --json number,title,mergedAt
+### 3. Classify each recurrence by enforceability
 
-   # agent review bodies + inline comments for one PR
-   gh api "/repos/$GITHUB_OWNER/$GITHUB_REPO/pulls/<n>/reviews" \
-     --jq '.[] | select(.body | startswith("🤖 **Agent:**")) | .body'
-   gh api "/repos/$GITHUB_OWNER/$GITHUB_REPO/pulls/<n>/comments" \
-     --jq '.[] | {path, line, body}'
-   ```
-   Use `$GITHUB_OWNER` / `$GITHUB_REPO` from the environment; fall back to
-   `michael-gonzalez-dev` / `media-sage` if unset. If a 7-day window is too quiet to spot a
-   trend, widen the date — the point is a *window*, not a magic number.
-
-2. Cluster the comment bodies by the *kind* of issue they raise (hardcoded strings, wrong
-   effect type, non-idiomatic Kotlin, reused-helper-missed, …). A cluster of ≥ 3 comments
-   across ≥ 2 distinct PRs is a recurrence worth reporting. One-off comments are noise — drop
-   them.
-
-### 4. Classify each recurrence by enforceability
-
-For every confirmed recurrence, decide the **strongest enforcement level it can support**.
-Stronger is better *only when the pattern is mechanically checkable* — never recommend a
-detekt rule for a judgment call.
+Decide the **strongest enforcement level the pattern can support**. Stronger is better *only
+when the pattern is mechanically checkable* — never recommend a detekt rule for a judgment call.
 
 | Level | Use when | Example |
 |---|---|---|
@@ -141,16 +90,16 @@ detekt rule for a judgment call.
 State explicitly which recurrences are **NOT statically checkable** and therefore prose-only —
 that is a required part of the output, not an omission.
 
-### 5. Output — a recommendation, full stop
+### 4. Output — a recommendation, full stop
 
 Emit one block per confirmed recurrence. **This is the entire deliverable. Do not open a PR,
 do not create a ticket, do not dispatch a worker, do not edit `detekt.yml` or `CLAUDE.md`.**
 
 ```
-## Recurrence: <short name of the mistake class>
+## Recurrence: <short name of the gate-failure class>
 
-**Type:** gate-failure | review-comment
-**Seen in:** MS-NNN (job <uuid>), PR #NN, PR #NN   ← runs/PRs it came from
+**Gate:** tests | detekt | compile
+**Seen in:** MS-NNN (job <uuid>), MS-NNN (job <uuid>), …   ← the runs it came from
 **Root cause:** <the specific shared cause, one or two sentences>
 **Statically checkable:** yes | no
 **Recommended enforcement:** detekt rule | test | CLAUDE.md note
@@ -161,7 +110,7 @@ do not create a ticket, do not dispatch a worker, do not edit `detekt.yml` or `C
 
 If nothing crosses the ≥ 3 threshold, say so plainly — a clean sweep is a valid result.
 
-### 6. Hand off to the human (the skill stops here)
+### 5. Hand off to the human (the skill stops here)
 
 State the sizing call so the human can act; **the skill does not act:**
 
@@ -186,23 +135,18 @@ which (if any) to graduate."*
 
 - **Advisory only.** Never open a PR, never dispatch a worker, never edit a rule file. Output
   is text.
-- **No new advisor capability.** Use `query_runs`, `fetch_transcript`, `analyze_run` as they
-  are. Cross-run reasoning happens in this session's context, not in a new tool.
-- **No Supabase copy of review comments.** Read them live from GitHub via `gh`.
-- **Stay server-slimmed; never dump a raw transcript.** `analyze_run` then `explain_failure`
-  are bounded regardless of run size — only their summaries land in this session. Raw
-  `fetch_transcript` returns the whole JSONL into context; a 90-turn run is 200k–500k+ tokens,
-  costly and able to overflow the turn. **Guard on `numTurns` (printed by `query_runs`): only
-  raw-fetch runs with `numTurns` ≲ 15, and only when both summaries left an exact line
-  ambiguous.** For a large run, don't raw-fetch — report the cause as unclear and move on. Keep
-  the sweep to **≤ 8 runs inspected total**; if more gates qualify, name them and stop.
-- **7-day window, not a fixed count.** Both types look back 7 days — drop `query_runs` rows
-  older than 7 days (it has no date filter), and window the `gh` PR list by merge date. Don't
-  read a fixed number of PRs; the count drifts with merge velocity.
-- **Cost.** A scoped sweep (one gate, ~5 `analyze_run` calls + a 7-day PR window) is roughly
-  **$1–3**; going raw across many runs can reach ~$5–10. Type-2 comment reads are pennies.
-- **≥ 3 to count.** One-off gate failures and one-off review comments are noise. A recurrence
-  is the same *cause* (type-1) or same *issue class* across ≥ 2 PRs (type-2), seen ≥ 3 times.
+- **No new advisor capability.** Use `query_runs`, `analyze_run`, `explain_failure` as they are.
+  Cross-run reasoning happens in this session's context, not in a new tool.
+- **Summaries only — never the raw transcript.** `analyze_run` / `explain_failure` are bounded
+  regardless of run size; there is no raw-`fetch_transcript` path in this skill because a raw
+  transcript dumps the whole run into context (a 90-turn run is 200k–500k+ tokens). If the
+  summaries can't pin the cause, report it as unclear and move on.
+- **7-day window.** Drop `query_runs` rows older than 7 days (it has no date filter), matching
+  the Slack nudge. Keep the sweep to **≤ 8 runs inspected**.
+- **Cost.** A scoped sweep (one gate, ~5 `analyze_run` calls) is roughly **$1–2**, with no
+  raw-transcript blowup possible.
+- **≥ 3 to count.** One-off gate failures are noise. A recurrence is the same *cause* across ≥ 3
+  runs in the window.
 - **Don't over-enforce.** A judgment-call pattern gets a CLAUDE.md note, never a detekt rule —
   a "correct implementation of a wrong rule" is the exact failure this pipeline already guards
   against.
@@ -210,8 +154,8 @@ which (if any) to graduate."*
 ## Relevant references
 
 - Advisor tools: `advisor/src/main/kotlin/com/mediasage/advisor/tools/`
-  (`QueryRunsTool`, `FetchTranscriptTool`, `AnalyzeRunTool`) — register with `/mcp` if absent
-- `agentruntime/.../service/JobCompletionNotifier.kt` — the Slack gate-failure trend line
-  (type-1 nudge); `feedback/detector/DatabasePatternDetector.kt` — the programmatic gate detector
-- `.claude/commands/pr-quality-work.md` — the reviewer whose comments type-2 reads
+  (`QueryRunsTool`, `AnalyzeRunTool`; `explain_failure` in `ExplainFailureTool`) — register with
+  `/mcp` if absent
+- `agentruntime/.../service/JobCompletionNotifier.kt` — the Slack gate-failure trend line (the
+  nudge); `feedback/detector/DatabasePatternDetector.kt` — the programmatic gate detector
 - `detekt.yml` — target for graduated static rules
