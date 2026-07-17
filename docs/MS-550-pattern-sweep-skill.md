@@ -22,8 +22,8 @@ check — was still valuable. It just had no home.
 
 ```
 human sees a recurrence (or the Slack gate-failure trend line) → runs /pattern-sweep
-  → reads recent FAILED runs + transcripts via advisor MCP (type-1: gate failures)
-  → reads recent pr-quality-work review comments live from GitHub via gh (type-2: review comments)
+  → reads FAILED runs in the last 7 days + analyze_run summaries via advisor MCP (type-1)
+  → reads pr-quality-work review comments from PRs merged in the last 7 days via gh (type-2)
   → clusters by shared cause; anything seen ≥ 3× is a recurrence
   → per recurrence: recommends detekt rule | test | CLAUDE.md note, and says which are prose-only
   → STOPS. Human decides whether/how to graduate it.
@@ -51,6 +51,24 @@ resurrecting `FeedbackPrService`.
   them — only reading across recent quality-review PRs surfaces them. GitHub is the source of truth;
   we deliberately **do not** copy the comment text into Supabase (that duplicates GitHub and adds a
   drift-prone write path — the completion event already stores `reviewCommentCount`, just not text).
+
+### Bounded and cheap: 7-day window, slimmed summaries, hard transcript cap
+
+The first draft listed a fixed 30 failed runs and 30 PRs and treated raw `fetch_transcript` and
+`analyze_run` as equal options. Both were tightened after a cost review:
+
+- **7-day window, not a fixed count.** Type-1 already keys off the Slack nudge's 7-day window, so
+  type-2 matches it — the `gh` PR list is filtered by merge date rather than a fixed 30 PRs (which
+  drifts with merge velocity: 30 PRs might be two days or three weeks). `query_runs` has no date
+  filter, so the skill pulls the recent 30 and drops rows older than 7 days in-session.
+- **Prefer the slimmed summary.** The advisor's read-time slimming (`preprocessTranscript` — keeps
+  head/tail + error/test/exit-status "signal" lines) is coupled *inside* `analyze_run`; there is no
+  standalone `fetch_transcript_slimmed` tool. So the skill reaches for `analyze_run` first (cheap,
+  keeps the session's context small) and drops to raw `fetch_transcript` only when the summary is
+  inconclusive and an exact dropped line is needed.
+- **Hard cap.** At most 8 transcripts per sweep; if more gates qualify, the skill names them and
+  stops rather than sweeping unbounded. A scoped sweep runs ~$1–3; raw-across-many-runs can reach
+  ~$5–10, which the cap and analyze_run-first default keep out of the common path.
 
 ### Enforcement ladder: stronger only when statically checkable
 

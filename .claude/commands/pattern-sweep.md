@@ -57,23 +57,31 @@ The advisor MCP server is the data source for gate failures and transcripts. It 
 tool provider — **this session does the cross-run reasoning in its own context.** Do not add
 any new advisor capability; use the tools that already exist.
 
-1. List recent failed runs:
+1. List recent failed runs, then window to the last 7 days:
    ```
    query_runs(status="FAILED", limit=30)
    ```
-   Each row carries `failed_gate` (`tests` / `detekt` / `compile`) — that tells you *which*
-   gate, not *why*. Group the rows by `failed_gate`. Any gate with ≥ 3 failures in the window
-   is a candidate recurrence.
+   `query_runs` has no date filter — pull the most recent 30 and **drop rows whose
+   `created_at` is older than 7 days** in this session, so the window matches the type-1 Slack
+   nudge (`gate failed ≥ 3× in 7 days`). Each row carries `failed_gate` (`tests` / `detekt` /
+   `compile`) — that tells you *which* gate, not *why*. Group the remaining rows by
+   `failed_gate`. Any gate with ≥ 3 failures in the window is a candidate recurrence.
 
-2. For each candidate gate, read the transcripts of its failing runs to find the *specific*
-   shared cause:
+2. For each candidate gate, find the *specific* shared cause — **prefer the slimmed summary**:
    ```
-   fetch_transcript(job_id="<uuid>")   # raw JSONL — read the gate output directly
-   analyze_run(job_id="<uuid>")        # Claude-summarized root cause when the raw log is large
+   analyze_run(job_id="<uuid>")        # PREFER THIS — advisor slims the transcript server-side
+                                       # (head/tail + error/test/exit-status lines) and returns
+                                       # a root-cause summary. Cheap; keeps this session small.
+   fetch_transcript(job_id="<uuid>")   # raw JSONL — only when analyze_run is inconclusive and
+                                       # you need an exact line the summary dropped.
    ```
-   Read 3–5 transcripts per gate — enough to confirm the *same* underlying cause repeats
-   (e.g. every `detekt` failure is `MaxLineLength`, not a scattering of unrelated rules). If
-   the causes are unrelated, it is **not** a single pattern — do not merge them.
+   The advisor's read-time slimming is coupled inside `analyze_run` — there is no
+   `fetch_transcript_slimmed` tool, so `analyze_run` *is* how you get the slimmed view.
+   **Cap: read at most 8 transcripts total across all gates in one sweep** (analyze_run or raw
+   combined). Read enough per gate to confirm the *same* underlying cause repeats (e.g. every
+   `detekt` failure is `MaxLineLength`, not a scattering of unrelated rules) — usually 3–5. If
+   more gates still qualify after the cap, report them by name and stop rather than sweeping
+   unbounded. If the causes are unrelated, it is **not** a single pattern — do not merge them.
 
 ### 3. Type-2: review-comment recurrences (GitHub via `gh`)
 
@@ -83,10 +91,12 @@ copy of the comments in Supabase; that duplicates GitHub and adds a drift-prone 
 (The completion event already records `reviewCommentCount` per run, but not the text — the
 text stays on GitHub.)
 
-1. List recently merged/closed PRs and pull their agent review comments:
+1. List PRs merged in the **last 7 days** (a time window, to match type-1 — not a fixed PR
+   count, which drifts with merge velocity), then pull their agent review comments:
    ```bash
-   # recent PRs
-   gh pr list --state all --limit 30 --json number,title,mergedAt
+   # 7-day window; GNU date first, BSD/macOS date as fallback
+   SINCE=$(date -u -d '7 days ago' +%F 2>/dev/null || date -u -v-7d +%F)
+   gh pr list --state merged --search "merged:>=$SINCE" --json number,title,mergedAt
 
    # agent review bodies + inline comments for one PR
    gh api "/repos/$GITHUB_OWNER/$GITHUB_REPO/pulls/<n>/reviews" \
@@ -95,7 +105,8 @@ text stays on GitHub.)
      --jq '.[] | {path, line, body}'
    ```
    Use `$GITHUB_OWNER` / `$GITHUB_REPO` from the environment; fall back to
-   `michael-gonzalez-dev` / `media-sage` if unset.
+   `michael-gonzalez-dev` / `media-sage` if unset. If a 7-day window is too quiet to spot a
+   trend, widen the date — the point is a *window*, not a magic number.
 
 2. Cluster the comment bodies by the *kind* of issue they raise (hardcoded strings, wrong
    effect type, non-idiomatic Kotlin, reused-helper-missed, …). A cluster of ≥ 3 comments
@@ -165,6 +176,15 @@ which (if any) to graduate."*
 - **No new advisor capability.** Use `query_runs`, `fetch_transcript`, `analyze_run` as they
   are. Cross-run reasoning happens in this session's context, not in a new tool.
 - **No Supabase copy of review comments.** Read them live from GitHub via `gh`.
+- **Prefer the slimmed summary; cap the sweep.** Reach for `analyze_run` first — it slims each
+  transcript server-side and returns a root-cause summary, keeping this session's context (and
+  cost) small. Drop to raw `fetch_transcript` only when the summary is inconclusive. Read at
+  most **8 transcripts per sweep**; if more gates qualify, name them and stop.
+- **7-day window, not a fixed count.** Both types look back 7 days — drop `query_runs` rows
+  older than 7 days (it has no date filter), and window the `gh` PR list by merge date. Don't
+  read a fixed number of PRs; the count drifts with merge velocity.
+- **Cost.** A scoped sweep (one gate, ~5 `analyze_run` calls + a 7-day PR window) is roughly
+  **$1–3**; going raw across many runs can reach ~$5–10. Type-2 comment reads are pennies.
 - **≥ 3 to count.** One-off gate failures and one-off review comments are noise. A recurrence
   is the same *cause* (type-1) or same *issue class* across ≥ 2 PRs (type-2), seen ≥ 3 times.
 - **Don't over-enforce.** A judgment-call pattern gets a CLAUDE.md note, never a detekt rule —
