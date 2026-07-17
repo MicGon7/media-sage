@@ -80,7 +80,11 @@ head/tail trim of the entire document.
 
 ## Packaging
 
-`./gradlew :advisor:shadowJar` → `advisor/build/libs/advisor.jar`
+`./gradlew :advisor:shadowJar` → `advisor/build/libs/advisor-all.jar`
+
+The fat jar uses the `-all` classifier so a plain `./gradlew :advisor:build` (which runs
+the default `jar` task) produces `advisor.jar` and can never clobber the runnable fat jar
+the MCP launches. Point the MCP at `advisor-all.jar`.
 
 The shadow plugin is applied without a version (`id("com.gradleup.shadow")`) because it is
 already on the classpath via `:orchestrator`'s Ktor plugin. Adding a version triggers a
@@ -96,7 +100,7 @@ claude mcp add advisor \
   -e "SUPABASE_DB_URL=$SUPABASE_DB_URL" \
   -e "ANTHROPIC_AUTH_TOKEN=$ANTHROPIC_AUTH_TOKEN" \
   -e "ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL" \
-  -- java -jar /absolute/path/to/media-sage/advisor/build/libs/advisor.jar
+  -- java -jar /absolute/path/to/media-sage/advisor/build/libs/advisor-all.jar
 ```
 
 The `$VAR` references expand from your shell at registration time — values are stored in

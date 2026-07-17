@@ -11,7 +11,10 @@ application {
 }
 
 tasks.shadowJar {
-    archiveClassifier.set("")
+    // Distinct "-all" classifier so the fat jar never collides with the plain `jar`
+    // task output (both defaulted to advisor.jar, and a plain build would clobber the
+    // runnable fat jar the MCP launches).
+    archiveClassifier.set("all")
     archiveBaseName.set("advisor")
     mergeServiceFiles()
 }
