@@ -1,5 +1,13 @@
 # MS-389 — Analyst auto-PRs skill improvements from rubric scores and failure patterns
 
+> **Retirement note (MS-576).** The gate-failure detection half of this feature — the
+> `GateFailure` pattern and the `DatabasePatternDetector`'s `failed_gate` query — was retired in
+> MS-576 along with the `jobs.failed_gate` column it read. Run death is not a gate failure, and the
+> hardened pipeline suppresses gate failures by design, so `failed_gate` was never populated. See
+> `docs/MS-386-jobs-failure-attribution-model.md` for the full rationale. (The auto-PR scanner and
+> per-job decision scoring described below were separately retired in MS-567.) This doc is retained
+> for history; the `failed_gate` specifics have been scrubbed.
+
 ## What & why
 
 Closes the self-improvement loop started in MS-380. After each worker job is scored by the
@@ -8,10 +16,12 @@ in a 7-day window. If so, it reads the relevant `.claude/commands/` skill file f
 Claude to propose a minimal edit, and opens a pull request to a `feedback/analyst-YYYY-MM-DD`
 branch for human review.
 
-**Two detector types:**
+**Detector type (as originally shipped):**
 
-- **GateFailure** — same `failed_gate` (`compile` / `tests` / `detekt` / `ci`) in 3+ FAILED jobs
 - **LowRubricScore** — rubric criterion averaged below 3.5/5 across 3+ jobs
+
+(A second detector type, based on recurring gate failures, was also shipped here and later retired
+in MS-576 — see the retirement note above.)
 
 A human reviews the diff and merges (or closes). The Analyst never self-merges.
 
@@ -30,20 +40,9 @@ fire-and-forget coroutine in `PubSubCompletionRoutes` after `decisionScorer.scor
 
 ## Pattern detection
 
-`DatabasePatternDetector` runs two raw SQL queries via Exposed `transaction { exec(sql) }`,
-the same pattern as `JobsTableStatsReader`. No new query framework was added.
-
-**Gate failure query:**
-```sql
-SELECT failed_gate, COUNT(*) AS run_count
-FROM jobs
-WHERE status = 'FAILED'
-  AND failed_gate IS NOT NULL
-  AND created_at >= now() - make_interval(days => 7)
-GROUP BY failed_gate
-HAVING COUNT(*) >= 3
-ORDER BY run_count DESC
-```
+`DatabasePatternDetector` ran raw SQL queries via Exposed `transaction { exec(sql) }`,
+the same pattern as `JobsTableStatsReader`. No new query framework was added. (The gate-failure
+query was retired in MS-576; only the low-score query is shown below.)
 
 **Low score query** (joins `decision_scores` + `jobs`):
 ```sql

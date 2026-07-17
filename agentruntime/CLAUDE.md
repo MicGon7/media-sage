@@ -8,7 +8,7 @@ agentruntime/src/main/kotlin/com/mediasage/agentruntime/
 ├── di/                  — AgentConfig, AgentModule
 ├── db/                  — AgentDatabase, JobsTable, JobRepository (Supabase Postgres)
 ├── evaluation/          — AgentService, ClaudeAgentService, NoOpAgentService
-├── feedback/            — PatternDetector, GitHubApiClient, GitHubAppClient
+├── feedback/            — GitHubApiClient, GitHubAppClient
 ├── plugins/             — ContentNegotiation, CallLogging, StatusPages
 ├── routes/              — JiraWebhookRoutes, GitHubWebhookRoutes, PubSubWebhookRoutes
 └── service/             — AgentLaunchService, CloudRunDispatch, CloudRunJobsClient, JiraApiClient,
@@ -51,9 +51,11 @@ in `AgentDatabase.migrate()`.
 
 Additional nullable columns are added via idempotent migrations in `AgentDatabase.migrate()`
 (never in the base `CREATE TABLE`): worker efficiency metrics (MS-210 — tokens, cost, duration,
-`num_turns`) and failure attribution + model tracking (MS-386 — `failed_gate`, `model_version`).
-`failed_gate` is reported by the worker on its completion event; `model_version` is parsed from
-the `result` event's `modelUsage` key alongside the other metrics.
+`num_turns`) and model tracking (MS-386 — `model_version`, parsed from the `result` event's
+`modelUsage` key alongside the other metrics). MS-386's sibling `failed_gate` column was retired
+in MS-576 (idempotent `DROP COLUMN IF EXISTS` in `migrate()`) — run death (`status = FAILED`) is
+not a gate failure, and the hardened pipeline suppresses gate failures by design, so it was never
+populated. See `docs/MS-386-jobs-failure-attribution-model.md`.
 
 **Job status state machine:** `PENDING → RUNNING → COMPLETED | FAILED | INTERRUPTED`
 

@@ -53,7 +53,6 @@ internal data class JobRow(
     val createdAt: String,
     val totalCostUsd: String,
     val numTurns: Int?,
-    val failedGate: String?,
 )
 
 private fun fetchRuns(ticketKey: String?, status: String?, limit: Int): List<JobRow> = transaction {
@@ -68,7 +67,6 @@ private fun fetchRuns(ticketKey: String?, status: String?, limit: Int): List<Job
             createdAt = row[JobsTable.createdAt].toString(),
             totalCostUsd = row[JobsTable.totalCostUsd]?.toPlainString() ?: "-",
             numTurns = row[JobsTable.numTurns],
-            failedGate = row[JobsTable.failedGate],
         )
     }
 }
@@ -76,14 +74,14 @@ private fun fetchRuns(ticketKey: String?, status: String?, limit: Int): List<Job
 internal fun formatJobRows(rows: List<JobRow>): String {
     if (rows.isEmpty()) return "No runs found."
     return buildString {
-        appendLine("%-36s  %-10s  %-12s  %-24s  %-8s  %-6s  %s".format(
-            "job_id", "ticket", "status", "created_at", "cost_usd", "turns", "failed_gate",
+        appendLine("%-36s  %-10s  %-12s  %-24s  %-8s  %s".format(
+            "job_id", "ticket", "status", "created_at", "cost_usd", "turns",
         ))
-        appendLine("-".repeat(120))
+        appendLine("-".repeat(110))
         rows.forEach { r ->
-            appendLine("%-36s  %-10s  %-12s  %-24s  %-8s  %-6s  %s".format(
+            appendLine("%-36s  %-10s  %-12s  %-24s  %-8s  %s".format(
                 r.jobId, r.ticketKey, r.status, r.createdAt,
-                r.totalCostUsd, r.numTurns?.toString() ?: "-", r.failedGate ?: "-",
+                r.totalCostUsd, r.numTurns?.toString() ?: "-",
             ))
         }
     }

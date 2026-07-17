@@ -7,35 +7,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * Wire-contract tests for the worker → orchestrator completion event (MS-386).
+ * Wire-contract tests for the worker → orchestrator completion event.
  *
  * The worker publishes [JobCompletionEvent] as base64 JSON on Pub/Sub; the orchestrator
- * decodes it in `PubSubWebhookRoutes`. These guard the `failedGate` field added in MS-386,
- * including backward compatibility with events published before the field existed.
+ * decodes it in `PubSubWebhookRoutes`. These guard the metric, job-type, and review-signal
+ * fields, including backward compatibility with events published before each field existed.
  */
 class JobCompletionEventTest {
 
     private val json = Json { ignoreUnknownKeys = true }
-
-    @Test
-    fun `failedGate deserializes when the worker reports a gate on failure`() {
-        val event = json.decodeFromString(
-            JobCompletionEvent.serializer(),
-            """{"ticketKey":"MS-1","executionName":"exec-1","status":"failure","failedGate":"detekt"}"""
-        )
-        assertEquals("failure", event.status)
-        assertEquals("detekt", event.failedGate)
-    }
-
-    @Test
-    fun `failedGate defaults to null when absent (success or pre-MS-386 worker)`() {
-        val event = json.decodeFromString(
-            JobCompletionEvent.serializer(),
-            """{"ticketKey":"MS-1","executionName":"exec-1","status":"success"}"""
-        )
-        assertEquals("success", event.status)
-        assertNull(event.failedGate)
-    }
 
     @Test
     fun `metrics fields round-trip when worker embeds them in payload`() {
@@ -80,7 +60,7 @@ class JobCompletionEventTest {
     }
 
     @Test
-    fun `jobType and reviewCommentCount default to null when absent (pre-MS-570 worker)`() {
+    fun `jobType and reviewCommentCount default to null when absent (older worker)`() {
         val event = json.decodeFromString(
             JobCompletionEvent.serializer(),
             """{"ticketKey":"MS-1","executionName":"exec-1","status":"success"}"""
@@ -90,7 +70,7 @@ class JobCompletionEventTest {
     }
 
     @Test
-    fun `metrics fields default to null when absent (pre-MS-412 worker)`() {
+    fun `metrics fields default to null when absent (older worker)`() {
         val event = json.decodeFromString(
             JobCompletionEvent.serializer(),
             """{"ticketKey":"MS-1","executionName":"exec-1","status":"success"}"""

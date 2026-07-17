@@ -50,7 +50,7 @@ class JobDispatchTest {
         }
         override suspend fun markRunning(jobId: UUID, executionName: String) = Unit
         override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?) { completed.add(jobId) }
-        override suspend fun markFailed(jobId: UUID, failedGate: String?, modelVersion: String?) { failed.add(jobId) }
+        override suspend fun markFailed(jobId: UUID, modelVersion: String?) { failed.add(jobId) }
         override suspend fun markInterrupted(jobId: UUID) { interrupted.add(jobId) }
         override suspend fun findRunningJobs() = runningJobs
         override suspend fun findRunningByTicketKey(ticketKey: String): JobRow? =

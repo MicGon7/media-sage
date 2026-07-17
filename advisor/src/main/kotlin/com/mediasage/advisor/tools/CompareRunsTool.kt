@@ -66,7 +66,6 @@ internal data class JobSummary(
     val claudeDurationMs: Long?,
     val inputTokens: Int?,
     val outputTokens: Int?,
-    val failedGate: String?,
 )
 
 private fun loadJobSummary(jobId: UUID): JobSummary? = transaction {
@@ -80,7 +79,6 @@ private fun loadJobSummary(jobId: UUID): JobSummary? = transaction {
             claudeDurationMs = row[JobsTable.claudeDurationMs],
             inputTokens = row[JobsTable.inputTokens],
             outputTokens = row[JobsTable.outputTokens],
-            failedGate = row[JobsTable.failedGate],
         )
     }
 }
@@ -101,6 +99,4 @@ internal fun formatComparison(a: JobSummary, b: JobSummary): String = buildStrin
         a.inputTokens?.toString() ?: "-", b.inputTokens?.toString() ?: "-"))
     appendLine("%-20s  %-38s  %-38s".format("output_tokens",
         a.outputTokens?.toString() ?: "-", b.outputTokens?.toString() ?: "-"))
-    appendLine("%-20s  %-38s  %-38s".format("failed_gate",
-        a.failedGate ?: "-", b.failedGate ?: "-"))
 }

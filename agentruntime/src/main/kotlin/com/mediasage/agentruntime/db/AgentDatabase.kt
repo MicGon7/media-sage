@@ -22,18 +22,21 @@ object AgentDatabase {
 
     /**
      * Idempotent schema migrations — safe to run on every startup.
-     * Add new ALTER TABLE / CREATE OR REPLACE statements here; never drop columns.
+     * Add new ALTER TABLE / CREATE OR REPLACE statements here. Column drops are rare and must be
+     * idempotent (`DROP COLUMN IF EXISTS`) after every reader has been removed — see
+     * [dropFailedGateColumn].
      */
     private fun org.jetbrains.exposed.sql.Transaction.migrate() {
-        addWorkerMetricColumns() // MS-210
-        addFailureAttributionColumns() // MS-386
+        addWorkerMetricColumns()
+        addModelVersionColumn()
+        dropFailedGateColumn()
         renamePromptToPayload()
         createJobDurationsView()
-        createTranscriptsTable() // MS-387
+        createTranscriptsTable()
         dropDecisionScoresTable()
     }
 
-    /** MS-210: Worker efficiency metric columns. */
+    /** Worker efficiency metric columns. */
     private fun org.jetbrains.exposed.sql.Transaction.addWorkerMetricColumns() = exec(
         """
         ALTER TABLE jobs
@@ -47,14 +50,19 @@ object AgentDatabase {
         """.trimIndent()
     )
 
-    /** MS-386: Failure attribution (`failed_gate`) + model tracking (`model_version`). */
-    private fun org.jetbrains.exposed.sql.Transaction.addFailureAttributionColumns() = exec(
-        """
-        ALTER TABLE jobs
-          ADD COLUMN IF NOT EXISTS failed_gate TEXT,
-          ADD COLUMN IF NOT EXISTS model_version TEXT
-        """.trimIndent()
+    /** Model tracking (`model_version`). A sibling `failed_gate` column was retired — see
+     * [dropFailedGateColumn]. */
+    private fun org.jetbrains.exposed.sql.Transaction.addModelVersionColumn() = exec(
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS model_version TEXT"
     )
+
+    /**
+     * Drops the retired `failed_gate` column. Run death (`status = FAILED`) is not a gate failure,
+     * and the hardened pipeline suppresses gate failures by design, so the column was never
+     * populated (0/17 FAILED rows). Idempotent — safe once every reader has been removed.
+     */
+    private fun org.jetbrains.exposed.sql.Transaction.dropFailedGateColumn() =
+        exec("ALTER TABLE jobs DROP COLUMN IF EXISTS failed_gate")
 
     /** Renames the `prompt` column to `payload` — idempotent via existence check. */
     private fun org.jetbrains.exposed.sql.Transaction.renamePromptToPayload() = exec(
@@ -72,14 +80,14 @@ object AgentDatabase {
     )
 
     /**
-     * Drops the dead `decision_scores` table. Per-job decision scoring was retired in MS-567;
-     * this removes the now-orphaned table so a fresh boot no longer recreates it and the deployed
+     * Drops the dead `decision_scores` table. Per-job decision scoring was retired; this removes
+     * the now-orphaned table so a fresh boot no longer recreates it and the deployed
      * Supabase instance is cleaned up on the next orchestrator deploy. Idempotent.
      */
     private fun org.jetbrains.exposed.sql.Transaction.dropDecisionScoresTable() =
         exec("DROP TABLE IF EXISTS decision_scores")
 
-    /** MS-387: Human-readable worker transcripts, one row per job. */
+    /** Human-readable worker transcripts, one row per job. */
     private fun org.jetbrains.exposed.sql.Transaction.createTranscriptsTable() = exec(
         """
         CREATE TABLE IF NOT EXISTS transcripts (
