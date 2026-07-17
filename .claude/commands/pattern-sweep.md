@@ -67,21 +67,34 @@ any new advisor capability; use the tools that already exist.
    `compile`) — that tells you *which* gate, not *why*. Group the remaining rows by
    `failed_gate`. Any gate with ≥ 3 failures in the window is a candidate recurrence.
 
-2. For each candidate gate, find the *specific* shared cause — **prefer the slimmed summary**:
+2. For each candidate gate, find the *specific* shared cause — **stay on the server-slimmed
+   tools; never dump a raw transcript into this session:**
    ```
-   analyze_run(job_id="<uuid>")        # PREFER THIS — advisor slims the transcript server-side
-                                       # (head/tail + error/test/exit-status lines) and returns
-                                       # a root-cause summary. Cheap; keeps this session small.
-   fetch_transcript(job_id="<uuid>")   # raw JSONL — only when analyze_run is inconclusive and
-                                       # you need an exact line the summary dropped.
+   analyze_run(job_id="<uuid>")        # START HERE — advisor slims the transcript server-side
+                                       # (head/tail + error/test/exit-status lines, with a
+                                       # whole-document head/tail trim as a hard ceiling) and
+                                       # returns a root-cause summary. Bounded regardless of run
+                                       # size; only the summary lands in this session.
+   explain_failure(job_id="<uuid>")    # ESCALATE HERE if analyze_run is inconclusive — same
+                                       # server-side slimming, tuned for failed runs (root cause
+                                       # + proposed fix). Still bounded; still just a summary.
+   fetch_transcript(job_id="<uuid>")   # LAST RESORT, SHORT RUNS ONLY. Returns the ENTIRE raw
+                                       # JSONL straight into this session — a 90-turn run is
+                                       # 200k-500k+ tokens, costly and able to overflow the turn.
    ```
-   The advisor's read-time slimming is coupled inside `analyze_run` — there is no
-   `fetch_transcript_slimmed` tool, so `analyze_run` *is* how you get the slimmed view.
-   **Cap: read at most 8 transcripts total across all gates in one sweep** (analyze_run or raw
-   combined). Read enough per gate to confirm the *same* underlying cause repeats (e.g. every
-   `detekt` failure is `MaxLineLength`, not a scattering of unrelated rules) — usually 3–5. If
-   more gates still qualify after the cap, report them by name and stop rather than sweeping
-   unbounded. If the causes are unrelated, it is **not** a single pattern — do not merge them.
+   **The raw-fetch guard is turn count, not a transcript budget.** `query_runs` already prints
+   `numTurns` per row — check it *before* fetching. Only ever `fetch_transcript` a run with
+   `numTurns` ≲ 15, and only when both `analyze_run` and `explain_failure` left an exact line
+   ambiguous. For a large run, do **not** raw-fetch it at all — if the two summaries can't pin
+   the cause, report "cause unclear from summaries — inspect job `<uuid>` manually" and move on.
+   The advisor's slimming is coupled inside `analyze_run`/`explain_failure` (there is no
+   `fetch_transcript_slimmed`), so those two tools *are* the safe path on big runs.
+
+   Read enough per gate to confirm the *same* underlying cause repeats (e.g. every `detekt`
+   failure is `MaxLineLength`, not a scattering of unrelated rules) — usually 3–5 summaries. Keep
+   the sweep to **≤ 8 runs inspected total**; if more gates still qualify, name them and stop
+   rather than sweeping unbounded. If the causes are unrelated, it is **not** a single pattern —
+   do not merge them.
 
 ### 3. Type-2: review-comment recurrences (GitHub via `gh`)
 
@@ -176,10 +189,13 @@ which (if any) to graduate."*
 - **No new advisor capability.** Use `query_runs`, `fetch_transcript`, `analyze_run` as they
   are. Cross-run reasoning happens in this session's context, not in a new tool.
 - **No Supabase copy of review comments.** Read them live from GitHub via `gh`.
-- **Prefer the slimmed summary; cap the sweep.** Reach for `analyze_run` first — it slims each
-  transcript server-side and returns a root-cause summary, keeping this session's context (and
-  cost) small. Drop to raw `fetch_transcript` only when the summary is inconclusive. Read at
-  most **8 transcripts per sweep**; if more gates qualify, name them and stop.
+- **Stay server-slimmed; never dump a raw transcript.** `analyze_run` then `explain_failure`
+  are bounded regardless of run size — only their summaries land in this session. Raw
+  `fetch_transcript` returns the whole JSONL into context; a 90-turn run is 200k–500k+ tokens,
+  costly and able to overflow the turn. **Guard on `numTurns` (printed by `query_runs`): only
+  raw-fetch runs with `numTurns` ≲ 15, and only when both summaries left an exact line
+  ambiguous.** For a large run, don't raw-fetch — report the cause as unclear and move on. Keep
+  the sweep to **≤ 8 runs inspected total**; if more gates qualify, name them and stop.
 - **7-day window, not a fixed count.** Both types look back 7 days — drop `query_runs` rows
   older than 7 days (it has no date filter), and window the `gh` PR list by merge date. Don't
   read a fixed number of PRs; the count drifts with merge velocity.

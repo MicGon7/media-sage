@@ -61,14 +61,21 @@ The first draft listed a fixed 30 failed runs and 30 PRs and treated raw `fetch_
   type-2 matches it — the `gh` PR list is filtered by merge date rather than a fixed 30 PRs (which
   drifts with merge velocity: 30 PRs might be two days or three weeks). `query_runs` has no date
   filter, so the skill pulls the recent 30 and drops rows older than 7 days in-session.
-- **Prefer the slimmed summary.** The advisor's read-time slimming (`preprocessTranscript` — keeps
-  head/tail + error/test/exit-status "signal" lines) is coupled *inside* `analyze_run`; there is no
-  standalone `fetch_transcript_slimmed` tool. So the skill reaches for `analyze_run` first (cheap,
-  keeps the session's context small) and drops to raw `fetch_transcript` only when the summary is
-  inconclusive and an exact dropped line is needed.
-- **Hard cap.** At most 8 transcripts per sweep; if more gates qualify, the skill names them and
-  stops rather than sweeping unbounded. A scoped sweep runs ~$1–3; raw-across-many-runs can reach
-  ~$5–10, which the cap and analyze_run-first default keep out of the common path.
+- **Stay on the server-slimmed tools.** The advisor's read-time slimming (`preprocessTranscript` —
+  keeps head/tail + error/test/exit-status "signal" lines, with a whole-document head/tail trim as
+  a hard ceiling) is coupled *inside* `analyze_run` and `explain_failure`; there is no standalone
+  `fetch_transcript_slimmed` tool. Both are bounded regardless of run size and return only a summary
+  to the session. The skill starts with `analyze_run`, escalates to `explain_failure` (tuned for
+  failed runs) when inconclusive, and treats raw `fetch_transcript` as a last resort.
+- **The real risk is one big transcript, not the count.** Raw `fetch_transcript` returns the entire
+  JSONL straight into the session context — a 90-turn worker run is 200k–500k+ tokens, costly and
+  able to overflow the turn. A count cap doesn't protect against that, so the guard is on **run
+  size**: `query_runs` prints `numTurns`, and the skill only raw-fetches runs with `numTurns` ≲ 15,
+  and only when both summaries left an exact line ambiguous. For a large run it never raw-fetches —
+  it reports the cause as unclear and moves on.
+- **Hard cap.** ≤ 8 runs inspected per sweep; if more gates qualify, the skill names them and stops.
+  A scoped sweep runs ~$1–3; the analyze_run-first default plus the `numTurns` guard keep the
+  raw-transcript blowup ($5–10+, or an overflowed turn) out of the common path entirely.
 
 ### Enforcement ladder: stronger only when statically checkable
 
