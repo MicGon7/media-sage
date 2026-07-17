@@ -16,6 +16,9 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 private const val DEFAULT_LIMIT = 10
 
+/** Column layout shared by the header and every data row so the two can't drift apart. */
+private const val ROW_FORMAT = "%-36s  %-10s  %-12s  %-24s  %-8s  %s"
+
 internal fun Server.registerQueryRunsTool() {
     addTool(
         name = "query_runs",
@@ -73,13 +76,12 @@ private fun fetchRuns(ticketKey: String?, status: String?, limit: Int): List<Job
 
 internal fun formatJobRows(rows: List<JobRow>): String {
     if (rows.isEmpty()) return "No runs found."
+    val header = ROW_FORMAT.format("job_id", "ticket", "status", "created_at", "cost_usd", "turns")
     return buildString {
-        appendLine("%-36s  %-10s  %-12s  %-24s  %-8s  %s".format(
-            "job_id", "ticket", "status", "created_at", "cost_usd", "turns",
-        ))
-        appendLine("-".repeat(110))
+        appendLine(header)
+        appendLine("-".repeat(header.length))
         rows.forEach { r ->
-            appendLine("%-36s  %-10s  %-12s  %-24s  %-8s  %s".format(
+            appendLine(ROW_FORMAT.format(
                 r.jobId, r.ticketKey, r.status, r.createdAt,
                 r.totalCostUsd, r.numTurns?.toString() ?: "-",
             ))
