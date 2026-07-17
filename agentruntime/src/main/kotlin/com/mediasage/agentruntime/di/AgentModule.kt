@@ -7,12 +7,8 @@ import com.mediasage.agentruntime.feedback.detector.PatternDetector
 import com.mediasage.agentruntime.evaluation.AgentService
 import com.mediasage.agentruntime.evaluation.ClaudeAgentService
 import com.mediasage.agentruntime.evaluation.NoOpAgentService
-import com.mediasage.agentruntime.evaluation.scoring.DecisionScorer
-import com.mediasage.agentruntime.evaluation.scoring.NoOpScoringService
-import com.mediasage.agentruntime.evaluation.scoring.ScoringService
 import com.mediasage.agentruntime.feedback.github.GitHubApiClient
 import com.mediasage.agentruntime.feedback.github.GitHubAppClient
-import com.mediasage.agentruntime.feedback.pr.FeedbackPrService
 import com.mediasage.pipeline.core.JobRepository
 import com.mediasage.agentruntime.service.AgentLauncher
 import com.mediasage.agentruntime.service.AgentLaunchService
@@ -48,7 +44,7 @@ import org.slf4j.LoggerFactory
 private val log = LoggerFactory.getLogger("AgentModule")
 
 fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
-    includes(feedbackModule(config))
+    includes(judgeModule(config))
     single { buildHttpClient() }
     single { buildJiraTicketClient(config, get()) }
     single<JiraApiClient> { get<JiraTicketClient>() }
@@ -62,18 +58,15 @@ fun agentModule(config: AgentConfig, scope: CoroutineScope) = module {
     single<AgentLauncher> { get<AgentLaunchService>() }
 }
 
-private fun feedbackModule(config: AgentConfig) = module {
+private fun judgeModule(config: AgentConfig) = module {
     single<PatternDetector> { DatabasePatternDetector() }
-    if (isFeedbackEnabled(config)) {
-        log.info("Feedback features enabled — repo={}/{}", config.githubRepoOwner, config.githubRepoName)
+    if (isJudgeEnabled(config)) {
+        log.info("AC-compliance judge enabled — repo={}/{}", config.githubRepoOwner, config.githubRepoName)
         single { AnthropicClient(get(), config.claudeAuthToken, config.claudeBaseUrl) }
-        single<DecisionScorer> { ScoringService(get(), config.claudeModel) }
         single<GitHubApiClient> { buildGitHubApiClient(config, get()) }
-        single { buildFeedbackPrService(config, get(), get(), get()) }
         single<AgentService> { buildClaudeAgentService(config, get(), get(), get()) }
     } else {
-        log.info("Feedback features disabled — GITHUB_APP_ID or ANTHROPIC_AUTH_TOKEN not configured")
-        single<DecisionScorer> { NoOpScoringService() }
+        log.info("AC-compliance judge disabled — GITHUB_APP_ID or ANTHROPIC_AUTH_TOKEN not configured")
         single<AgentService> { NoOpAgentService() }
     }
 }
@@ -93,18 +86,6 @@ private fun buildGitHubApiClient(config: AgentConfig, httpClient: HttpClient): G
         installationId = config.githubAppInstallationId,
     )
 
-private fun buildFeedbackPrService(config: AgentConfig, httpClient: HttpClient, detector: PatternDetector, githubClient: GitHubApiClient) =
-    FeedbackPrService(
-        detector = detector,
-        githubClient = githubClient,
-        httpClient = httpClient,
-        authToken = config.claudeAuthToken,
-        claudeBaseUrl = config.claudeBaseUrl,
-        repoOwner = config.githubRepoOwner,
-        repoName = config.githubRepoName,
-        model = config.claudeModel,
-    )
-
 private fun buildClaudeAgentService(
     config: AgentConfig,
     anthropicClient: AnthropicClient,
@@ -119,7 +100,7 @@ private fun buildClaudeAgentService(
     repoName = config.githubRepoName,
 )
 
-private fun isFeedbackEnabled(config: AgentConfig): Boolean =
+private fun isJudgeEnabled(config: AgentConfig): Boolean =
     listOf(config.githubAppId, config.githubAppPrivateKey, config.githubAppInstallationId, config.githubRepoOwner, config.githubRepoName)
         .all { it.isNotBlank() } && config.claudeAuthToken.isNotBlank()
 

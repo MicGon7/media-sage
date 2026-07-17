@@ -3,10 +3,7 @@ package com.mediasage.agentruntime
 import com.mediasage.agentruntime.di.AgentConfig
 import com.mediasage.agentruntime.di.agentModule
 import com.mediasage.agentruntime.evaluation.AgentService
-import com.mediasage.agentruntime.evaluation.scoring.DecisionScorer
-import com.mediasage.agentruntime.feedback.pr.FeedbackPrService
 import com.mediasage.agentruntime.plugins.*
-import com.mediasage.agentruntime.routes.feedbackScanRoutes
 import com.mediasage.agentruntime.routes.githubWebhookRoutes
 import com.mediasage.agentruntime.routes.PostCompletionActions
 import com.mediasage.agentruntime.routes.pubSubWebhookRoutes
@@ -23,7 +20,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.ktor.ext.get
-import org.koin.ktor.ext.getKoin
 import org.koin.ktor.plugin.Koin
 
 fun main(args: Array<String>) {
@@ -39,10 +35,8 @@ fun Application.module() {
     // Resolve Cloud Run client before routing block to avoid Ktor routing DSL name collision
     val cloudRunJobsClient = agentLaunchService.cloudRun?.client
     val jobRegistry = agentLaunchService.cloudRun?.jobs
-    val decisionScorer = get<DecisionScorer>()
     val agentService: AgentService = get()
     val jobCompletionNotifier = get<JobCompletionNotifier>()
-    val feedbackPrService: FeedbackPrService? = getKoin().getOrNull()
     configureContentNegotiation()
     configureCallLogging()
     configureStatusPages()
@@ -50,11 +44,10 @@ fun Application.module() {
         get("/health") { call.respond(HttpStatusCode.OK, "OK") }
         webhookRoutes(config.jiraBotAccountId)
         githubWebhookRoutes(config.githubWebhookSecret, config.githubBotLogin)
-        feedbackScanRoutes(feedbackPrService)
         if (config.pubSubWebhookSecret.isNotBlank() && cloudRunJobsClient != null && jobRegistry != null) {
             pubSubWebhookRoutes(
                 config.pubSubWebhookSecret, cloudRunJobsClient, jobRegistry,
-                PostCompletionActions(agentService, decisionScorer, agentLaunchService, jobCompletionNotifier), scope,
+                PostCompletionActions(agentService, agentLaunchService, jobCompletionNotifier), scope,
             )
         }
     }
@@ -82,11 +75,11 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         claudeAuthToken = config.str("app.claude.authToken"),
         claudeBaseUrl = config.str("app.claude.baseUrl", "https://api.anthropic.com"),
         claudeModel = config.str("app.claude.model", "claude-sonnet-4-6"),
-        githubAppId = config.str("app.feedbackScan.githubAppId"),
-        githubAppPrivateKey = config.str("app.feedbackScan.githubPrivateKey"),
-        githubAppInstallationId = config.str("app.feedbackScan.githubInstallationId"),
-        githubRepoOwner = config.str("app.feedbackScan.githubRepoOwner"),
-        githubRepoName = config.str("app.feedbackScan.githubRepoName"),
+        githubAppId = config.str("app.githubApp.githubAppId"),
+        githubAppPrivateKey = config.str("app.githubApp.githubPrivateKey"),
+        githubAppInstallationId = config.str("app.githubApp.githubInstallationId"),
+        githubRepoOwner = config.str("app.githubApp.githubRepoOwner"),
+        githubRepoName = config.str("app.githubApp.githubRepoName"),
         slackWebhookUrl = config.str("app.slack.webhookUrl"),
     )
 
