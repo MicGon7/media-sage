@@ -8,7 +8,6 @@ import com.mediasage.advisor.ToolChoice
 import com.mediasage.advisor.ToolDefinition
 import com.mediasage.advisor.ToolInputSchema
 import com.mediasage.advisor.callClaudeWithRetry
-import com.mediasage.pipeline.core.DecisionScoresTable
 import com.mediasage.pipeline.core.TranscriptsTable
 import io.ktor.client.HttpClient
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -49,8 +48,6 @@ private val SYSTEM_PROMPT = """
 You are analyzing a Claude Code worker session transcript (JSONL format).
 Count the agentic turns (assistant → tool_use → tool_result cycles) and identify
 patterns of inefficiency like repeated file reads, redundant searches, or backtracking.
-Rubric scores from a prior evaluation are provided above the transcript — factor them
-into your analysis and recommendation.
 Report via the $ANALYZE_TOOL_NAME tool.
 """.trimIndent()
 
@@ -74,18 +71,10 @@ internal fun Server.registerAnalyzeRunTool(client: HttpClient, baseUrl: String, 
             ?: return@addTool CallToolResult(content = listOf(TextContent(text = "Invalid UUID: $jobIdStr")))
         val transcript = loadTranscript(jobId)
             ?: return@addTool CallToolResult(content = listOf(TextContent(text = "No transcript for $jobIdStr")))
-        val scores = loadDecisionScores(jobId)
-        val analysis = runAnalysis(client, baseUrl, authToken, transcript, scores)
+        val analysis = runAnalysis(client, baseUrl, authToken, transcript)
         CallToolResult(content = listOf(TextContent(text = analysis)))
     }
 }
-
-private data class DecisionScore(
-    val criterion: String,
-    val score: Int,
-    val rationale: String,
-    val recommendation: String,
-)
 
 private fun loadTranscript(jobId: UUID): String? = transaction {
     TranscriptsTable.selectAll()
@@ -94,35 +83,13 @@ private fun loadTranscript(jobId: UUID): String? = transaction {
         ?.get(TranscriptsTable.content)
 }
 
-private fun loadDecisionScores(jobId: UUID): List<DecisionScore> = transaction {
-    DecisionScoresTable.selectAll()
-        .where { DecisionScoresTable.jobId eq jobId }
-        .orderBy(DecisionScoresTable.criterion)
-        .map { row ->
-            DecisionScore(
-                criterion = row[DecisionScoresTable.criterion],
-                score = row[DecisionScoresTable.score],
-                rationale = row[DecisionScoresTable.rationale],
-                recommendation = row[DecisionScoresTable.recommendation],
-            )
-        }
-}
-
 private suspend fun runAnalysis(
     client: HttpClient,
     baseUrl: String,
     authToken: String,
     transcript: String,
-    scores: List<DecisionScore>,
 ): String {
     val context = buildString {
-        if (scores.isNotEmpty()) {
-            appendLine("## Rubric Scores")
-            scores.forEach { s ->
-                appendLine("${s.criterion}: ${s.score}/5 — ${s.rationale} | Fix: ${s.recommendation}")
-            }
-            appendLine()
-        }
         appendLine("## Session Transcript")
         append(preprocessTranscript(transcript))
     }
