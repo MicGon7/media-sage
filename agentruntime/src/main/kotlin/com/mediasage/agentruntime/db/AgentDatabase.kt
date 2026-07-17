@@ -30,7 +30,7 @@ object AgentDatabase {
         renamePromptToPayload()
         createJobDurationsView()
         createTranscriptsTable() // MS-387
-        createDecisionScoresTable()
+        dropDecisionScoresTable()
     }
 
     /** MS-210: Worker efficiency metric columns. */
@@ -71,20 +71,13 @@ object AgentDatabase {
         """.trimIndent()
     )
 
-    /** Decision scoring results, one row per (job, decision index, criterion). */
-    private fun org.jetbrains.exposed.sql.Transaction.createDecisionScoresTable() = exec(
-        """
-        CREATE TABLE IF NOT EXISTS decision_scores (
-            job_id          UUID REFERENCES jobs(job_id),
-            decision_index  INT NOT NULL,
-            criterion       TEXT NOT NULL,
-            score           INT NOT NULL,
-            rationale       TEXT NOT NULL,
-            recommendation  TEXT NOT NULL,
-            PRIMARY KEY (job_id, decision_index, criterion)
-        )
-        """.trimIndent()
-    )
+    /**
+     * Drops the dead `decision_scores` table. Per-job decision scoring was retired in MS-567;
+     * this removes the now-orphaned table so a fresh boot no longer recreates it and the deployed
+     * Supabase instance is cleaned up on the next orchestrator deploy. Idempotent.
+     */
+    private fun org.jetbrains.exposed.sql.Transaction.dropDecisionScoresTable() =
+        exec("DROP TABLE IF EXISTS decision_scores")
 
     /** MS-387: Human-readable worker transcripts, one row per job. */
     private fun org.jetbrains.exposed.sql.Transaction.createTranscriptsTable() = exec(

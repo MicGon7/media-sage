@@ -1,8 +1,8 @@
 # :advisor — Advisor MCP Server
 
 Stdio MCP server that gives interactive pipeline run analysis. Claude Code connects to it
-as a local process and can query the Supabase `jobs`, `transcripts`, and `decision_scores`
-tables and call Claude for analysis without leaving the conversation.
+as a local process and can query the Supabase `jobs` and `transcripts` tables and call
+Claude for analysis without leaving the conversation.
 
 ## Transport
 
@@ -27,7 +27,7 @@ it with `java.net.URI` and reconstructs a `jdbc:postgresql://` URL for Exposed.
 |--------------------|--------------------------------------------------------------------------------------|
 | `query_runs`       | List recent jobs; filter by ticket key, status, or limit                             |
 | `fetch_transcript` | Return raw JSONL transcript for a job                                                |
-| `analyze_run`      | Claude-powered analysis using both the transcript and rubric scores (decision_scores)|
+| `analyze_run`      | Claude-powered analysis of the run transcript alone                                  |
 | `compare_runs`     | Side-by-side comparison of two jobs (cost, turns, duration, status)                  |
 | `explain_failure`  | Claude-powered root cause + proposed fix for a failed job                            |
 
@@ -45,7 +45,7 @@ advisor/src/main/kotlin/com/mediasage/advisor/
 └── tools/
     ├── QueryRunsTool.kt
     ├── FetchTranscriptTool.kt
-    ├── AnalyzeRunTool.kt      — loads DecisionScoresTable + TranscriptsTable
+    ├── AnalyzeRunTool.kt      — loads TranscriptsTable
     ├── CompareRunsTool.kt
     ├── ExplainFailureTool.kt
     └── TranscriptPreprocessor.kt — read-time transcript slimming for analyze_run / explain_failure
