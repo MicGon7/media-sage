@@ -90,3 +90,25 @@ stages them, and emits `![name](https://raw.githubusercontent.com/<repo>/<branch
 branch is pushed at ship time, so the raw URLs resolve once the PR exists. (Committing review
 screenshots to the repo is a known cleanliness tradeoff; a dedicated hosting path can replace
 it later.)
+
+## Worker enablement (MS-583)
+
+MS-581 proved the loop locally but left the Cloud Run worker unable to run it — the worker
+image was deliberately built with no Android SDK. MS-583 enables it in `Dockerfile.worker`:
+
+- **Compile-only Android SDK.** `cmdline-tools` + `platforms;android-36` + `build-tools;36.0.0`
+  + `platform-tools`, installed under `/opt/android-sdk` (exported as `ANDROID_HOME`). No
+  emulator or system image — the render is pure JVM. Robolectric swaps `android.jar` at test
+  *runtime*, but compiling the `:composeApp` Android target still needs a compile-time SDK.
+- **Pre-bake by actually rendering once.** The existing dependency warm-up (`:agentruntime` /
+  `:appServer`) only *resolves* dependencies. That is not enough here: Robolectric's 144 MB
+  `android-all` jar is fetched at test *runtime* into `~/.m2`, so the pre-bake runs a real
+  `./gradlew :composeApp:recordRoborazziDebug -Pmediasage.worker=true --no-daemon` at image-build
+  time, then deletes the copied source in the same layer. Only the warmed `~/.gradle` / `~/.m2`
+  caches survive. Cold first render ≈ 15 min → warm per-ticket render ≈ 10 s.
+- **iOS stays gated.** `-Pmediasage.worker=true` skips the iOS target registration in both
+  `:composeApp` and `:shared`, so the ~3 GB Kotlin/Native toolchain is never downloaded on the
+  Linux image. Net image growth ≈ 500 MB (SDK + Robolectric jar + androidx/compose), and the
+  build must show **no** `kotlin-native-prebuilt` download.
+- **Runner disk.** `build-worker-image.yml` reclaims the runner's preinstalled toolchains before
+  building, since the render pre-bake pulls the SDK and caches into the image at build time.

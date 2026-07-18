@@ -33,6 +33,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # The render pre-bake (MS-583) runs a full :composeApp render at image-build
+      # time, pulling the Android SDK, the 144 MB Robolectric android-all jar, and the
+      # androidx/compose caches into the image. Reclaim the large preinstalled
+      # toolchains the runner ships with so the build does not exhaust disk.
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          df -h /
+
       - name: Log in to Artifact Registry
         uses: docker/login-action@v3
         with:

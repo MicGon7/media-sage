@@ -31,10 +31,12 @@ COMMIT_DIR="docs/ui-screenshots"
 
 # The render compiles the composeApp Android target, which needs a COMPILE-TIME
 # Android SDK (android.jar + aapt2). Robolectric only swaps android.jar at runtime,
-# so it does not remove the compile-time dependency. The Cloud Run worker gains this
-# SDK in a follow-up image update; until then, skip loudly and non-fatally (exit 3)
-# so a UI ticket does not break the whole run. Exit 3 means "render skipped", not
-# "render failed" — callers treat it as skip, never as a quality-gate failure.
+# so it does not remove the compile-time dependency. The Cloud Run worker image ships
+# this SDK (MS-583, installed in Dockerfile.worker), so the render normally runs. This
+# guard remains as a defensive fallback for SDK-less environments (e.g. a bare local
+# checkout): skip loudly and non-fatally (exit 3) so a UI ticket does not break the
+# whole run. Exit 3 means "render skipped", not "render failed" — callers treat it as
+# skip, never as a quality-gate failure.
 if [ -z "${ANDROID_HOME:-}" ] && [ -z "${ANDROID_SDK_ROOT:-}" ] && \
    ! grep -q '^sdk.dir=' local.properties 2>/dev/null; then
     echo "NOTICE: No Android SDK found (ANDROID_HOME / ANDROID_SDK_ROOT / sdk.dir)." >&2

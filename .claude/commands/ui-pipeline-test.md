@@ -43,4 +43,4 @@ This is the visual analog of `/pipeline-test`: where that bumps a counter in `Sm
 
 ## Prerequisite
 
-The worker renders UI only once its container image ships a compile-time Android SDK. Until that image update lands, `capture-ui.sh` skips the render (exit 3, non-fatal) and the worker opens a PR with the version bump but no screenshot — the smoke test still passes, it just doesn't exercise the render. Run this skill against a worker image that includes the SDK to test the full loop.
+The worker renders UI only when its container image ships a compile-time Android SDK. That SDK landed in MS-583 (`Dockerfile.worker`), so the full loop is live on the current worker image. If ever run against an older image without the SDK, `capture-ui.sh` skips the render (exit 3, non-fatal) and the worker opens a PR with the version bump but no screenshot — the smoke test still passes, it just doesn't exercise the render.

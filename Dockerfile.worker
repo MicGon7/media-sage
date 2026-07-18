@@ -17,16 +17,37 @@ ENV DISABLE_AUTOUPDATER=1
 ENV PYTHONUNBUFFERED=1
 
 RUN useradd -m -s /bin/bash agent
+
+# ---- Compile-only Android SDK (MS-583) ----
+# Rendering Compose UI headlessly (Roborazzi + Robolectric) needs a COMPILE-TIME
+# Android SDK — android.jar + aapt2 — to compile the :composeApp Android target.
+# Robolectric only swaps android.jar at test RUNTIME, so it does not remove the
+# compile-time dependency. No emulator or system image is installed (the render is
+# pure JVM), which keeps this to the platform + build-tools only. ANDROID_HOME is
+# also what scripts/capture-ui.sh probes to decide whether to render or skip.
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends unzip && \
+    mkdir -p "${ANDROID_HOME}/cmdline-tools" && \
+    curl -fsSL -o /tmp/cmdline-tools.zip \
+        https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip && \
+    unzip -q /tmp/cmdline-tools.zip -d "${ANDROID_HOME}/cmdline-tools" && \
+    mv "${ANDROID_HOME}/cmdline-tools/cmdline-tools" "${ANDROID_HOME}/cmdline-tools/latest" && \
+    rm /tmp/cmdline-tools.zip && \
+    yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null && \
+    "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
+        "platform-tools" "platforms;android-36" "build-tools;36.0.0" > /dev/null && \
+    apt-get purge -y unzip && apt-get autoremove -y && \
+    chown -R agent:agent "${ANDROID_HOME}" && \
+    rm -rf /var/lib/apt/lists/*
+
 USER agent
 WORKDIR /home/agent
 
 # Pre-bake the Gradle distribution and JVM module dependencies into the image layer
-# at build time. Covers :agentruntime and :appServer only.
-#
-# :composeApp and :shared are excluded because:
-#   - run-affected-tests.sh explicitly skips both (no Android/iOS SDK in Cloud Run)
-#   - :composeApp/:shared dependency resolution downloads kotlin-native-prebuilt (~245 MB)
-#     which is never used at worker runtime
+# at build time. Covers :agentruntime and :appServer here; :composeApp render deps are
+# warmed in the render pre-bake below.
 #
 # At runtime the worker makes zero Gradle downloads for :agentruntime/:appServer;
 # everything resolves from the image layer on the local container filesystem.
@@ -42,8 +63,23 @@ COPY --chown=agent:agent shared/build.gradle.kts shared/build.gradle.kts
 RUN chmod +x gradlew && \
     ./gradlew help --no-daemon && \
     ./gradlew :agentruntime:dependencies :appServer:dependencies \
-        --no-daemon --configure-on-demand && \
-    rm -f gradlew && rm -rf gradle
+        --no-daemon --configure-on-demand
+
+# Pre-bake the :composeApp headless-render toolchain (MS-583). A per-ticket UI render
+# must not sit through the ~15 min cold first render: Robolectric's 144 MB `android-all`
+# jar is fetched at test RUNTIME into ~/.m2, and the androidx/compose deps resolve on
+# first build. Warming those requires actually RUNNING a render once at image-build time,
+# not just resolving dependencies (that is why this mirrors the render, unlike the
+# :dependencies warm-up above). -Pmediasage.worker=true skips the iOS targets so the
+# ~3 GB Kotlin/Native toolchain is never downloaded on this Linux image. The copied
+# source is deleted in the same layer — the worker clones fresh at run time; only the
+# warmed ~/.gradle and ~/.m2 caches survive into the image.
+COPY --chown=agent:agent composeApp/src composeApp/src
+COPY --chown=agent:agent shared/src shared/src
+COPY --chown=agent:agent shared/schemas shared/schemas
+RUN ./gradlew :composeApp:recordRoborazziDebug -Pmediasage.worker=true --no-daemon && \
+    rm -rf composeApp shared agentruntime appServer \
+        build.gradle.kts settings.gradle.kts gradle.properties gradlew gradle
 
 COPY --chown=agent:agent agentruntime/entrypoint-common.sh entrypoint-common.sh
 COPY --chown=agent:agent agentruntime/worker-entrypoint.sh entrypoint.sh
