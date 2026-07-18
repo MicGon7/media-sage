@@ -63,11 +63,22 @@ for png in "${pngs[@]}"; do
 done
 git add "$COMMIT_DIR"/*.png
 
-# Derive the raw.githubusercontent base for the current branch. The branch is
-# pushed at ship time, so these URLs resolve once the PR exists.
-REMOTE_URL=$(git remote get-url origin)
-SLUG=$(echo "$REMOTE_URL" | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')
+# Derive the "owner/repo" slug for the raw.githubusercontent base. Prefer the
+# GITHUB_OWNER / GITHUB_REPO env vars the worker already exports; fall back to
+# parsing the origin remote. The remote MUST be credential-stripped: in the
+# worker, origin is https://x-access-token:TOKEN@github.com/OWNER/REPO.git, so a
+# naive parse would both break the URL and LEAK THE TOKEN into the PR body. The
+# sed strips scheme, any user[:pass]@ credential, the github.com host, and .git.
+if [ -n "${GITHUB_OWNER:-}" ] && [ -n "${GITHUB_REPO:-}" ]; then
+    SLUG="${GITHUB_OWNER}/${GITHUB_REPO}"
+else
+    REMOTE_URL=$(git remote get-url origin)
+    SLUG=$(echo "$REMOTE_URL" | \
+        sed -E 's#^[a-z]+://##; s#^[^/@]*@##; s#github\.com[:/]##; s#\.git$##')
+fi
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
+# The branch is pushed at ship time, so these URLs resolve once the PR exists.
+# The repo is public, so GitHub proxies the raw URL and renders it inline.
 RAW_BASE="https://raw.githubusercontent.com/${SLUG}/${BRANCH}"
 
 echo ""
@@ -78,7 +89,9 @@ for png in "${pngs[@]}"; do
     name=$(basename "$png" .png)
     echo "**${name}**"
     echo ""
-    echo "![${name}](${RAW_BASE}/${COMMIT_DIR}/$(basename "$png"))"
+    # HTML <img> (not Markdown) so the width is capped — a full-res phone render
+    # is too wide inline. An absolute URL is what makes it render, not the tag.
+    echo "<img src=\"${RAW_BASE}/${COMMIT_DIR}/$(basename "$png")\" alt=\"${name}\" width=\"320\" />"
     echo ""
 done
 echo "================================================================================"
