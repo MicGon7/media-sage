@@ -408,7 +408,7 @@ private fun EncouragementContent(
 }
 
 @Composable
-private fun FigureProfileSheetContent(profile: HeadlineDetailContract.FigureProfileState) {
+internal fun FigureProfileSheetContent(profile: HeadlineDetailContract.FigureProfileState) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
