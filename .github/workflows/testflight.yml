@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'composeApp/**'
+      - '!composeApp/src/commonMain/kotlin/com/mediasage/feature/smoketest/**'
       - 'shared/**'
       - 'iosApp/**'
   workflow_dispatch:
