@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -128,7 +129,8 @@ fun HeadlineDetailScreen(
                 )
                 if (state.figureProfile != null) {
                     MediaSageBottomSheet(
-                        onDismissRequest = { onIntent(HeadlineDetailContract.Intent.DismissFigureProfile) }
+                        onDismissRequest = { onIntent(HeadlineDetailContract.Intent.DismissFigureProfile) },
+                        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
                     ) {
                         FigureProfileSheetContent(profile = state.figureProfile)
                     }
