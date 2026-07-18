@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +32,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,12 +45,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
+import com.mediasage.ui.MediaSageBottomSheet
 import com.mediasage.ui.SepiaColorFilter
 import io.github.alexzhirkevich.compottie.DotLottie
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
@@ -122,11 +129,14 @@ fun HeadlineDetailScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HeadlineDetailContent(
     state: HeadlineDetailContract.UiState.Success,
     onRetry: () -> Unit
 ) {
+    var showFigureSheet by rememberSaveable { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -161,7 +171,22 @@ private fun HeadlineDetailContent(
                     onRetry = onRetry
                 )
                 is HeadlineDetailContract.EncouragementState.Loaded -> EncouragementContent(
-                    encouragement = state.encouragement
+                    encouragement = state.encouragement,
+                    onFigureClick = { showFigureSheet = true },
+                )
+            }
+        }
+    }
+
+    if (showFigureSheet) {
+        val loaded = state.encouragement as? HeadlineDetailContract.EncouragementState.Loaded
+        if (loaded != null) {
+            MediaSageBottomSheet(onDismissRequest = { showFigureSheet = false }) {
+                FigureProfileSheetContent(
+                    figureName = loaded.figureName,
+                    figureRole = loaded.figureRole,
+                    figureImageUrl = loaded.figureImageUrl,
+                    figureBio = loaded.figureBio,
                 )
             }
         }
@@ -261,7 +286,10 @@ private fun EncouragementError(
 }
 
 @Composable
-private fun EncouragementContent(encouragement: HeadlineDetailContract.EncouragementState.Loaded) {
+private fun EncouragementContent(
+    encouragement: HeadlineDetailContract.EncouragementState.Loaded,
+    onFigureClick: () -> Unit,
+) {
     // Article summary
     if (!encouragement.summary.isNullOrBlank()) {
         Text(
@@ -308,6 +336,7 @@ private fun EncouragementContent(encouragement: HeadlineDetailContract.Encourage
 
             // Figure attribution
             Row(
+                modifier = Modifier.clickable(onClick = onFigureClick),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -416,5 +445,65 @@ private fun FullErrorState(
         OutlinedButton(onClick = onRetry) {
             Text(stringResource(Res.string.match_retry))
         }
+    }
+}
+
+@Composable
+private fun FigureProfileSheetContent(
+    figureName: String,
+    figureRole: String,
+    figureImageUrl: String?,
+    figureBio: String?,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        FigurePortraitCircle(url = figureImageUrl, name = figureName, size = 120.dp)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = figureName,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        if (figureRole.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = figureRole,
+                style = MaterialTheme.typography.bodyLarge,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        if (!figureBio.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = figureBio,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 24.sp,
+            )
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun FigurePortraitCircle(url: String?, name: String, size: Dp) {
+    if (url != null) {
+        AsyncImage(
+            model = url,
+            contentDescription = name,
+            modifier = Modifier.size(size).clip(CircleShape),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+        )
+    } else {
+        FigurePlaceholder(name = name, size = size)
     }
 }

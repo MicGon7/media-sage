@@ -113,6 +113,47 @@ class HeadlineDetailViewModelTest {
         assertIs<HeadlineDetailContract.UiState.Error>(vm.state.value)
     }
 
+    @Test
+    fun populatesFigureBioInEncouragementWhenFigureIsFound() = runTest(testDispatcher) {
+        val figure = buildFigure(name = "Augustine", bio = "Bishop of Hippo in North Africa.")
+        val vm = buildViewModel(
+            headline = buildHeadline(),
+            encouragement = buildEncouragement(figureName = "Augustine"),
+            figure = figure,
+        )
+
+        val success = assertIs<HeadlineDetailContract.UiState.Success>(vm.state.value)
+        val loaded = assertIs<HeadlineDetailContract.EncouragementState.Loaded>(success.encouragement)
+        assertEquals("Bishop of Hippo in North Africa.", loaded.figureBio)
+    }
+
+    @Test
+    fun figureBioIsNullWhenFigureIsNotFound() = runTest(testDispatcher) {
+        val vm = buildViewModel(
+            headline = buildHeadline(),
+            encouragement = buildEncouragement(figureName = "Unknown"),
+            figure = null,
+        )
+
+        val success = assertIs<HeadlineDetailContract.UiState.Success>(vm.state.value)
+        val loaded = assertIs<HeadlineDetailContract.EncouragementState.Loaded>(success.encouragement)
+        assertEquals(null, loaded.figureBio)
+    }
+
+    @Test
+    fun figureBioIsNullWhenFigureBioIsBlank() = runTest(testDispatcher) {
+        val figure = buildFigure(name = "Augustine", bio = "")
+        val vm = buildViewModel(
+            headline = buildHeadline(),
+            encouragement = buildEncouragement(figureName = "Augustine"),
+            figure = figure,
+        )
+
+        val success = assertIs<HeadlineDetailContract.UiState.Success>(vm.state.value)
+        val loaded = assertIs<HeadlineDetailContract.EncouragementState.Loaded>(success.encouragement)
+        assertEquals(null, loaded.figureBio)
+    }
+
     private fun buildViewModel(
         headline: Headline? = null,
         encouragement: Encouragement? = buildEncouragement(),
@@ -138,11 +179,12 @@ private fun buildHeadline(url: String = "https://example.com/article") = Headlin
     fetchedAt = 0L,
 )
 
-private fun buildFigure(id: Long = 1L, name: String = "Augustine") = Figure(
+private fun buildFigure(id: Long = 1L, name: String = "Augustine", bio: String = "") = Figure(
     id = id,
     name = name,
     category = FigureCategory.THEOLOGIAN,
     century = "4th",
+    bio = bio,
 )
 
 private fun buildEncouragement(

@@ -89,15 +89,16 @@ class HeadlineDetailViewModel(
                 )
 
                 runCatching {
-                    val figure = figureRepository.getFigureByName(encouragement.figureName)
-                    if (figure != null) {
-                        quoteRepository.saveQuote(
-                            text = encouragement.quoteText,
-                            source = encouragement.scriptureReference,
-                            themes = encouragement.connectionThemes,
-                            figureId = figure.id,
-                        )
-                    }
+                    val figure = figureRepository.getFigureByName(encouragement.figureName) ?: return@runCatching
+                    quoteRepository.saveQuote(
+                        text = encouragement.quoteText,
+                        source = encouragement.scriptureReference,
+                        themes = encouragement.connectionThemes,
+                        figureId = figure.id,
+                    )
+                    val current = _state.value as? HeadlineDetailContract.UiState.Success ?: return@runCatching
+                    val loaded = current.encouragement as? HeadlineDetailContract.EncouragementState.Loaded ?: return@runCatching
+                    _state.value = current.copy(encouragement = loaded.copy(figureBio = figure.bio.takeIf { it.isNotBlank() }))
                 }
             } catch (e: Exception) {
                 _state.value = HeadlineDetailContract.UiState.Error(e.toErrorType())

@@ -28,6 +28,7 @@ object HeadlineDetailContract {
             val figureName: String,
             val figureRole: String,
             val figureImageUrl: String?,
+            val figureBio: String? = null,
             val scriptureReference: String,
             val scriptureText: String,
             val matchExplanation: String,
