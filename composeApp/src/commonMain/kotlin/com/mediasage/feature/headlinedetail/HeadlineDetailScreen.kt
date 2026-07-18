@@ -449,7 +449,7 @@ private fun FullErrorState(
 }
 
 @Composable
-private fun FigureProfileSheetContent(
+internal fun FigureProfileSheetContent(
     figureName: String,
     figureRole: String,
     figureImageUrl: String?,
