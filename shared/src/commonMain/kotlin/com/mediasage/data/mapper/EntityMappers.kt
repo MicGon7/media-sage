@@ -163,7 +163,8 @@ fun EncouragementEntity.toDomain() = Encouragement(
     headlineSource = headlineSource,
     headlineImageUrl = headlineImageUrl,
     articleUrl = articleUrl,
-    bookmarked = bookmarked
+    bookmarked = bookmarked,
+    figureId = figureId
 )
 
 fun Encouragement.toEntity(

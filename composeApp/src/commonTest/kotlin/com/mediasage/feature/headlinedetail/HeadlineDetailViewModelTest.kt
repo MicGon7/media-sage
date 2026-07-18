@@ -23,6 +23,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 
 class HeadlineDetailViewModelTest {
 
@@ -43,7 +44,7 @@ class HeadlineDetailViewModelTest {
         val vm = buildViewModel(
             headline = buildHeadline(),
             encouragement = buildEncouragement(figureName = "Augustine"),
-            figure = buildFigure(name = "Augustine"),
+            figureRepository = FakeFigureRepository(buildFigure(name = "Augustine")),
         )
 
         assertIs<HeadlineDetailContract.UiState.Success>(vm.state.value)
@@ -63,7 +64,7 @@ class HeadlineDetailViewModelTest {
         buildViewModel(
             headline = buildHeadline(),
             encouragement = encouragement,
-            figure = figure,
+            figureRepository = FakeFigureRepository(figure),
             quoteRepository = quoteRepo,
         )
 
@@ -82,7 +83,6 @@ class HeadlineDetailViewModelTest {
         buildViewModel(
             headline = buildHeadline(),
             encouragement = buildEncouragement(figureName = "Unknown Figure"),
-            figure = null,
             quoteRepository = quoteRepo,
         )
 
@@ -96,7 +96,7 @@ class HeadlineDetailViewModelTest {
         val vm = buildViewModel(
             headline = buildHeadline(),
             encouragement = buildEncouragement(figureName = "Augustine"),
-            figure = buildFigure(name = "Augustine"),
+            figureRepository = FakeFigureRepository(buildFigure(name = "Augustine")),
             quoteRepository = quoteRepo,
         )
 
@@ -113,17 +113,37 @@ class HeadlineDetailViewModelTest {
         assertIs<HeadlineDetailContract.UiState.Error>(vm.state.value)
     }
 
+    @Test
+    fun viewFigureProfileLoadsFigureByIdWhenFigureIdPresent() = runTest(testDispatcher) {
+        val figure = buildFigure(id = 5L, name = "Augustine")
+        val figureRepo = FakeFigureRepository(figure)
+
+        val vm = buildViewModel(
+            headline = buildHeadline(),
+            encouragement = buildEncouragement(figureName = "Augustine", figureId = 5L),
+            figureRepository = figureRepo,
+        )
+
+        vm.onIntent(HeadlineDetailContract.Intent.ViewFigureProfile)
+
+        val state = vm.state.value as HeadlineDetailContract.UiState.Success
+        assertNotNull(state.figureProfile)
+        assertEquals("Augustine", state.figureProfile!!.name)
+        assertEquals(1, figureRepo.getFigureByIdCalls.size)
+        assertEquals(5L, figureRepo.getFigureByIdCalls.first())
+    }
+
     private fun buildViewModel(
         headline: Headline? = null,
         encouragement: Encouragement? = buildEncouragement(),
-        figure: Figure? = null,
+        figureRepository: FigureRepository = FakeFigureRepository(),
         quoteRepository: QuoteRepository = FakeQuoteRepository(),
         articleUrl: String = "https://example.com/article",
     ) = HeadlineDetailViewModel(
         articleUrl = articleUrl,
         headlineRepository = FakeHeadlineRepository(headline),
         encouragementRepository = FakeEncouragementRepository(encouragement),
-        figureRepository = FakeFigureRepository(figure),
+        figureRepository = figureRepository,
         quoteRepository = quoteRepository,
     )
 }
@@ -150,6 +170,7 @@ private fun buildEncouragement(
     quoteText: String = "Our heart is restless until it rests in Thee",
     scriptureReference: String = "Confessions 1.1",
     connectionThemes: List<String> = listOf("peace"),
+    figureId: Long? = null,
 ) = Encouragement(
     summary = null,
     quoteText = quoteText,
@@ -161,6 +182,7 @@ private fun buildEncouragement(
     connectionThemes = connectionThemes,
     matchTheme = "peace",
     tone = "hopeful",
+    figureId = figureId,
 )
 
 private data class SavedQuote(
@@ -211,10 +233,15 @@ private class FakeEncouragementRepository(private val encouragement: Encourageme
     override suspend fun toggleBookmark(articleUrl: String) = Unit
 }
 
-private class FakeFigureRepository(private val figure: Figure?) : FigureRepository {
+private class FakeFigureRepository(private val figure: Figure? = null) : FigureRepository {
+    val getFigureByIdCalls = mutableListOf<Long>()
+
     override fun observeAllFigures(): Flow<List<Figure>> = flowOf(listOfNotNull(figure))
     override fun observeFiguresByCategory(category: FigureCategory): Flow<List<Figure>> = flowOf(listOfNotNull(figure))
-    override suspend fun getFigureById(id: Long): Figure? = figure?.takeIf { it.id == id }
+    override suspend fun getFigureById(id: Long): Figure? {
+        getFigureByIdCalls.add(id)
+        return figure?.takeIf { it.id == id }
+    }
     override suspend fun getFigureByName(name: String): Figure? = figure?.takeIf { it.name == name }
     override suspend fun syncFigures() = Unit
 }

@@ -2,6 +2,7 @@ package com.mediasage.feature.headlinedetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediasage.domain.model.Figure
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
@@ -42,6 +43,11 @@ class HeadlineDetailViewModel(
             is HeadlineDetailContract.Intent.ToggleBookmark -> {
                 viewModelScope.launch { encouragementRepository.toggleBookmark(articleUrl) }
             }
+            is HeadlineDetailContract.Intent.ViewFigureProfile -> loadFigureProfile()
+            is HeadlineDetailContract.Intent.DismissFigureProfile -> {
+                val current = _state.value as? HeadlineDetailContract.UiState.Success ?: return
+                _state.value = current.copy(figureProfile = null)
+            }
         }
     }
 
@@ -55,6 +61,26 @@ class HeadlineDetailViewModel(
             }
         }
     }
+
+    private fun loadFigureProfile() {
+        val current = _state.value as? HeadlineDetailContract.UiState.Success ?: return
+        val loaded = current.encouragement as? HeadlineDetailContract.EncouragementState.Loaded ?: return
+        viewModelScope.launch {
+            val figure = loaded.figureId?.let { figureRepository.getFigureById(it) }
+            val fresh = _state.value as? HeadlineDetailContract.UiState.Success ?: return@launch
+            _state.value = fresh.copy(figureProfile = buildFigureProfile(figure, loaded))
+        }
+    }
+
+    private fun buildFigureProfile(
+        figure: Figure?,
+        loaded: HeadlineDetailContract.EncouragementState.Loaded
+    ) = HeadlineDetailContract.FigureProfileState(
+        name = figure?.name ?: loaded.figureName,
+        role = figure?.role ?: loaded.figureRole,
+        imageUrl = figure?.portraitUrl ?: loaded.figureImageUrl,
+        bio = figure?.bio?.takeIf { it.isNotBlank() }
+    )
 
     private fun loadMatch() {
         viewModelScope.launch {
@@ -85,6 +111,7 @@ class HeadlineDetailViewModel(
                         matchExplanation = encouragement.explanation,
                         matchTheme = encouragement.matchTheme,
                         tone = encouragement.tone,
+                        figureId = encouragement.figureId,
                     )
                 )
 

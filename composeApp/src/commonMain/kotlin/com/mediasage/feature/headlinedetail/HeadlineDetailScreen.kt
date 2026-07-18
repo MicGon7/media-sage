@@ -4,7 +4,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +24,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,6 +50,7 @@ import coil3.compose.AsyncImage
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
+import com.mediasage.ui.MediaSageBottomSheet
 import com.mediasage.ui.SepiaColorFilter
 import io.github.alexzhirkevich.compottie.DotLottie
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
@@ -55,12 +60,14 @@ import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.bookmark_add
 import mediasage.composeapp.generated.resources.bookmark_remove
+import mediasage.composeapp.generated.resources.figure_detail_biography
 import mediasage.composeapp.generated.resources.match_error_generic
 import mediasage.composeapp.generated.resources.match_error_network
 import mediasage.composeapp.generated.resources.match_finding
 import mediasage.composeapp.generated.resources.match_retry
 import org.jetbrains.compose.resources.stringResource
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeadlineDetailScreen(
     state: HeadlineDetailContract.UiState,
@@ -113,10 +120,20 @@ fun HeadlineDetailScreen(
                 },
                 onRetry = { onIntent(HeadlineDetailContract.Intent.RetryMatch) }
             )
-            is HeadlineDetailContract.UiState.Success -> HeadlineDetailContent(
-                state = state,
-                onRetry = { onIntent(HeadlineDetailContract.Intent.RetryMatch) }
-            )
+            is HeadlineDetailContract.UiState.Success -> {
+                HeadlineDetailContent(
+                    state = state,
+                    onRetry = { onIntent(HeadlineDetailContract.Intent.RetryMatch) },
+                    onFigureTap = { onIntent(HeadlineDetailContract.Intent.ViewFigureProfile) }
+                )
+                if (state.figureProfile != null) {
+                    MediaSageBottomSheet(
+                        onDismissRequest = { onIntent(HeadlineDetailContract.Intent.DismissFigureProfile) }
+                    ) {
+                        FigureProfileSheetContent(profile = state.figureProfile)
+                    }
+                }
+            }
         }
     }
     }
@@ -125,7 +142,8 @@ fun HeadlineDetailScreen(
 @Composable
 private fun HeadlineDetailContent(
     state: HeadlineDetailContract.UiState.Success,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onFigureTap: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -161,7 +179,8 @@ private fun HeadlineDetailContent(
                     onRetry = onRetry
                 )
                 is HeadlineDetailContract.EncouragementState.Loaded -> EncouragementContent(
-                    encouragement = state.encouragement
+                    encouragement = state.encouragement,
+                    onFigureTap = onFigureTap,
                 )
             }
         }
@@ -261,7 +280,10 @@ private fun EncouragementError(
 }
 
 @Composable
-private fun EncouragementContent(encouragement: HeadlineDetailContract.EncouragementState.Loaded) {
+private fun EncouragementContent(
+    encouragement: HeadlineDetailContract.EncouragementState.Loaded,
+    onFigureTap: () -> Unit,
+) {
     // Article summary
     if (!encouragement.summary.isNullOrBlank()) {
         Text(
@@ -306,8 +328,9 @@ private fun EncouragementContent(encouragement: HeadlineDetailContract.Encourage
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Figure attribution
+            // Figure attribution — tappable to open profile sheet
             Row(
+                modifier = Modifier.clickable(onClick = onFigureTap),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -381,6 +404,74 @@ private fun EncouragementContent(encouragement: HeadlineDetailContract.Encourage
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 20.sp,
         )
+    }
+}
+
+@Composable
+private fun FigureProfileSheetContent(profile: HeadlineDetailContract.FigureProfileState) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 32.dp)
+    ) {
+        if (profile.imageUrl != null) {
+            AsyncImage(
+                model = profile.imageUrl,
+                contentDescription = profile.name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(260.dp),
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(260.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                FigurePlaceholder(name = profile.name, size = 100.dp)
+            }
+        }
+
+        Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+            Text(
+                text = profile.name,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            if (profile.role.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = profile.role,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            if (!profile.bio.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(Res.string.figure_detail_biography).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing * 1.5f,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = profile.bio,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 24.sp,
+                )
+            }
+        }
     }
 }
 
