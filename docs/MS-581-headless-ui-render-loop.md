@@ -137,23 +137,42 @@ headroom) — if a later, cheaper sizing is wanted, `4 CPU / 8 GiB` is the untes
 
 ### Measurement: before / after
 
-Measured on a real UI render triggered via `/ui-pipeline-test`. The render-build wall-clock is read
-from the Cloud Run execution logs (the Gradle `recordRoborazziDebug` build); total run duration is
-the job execution wall-clock. The advisor's `duration_ms` is *not* used as the render-build proxy —
-it measures the whole agent session and does not isolate the compile (e.g. non-UI MS-585 showed a
-larger `duration_ms` than UI MS-587).
+Measured on real runs. The **render-build wall-clock** is Gradle's own `BUILD SUCCESSFUL in …` for
+the `:composeApp:recordRoborazziDebug` task, read from the Cloud Run execution logs. **Total run
+duration** is the Cloud Run *execution* wall-clock (`completionTime − creationTimestamp`). The
+advisor's `duration_ms` is *not* used — it measures the agent session, undercounts the execution
+wall-clock (MS-587 reported 349569 ms ≈ 5m50s vs. the true 8m26s execution), and does not isolate
+the compile.
 
-| Metric | Before (2 CPU / 4 GiB) | After (8 CPU / 16 GiB) |
-|---|---|---|
-| Render build wall-clock | ~4m14s (MS-587) | _pending post-deploy measurement_ |
-| Total run duration | ~5m50s (MS-587, advisor `duration_ms` 349569) | _pending post-deploy measurement_ |
-| Non-UI run duration | ~1 min (unchanged baseline) | _confirm unchanged_ |
+- **Before** = MS-587 (execution `…-n5v97`), a real UI render at `2 CPU / 4 GiB`.
+- **After** = MS-590 (execution `…-5lqgl`), the `/ui-pipeline-test` UI render at `8 CPU / 16 GiB`.
+- **Non-UI** = QUALITY-503 (`…-5kw28`, the PR-quality review dispatched for MS-590's PR) at
+  `8 CPU / 16 GiB`, vs. QUALITY-501 (`…-hwg8l`) at `2 CPU / 4 GiB`.
 
-The **before** row uses MS-587 — a real UI render that ran at the current `2 CPU / 4 GiB` sizing,
-so no redundant baseline run was needed. The **after** row is filled in once this change merges and
-the worker redeploys at the new sizing (a fresh `/ui-pipeline-test` is run and the render-build time
-read from its Cloud Run logs). A non-UI run is also confirmed to still complete in ~1 min and not be
-made materially more expensive.
+| Metric | Before (2 CPU / 4 GiB) | After (8 CPU / 16 GiB) | Change |
+|---|---|---|---|
+| Render build (`recordRoborazziDebug`) | ~4m14s (MS-587) | **1m 30s** (MS-590) | **2.8× faster** |
+| Total UI run (execution wall-clock) | 8m26s (MS-587) | **4m59s** (MS-590) | **1.7× faster** |
+| Non-UI run (execution wall-clock) | 2m05s (QUALITY-501) | **2m08s** (QUALITY-503) | unchanged |
+
+**Result: the bump works.** The render build dropped from ~4m14s to 1m30s and the whole UI run from
+8m26s to under 5 min. The render sped up **2.8×**, not the full 4× the extra cores would imply
+linearly — consistent with Amdahl (resource setup, `android-all` load, and single-threaded phases
+don't parallelise) plus GC headroom from 16 GiB doing part of the work. The total run improves less
+than the render alone (1.7×) because the non-compile parts — git clone, the agent's reasoning turns,
+PR creation — are unaffected by machine size. The non-UI run is flat (2m05s → 2m08s), confirming the
+larger machine neither helps nor hurts work that has no compile to parallelise.
+
+**Cost reality.** `8/16` is exactly 4× the per-second rate of `2/4` (both CPU and memory scaled 4×;
+Cloud Run bills ~$0.000024/vCPU-s + $0.0000025/GiB-s). Because the run isn't a full 4× shorter, the
+Cloud Run *compute* per run rises modestly in absolute terms: a UI render goes ~$0.029 → ~$0.069 and
+a non-UI run ~$0.007 → ~$0.030. Both are **cents** — dwarfed ~5–10× by each run's Anthropic token
+cost (~$0.20–0.30, the advisor `cost_usd`). So the "roughly cost-neutral" framing holds *in the way
+that matters*: a few extra cents of compute per run buys a ~3.5-minute-faster UI render, and the 4×
+per-second penalty on the more-frequent non-UI runs is negligible against the token bill. The one
+caveat is structural: the worker is a *single* job definition shared by all job types, so every run
+pays the larger machine — if the non-UI compute ever became material, the cleaner fix is a separate
+larger job definition dispatched only for UI tickets (out of scope here).
 
 ### Follow-up levers (out of scope here)
 
