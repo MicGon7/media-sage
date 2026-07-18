@@ -105,6 +105,21 @@ Reject any item that names a tool, script, or quality gate:
 | Run `./scripts/run-affected-tests.sh` | All existing tests continue to pass |
 | CI passes | The feature works end-to-end in the running app |
 
+**Verify before you assert — no unverified technical claims.** Any note that names a specific symbol,
+field, DTO, endpoint, function, or file — and that the work depends on — is a *claim about the
+codebase*, not a given. Confirm it with `grep`/`Read` before you write it into the ticket. If you
+cannot confirm the mechanism exists, or it behaves differently than assumed, do not assert it: state
+the desired outcome and name the gap honestly instead (e.g. "today the encourage response carries no
+figure identifier — surfacing one is part of this work"). A wrong technical claim in a ticket
+propagates through the worker and every quality gate unchecked — this is exactly how MS-87 (PR #506)
+shipped a fragile `figureId` workaround built on a field that did not exist on the DTO the note named.
+
+**Keep Implementation Notes at the intent/outcome altitude.** Describe constraints and the observable
+result you want, not the exact plumbing. Prescribing a precise mechanism ("plumb it from field X on
+type Y") that rests on an unverified assumption steers the worker into a workaround and hides the real
+gap. When the mechanism is not verified, describe the outcome and let the worker discover the path —
+an honest "resolve X" beats a confident-but-wrong "do X by doing Y".
+
 ### 5. Determine the correct Jira fields
 
 - **Parent epic:** use the `parent` field with the epic issue key resolved from the JQL result in step 1 (e.g. `MS-68`). If the user selected "none", omit the field entirely.
