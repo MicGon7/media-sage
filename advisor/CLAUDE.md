@@ -17,6 +17,7 @@ via SLF4J + logback (`logback.xml` uses `<target>System.err</target>`).
 | `SUPABASE_DB_URL`      | Postgres URI (`postgresql://user:pass@host:port/db`) |
 | `ANTHROPIC_AUTH_TOKEN` | Anthropic API key                                    |
 | `ANTHROPIC_BASE_URL`   | e.g. `https://api.anthropic.com`                     |
+| `ANTHROPIC_MODEL`      | Optional. Model for `analyze_run` / `explain_failure`; falls back to pipelineCore's `DEFAULT_CLAUDE_MODEL` when unset. |
 
 Note: `SUPABASE_DB_URL` is a libpq-style URI, not a JDBC URL. `AdvisorDatabase.kt` parses
 it with `java.net.URI` and reconstructs a `jdbc:postgresql://` URL for Exposed.
@@ -100,6 +101,7 @@ claude mcp add advisor \
   -e "SUPABASE_DB_URL=$SUPABASE_DB_URL" \
   -e "ANTHROPIC_AUTH_TOKEN=$ANTHROPIC_AUTH_TOKEN" \
   -e "ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL" \
+  -e "ANTHROPIC_MODEL=$ANTHROPIC_MODEL" \
   -- java -jar /absolute/path/to/media-sage/advisor/build/libs/advisor-all.jar
 ```
 

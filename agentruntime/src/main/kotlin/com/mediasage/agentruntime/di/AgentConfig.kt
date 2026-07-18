@@ -1,5 +1,7 @@
 package com.mediasage.agentruntime.di
 
+import com.mediasage.pipeline.core.DEFAULT_CLAUDE_MODEL
+
 /**
  * Configuration for the agent orchestration server.
  *
@@ -47,8 +49,8 @@ package com.mediasage.agentruntime.di
  *   `ANTHROPIC_AUTH_TOKEN`. When blank (along with the GitHub App vars), the judge is disabled.
  * @property claudeBaseUrl Anthropic API base URL. Defaults to `https://api.anthropic.com`.
  *   Sourced from env var `ANTHROPIC_BASE_URL`. Set to the Fuelix proxy URL on Cloud Run.
- * @property claudeModel Model ID for Claude calls. Defaults to `claude-sonnet-4-6`.
- *   Sourced from env var `ANTHROPIC_MODEL`.
+ * @property claudeModel Model ID for Claude calls. Sourced from env var `ANTHROPIC_MODEL`; falls
+ *   back to [com.mediasage.pipeline.core.DEFAULT_CLAUDE_MODEL] when unset.
  * @property githubAppId GitHub App ID. Used by [com.mediasage.agentruntime.feedback.github.GitHubAppClient]
  *   to mint installation tokens so the AC judge can read PR details/diffs. Sourced from
  *   `GITHUB_APP_ID`. When blank, the judge is disabled.
@@ -78,7 +80,7 @@ data class AgentConfig(
     val pubSubWebhookSecret: String = "",
     val claudeAuthToken: String = "",
     val claudeBaseUrl: String = "https://api.anthropic.com",
-    val claudeModel: String = "claude-sonnet-4-6",
+    val claudeModel: String = DEFAULT_CLAUDE_MODEL,
     val githubAppId: String = "",
     val githubAppPrivateKey: String = "",
     val githubAppInstallationId: String = "",
