@@ -35,7 +35,7 @@ RUN apt-get update && \
     unzip -q /tmp/cmdline-tools.zip -d "${ANDROID_HOME}/cmdline-tools" && \
     mv "${ANDROID_HOME}/cmdline-tools/cmdline-tools" "${ANDROID_HOME}/cmdline-tools/latest" && \
     rm /tmp/cmdline-tools.zip && \
-    yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null && \
+    ( yes || true ) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null && \
     "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
         "platform-tools" "platforms;android-36" "build-tools;36.0.0" > /dev/null && \
     apt-get purge -y unzip && apt-get autoremove -y && \
