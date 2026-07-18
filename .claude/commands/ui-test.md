@@ -154,6 +154,10 @@ string.
 ./scripts/run-affected-tests.sh
 ```
 
+If the script prints a skip notice (no Android/iOS SDK, or nothing affected), that is a non-failure — continue. Do not `Read` or `cat` the script source to interpret the skip, and do not emit a standalone commentary turn about it. Trust the tests you just wrote; do not re-read them to confirm the edit landed (root `CLAUDE.md` "Trust your own writes").
+
+> **Render tests are not written here.** This skill writes `runComposeUiTest` interaction/state tests only. The `captureRoboImage` render test that produces PR screenshots is authored once, up front, in `/ticket-work` step 5 — before its single `capture-ui.sh` build. Do not add `captureRoboImage` blocks in this skill.
+
 ### 12. Fix detekt violations
 
 ```bash
