@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun SmokeTestScreen(modifier: Modifier = Modifier) {
-    // smoke-test-ui-version: 2
+    // smoke-test-ui-version: 3
     Surface(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -46,7 +46,7 @@ fun SmokeTestScreen(modifier: Modifier = Modifier) {
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = "v2",
+                text = "v3",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
