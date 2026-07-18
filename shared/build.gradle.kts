@@ -6,6 +6,14 @@ plugins {
     alias(libs.plugins.room)
 }
 
+// The Cloud Run worker only builds the Android target (to render Compose UI headlessly
+// via Robolectric — see docs/MS-581-headless-ui-render-loop.md). Registering the iOS
+// targets forces the Kotlin/Native toolchain (~3 GB extracted) to download during
+// configuration even though it is never used on Linux, so the worker skips them by
+// passing -Pmediasage.worker=true. Local and CI builds leave the property unset and
+// build all targets normally.
+val buildIosTargets = providers.gradleProperty("mediasage.worker").orNull != "true"
+
 kotlin {
     androidTarget {
         compilerOptions {
@@ -13,18 +21,20 @@ kotlin {
         }
     }
 
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "Shared"
-            isStatic = true
-        }
-        iosTarget.compilations.all {
-            compileTaskProvider.configure {
-                compilerOptions {
-                    freeCompilerArgs.add("-Xexpect-actual-classes")
+    if (buildIosTargets) {
+        listOf(
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach { iosTarget ->
+            iosTarget.binaries.framework {
+                baseName = "Shared"
+                isStatic = true
+            }
+            iosTarget.compilations.all {
+                compileTaskProvider.configure {
+                    compilerOptions {
+                        freeCompilerArgs.add("-Xexpect-actual-classes")
+                    }
                 }
             }
         }
@@ -64,8 +74,10 @@ kotlin {
             implementation(libs.okhttp.logging.interceptor)
         }
 
-        iosMain.dependencies {
-            implementation(libs.ktor.client.darwin)
+        if (buildIosTargets) {
+            iosMain.dependencies {
+                implementation(libs.ktor.client.darwin)
+            }
         }
     }
 }
@@ -91,6 +103,8 @@ room {
 dependencies {
     // Room KSP processor — target-specific configurations
     add("kspAndroid", libs.androidx.room.compiler)
-    add("kspIosArm64", libs.androidx.room.compiler)
-    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
+    if (buildIosTargets) {
+        add("kspIosArm64", libs.androidx.room.compiler)
+        add("kspIosSimulatorArm64", libs.androidx.room.compiler)
+    }
 }

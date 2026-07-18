@@ -42,6 +42,8 @@ google-auth = "1.23.0"
 auth0-java-jwt = "4.5.2"
 mcp = "0.9.0"
 shadow = "8.3.9"
+roborazzi = "1.69.0"
+robolectric = "4.16"
 
 [libraries]
 # Coil (KMP image loading)
@@ -142,6 +144,12 @@ compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "comp
 compottie-dot = { module = "io.github.alexzhirkevich:compottie-dot", version.ref = "compottie" }
 compottie-resources = { module = "io.github.alexzhirkevich:compottie-resources", version.ref = "compottie" }
 
+# Roborazzi (headless JVM Compose screenshot rendering via Robolectric — composeApp UI render loop)
+roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
+roborazzi-junit-rule = { module = "io.github.takahirom.roborazzi:roborazzi-junit-rule", version.ref = "roborazzi" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
@@ -156,3 +164,4 @@ room = { id = "androidx.room", version.ref = "androidx-room" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
