@@ -112,6 +112,19 @@ class EncouragementRepositoryTest {
     }
 
     @Test
+    fun figureIdPropagatedToReturnedEncouragementOnFirstVisit() = runTest {
+        val figure = FigureEntity(id = 42, name = "Martin Luther King Jr.", category = "social_justice", century = "20th")
+        val dao = FakeEncouragementDao()
+        val api = FakeMediaSageApi(result = sampleResult)
+        val figureDao = FakeFigureDao(figures = listOf(figure))
+        val repo = EncouragementRepositoryImpl(api, dao, figureDao)
+
+        val result = repo.getEncouragement("Article", articleUrl = "https://example.com/article")
+
+        assertEquals(42L, result.figureId)
+    }
+
+    @Test
     fun populatesFigureIdWhenFigureExistsOnCache() = runTest {
         val figure = FigureEntity(id = 42, name = "Martin Luther King Jr.", category = "social_justice", century = "20th")
         val dao = FakeEncouragementDao()

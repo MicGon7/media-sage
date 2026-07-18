@@ -36,13 +36,14 @@ class EncouragementRepositoryImpl(
             )
         ).toDomain()
 
-        articleUrl?.let {
-            val figureId = figureDao.getByName(encouragement.figureName)?.id
+        val figureId = articleUrl?.let { url ->
+            val id = figureDao.getByName(encouragement.figureName)?.id
             encouragementDao.insert(
-                encouragement.toEntity(it, headlineTitle, headlineSource, headlineImageUrl, currentTimeMillis(), figureId)
+                encouragement.toEntity(url, headlineTitle, headlineSource, headlineImageUrl, currentTimeMillis(), id)
             )
+            id
         }
-        return encouragement
+        return encouragement.copy(figureId = figureId)
     }
 
     override fun observeAll(): Flow<List<Encouragement>> =
