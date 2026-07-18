@@ -112,3 +112,56 @@ image was deliberately built with no Android SDK. MS-583 enables it in `Dockerfi
   build must show **no** `kotlin-native-prebuilt` download.
 - **Runner disk.** `build-worker-image.yml` reclaims the runner's preinstalled toolchains before
   building, since the render pre-bake pulls the SDK and caches into the image at build time.
+
+## Worker sizing: raising CPU/memory to speed the render (MS-589)
+
+A UI ticket-work run takes ~8 min vs ~1 min for a non-UI run; almost the entire gap is the
+`:composeApp` compile inside the render. Compiling the changed module is unavoidable (Kotlin
+compiles at module granularity, and the worker clones fresh so there is no incremental state to
+reuse), but the compile *duration* is compute-bound, not fixed. Kotlin + Compose compilation
+parallelises across cores, and 4 GiB is tight for it (GC pressure). Because Cloud Run bills per
+vCPU-second, a wider-but-shorter run is roughly cost-neutral while cutting wall-clock — so the
+first lever tried was simply a bigger machine.
+
+The worker Cloud Run job sizing lives in `.github/workflows/build-worker-image.yml`, which is the
+declarative source of truth for the job (`--cpu` / `--memory` in the deploy step). That workflow
+redeploys the job on every merge to `main`, so a sizing change only takes effect after merge.
+
+### Sizing chosen: 8 CPU / 16 GiB
+
+The ticket suggested trying `4 CPU / 8 GiB` first. We went straight to **`8 CPU / 16 GiB`** (up
+from `2 CPU / 4 GiB`). Tradeoff noted: a larger jump is more likely to produce a clearly visible
+wall-clock cut, but it makes the gain harder to attribute to any single factor (added cores vs. GC
+headroom) — if a later, cheaper sizing is wanted, `4 CPU / 8 GiB` is the untested middle point.
+`8 CPU / 16 GiB` is within Cloud Run job limits, so there is no quota concern.
+
+### Measurement: before / after
+
+Measured on a real UI render triggered via `/ui-pipeline-test`. The render-build wall-clock is read
+from the Cloud Run execution logs (the Gradle `recordRoborazziDebug` build); total run duration is
+the job execution wall-clock. The advisor's `duration_ms` is *not* used as the render-build proxy —
+it measures the whole agent session and does not isolate the compile (e.g. non-UI MS-585 showed a
+larger `duration_ms` than UI MS-587).
+
+| Metric | Before (2 CPU / 4 GiB) | After (8 CPU / 16 GiB) |
+|---|---|---|
+| Render build wall-clock | ~4m14s (MS-587) | _pending post-deploy measurement_ |
+| Total run duration | ~5m50s (MS-587, advisor `duration_ms` 349569) | _pending post-deploy measurement_ |
+| Non-UI run duration | ~1 min (unchanged baseline) | _confirm unchanged_ |
+
+The **before** row uses MS-587 — a real UI render that ran at the current `2 CPU / 4 GiB` sizing,
+so no redundant baseline run was needed. The **after** row is filled in once this change merges and
+the worker redeploys at the new sizing (a fresh `/ui-pipeline-test` is run and the render-build time
+read from its Cloud Run logs). A non-UI run is also confirmed to still complete in ~1 min and not be
+made materially more expensive.
+
+### Follow-up levers (out of scope here)
+
+If the CPU/RAM bump alone is insufficient, the next levers — noted here but not implemented in
+MS-589 — are:
+
+- **Persisting Kotlin incremental-compile state** for same-branch re-renders, which would help the
+  self-critique iterate-on-a-fix loop (each fix currently recompiles from cold).
+- **A warm Gradle daemon.** `--no-daemon` was chosen only for the 4 GiB limit; with memory raised, a
+  reused daemon becomes viable.
+- **Gradle configuration-cache reuse.**
