@@ -5,6 +5,7 @@ import com.mediasage.advisor.tools.registerCompareRunsTool
 import com.mediasage.advisor.tools.registerExplainFailureTool
 import com.mediasage.advisor.tools.registerFetchTranscriptTool
 import com.mediasage.advisor.tools.registerQueryRunsTool
+import com.mediasage.pipeline.core.DEFAULT_CLAUDE_MODEL
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
@@ -29,6 +30,8 @@ fun main() {
     val dbUrl = requireEnv("SUPABASE_DB_URL")
     val authToken = requireEnv("ANTHROPIC_AUTH_TOKEN")
     val baseUrl = requireEnv("ANTHROPIC_BASE_URL")
+    // Optional — falls back to the shared pipeline default when the env var is unset.
+    val model = System.getenv("ANTHROPIC_MODEL")?.takeIf { it.isNotBlank() } ?: DEFAULT_CLAUDE_MODEL
 
     connectDatabase(dbUrl)
 
@@ -37,9 +40,9 @@ fun main() {
 
     server.registerQueryRunsTool()
     server.registerFetchTranscriptTool()
-    server.registerAnalyzeRunTool(client, baseUrl, authToken)
+    server.registerAnalyzeRunTool(client, baseUrl, authToken, model)
     server.registerCompareRunsTool()
-    server.registerExplainFailureTool(client, baseUrl, authToken)
+    server.registerExplainFailureTool(client, baseUrl, authToken, model)
 
     val done = Job()
     server.onClose { done.complete() }

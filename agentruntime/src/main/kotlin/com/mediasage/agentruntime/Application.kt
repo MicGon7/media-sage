@@ -10,6 +10,7 @@ import com.mediasage.agentruntime.routes.pubSubWebhookRoutes
 import com.mediasage.agentruntime.routes.webhookRoutes
 import com.mediasage.agentruntime.service.AgentLaunchService
 import com.mediasage.agentruntime.service.JobCompletionNotifier
+import com.mediasage.pipeline.core.DEFAULT_CLAUDE_MODEL
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
 import io.ktor.server.netty.EngineMain
@@ -74,7 +75,7 @@ private fun buildAgentConfig(config: io.ktor.server.config.ApplicationConfig): A
         pubSubWebhookSecret = config.str("app.pubSub.webhookSecret"),
         claudeAuthToken = config.str("app.claude.authToken"),
         claudeBaseUrl = config.str("app.claude.baseUrl", "https://api.anthropic.com"),
-        claudeModel = config.str("app.claude.model", "claude-sonnet-4-6"),
+        claudeModel = config.str("app.claude.model", DEFAULT_CLAUDE_MODEL),
         githubAppId = config.str("app.githubApp.githubAppId"),
         githubAppPrivateKey = config.str("app.githubApp.githubPrivateKey"),
         githubAppInstallationId = config.str("app.githubApp.githubInstallationId"),

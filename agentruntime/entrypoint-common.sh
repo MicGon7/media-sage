@@ -204,7 +204,7 @@ try:
                 payload['cacheReadTokens'] = resolve_token('cache_read_input_tokens', 'cacheReadInputTokens')
                 payload['cacheCreationTokens'] = resolve_token('cache_creation_input_tokens', 'cacheCreationInputTokens')
                 if model_usage:
-                    payload['modelVersion'] = os.environ.get('CLAUDE_MODEL', 'claude-sonnet-4')
+                    payload['modelVersion'] = os.environ.get('ANTHROPIC_MODEL', 'claude-sonnet-5')
                 break
         except Exception:
             pass

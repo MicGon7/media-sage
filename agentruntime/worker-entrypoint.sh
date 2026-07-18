@@ -18,8 +18,11 @@ python3 -c "import json, os; print(json.dumps({'message': '[worker] job dispatch
 # Run Claude Code — no exec so the trap can capture the exit code for Pub/Sub.
 # --verbose is required when using --output-format=stream-json.
 # Tee to capture stream-json output for metrics parsing in publish_completion.
+# ANTHROPIC_MODEL is set on the worker Cloud Run Job by build-worker-image.yml (the standard var
+# Claude Code reads for model selection). The literal fallback below is the safety default; keep it
+# in sync with pipelineCore's DEFAULT_CLAUDE_MODEL.
 claude -p "/$JOB_TYPE" \
-  --model "${CLAUDE_MODEL:-claude-sonnet-4}" \
+  --model "${ANTHROPIC_MODEL:-claude-sonnet-5}" \
   --dangerously-skip-permissions \
   --output-format stream-json \
   --verbose \

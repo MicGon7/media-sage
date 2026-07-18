@@ -71,7 +71,7 @@ jobs:
             GCP_PROJECT_ID=media-sage-agent
             GCP_REGION=us-central1
             ANTHROPIC_BASE_URL=https://api.fuelix.ai
-            ANTHROPIC_MODEL=claude-sonnet-4
+            ANTHROPIC_MODEL=claude-sonnet-5
           env_vars_update_strategy: overwrite
           secrets: |
             ANTHROPIC_AUTH_TOKEN=orchestrator-anthropic-auth-token:latest

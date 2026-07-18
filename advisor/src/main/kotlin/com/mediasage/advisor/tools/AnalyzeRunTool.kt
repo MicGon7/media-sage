@@ -25,7 +25,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.UUID
 
 private const val ANALYZE_TOOL_NAME = "record_analysis"
-private const val MODEL = "claude-sonnet-4-6"
 
 private val ANALYZE_TOOL = ToolDefinition(
     name = ANALYZE_TOOL_NAME,
@@ -51,7 +50,7 @@ patterns of inefficiency like repeated file reads, redundant searches, or backtr
 Report via the $ANALYZE_TOOL_NAME tool.
 """.trimIndent()
 
-internal fun Server.registerAnalyzeRunTool(client: HttpClient, baseUrl: String, authToken: String) {
+internal fun Server.registerAnalyzeRunTool(client: HttpClient, baseUrl: String, authToken: String, model: String) {
     addTool(
         name = "analyze_run",
         description = "Use Claude to analyze a pipeline run transcript for turn efficiency and waste.",
@@ -71,7 +70,7 @@ internal fun Server.registerAnalyzeRunTool(client: HttpClient, baseUrl: String, 
             ?: return@addTool CallToolResult(content = listOf(TextContent(text = "Invalid UUID: $jobIdStr")))
         val transcript = loadTranscript(jobId)
             ?: return@addTool CallToolResult(content = listOf(TextContent(text = "No transcript for $jobIdStr")))
-        val analysis = runAnalysis(client, baseUrl, authToken, transcript)
+        val analysis = runAnalysis(client, baseUrl, authToken, model, transcript)
         CallToolResult(content = listOf(TextContent(text = analysis)))
     }
 }
@@ -87,6 +86,7 @@ private suspend fun runAnalysis(
     client: HttpClient,
     baseUrl: String,
     authToken: String,
+    model: String,
     transcript: String,
 ): String {
     val context = buildString {
@@ -94,7 +94,7 @@ private suspend fun runAnalysis(
         append(preprocessTranscript(transcript))
     }
     val claudeRequest = ClaudeRequest(
-        model = MODEL,
+        model = model,
         maxTokens = AnthropicApi.TokenBudget.STANDARD,
         system = SYSTEM_PROMPT,
         messages = listOf(ClaudeMessage("user", context)),

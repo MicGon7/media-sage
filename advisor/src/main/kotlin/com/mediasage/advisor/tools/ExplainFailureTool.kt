@@ -26,7 +26,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.UUID
 
 private const val EXPLAIN_TOOL_NAME = "record_explanation"
-private const val MODEL = "claude-sonnet-4-6"
 
 private val EXPLAIN_TOOL = ToolDefinition(
     name = EXPLAIN_TOOL_NAME,
@@ -43,7 +42,7 @@ private val EXPLAIN_TOOL = ToolDefinition(
 
 private val TOOL_CHOICE = ToolChoice(type = "tool", name = EXPLAIN_TOOL_NAME)
 
-internal fun Server.registerExplainFailureTool(client: HttpClient, baseUrl: String, authToken: String) {
+internal fun Server.registerExplainFailureTool(client: HttpClient, baseUrl: String, authToken: String, model: String) {
     addTool(
         name = "explain_failure",
         description = "Use Claude to diagnose why a pipeline run failed and propose a fix.",
@@ -65,7 +64,7 @@ internal fun Server.registerExplainFailureTool(client: HttpClient, baseUrl: Stri
             ?: return@addTool CallToolResult(
                 content = listOf(TextContent(text = "Job not found or no transcript for $jobIdStr")),
             )
-        val explanation = runExplanation(client, baseUrl, authToken, context)
+        val explanation = runExplanation(client, baseUrl, authToken, model, context)
         CallToolResult(content = listOf(TextContent(text = explanation)))
     }
 }
@@ -89,6 +88,7 @@ private suspend fun runExplanation(
     client: HttpClient,
     baseUrl: String,
     authToken: String,
+    model: String,
     context: FailureContext,
 ): String {
     val system = buildString {
@@ -98,7 +98,7 @@ private suspend fun runExplanation(
         appendLine("Report via the $EXPLAIN_TOOL_NAME tool.")
     }
     val claudeRequest = ClaudeRequest(
-        model = MODEL,
+        model = model,
         maxTokens = AnthropicApi.TokenBudget.STANDARD,
         system = system,
         messages = listOf(ClaudeMessage("user", preprocessTranscript(context.transcript))),

@@ -122,7 +122,7 @@ The `:agentruntime` server runs as a GCP Cloud Run Service (`media-sage-orchestr
 | `GCP_PROJECT_ID` | `media-sage-agent` |
 | `GCP_REGION` | `us-central1` |
 | `ANTHROPIC_BASE_URL` | `https://api.fuelix.ai` (Fuelix proxy) |
-| `ANTHROPIC_MODEL` | `claude-sonnet-4` (short-form alias required by Fuelix) |
+| `ANTHROPIC_MODEL` | Support-service (AC judge) model. Set as a literal in `deploy-orchestrator.yml`; falls back to pipelineCore's `DEFAULT_CLAUDE_MODEL` when unset (local dev). Fuelix requires the short-form alias (e.g. `claude-sonnet-5`). |
 
 > `JIRA_CLOUD_ID` and `GCP_JOB_NAME` are **not** set — the app falls back to the correct hardcoded defaults in `application.conf` (`ad358528-…` and `media-sage-agent-worker`), so the declarative deploy leaves them unset to match production.
 
