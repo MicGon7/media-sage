@@ -46,6 +46,45 @@ echo " worker-init  —  $TICKET_KEY"
 echo "═══════════════════════════════════════════"
 echo ""
 
+# Precompute discovery searches the model would otherwise spend turns on.
+#
+# Render-test coverage: which composables already have a `captureRoboImage` block.
+# The discovery phase (ticket-work.md step 2) and the render step (step 5) need to
+# know, for an affected screen, whether a render block already exists. Computing it
+# here means the model reads the answer from this output instead of issuing its own
+# grep — one fewer serial search in the discovery phase.
+RENDER_COVERED=$(python3 - << 'PYEOF'
+import glob
+import re
+
+# captureRoboImage(...) { MediaSageTheme(...) { <Composable>( ... — capture the composable.
+pattern = re.compile(
+    r"captureRoboImage\([^)]*\)\s*\{\s*MediaSageTheme\([^)]*\)\s*\{\s*([A-Za-z_]\w*)\s*\(",
+    re.DOTALL,
+)
+covered = []
+for path in glob.glob("composeApp/src/**/*.kt", recursive=True):
+    if "androidUnitTest" not in path:
+        continue
+    with open(path, encoding="utf-8", errors="ignore") as f:
+        text = f.read()
+    if "captureRoboImage" not in text:
+        continue
+    for name in pattern.findall(text):
+        if name not in covered:
+            covered.append(name)
+print(" ".join(covered))
+PYEOF
+)
+
+if [ -n "$RENDER_COVERED" ]; then
+    echo "Render-test coverage (composables with an existing captureRoboImage block):"
+    echo "    $RENDER_COVERED"
+else
+    echo "Render-test coverage: none — no captureRoboImage blocks found."
+fi
+echo ""
+
 # Check for an existing open PR targeting this branch.
 EXISTING=$(gh pr list --state open --search "head:feature/${TICKET_KEY}" \
     --json number,url,headRefName --limit 1 2>/dev/null || echo "[]")
@@ -59,8 +98,8 @@ if [ "$PR_COUNT" -gt 0 ]; then
     echo "Checking out branch: $HEAD_REF"
     git fetch origin "$HEAD_REF"
     git checkout -b "$HEAD_REF" origin/"$HEAD_REF"
-    printf 'export WORKER_BRANCH_STATUS=existing\nexport WORKER_PR_URL=%s\nexport WORKER_BRANCH_NAME=%s\n' \
-        "$PR_URL" "$HEAD_REF" > /tmp/worker_init.env
+    printf 'export WORKER_BRANCH_STATUS=existing\nexport WORKER_PR_URL=%s\nexport WORKER_BRANCH_NAME=%s\nexport WORKER_RENDER_COVERED="%s"\n' \
+        "$PR_URL" "$HEAD_REF" "$RENDER_COVERED" > /tmp/worker_init.env
     echo ""
     echo "✅  Branch ready (existing) — $HEAD_REF"
     echo "    PR: $PR_URL"
@@ -71,7 +110,7 @@ fi
 echo "No existing PR found. Creating branch: $BRANCH_NAME"
 git fetch origin
 git checkout -b "$BRANCH_NAME" origin/main
-printf 'export WORKER_BRANCH_STATUS=new\nexport WORKER_PR_URL=\nexport WORKER_BRANCH_NAME=%s\n' \
-    "$BRANCH_NAME" > /tmp/worker_init.env
+printf 'export WORKER_BRANCH_STATUS=new\nexport WORKER_PR_URL=\nexport WORKER_BRANCH_NAME=%s\nexport WORKER_RENDER_COVERED="%s"\n' \
+    "$BRANCH_NAME" "$RENDER_COVERED" > /tmp/worker_init.env
 echo ""
 echo "✅  Branch ready (new) — $BRANCH_NAME"
