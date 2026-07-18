@@ -112,8 +112,8 @@ jobs:
           secrets_update_strategy: overwrite
           flags: >-
             --service-account=media-sage-orchestrator@media-sage-agent.iam.gserviceaccount.com
-            --cpu=2
-            --memory=4Gi
+            --cpu=8
+            --memory=16Gi
             --task-timeout=1800
             --max-retries=0
             --tasks=1
