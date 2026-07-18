@@ -1,10 +1,6 @@
 package com.mediasage.feature.headlinedetail
 
 import android.app.Application
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.mediasage.theme.MediaSageTheme
@@ -59,27 +55,22 @@ class HeadlineDetailScreenRenderTest {
     // The figure profile sheet is a ModalBottomSheet — it draws in a separate window
     // that a capture of the host screen does not include, and the host's default state
     // has it dismissed. Render its stateless content composable directly, populated, so
-    // the screenshot actually proves the feature. Wrap it in a Surface matching the
-    // ModalBottomSheet container (surface color + rounded top) — rendered bare, the
-    // composable has no background and the capture comes out transparent.
+    // the screenshot proves the feature. Rendered bare the composable has no background,
+    // so this capture comes out transparent — that limitation is left visible as the
+    // baseline; the faithful full-composite capture is tracked separately.
     @Test
     fun rendersFigureProfileSheetContent() {
         captureRoboImage("build/outputs/roborazzi/figure_profile_sheet_content.png") {
             MediaSageTheme(darkTheme = false) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                ) {
-                    FigureProfileSheetContent(
-                        figureName = "C.S. Lewis",
-                        figureRole = "Author & Apologist",
-                        figureImageUrl = null,
-                        figureBio = "Clive Staples Lewis (1898–1963) was a British writer and lay " +
-                            "theologian, best known for The Chronicles of Narnia and Mere " +
-                            "Christianity. He taught at Oxford and Cambridge and remains one of " +
-                            "the most widely read Christian authors of the twentieth century.",
-                    )
-                }
+                FigureProfileSheetContent(
+                    figureName = "C.S. Lewis",
+                    figureRole = "Author & Apologist",
+                    figureImageUrl = null,
+                    figureBio = "Clive Staples Lewis (1898–1963) was a British writer and lay " +
+                        "theologian, best known for The Chronicles of Narnia and Mere " +
+                        "Christianity. He taught at Oxford and Cambridge and remains one of " +
+                        "the most widely read Christian authors of the twentieth century.",
+                )
             }
         }
     }
