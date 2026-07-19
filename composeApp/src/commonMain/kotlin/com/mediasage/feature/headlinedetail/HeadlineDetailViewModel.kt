@@ -42,6 +42,32 @@ class HeadlineDetailViewModel(
             is HeadlineDetailContract.Intent.ToggleBookmark -> {
                 viewModelScope.launch { encouragementRepository.toggleBookmark(articleUrl) }
             }
+            is HeadlineDetailContract.Intent.ShowFigureProfile -> showFigureProfile()
+            is HeadlineDetailContract.Intent.DismissFigureProfile -> {
+                val current = _state.value as? HeadlineDetailContract.UiState.Success ?: return
+                _state.value = current.copy(figureProfile = HeadlineDetailContract.FigureProfileState.Hidden)
+            }
+        }
+    }
+
+    private fun showFigureProfile() {
+        val current = _state.value as? HeadlineDetailContract.UiState.Success ?: return
+        val encouragement = current.encouragement as? HeadlineDetailContract.EncouragementState.Loaded ?: return
+
+        viewModelScope.launch {
+            val bio = runCatching { figureRepository.getFigureByName(encouragement.figureName)?.bio }
+                .getOrNull()
+                ?.takeIf { it.isNotBlank() }
+
+            val latest = _state.value as? HeadlineDetailContract.UiState.Success ?: return@launch
+            _state.value = latest.copy(
+                figureProfile = HeadlineDetailContract.FigureProfileState.Visible(
+                    figureName = encouragement.figureName,
+                    figureRole = encouragement.figureRole,
+                    figureImageUrl = encouragement.figureImageUrl,
+                    bio = bio,
+                )
+            )
         }
     }
 
