@@ -15,7 +15,8 @@ object HeadlineDetailContract {
             val headlineImageUrl: String?,
             // AI content — loaded progressively from Claude
             val encouragement: EncouragementState = EncouragementState.Loading,
-            val isBookmarked: Boolean = false
+            val isBookmarked: Boolean = false,
+            val figureProfile: FigureProfileState = FigureProfileState.Hidden,
         ) : UiState
         data class Error(val errorType: ErrorType) : UiState
     }
@@ -37,9 +38,21 @@ object HeadlineDetailContract {
         data class Error(val errorType: ErrorType) : EncouragementState
     }
 
+    sealed interface FigureProfileState {
+        data object Hidden : FigureProfileState
+        data class Visible(
+            val figureName: String,
+            val figureRole: String,
+            val figureImageUrl: String?,
+            val bio: String?,
+        ) : FigureProfileState
+    }
+
     sealed interface Intent {
         data object RetryMatch : Intent
         data object ToggleBookmark : Intent
+        data object ShowFigureProfile : Intent
+        data object DismissFigureProfile : Intent
     }
 
     sealed interface SideEffect {

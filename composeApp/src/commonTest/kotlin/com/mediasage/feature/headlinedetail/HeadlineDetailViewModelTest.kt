@@ -113,6 +113,54 @@ class HeadlineDetailViewModelTest {
         assertIs<HeadlineDetailContract.UiState.Error>(vm.state.value)
     }
 
+    @Test
+    fun showFigureProfileRevealsSheetWithBioWhenFigureIsFound() = runTest(testDispatcher) {
+        val vm = buildViewModel(
+            headline = buildHeadline(),
+            encouragement = buildEncouragement(figureName = "Augustine"),
+            figure = buildFigure(name = "Augustine", bio = "Bishop of Hippo, author of Confessions."),
+        )
+
+        vm.onIntent(HeadlineDetailContract.Intent.ShowFigureProfile)
+
+        val profile = (vm.state.value as HeadlineDetailContract.UiState.Success).figureProfile
+        val visible = assertIs<HeadlineDetailContract.FigureProfileState.Visible>(profile)
+        assertEquals("Augustine", visible.figureName)
+        assertEquals("Bishop of Hippo, author of Confessions.", visible.bio)
+    }
+
+    @Test
+    fun showFigureProfileFallsBackToEncouragementFieldsWhenFigureIsNotFound() = runTest(testDispatcher) {
+        val vm = buildViewModel(
+            headline = buildHeadline(),
+            encouragement = buildEncouragement(figureName = "Unknown Figure"),
+            figure = null,
+        )
+
+        vm.onIntent(HeadlineDetailContract.Intent.ShowFigureProfile)
+
+        val profile = (vm.state.value as HeadlineDetailContract.UiState.Success).figureProfile
+        val visible = assertIs<HeadlineDetailContract.FigureProfileState.Visible>(profile)
+        assertEquals("Unknown Figure", visible.figureName)
+        assertEquals("Bishop of Hippo", visible.figureRole)
+        assertEquals(null, visible.bio)
+    }
+
+    @Test
+    fun dismissFigureProfileHidesSheet() = runTest(testDispatcher) {
+        val vm = buildViewModel(
+            headline = buildHeadline(),
+            encouragement = buildEncouragement(figureName = "Augustine"),
+            figure = buildFigure(name = "Augustine", bio = "Bishop of Hippo."),
+        )
+
+        vm.onIntent(HeadlineDetailContract.Intent.ShowFigureProfile)
+        vm.onIntent(HeadlineDetailContract.Intent.DismissFigureProfile)
+
+        val profile = (vm.state.value as HeadlineDetailContract.UiState.Success).figureProfile
+        assertIs<HeadlineDetailContract.FigureProfileState.Hidden>(profile)
+    }
+
     private fun buildViewModel(
         headline: Headline? = null,
         encouragement: Encouragement? = buildEncouragement(),
@@ -138,11 +186,12 @@ private fun buildHeadline(url: String = "https://example.com/article") = Headlin
     fetchedAt = 0L,
 )
 
-private fun buildFigure(id: Long = 1L, name: String = "Augustine") = Figure(
+private fun buildFigure(id: Long = 1L, name: String = "Augustine", bio: String = "") = Figure(
     id = id,
     name = name,
     category = FigureCategory.THEOLOGIAN,
     century = "4th",
+    bio = bio,
 )
 
 private fun buildEncouragement(
