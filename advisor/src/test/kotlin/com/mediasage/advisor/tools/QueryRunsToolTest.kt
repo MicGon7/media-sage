@@ -33,6 +33,27 @@ class QueryRunsToolTest {
     }
 
     @Test
+    fun `formatJobRows includes model and effort columns`() {
+        val rows = listOf(
+            JobRow(
+                jobId = "abcd",
+                ticketKey = "MS-604",
+                status = "COMPLETED",
+                createdAt = "2026-07-19T10:00:00",
+                totalCostUsd = "0.500",
+                numTurns = 20,
+                modelVersion = "claude-sonnet-5",
+                effort = "high",
+            ),
+        )
+        val result = formatJobRows(rows)
+        assertContains(result, "model")
+        assertContains(result, "effort")
+        assertContains(result, "claude-sonnet-5")
+        assertContains(result, "high")
+    }
+
+    @Test
     fun `formatJobRows renders dash for null optional fields`() {
         val rows = listOf(
             JobRow(

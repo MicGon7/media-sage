@@ -58,6 +58,13 @@ data class JobCompletionEvent(
     val durationMs: Long? = null,
     @SerialName("modelVersion")
     val modelVersion: String? = null,
+    /**
+     * Reasoning effort the worker ran under (e.g. `high`, `low`), published verbatim from the
+     * worker's `WORKER_EFFORT` env var. Recorded alongside [modelVersion] as the run's execution
+     * config. Null when published by an older worker.
+     */
+    @SerialName("effort")
+    val effort: String? = null,
     @SerialName("inputTokens")
     val inputTokens: Int? = null,
     @SerialName("outputTokens")

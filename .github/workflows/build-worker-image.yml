@@ -76,6 +76,14 @@ jobs:
       # TICKET_KEY, PR_NUMBER) are injected at dispatch time via containerOverrides
       # by AgentLaunchService — they must NOT be declared here.
       #
+      # ANTHROPIC_MODEL + WORKER_EFFORT are the worker's execution config. They live
+      # here as the production defaults and are read by worker-entrypoint.sh. To run a
+      # model/effort comparison, override them per run without a redeploy via
+      # `gcloud run jobs update media-sage-agent-worker --update-env-vars
+      # ANTHROPIC_MODEL=…,WORKER_EFFORT=…`; the values reset to these defaults on the
+      # next worker image build. The model + effort a run used are recorded on its
+      # jobs row (model_version, effort) and shown by the advisor's compare_runs.
+      #
       # Per-target values (swap these + the matching secrets to stand up a new
       # client target): GITHUB_OWNER, GITHUB_REPO, SUPABASE_REST_URL, and the
       # SUPABASE_SERVICE_ROLE_KEY / JIRA_* secret bindings. Everything else is
@@ -89,6 +97,7 @@ jobs:
           env_vars: |
             ANTHROPIC_BASE_URL=https://api.fuelix.ai
             ANTHROPIC_MODEL=claude-sonnet-5
+            WORKER_EFFORT=high
             GCP_PROJECT_ID=media-sage-agent
             PUBSUB_TOPIC=cloud-run-job-completions
             GITHUB_APP_ID=3848870

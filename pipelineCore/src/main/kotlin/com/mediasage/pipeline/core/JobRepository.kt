@@ -141,8 +141,8 @@ class JobRepository : JobRegistry {
      * Transitions [jobId] to COMPLETED and stamps [JobsTable.completedAt].
      *
      * If [metrics] is non-null, also persists token counts, cost, Claude duration, turn
-     * count, and model version sourced from the Cloud Logging result event. These columns
-     * remain null when metrics are unavailable (e.g. Cloud Logging ingestion timeout).
+     * count, model version, and reasoning effort sourced from the worker's completion event.
+     * These columns remain null when metrics are unavailable (e.g. failure with no result event).
      */
     override suspend fun markCompleted(jobId: UUID, metrics: WorkerMetrics?) =
         withContext(Dispatchers.IO) {
@@ -159,6 +159,7 @@ class JobRepository : JobRegistry {
                         it[JobsTable.claudeDurationMs] = metrics.durationMs
                         it[JobsTable.numTurns] = metrics.numTurns
                         it[JobsTable.modelVersion] = metrics.modelVersion
+                        it[JobsTable.effort] = metrics.effort
                     }
                 }
             }

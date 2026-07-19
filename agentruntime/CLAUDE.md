@@ -51,11 +51,24 @@ in `AgentDatabase.migrate()`.
 
 Additional nullable columns are added via idempotent migrations in `AgentDatabase.migrate()`
 (never in the base `CREATE TABLE`): worker efficiency metrics (MS-210 — tokens, cost, duration,
-`num_turns`) and model tracking (MS-386 — `model_version`, parsed from the `result` event's
-`modelUsage` key alongside the other metrics). MS-386's sibling `failed_gate` column was retired
-in MS-576 (idempotent `DROP COLUMN IF EXISTS` in `migrate()`) — run death (`status = FAILED`) is
-not a gate failure, and the hardened pipeline suppresses gate failures by design, so it was never
-populated. See `docs/MS-386-jobs-failure-attribution-model.md`.
+`num_turns`), model tracking (MS-386 — `model_version`, parsed from the `result` event's
+`modelUsage` key alongside the other metrics), and reasoning-effort tracking (MS-604 — `effort`,
+published verbatim from the worker's `WORKER_EFFORT` env var). `model_version` and `effort`
+together capture the run's execution config and are the fields the advisor's `compare_runs` /
+`query_runs` surface. MS-386's sibling `failed_gate` column was retired in MS-576 (idempotent
+`DROP COLUMN IF EXISTS` in `migrate()`) — run death (`status = FAILED`) is not a gate failure, and
+the hardened pipeline suppresses gate failures by design, so it was never populated. See
+`docs/MS-386-jobs-failure-attribution-model.md`.
+
+**Worker execution config (model + effort).** The worker's model and reasoning effort are static
+env vars on the worker Cloud Run Job — `ANTHROPIC_MODEL` (read by Claude Code) and `WORKER_EFFORT`
+(passed as `--effort` by `worker-entrypoint.sh`, default `high`). Both are declared as production
+defaults in `build-worker-image.yml`. To compare runs under different configs, override them per
+run without a redeploy — `gcloud run jobs update media-sage-agent-worker --update-env-vars
+ANTHROPIC_MODEL=…,WORKER_EFFORT=…` — then run a ticket through the normal pipeline; the run's
+`model_version` + `effort` land on its `jobs` row and `compare_runs A B` shows the difference.
+Because these are the worker's own static env vars, they are *not* dispatch-time
+`containerOverrides` and so are unaffected by the static-beats-override precedence noted above.
 
 **Job status state machine:** `PENDING → RUNNING → COMPLETED | FAILED | INTERRUPTED`
 

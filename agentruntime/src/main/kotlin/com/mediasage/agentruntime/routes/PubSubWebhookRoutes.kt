@@ -156,6 +156,7 @@ private fun JobCompletionEvent.toWorkerMetrics(): WorkerMetrics? {
         totalCostUsd = totalCostUsd,
         durationMs = durationMs,
         modelVersion = modelVersion,
+        effort = effort,
         inputTokens = inputTokens ?: 0,
         outputTokens = outputTokens ?: 0,
         cacheReadTokens = cacheReadTokens ?: 0,

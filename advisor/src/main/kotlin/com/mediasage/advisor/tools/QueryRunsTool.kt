@@ -17,7 +17,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 private const val DEFAULT_LIMIT = 10
 
 /** Column layout shared by the header and every data row so the two can't drift apart. */
-private const val ROW_FORMAT = "%-36s  %-10s  %-12s  %-24s  %-8s  %s"
+private const val ROW_FORMAT = "%-36s  %-10s  %-12s  %-24s  %-8s  %-6s  %-22s  %-8s"
 
 internal fun Server.registerQueryRunsTool() {
     addTool(
@@ -56,6 +56,8 @@ internal data class JobRow(
     val createdAt: String,
     val totalCostUsd: String,
     val numTurns: Int?,
+    val modelVersion: String? = null,
+    val effort: String? = null,
 )
 
 private fun fetchRuns(ticketKey: String?, status: String?, limit: Int): List<JobRow> = transaction {
@@ -70,13 +72,17 @@ private fun fetchRuns(ticketKey: String?, status: String?, limit: Int): List<Job
             createdAt = row[JobsTable.createdAt].toString(),
             totalCostUsd = row[JobsTable.totalCostUsd]?.toPlainString() ?: "-",
             numTurns = row[JobsTable.numTurns],
+            modelVersion = row[JobsTable.modelVersion],
+            effort = row[JobsTable.effort],
         )
     }
 }
 
 internal fun formatJobRows(rows: List<JobRow>): String {
     if (rows.isEmpty()) return "No runs found."
-    val header = ROW_FORMAT.format("job_id", "ticket", "status", "created_at", "cost_usd", "turns")
+    val header = ROW_FORMAT.format(
+        "job_id", "ticket", "status", "created_at", "cost_usd", "turns", "model", "effort",
+    )
     return buildString {
         appendLine(header)
         appendLine("-".repeat(header.length))
@@ -84,6 +90,7 @@ internal fun formatJobRows(rows: List<JobRow>): String {
             appendLine(ROW_FORMAT.format(
                 r.jobId, r.ticketKey, r.status, r.createdAt,
                 r.totalCostUsd, r.numTurns?.toString() ?: "-",
+                r.modelVersion ?: "-", r.effort ?: "-",
             ))
         }
     }

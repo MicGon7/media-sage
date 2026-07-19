@@ -19,6 +19,7 @@ package com.mediasage.pipeline.core
  * @property durationMs Wall-clock duration of the worker run in milliseconds.
  * @property numTurns Number of agentic turns (tool-call/response cycles) completed.
  * @property modelVersion Claude model that ran the session, or null when unavailable.
+ * @property effort Reasoning effort the session ran under (e.g. `high`, `low`), or null when unavailable.
  */
 data class WorkerMetrics(
     val inputTokens: Int,
@@ -32,5 +33,10 @@ data class WorkerMetrics(
      * Claude model that ran the session (e.g. `claude-sonnet-4-5-20250929`), taken from the
      * `modelUsage` key of the result event. Null when the result event omits per-model usage.
      */
-    val modelVersion: String? = null
+    val modelVersion: String? = null,
+    /**
+     * Reasoning effort the worker ran under (e.g. `high`, `low`), sourced from the worker's
+     * `WORKER_EFFORT` env var. Null when unavailable (older workers).
+     */
+    val effort: String? = null,
 )
