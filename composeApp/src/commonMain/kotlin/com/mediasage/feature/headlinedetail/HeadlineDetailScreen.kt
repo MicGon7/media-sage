@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -131,7 +132,8 @@ fun HeadlineDetailScreen(
     val figureProfile = successState?.figureProfile
     if (figureProfile is HeadlineDetailContract.FigureProfileState.Visible) {
         MediaSageBottomSheet(
-            onDismissRequest = { onIntent(HeadlineDetailContract.Intent.DismissFigureProfile) }
+            onDismissRequest = { onIntent(HeadlineDetailContract.Intent.DismissFigureProfile) },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ) {
             FigureProfileSheetContent(profile = figureProfile)
         }
@@ -410,14 +412,15 @@ private fun EncouragementContent(
 private fun FigureProfileSheetContent(profile: HeadlineDetailContract.FigureProfileState.Visible) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
             .padding(bottom = 32.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(300.dp)
                 .clip(MaterialTheme.shapes.medium)
         ) {
             if (profile.figureImageUrl != null) {
