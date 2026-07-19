@@ -74,5 +74,13 @@ object JobsTable : Table("jobs") {
      */
     val modelVersion = text("model_version").nullable()
 
+    /**
+     * Reasoning effort the worker ran under (e.g. `high`, `low`), sourced from the worker's
+     * `WORKER_EFFORT` env var and published on the completion event. Recorded alongside
+     * [modelVersion] so a run's full execution config (model + effort) is comparable in the
+     * advisor. Null for rows written before this column existed or when the value is unavailable.
+     */
+    val effort = text("effort").nullable()
+
     override val primaryKey = PrimaryKey(jobId)
 }

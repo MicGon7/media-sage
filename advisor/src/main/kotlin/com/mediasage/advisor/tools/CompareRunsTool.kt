@@ -69,6 +69,8 @@ internal data class JobSummary(
     val claudeDurationMs: Long?,
     val inputTokens: Int?,
     val outputTokens: Int?,
+    val modelVersion: String? = null,
+    val effort: String? = null,
 )
 
 private fun loadJobSummary(jobId: UUID): JobSummary? = transaction {
@@ -82,9 +84,14 @@ private fun loadJobSummary(jobId: UUID): JobSummary? = transaction {
             claudeDurationMs = row[JobsTable.claudeDurationMs],
             inputTokens = row[JobsTable.inputTokens],
             outputTokens = row[JobsTable.outputTokens],
+            modelVersion = row[JobsTable.modelVersion],
+            effort = row[JobsTable.effort],
         )
     }
 }
+
+/** Renders a nullable cell value as its string form, or a dash placeholder when absent. */
+private fun cell(value: Any?): String = value?.toString() ?: "-"
 
 internal fun formatComparison(a: JobSummary, b: JobSummary): String = buildString {
     fun row(label: String, valueA: String, valueB: String) = appendLine(ROW_FORMAT.format(label, valueA, valueB))
@@ -94,9 +101,11 @@ internal fun formatComparison(a: JobSummary, b: JobSummary): String = buildStrin
     row("job_id", a.jobId.take(36), b.jobId.take(36))
     row("ticket", a.ticketKey, b.ticketKey)
     row("status", a.status, b.status)
-    row("cost_usd", a.totalCostUsd?.toPlainString() ?: "-", b.totalCostUsd?.toPlainString() ?: "-")
-    row("turns", a.numTurns?.toString() ?: "-", b.numTurns?.toString() ?: "-")
-    row("duration_ms", a.claudeDurationMs?.toString() ?: "-", b.claudeDurationMs?.toString() ?: "-")
-    row("input_tokens", a.inputTokens?.toString() ?: "-", b.inputTokens?.toString() ?: "-")
-    row("output_tokens", a.outputTokens?.toString() ?: "-", b.outputTokens?.toString() ?: "-")
+    row("model", cell(a.modelVersion), cell(b.modelVersion))
+    row("effort", cell(a.effort), cell(b.effort))
+    row("cost_usd", cell(a.totalCostUsd?.toPlainString()), cell(b.totalCostUsd?.toPlainString()))
+    row("turns", cell(a.numTurns), cell(b.numTurns))
+    row("duration_ms", cell(a.claudeDurationMs), cell(b.claudeDurationMs))
+    row("input_tokens", cell(a.inputTokens), cell(b.inputTokens))
+    row("output_tokens", cell(a.outputTokens), cell(b.outputTokens))
 }

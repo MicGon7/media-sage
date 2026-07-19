@@ -29,6 +29,7 @@ object AgentDatabase {
     private fun org.jetbrains.exposed.sql.Transaction.migrate() {
         addWorkerMetricColumns()
         addModelVersionColumn()
+        addEffortColumn()
         dropFailedGateColumn()
         renamePromptToPayload()
         createJobDurationsView()
@@ -54,6 +55,11 @@ object AgentDatabase {
      * [dropFailedGateColumn]. */
     private fun org.jetbrains.exposed.sql.Transaction.addModelVersionColumn() = exec(
         "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS model_version TEXT"
+    )
+
+    /** Reasoning-effort tracking (`effort`) — the sibling of `model_version` for a run's execution config. */
+    private fun org.jetbrains.exposed.sql.Transaction.addEffortColumn() = exec(
+        "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS effort TEXT"
     )
 
     /**

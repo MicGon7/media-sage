@@ -23,13 +23,14 @@ class JobCompletionEventTest {
             JobCompletionEvent.serializer(),
             """{"ticketKey":"MS-1","executionName":"exec-1","status":"success",
               "numTurns":12,"totalCostUsd":0.0423,"durationMs":47000,
-              "modelVersion":"claude-sonnet-4-6","inputTokens":15000,
+              "modelVersion":"claude-sonnet-4-6","effort":"high","inputTokens":15000,
               "outputTokens":3000,"cacheReadTokens":90000,"cacheCreationTokens":1000}"""
         )
         assertEquals(12, event.numTurns)
         assertEquals(0.0423, event.totalCostUsd)
         assertEquals(47000L, event.durationMs)
         assertEquals("claude-sonnet-4-6", event.modelVersion)
+        assertEquals("high", event.effort)
         assertEquals(15000, event.inputTokens)
         assertEquals(3000, event.outputTokens)
         assertEquals(90000, event.cacheReadTokens)
@@ -79,6 +80,7 @@ class JobCompletionEventTest {
         assertNull(event.totalCostUsd)
         assertNull(event.durationMs)
         assertNull(event.modelVersion)
+        assertNull(event.effort)
         assertNull(event.inputTokens)
         assertNull(event.outputTokens)
         assertNull(event.cacheReadTokens)

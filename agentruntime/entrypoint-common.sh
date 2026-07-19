@@ -205,6 +205,10 @@ try:
                 payload['cacheCreationTokens'] = resolve_token('cache_creation_input_tokens', 'cacheCreationInputTokens')
                 if model_usage:
                     payload['modelVersion'] = os.environ.get('ANTHROPIC_MODEL', 'claude-sonnet-5')
+                # Reasoning effort the run used — the sibling of modelVersion in the run's
+                # execution config. Independent of model_usage; defaults to the entrypoint's
+                # WORKER_EFFORT fallback so it is always recorded when a result event exists.
+                payload['effort'] = os.environ.get('WORKER_EFFORT', 'high')
                 break
         except Exception:
             pass

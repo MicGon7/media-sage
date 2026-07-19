@@ -51,4 +51,18 @@ class CompareRunsToolTest {
         assertContains(result, "-")
         assertContains(result, "INTERRUPTED")
     }
+
+    @Test
+    fun `formatComparison shows model and effort for both runs`() {
+        val a = buildSummary("a3", "MS-604", "COMPLETED").copy(modelVersion = "claude-sonnet-5", effort = "high")
+        val b = buildSummary("b3", "MS-604", "COMPLETED")
+            .copy(modelVersion = "claude-haiku-4-5-20251001", effort = "low")
+        val result = formatComparison(a, b)
+        assertContains(result, "model")
+        assertContains(result, "claude-sonnet-5")
+        assertContains(result, "claude-haiku-4-5-20251001")
+        assertContains(result, "effort")
+        assertContains(result, "high")
+        assertContains(result, "low")
+    }
 }
