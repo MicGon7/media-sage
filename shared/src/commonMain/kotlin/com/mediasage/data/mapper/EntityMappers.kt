@@ -24,7 +24,7 @@ fun FigureEntity.toDomain() = Figure(
     bio = bio,
     role = role,
     lifespan = lifespan,
-    themes = if (themes.isEmpty()) emptyList() else themes.split(",").map { it.trim() },
+    themes = themes.toThemeList(),
     portraitUrl = portraitUrl,
     serverId = serverId
 )
@@ -37,7 +37,7 @@ fun Figure.toEntity() = FigureEntity(
     bio = bio,
     role = role,
     lifespan = lifespan,
-    themes = themes.joinToString(","),
+    themes = themes.toThemeString(),
     portraitUrl = portraitUrl,
     serverId = serverId
 )
@@ -61,7 +61,7 @@ fun QuoteEntity.toDomain() = Quote(
     figureId = figureId,
     text = text,
     source = source,
-    themes = if (themes.isEmpty()) emptyList() else themes.split(",").map { it.trim() },
+    themes = themes.toThemeList(),
     verified = verified
 )
 
@@ -70,7 +70,7 @@ fun Quote.toEntity() = QuoteEntity(
     figureId = figureId,
     text = text,
     source = source,
-    themes = themes.joinToString(","),
+    themes = themes.toThemeString(),
     verified = verified
 )
 
