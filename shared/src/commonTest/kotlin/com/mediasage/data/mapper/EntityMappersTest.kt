@@ -44,6 +44,17 @@ class EntityMappersTest {
     }
 
     @Test
+    fun figureDtoToEntityNormalizesThemes() {
+        val dto = FigureDto(
+            id = 42L, name = "Augustine", category = "theologian",
+            century = "4th", role = "Bishop", lifespan = "354-430", bio = "Bishop of Hippo",
+            themes = "Grace, grace ,faith"
+        )
+        val entity = dto.toEntity()
+        assertEquals("Grace,faith", entity.themes)
+    }
+
+    @Test
     fun figureDomainToEntity() {
         val domain = Figure(
             id = 1, name = "Augustine", category = FigureCategory.THEOLOGIAN,

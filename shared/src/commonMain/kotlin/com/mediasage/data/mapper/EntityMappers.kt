@@ -14,6 +14,8 @@ import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.Headline
 import com.mediasage.domain.model.Match
 import com.mediasage.domain.model.Quote
+import com.mediasage.domain.model.toThemeTagList
+import com.mediasage.domain.model.toThemeTagString
 
 // Figure
 fun FigureEntity.toDomain() = Figure(
@@ -24,7 +26,7 @@ fun FigureEntity.toDomain() = Figure(
     bio = bio,
     role = role,
     lifespan = lifespan,
-    themes = if (themes.isEmpty()) emptyList() else themes.split(",").map { it.trim() },
+    themes = themes.toThemeTagList(),
     portraitUrl = portraitUrl,
     serverId = serverId
 )
@@ -37,7 +39,7 @@ fun Figure.toEntity() = FigureEntity(
     bio = bio,
     role = role,
     lifespan = lifespan,
-    themes = themes.joinToString(","),
+    themes = themes.toThemeTagString(),
     portraitUrl = portraitUrl,
     serverId = serverId
 )
@@ -50,7 +52,7 @@ fun FigureDto.toEntity() = FigureEntity(
     bio = bio,
     role = role,
     lifespan = lifespan,
-    themes = themes,
+    themes = themes.toThemeTagList().toThemeTagString(),
     portraitUrl = portraitUrl,
     serverId = id
 )
@@ -61,7 +63,7 @@ fun QuoteEntity.toDomain() = Quote(
     figureId = figureId,
     text = text,
     source = source,
-    themes = if (themes.isEmpty()) emptyList() else themes.split(",").map { it.trim() },
+    themes = themes.toThemeTagList(),
     verified = verified
 )
 
@@ -70,7 +72,7 @@ fun Quote.toEntity() = QuoteEntity(
     figureId = figureId,
     text = text,
     source = source,
-    themes = themes.joinToString(","),
+    themes = themes.toThemeTagString(),
     verified = verified
 )
 
