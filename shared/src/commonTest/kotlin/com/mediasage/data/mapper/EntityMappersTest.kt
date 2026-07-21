@@ -94,6 +94,26 @@ class EntityMappersTest {
     }
 
     @Test
+    fun figureEntityToDomainDedupesThemesCaseInsensitively() {
+        val entity = FigureEntity(
+            id = 1, name = "Augustine", category = "theologian",
+            century = "4th", themes = "Grace, grace, GRACE, Faith"
+        )
+        val domain = entity.toDomain()
+        assertEquals(listOf("Grace", "Faith"), domain.themes)
+    }
+
+    @Test
+    fun figureDtoToEntityNormalizesThemes() {
+        val dto = FigureDto(
+            id = 42L, name = "Augustine", category = "theologian",
+            century = "4th", themes = " Grace ,grace, Faith,"
+        )
+        val entity = dto.toEntity()
+        assertEquals("Grace,Faith", entity.themes)
+    }
+
+    @Test
     fun quoteEntityToDomainSplitsThemes() {
         val entity = QuoteEntity(
             id = 1, figureId = 1, text = "Test quote",
@@ -121,6 +141,16 @@ class EntityMappersTest {
         )
         val entity = domain.toEntity()
         assertEquals("faith,hope,love", entity.themes)
+    }
+
+    @Test
+    fun quoteDomainToEntityDedupesThemesCaseInsensitively() {
+        val domain = Quote(
+            id = 1, figureId = 1, text = "Test quote",
+            source = "Confessions", themes = listOf("Faith", " faith ", "Hope")
+        )
+        val entity = domain.toEntity()
+        assertEquals("Faith,Hope", entity.themes)
     }
 
     @Test
