@@ -124,6 +124,36 @@ class EntityMappersTest {
     }
 
     @Test
+    fun figureEntityToDomainCleansAndDeduplicatesThemes() {
+        val entity = FigureEntity(
+            id = 1, name = "Augustine", category = "theologian",
+            century = "4th", themes = " Grace , faith, grace,GRACE "
+        )
+        val domain = entity.toDomain()
+        assertEquals(listOf("Grace", "faith"), domain.themes)
+    }
+
+    @Test
+    fun figureDtoToEntityCleansAndDeduplicatesThemes() {
+        val dto = FigureDto(
+            id = 1, name = "Augustine", category = "theologian",
+            century = "4th", themes = " Grace , faith, grace,GRACE "
+        )
+        val entity = dto.toEntity()
+        assertEquals("Grace,faith", entity.themes)
+    }
+
+    @Test
+    fun quoteEntityToDomainCleansAndDeduplicatesThemes() {
+        val entity = QuoteEntity(
+            id = 1, figureId = 1, text = "Test quote",
+            source = "Confessions", themes = " Faith , hope, faith,FAITH "
+        )
+        val domain = entity.toDomain()
+        assertEquals(listOf("Faith", "hope"), domain.themes)
+    }
+
+    @Test
     fun headlineRoundTrip() {
         val entity = HeadlineEntity(
             id = 1, title = "Test headline", source = "BBC",
