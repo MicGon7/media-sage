@@ -3,6 +3,7 @@ package com.mediasage.data.repository
 import com.mediasage.data.local.dao.QuoteDao
 import com.mediasage.data.local.entity.QuoteEntity
 import com.mediasage.data.mapper.toDomain
+import com.mediasage.data.mapper.toThemeString
 import com.mediasage.domain.model.Quote
 import com.mediasage.domain.repository.QuoteRepository
 import kotlinx.coroutines.flow.Flow
@@ -30,7 +31,7 @@ class QuoteRepositoryImpl(
                 figureId = figureId,
                 text = text,
                 source = source,
-                themes = themes.joinToString(","),
+                themes = themes.toThemeString(),
             )
         )
     }
