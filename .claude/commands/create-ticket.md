@@ -1,8 +1,11 @@
 # /create-ticket — Write a well-structured Jira ticket for the MS project
 
-Use this skill whenever the user asks to create, draft, or write a Jira ticket. It enforces the
-required structure, prohibits tooling instructions from AC, and ensures Relevant Files is always
-populated before the ticket is created.
+Use this skill whenever the user asks to create, draft, or write a Jira ticket. It produces
+**goal-driven** tickets: each ticket states *why* the work is needed (Context) and *what verifiable
+done-state* it must reach (Acceptance Criteria), and nothing else. It does not tell the worker which
+files to touch or how to build the change — a capable worker discovers that itself, and prescribing it
+at best adds no value and at worst mis-steers. The skill's job is to size the work correctly and state
+the goal honestly, not to pre-solve the implementation.
 
 ---
 
@@ -23,130 +26,106 @@ If the user has not already provided them, ask:
 If the user has given you enough context to infer any of these, derive them — don't ask for what
 you can figure out.
 
-### 2. Research Relevant Files
+### 2. Size the work — decide ticket count by independently-shippable goal
 
-Before drafting the ticket, search the codebase for the files that a worker would need to read and
-edit. Use `find`, `grep`, or the Explore agent as needed.
+Right-sizing is the one structural decision this skill makes. The seam is the **independently
+shippable, independently verifiable outcome** — never the code layer or the Gradle module.
 
-Rules:
-- List only files a worker would actually open — source files, config, existing tests
-- Never list `scripts/worker-*.sh` — those are pipeline tools, not implementation context
-- If no existing files are directly relevant (e.g. the ticket creates something new), list the
-  directory where the new file will live and one or two reference files to model it after
+**Default to a single ticket.** Split only when the work contains two or more outcomes that each ship
+*and* verify on their own. Deciding this needs no file survey — you count distinct user-facing (or
+interface-observable) outcomes, which is a Context/AC-altitude judgment.
 
-### 3. Detect module boundaries and decide ticket count
+**The test for a valid split: does each piece have its own observable AC?**
 
-Group the Relevant Files from step 2 by bucket:
+- **Split by vertical slice, never by layer or module.** A "data only" or "UI only" half is dead code
+  until its partner lands — nobody can observe it in the running app, so it has no honest AC and is not
+  a valid ticket. If a feature is too big for one ticket, cut it into *thinner slices that each still
+  work end-to-end*.
+  - ✅ Valid: "Voices list shows each figure's name and portrait" → then "Voices list supports search."
+    Each is thin but whole — data + UI + a verifiable outcome.
+  - ❌ Invalid: "Voices data layer" + "Voices UI." Neither is verifiable alone.
+- **A backend-only ticket is legitimate only when the endpoint *is* the observable outcome.** "`GET
+  /figures/{id}` returns the figure's bio" stands alone because you can verify it by calling the
+  endpoint. That is a real independent outcome, not a layer split.
 
-| Path prefix | Bucket |
-|---|---|
-| `shared/` | `:shared` |
-| `composeApp/` | `:composeApp` |
-| `appServer/` | `:appServer` |
-| `agentruntime/` | `:agentruntime` |
-| Anything else (`.github/`, `Dockerfile*`, `gradle/`, `docs/`, etc.) | `infrastructure` |
+**Ordering between split tickets (encode as Jira `Blocks` links in step 5):** add a `Blocks` link only
+when one *goal* genuinely depends on another shipping first (feature B builds on feature A's shipped
+behavior). Never add a `Blocks` link to encode compile order or module dependency — a single vertical
+slice compiles as a unit within one PR, so compile order is not a reason to split or sequence tickets.
 
-**Decision rules:**
+### 3. Draft the ticket body
 
-- **Infrastructure + any module files** → create a **single `assisted` ticket** covering all files. Note in Implementation Notes that the ticket is cross-cutting. Do not decompose.
-- **Infrastructure files only** → create a **single ticket**. Do not decompose.
-- **Multiple Gradle modules, no infrastructure** → **multi-ticket mode**: one ticket per module, each with only its own module's Relevant Files.
-- **Single Gradle module, >8 files** → split into two tickets at the natural seam:
-  - `:shared` — data layer (entities, migrations, DAOs) vs. domain layer (domain models, repository interfaces, mappers)
-  - `:composeApp` — **one ticket per screen**. A screen is the natural split unit. If the work touches two or more distinct screens or top-level components with no shared runtime state between them, create one ticket per screen. Exception: if one screen directly hosts the other (e.g. a detail sheet inside a list screen), keep them together.
-  - Other modules — use your best judgment to find a cohesive seam
-- **Single Gradle module, ≤8 files** → single ticket. Proceed to step 4.
-
-**KMP compile dependency order (encode as Jira `Blocks` links in step 6):**
-
-```
-:appServer, :agentruntime   — independent (no dependency on client modules)
-:shared                     — must compile before :composeApp
-:composeApp                 — depends on :shared
-```
-
-### 4. Draft the ticket body
-
-Use this exact structure — all four sections are required:
+Use this exact structure — both sections are required, and these are the **only** two sections:
 
 ```
 ## Context
 
 {Why this work is needed. One to three sentences describing the problem or opportunity.
-Reference the root cause or trigger if known.}
+Reference the root cause or trigger if known. This is the goal's "why".}
 
 ## Acceptance Criteria
 
-{Bulleted checklist. Each item must describe an observable outcome — something the user
-can see, click, read, or verify by running the app. Never include tooling commands,
-quality gate steps, or CI instructions here. Those belong in CLAUDE.md.}
+{Bulleted checklist. Each item must describe an observable outcome — something a user or
+reviewer can see, click, read, or verify by running the app or calling an interface. This
+is the goal's verifiable definition of done.}
 
 - [ ] {observable outcome}
 - [ ] {observable outcome}
-
-## Implementation Notes
-
-{Optional hints for the worker: patterns to follow, APIs to use, edge cases to handle,
-links to reference implementations. Skip this section if there is nothing non-obvious to say.}
-
-## Relevant Files
-
-{Files and directories the worker should read before writing any code. One entry per line.}
-
-- `path/to/file.kt` — {why it matters}
 ```
 
-**AC rule — enforce strictly:** Every AC item must describe what a user or reviewer can observe.
-Reject any item that names a tool, script, or quality gate:
+Do **not** add an Implementation Notes section and do **not** add a Relevant Files section. The worker
+discovers the files and the approach on its own; a supplied file list or step-by-step plan is at best
+redundant and at worst steers the worker into placement or mechanics a reviewer later flags as drift.
 
-| Prohibited (tooling) | Correct (observable) |
+**AC rule — enforce strictly.** Every AC item must describe *what a user or reviewer can observe*, and
+must **never** name a file path, module or package placement, function or type signature, or a
+step-by-step instruction. Those are mechanics; they belong to the worker, not the ticket.
+
+| Prohibited | Correct (observable) |
 |---|---|
 | Run `./gradlew detekt` | No detekt violations are introduced |
 | Run `./scripts/run-affected-tests.sh` | All existing tests continue to pass |
 | CI passes | The feature works end-to-end in the running app |
+| Add `bio: String` to `FigureDto` | The figure profile displays a short biography |
+| Put the mapper in `data/mapper/` | The figure's biography renders on the Voices detail sheet |
 
-**Verify before you assert — no unverified technical claims.** Any note that names a specific symbol,
-field, DTO, endpoint, function, or file — and that the work depends on — is a *claim about the
-codebase*, not a given. Confirm it with `grep`/`Read` before you write it into the ticket. If you
-cannot confirm the mechanism exists, or it behaves differently than assumed, do not assert it: state
-the desired outcome and name the gap honestly instead (e.g. "today the encourage response carries no
-figure identifier — surfacing one is part of this work"). A wrong technical claim in a ticket
-propagates through the worker and every quality gate unchecked — this is exactly how MS-87 (PR #506)
-shipped a fragile `figureId` workaround built on a field that did not exist on the DTO the note named.
+**Verify before you assert — no unverified technical claims.** Any Context sentence or AC item that
+names a specific symbol, field, DTO, endpoint, function, or behaviour — and that the work depends on —
+is a *claim about the codebase*, not a given. Confirm it with `grep`/`Read` before you write it into
+the ticket. If you cannot confirm the mechanism exists, or it behaves differently than assumed, do not
+assert it: state the desired outcome and name the gap honestly instead (e.g. "today the encourage
+response carries no figure identifier — surfacing one is part of this work"). A wrong technical claim
+in a ticket propagates through the worker and every quality gate unchecked — this is exactly how MS-87
+(PR #506) shipped a fragile `figureId` workaround built on a field that did not exist on the DTO it
+named. Note the discipline is about *not asserting false facts*, not about prescribing the fix: state
+the true outcome you want and let the worker discover the path.
 
-**Keep Implementation Notes at the intent/outcome altitude.** Describe constraints and the observable
-result you want, not the exact plumbing. Prescribing a precise mechanism ("plumb it from field X on
-type Y") that rests on an unverified assumption steers the worker into a workaround and hides the real
-gap. When the mechanism is not verified, describe the outcome and let the worker discover the path —
-an honest "resolve X" beats a confident-but-wrong "do X by doing Y".
-
-### 5. Determine the correct Jira fields
+### 4. Determine the correct Jira fields
 
 - **Parent epic:** use the `parent` field with the epic issue key resolved from the JQL result in step 1 (e.g. `MS-68`). If the user selected "none", omit the field entirely.
 - **Label:** `assisted` or `autonomous` — set from step 1.
 - **Summary:** concise imperative phrase, e.g. "Add retry logic to CloudRunJobsClient"
 
-### 6. Create the ticket(s)
+### 5. Create the ticket(s)
 
 **Single-ticket mode:** Call `createJiraIssue` once:
 - `cloudId`: `media-sage.atlassian.net`
 - `project`: `{ "key": "MS" }`
 - `issuetype`: `{ "name": "Task" }`
 - `summary`: the one-line summary
-- `description`: the full body from step 4, using `contentFormat: "markdown"`
+- `description`: the full body from step 3, using `contentFormat: "markdown"`
 - `parent`: `{ "key": "<epic key>" }` if an epic was identified
 - `labels`: `["assisted"]` or `["autonomous"]`
 
-**Multi-ticket mode:**
-1. Create tickets in compile order: `:shared` before `:composeApp`; `:appServer` and `:agentruntime` can be created in any order.
-2. Use the same `parent` epic and `labels` on all tickets.
-3. After all tickets are created, call `createIssueLink` for each blocking relationship:
+**Multi-ticket mode** (only when step 2 found two or more independently-shippable goals):
+1. Use the same `parent` epic and `labels` on all tickets.
+2. After all tickets are created, call `createIssueLink` for each genuine goal dependency:
    - `cloudId`: `media-sage.atlassian.net`
    - `type`: `Blocks`
-   - `inwardIssue`: the blocker ticket key (e.g. the `:shared` ticket)
-   - `outwardIssue`: the blocked ticket key (e.g. the `:composeApp` ticket)
+   - `inwardIssue`: the blocker ticket key (the goal that must ship first)
+   - `outwardIssue`: the blocked ticket key (the goal that builds on it)
 
-### 7. Confirm to the user
+### 6. Confirm to the user
 
 Reply with:
 - The Jira issue key and URL (e.g. [MS-370](https://media-sage.atlassian.net/browse/MS-370))
