@@ -31,7 +31,6 @@ object ReaderContract {
         val hasData: Boolean,
         val figurePortraitUrl: String?,
         val figureName: String?,
-        val overrideFigureId: Long? = null,
     )
 
     data class ReflectionSummary(
@@ -62,7 +61,6 @@ object ReaderContract {
 
     sealed interface ActiveSheet {
         data class WeekSlotPicker(val dayOfWeek: Int) : ActiveSheet
-        data class FutureDayPicker(val epochDay: Long) : ActiveSheet
         data class HistoryDetail(val detail: DayDetail) : ActiveSheet
     }
 
@@ -82,9 +80,6 @@ object ReaderContract {
         data object PickerDismissed : Intent
         data class FigureAssigned(val dayOfWeek: Int, val figureId: Long, val lens: LensFilter?) : Intent
         data class AssignmentCleared(val dayOfWeek: Int) : Intent
-        data class SelectFutureDay(val epochDay: Long) : Intent
-        data class AssignOverride(val epochDay: Long, val figureId: Long) : Intent
-        data class ClearOverride(val epochDay: Long) : Intent
         data object ToggleCalendarExpanded : Intent
         data class MonthPageChanged(val year: Int, val month: Int) : Intent
         data class HistoryDayTapped(val epochDay: Long) : Intent
