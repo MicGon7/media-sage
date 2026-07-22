@@ -68,7 +68,7 @@ class ReaderViewModel(
     private val calendarData: Flow<ReaderCalendarData> =
         input.map { it.visibleMonth }.distinctUntilChanged().flatMapLatest { month ->
             val range = monthRange(month)
-            getReaderCalendar(range.monthStart, range.monthEnd, range.overrideStart, range.overrideEnd)
+            getReaderCalendar(range.monthStart, range.monthEnd)
         }
 
     /** Detail for the open history day. flatMapLatest cancels the prior day's collection automatically. */
@@ -236,12 +236,7 @@ class ReaderViewModel(
     private fun monthRange(month: LocalDate): MonthRange {
         val start = month.toEpochDays().toLong()
         val end = month.plus(1, DateTimeUnit.MONTH).toEpochDays().toLong() - 1
-        return MonthRange(
-            monthStart = start,
-            monthEnd = end,
-            overrideStart = minOf(start, todayEpochDay - WEEK_WINDOW_DAYS),
-            overrideEnd = maxOf(end, todayEpochDay + WEEK_WINDOW_DAYS),
-        )
+        return MonthRange(monthStart = start, monthEnd = end)
     }
 
     /** The user-owned view selection — the single mutable input to the state pipeline. */
@@ -260,13 +255,10 @@ class ReaderViewModel(
     private data class MonthRange(
         val monthStart: Long,
         val monthEnd: Long,
-        val overrideStart: Long,
-        val overrideEnd: Long,
     )
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
-        const val WEEK_WINDOW_DAYS = 7L
     }
 }
 

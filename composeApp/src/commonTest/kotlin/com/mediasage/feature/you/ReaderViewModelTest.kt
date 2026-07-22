@@ -205,22 +205,10 @@ private class FakeFigureRepository(private val figures: List<Figure>) : FigureRe
 private class FakeDayAssignmentRepository(
     private val assignmentsFlow: MutableStateFlow<Map<Int, DayAssignment>>
 ) : DayAssignmentRepository {
-    val overrides = mutableMapOf<Long, Long>()
-    private val overridesFlow = MutableStateFlow<Map<Long, Long>>(emptyMap())
-
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = assignmentsFlow
-    override fun observeOverridesByEpochDayRange(start: Long, end: Long): Flow<Map<Long, Long>> = overridesFlow
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
-    override suspend fun setOverride(epochDay: Long, figureId: Long) {
-        overrides[epochDay] = figureId
-        overridesFlow.value = overrides.toMap()
-    }
-    override suspend fun clearOverride(epochDay: Long) {
-        overrides.remove(epochDay)
-        overridesFlow.value = overrides.toMap()
-    }
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = null
 }
 
