@@ -250,9 +250,7 @@ private fun SharedTransitionScope.MonthCarouselContent(
                 days = daysForPage,
                 onDayTapped = { epochDay ->
                     val day = daysForPage.find { it.epochDay == epochDay }
-                    if (day?.isFuture == true) {
-                        onIntent(ReaderContract.Intent.SelectFutureDay(epochDay))
-                    } else {
+                    if (day?.isFuture != true) {
                         onIntent(ReaderContract.Intent.HistoryDayTapped(epochDay))
                     }
                 },
@@ -366,7 +364,6 @@ private fun buildSkeletonDays(
             hasData = false,
             figurePortraitUrl = null,
             figureName = null,
-            overrideFigureId = null,
         )
     }
 }
