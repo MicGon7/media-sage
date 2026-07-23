@@ -14,9 +14,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Renders the Reader screen in both week-strip and expanded-month layouts so a reviewer can see
- * the calendar with future-day scheduling removed (MS-633): future cells render with no data and
- * no picker affordance, while past/today cells keep showing the reporter that actually ran.
+ * Renders the Reader screen's week strip, quote card, and History entry point so a reviewer can
+ * see the recurring weekly schedule without the read-only calendar browsing surface.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -31,24 +30,6 @@ class ReaderScreenRenderTest {
                     state = ReaderContract.UiState.Ready(
                         weekSlots = sampleWeekSlots(),
                         quoteCard = sampleQuoteCard(),
-                        calendarDays = sampleCalendarDays(),
-                    ),
-                    onIntent = {},
-                )
-            }
-        }
-    }
-
-    @Test
-    fun rendersReaderScreenMonthView() {
-        captureRoboImage("build/outputs/roborazzi/reader_screen_month.png") {
-            MediaSageTheme {
-                ReaderScreen(
-                    state = ReaderContract.UiState.Ready(
-                        weekSlots = sampleWeekSlots(),
-                        quoteCard = sampleQuoteCard(),
-                        calendarDays = sampleCalendarDays(),
-                        isCalendarExpanded = true,
                     ),
                     onIntent = {},
                 )
@@ -79,22 +60,3 @@ private fun sampleQuoteCard() = ReaderContract.QuoteCard(
     figureImageUrl = null,
     figureId = 1L,
 )
-
-private fun sampleCalendarDays(): List<ReaderContract.CalendarDay> {
-    val monthStart = LocalDate(2026, 7, 1)
-    val monthStartEpoch = monthStart.toEpochDays().toLong()
-    val daysInMonth = monthStart.plus(1, DateTimeUnit.MONTH).toEpochDays() - monthStart.toEpochDays()
-    val todayEpoch = LocalDate(2026, 7, 22).toEpochDays().toLong()
-    return (0 until daysInMonth).map { d ->
-        val epochDay = monthStartEpoch + d
-        ReaderContract.CalendarDay(
-            epochDay = epochDay,
-            dateNumber = LocalDate.fromEpochDays(epochDay.toInt()).dayOfMonth,
-            isToday = epochDay == todayEpoch,
-            isFuture = epochDay > todayEpoch,
-            hasData = epochDay <= todayEpoch,
-            figurePortraitUrl = null,
-            figureName = if (epochDay <= todayEpoch) "Augustine of Hippo" else null,
-        )
-    }
-}

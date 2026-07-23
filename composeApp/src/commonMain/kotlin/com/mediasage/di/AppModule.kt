@@ -21,6 +21,7 @@ import com.mediasage.feature.history.HistoryViewModel
 import com.mediasage.feature.briefing.BriefingViewModel
 import com.mediasage.feature.headlines.HeadlinesViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
+import com.mediasage.feature.you.ReaderHistoryViewModel
 import com.mediasage.feature.you.ReaderViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -34,7 +35,8 @@ val appModule = module {
     viewModel { (figureId: Long) -> FigureDetailViewModel(figureId, get<FigureRepository>(), get<EncouragementRepository>(), get<DayAssignmentRepository>()) }
     viewModel { LoginViewModel(get<AuthRepository>(), get<AuthPreferencesRepository>()) }
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
-    viewModel { ReaderViewModel(get<GetReaderCalendarUseCase>(), get<GetDayDetailUseCase>(), get<DayAssignmentRepository>()) }
+    viewModel { ReaderViewModel(get<GetReaderCalendarUseCase>(), get<DayAssignmentRepository>()) }
+    viewModel { ReaderHistoryViewModel(get<GetReaderCalendarUseCase>(), get<GetDayDetailUseCase>()) }
     viewModel { HistoryViewModel(get<EncouragementRepository>()) }
     viewModel { BookmarksViewModel(get<EncouragementRepository>()) }
 }

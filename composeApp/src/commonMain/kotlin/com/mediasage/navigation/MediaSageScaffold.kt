@@ -41,6 +41,8 @@ import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
 import com.mediasage.feature.settings.SettingsContract
 import com.mediasage.feature.settings.SettingsScreen
 import com.mediasage.feature.settings.SettingsViewModel
+import com.mediasage.feature.you.ReaderHistoryScreen
+import com.mediasage.feature.you.ReaderHistoryViewModel
 import com.mediasage.feature.you.ReaderScreen
 import com.mediasage.feature.you.ReaderViewModel
 import org.jetbrains.compose.resources.stringResource
@@ -182,6 +184,16 @@ fun MediaSageScaffold(
                         onNavigateToSettings = { appState.navigateToSettings() },
                         onNavigateToFigureDetail = { id -> appState.navigateToFigureDetail(id) },
                         onNavigateToArticleDetail = { url -> appState.navigateToHeadlineDetail(url) },
+                        onNavigateToHistory = { appState.navigateToReaderHistory() },
+                    )
+                }
+                is Route.ReaderHistory -> NavEntry(route) {
+                    val vm = koinViewModel<ReaderHistoryViewModel>()
+                    val state by vm.state.collectAsState()
+                    ReaderHistoryScreen(
+                        state = state,
+                        onIntent = vm::onIntent,
+                        onNavigateBack = { appState.navigateBack() },
                     )
                 }
                 is Route.Bookmarks -> NavEntry(route) {

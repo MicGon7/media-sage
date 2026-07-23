@@ -34,6 +34,10 @@ sealed interface Route : NavKey {
     @Serializable
     data object You : Route
 
+    /** Read-only, past-and-today browse of Reader history, reached from a card on [You]. */
+    @Serializable
+    data object ReaderHistory : Route
+
     /** Bookmarks screen — saved matches (shell). */
     @Serializable
     data object Bookmarks : Route
@@ -52,6 +56,7 @@ val navSerializersModule = SerializersModule {
         subclass(Route.Figures::class)
         subclass(Route.FigureDetail::class)
         subclass(Route.You::class)
+        subclass(Route.ReaderHistory::class)
         subclass(Route.Bookmarks::class)
         subclass(Route.Settings::class)
     }

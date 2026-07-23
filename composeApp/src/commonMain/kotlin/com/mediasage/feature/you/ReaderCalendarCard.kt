@@ -43,9 +43,8 @@ private val CalendarBodyHeight = MonthDayCellHeight * CALENDAR_WEEK_ROWS
 
 @Composable
 fun CalendarCard(
-    days: List<ReaderContract.CalendarDay>,
+    days: List<ReaderHistoryContract.CalendarDay>,
     onDayTapped: (epochDay: Long) -> Unit,
-    sharedElementModifierFor: @Composable (epochDay: Long) -> Modifier = { Modifier },
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.padding(horizontal = 16.dp)) {
@@ -69,7 +68,6 @@ fun CalendarCard(
                                 MonthDayCell(
                                     day = day,
                                     onClick = { day?.let { onDayTapped(it.epochDay) } },
-                                    sharedElementModifierFor = sharedElementModifierFor,
                                     modifier = Modifier.weight(1f),
                                 )
                             }
@@ -82,7 +80,7 @@ fun CalendarCard(
 }
 
 @Composable
-private fun MonthHeader(days: List<ReaderContract.CalendarDay>) {
+private fun MonthHeader(days: List<ReaderHistoryContract.CalendarDay>) {
     val title = remember(days) {
         days.firstOrNull()?.let { day ->
             val date = LocalDate.fromEpochDays(day.epochDay.toInt())
@@ -114,16 +112,14 @@ private fun WeekDayHeaderRow() {
 
 @Composable
 private fun MonthDayCell(
-    day: ReaderContract.CalendarDay?,
+    day: ReaderHistoryContract.CalendarDay?,
     onClick: () -> Unit,
-    sharedElementModifierFor: @Composable (epochDay: Long) -> Modifier = { Modifier },
     modifier: Modifier = Modifier,
 ) {
     if (day == null) {
         Box(modifier = modifier.height(MonthDayCellHeight))
         return
     }
-    val portraitMod = sharedElementModifierFor(day.epochDay)
     Column(
         modifier = modifier.height(MonthDayCellHeight).clickable(onClick = onClick).padding(vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -144,7 +140,7 @@ private fun MonthDayCell(
                 Box(Modifier.size(6.dp).clip(CircleShape).background(BrandAmber))
             }
             if (day.hasData) {
-                DayPortrait(day, portraitMod)
+                DayPortrait(day)
             }
         }
     }
@@ -152,8 +148,7 @@ private fun MonthDayCell(
 
 @Composable
 private fun DayPortrait(
-    day: ReaderContract.CalendarDay,
-    sharedModifier: Modifier = Modifier,
+    day: ReaderHistoryContract.CalendarDay,
     showRing: Boolean = true,
 ) {
     val isPast = !day.isToday && !day.isFuture
@@ -165,10 +160,9 @@ private fun DayPortrait(
             isToday = day.isToday,
             isPast = isPast,
             showRing = showRing,
-            modifier = sharedModifier,
         )
     } else {
-        val fallbackModifier = sharedModifier.size(28.dp).clip(CircleShape)
+        val fallbackModifier = Modifier.size(28.dp).clip(CircleShape)
             .then(if (day.isToday && showRing) Modifier.solidCircleBorder(BrandAmber, 2.dp) else Modifier)
             .then(if (isPast) Modifier.alpha(0.6f) else Modifier)
         Box(
@@ -181,10 +175,10 @@ private fun DayPortrait(
 }
 
 private fun buildMonthCells(
-    days: List<ReaderContract.CalendarDay>,
+    days: List<ReaderHistoryContract.CalendarDay>,
     firstDayOffset: Int,
-): List<ReaderContract.CalendarDay?> {
-    val cells = mutableListOf<ReaderContract.CalendarDay?>()
+): List<ReaderHistoryContract.CalendarDay?> {
+    val cells = mutableListOf<ReaderHistoryContract.CalendarDay?>()
     repeat(firstDayOffset) { cells.add(null) }
     cells.addAll(days)
     while (cells.size % 7 != 0) cells.add(null)
