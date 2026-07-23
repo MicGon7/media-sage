@@ -48,9 +48,7 @@
     <string name="you_carousel_title">WEEKLY SCHEDULE</string>
     <string name="you_reporters_section_heading">REPORTERS</string>
     <string name="you_reporters_this_week">REPORTERS OF THE WEEK</string>
-    <string name="you_reporters_this_month">REPORTERS OF THE MONTH</string>
-    <string name="you_toggle_month_view">Month</string>
-    <string name="you_toggle_week_view">Week</string>
+    <string name="you_history_entry_subtitle">See past reporters and reflections</string>
     <string name="you_saved_section_title">FROM THE REPORTERS</string>
     <string name="you_quote_card_header">MEMORY QUOTE</string>
     <string name="you_saved_see_all">Select a quote to memorize →</string>

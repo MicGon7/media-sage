@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Settings
@@ -90,6 +91,8 @@ import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.headline_nature_image_default
 import mediasage.composeapp.generated.resources.reader_hero_caption
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
+import mediasage.composeapp.generated.resources.you_history_entry_subtitle
+import mediasage.composeapp.generated.resources.you_nav_history
 import mediasage.composeapp.generated.resources.you_lens_faith
 import mediasage.composeapp.generated.resources.you_lens_grace
 import mediasage.composeapp.generated.resources.you_lens_grief
@@ -123,9 +126,10 @@ fun ReaderScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToFigureDetail: (figureId: Long) -> Unit = {},
     onNavigateToArticleDetail: (url: String) -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
 ) {
     val ready = state as? ReaderContract.UiState.Ready
-    val activeSheet = ready?.activeSheet
+    val activeSheet = ready?.activeSheet as? ReaderContract.ActiveSheet.WeekSlotPicker
     if (ready != null && activeSheet != null) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
@@ -133,27 +137,19 @@ fun ReaderScreen(
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
-            when (val sheet = activeSheet) {
-                is ReaderContract.ActiveSheet.WeekSlotPicker -> {
-                    val isAssigned = ready.weekSlots.any {
-                        it.dayOfWeek.ordinal == sheet.dayOfWeek && it.assignedFigureName != null
-                    }
-                    FigurePickerSheet(
-                        figures = ready.pickerFigures,
-                        showClearOption = isAssigned,
-                        onFigureAndLensSelected = { figure, lens ->
-                            onIntent(ReaderContract.Intent.FigureAssigned(sheet.dayOfWeek, figure.id, lens))
-                        },
-                        onClearDay = {
-                            onIntent(ReaderContract.Intent.AssignmentCleared(sheet.dayOfWeek))
-                        },
-                    )
-                }
-                is ReaderContract.ActiveSheet.HistoryDetail -> {
-                    DayDetailSheetContent(dayDetail = sheet.detail)
-                }
-                else -> {}
+            val isAssigned = ready.weekSlots.any {
+                it.dayOfWeek.ordinal == activeSheet.dayOfWeek && it.assignedFigureName != null
             }
+            FigurePickerSheet(
+                figures = ready.pickerFigures,
+                showClearOption = isAssigned,
+                onFigureAndLensSelected = { figure, lens ->
+                    onIntent(ReaderContract.Intent.FigureAssigned(activeSheet.dayOfWeek, figure.id, lens))
+                },
+                onClearDay = {
+                    onIntent(ReaderContract.Intent.AssignmentCleared(activeSheet.dayOfWeek))
+                },
+            )
         }
     }
 
@@ -204,10 +200,15 @@ fun ReaderScreen(
                 item {
                     ReporterScheduleSection(
                         weekSlots = ready.weekSlots,
-                        calendarDays = ready.calendarDays,
-                        isExpanded = ready.isCalendarExpanded,
                         onIntent = onIntent,
                         modifier = Modifier.padding(top = 24.dp),
+                    )
+                }
+
+                item {
+                    HistoryEntryCard(
+                        onClick = onNavigateToHistory,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
                     )
                 }
 
@@ -225,6 +226,42 @@ fun ReaderScreen(
                 }
             }
 
+        }
+    }
+}
+
+@Composable
+private fun HistoryEntryCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 0.dp,
+        shadowElevation = 2.dp,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.you_nav_history),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(Res.string.you_history_entry_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -264,8 +301,6 @@ internal fun SectionLabel(text: String, modifier: Modifier = Modifier) {
 internal fun DaySlotItem(
     slot: ReaderContract.DaySlot,
     onClick: () -> Unit,
-    portraitModifier: Modifier = Modifier,
-    badgeModifier: Modifier = Modifier,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
@@ -296,13 +331,12 @@ internal fun DaySlotItem(
                     todayRingColor = BrandAmber,
                     surfaceVariantColor = surfaceVariant,
                     onSurfaceVariantColor = onSurfaceVariant,
-                    modifier = portraitModifier,
                 )
             }
             if (slot.assignedLens != null) {
                 LensBadge(
                     lens = slot.assignedLens,
-                    modifier = badgeModifier
+                    modifier = Modifier
                         .size(18.dp)
                         .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
                 )

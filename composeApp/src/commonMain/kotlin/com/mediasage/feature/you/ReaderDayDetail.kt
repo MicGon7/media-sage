@@ -37,7 +37,7 @@ import mediasage.composeapp.generated.resources.you_day_detail_figure_attributio
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun DayDetailSheetContent(dayDetail: ReaderContract.DayDetail) {
+internal fun DayDetailSheetContent(dayDetail: ReaderHistoryContract.DayDetail) {
     LazyColumn(contentPadding = PaddingValues(bottom = 40.dp)) {
         item { DayDetailHeader(dayDetail) }
         item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) }
@@ -61,7 +61,7 @@ internal fun DayDetailSheetContent(dayDetail: ReaderContract.DayDetail) {
 }
 
 @Composable
-private fun DayDetailHeader(dayDetail: ReaderContract.DayDetail) {
+private fun DayDetailHeader(dayDetail: ReaderHistoryContract.DayDetail) {
     val dateText = remember(dayDetail.epochDay) {
         val date = LocalDate.fromEpochDays(dayDetail.epochDay.toInt())
         val day = date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
@@ -100,7 +100,7 @@ private fun DayDetailHeader(dayDetail: ReaderContract.DayDetail) {
 }
 
 @Composable
-private fun DayDetailReflection(reflection: ReaderContract.ReflectionSummary) {
+private fun DayDetailReflection(reflection: ReaderHistoryContract.ReflectionSummary) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(
             text = reflection.scriptureReference,
@@ -150,7 +150,7 @@ private fun DayDetailEmptyState(epochDay: Long) {
 }
 
 @Composable
-private fun DayDetailArticleRow(article: ReaderContract.ArticleItem) {
+private fun DayDetailArticleRow(article: ReaderHistoryContract.ArticleItem) {
     val quotePreview = if (article.quoteText.length > 100) {
         article.quoteText.take(100) + "…"
     } else {
