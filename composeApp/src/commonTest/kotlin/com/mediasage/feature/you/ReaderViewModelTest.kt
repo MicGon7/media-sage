@@ -77,46 +77,6 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun selectFutureDay_opensFutureDayPickerSheet() = runTest(testDispatcher) {
-        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
-        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
-            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
-
-        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
-
-        val state = viewModel.state.value as ReaderContract.UiState.Ready
-        val sheet = state.activeSheet as? ReaderContract.ActiveSheet.FutureDayPicker
-        assertNotNull(sheet)
-        assertEquals(futureEpochDay, sheet.epochDay)
-    }
-
-    @Test
-    fun assignOverride_closesActiveSheet() = runTest(testDispatcher) {
-        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
-        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
-            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
-        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
-
-        viewModel.onIntent(ReaderContract.Intent.AssignOverride(futureEpochDay, testFigure.id))
-
-        val state = viewModel.state.value as ReaderContract.UiState.Ready
-        assertNull(state.activeSheet)
-    }
-
-    @Test
-    fun clearOverride_closesActiveSheet() = runTest(testDispatcher) {
-        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
-        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
-            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
-        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
-
-        viewModel.onIntent(ReaderContract.Intent.ClearOverride(futureEpochDay))
-
-        val state = viewModel.state.value as ReaderContract.UiState.Ready
-        assertNull(state.activeSheet)
-    }
-
-    @Test
     fun daySlotTapped_opensWeekSlotPickerForThatDay() = runTest(testDispatcher) {
         val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
 
@@ -163,7 +123,6 @@ class ReaderViewModelTest {
             assertTrue(cell.hasData)
             assertEquals("Augustine of Hippo", cell.figureName)
             assertEquals(slot.assignedFigureName, cell.figureName)
-            assertNull(cell.overrideFigureId)
         }
     }
 
@@ -177,27 +136,6 @@ class ReaderViewModelTest {
         val beyondWeek = state.calendarDays.firstOrNull { it.epochDay > endOfWeekEpochDay } ?: return@runTest
         assertFalse(beyondWeek.hasData)
         assertNull(beyondWeek.figureName)
-    }
-
-    @Test
-    fun futureOverrideTakesPrecedenceOverWeeklyAssignment() = runTest(testDispatcher) {
-        val override = testFigure.copy(id = 2L, name = "Teresa of Avila")
-        val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
-        val viewModel = readerViewModel(
-            figure = testFigure,
-            latestQuote = null,
-            extraFigures = listOf(override),
-            assignments = assignments,
-        )
-        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
-            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
-
-        viewModel.onIntent(ReaderContract.Intent.AssignOverride(futureEpochDay, override.id))
-
-        val cell = (viewModel.state.value as ReaderContract.UiState.Ready)
-            .calendarDays.first { it.epochDay == futureEpochDay }
-        assertEquals("Teresa of Avila", cell.figureName)
-        assertEquals(override.id, cell.overrideFigureId)
     }
 
     @Test
