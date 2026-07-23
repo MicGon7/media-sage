@@ -74,8 +74,8 @@ class DailyReflectionRepositoryImpl(
             entities.groupBy { it.epochDay }.map { (day, list) -> BriefingDay(day, list.first().figureId) }
         }
 
-    override suspend fun getForDay(epochDay: Long): DailyReflection? =
-        dao.getFirstForDay(epochDay)?.toDomain()
+    override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? =
+        dao.getForDayAndTone(epochDay, tone)?.toDomain()
 }
 
 private fun DailyReflectionEntity.toDomain() = DailyReflection(

@@ -6,17 +6,14 @@ import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.model.BriefingDay
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
-import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.model.Quote
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
-import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.QuoteRepository
-import com.mediasage.domain.usecase.GetDayDetailUseCase
 import com.mediasage.domain.usecase.GetReaderCalendarUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -35,7 +32,6 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 
@@ -133,29 +129,6 @@ class ReaderHistoryViewModelTest {
         assertTrue(state.calendarDays.all { LocalDate.fromEpochDays(it.epochDay.toInt()).monthNumber == previousMonth.monthNumber })
     }
 
-    @Test
-    fun dayTapped_opensDetailForThatDay() = runTest(testDispatcher) {
-        val viewModel = historyViewModel()
-        val epochDay = (viewModel.state.value as ReaderHistoryContract.UiState.Ready).todayEpochDay
-
-        viewModel.onIntent(ReaderHistoryContract.Intent.DayTapped(epochDay))
-
-        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
-        assertEquals(epochDay, state.activeDetail?.epochDay)
-    }
-
-    @Test
-    fun detailDismissed_clearsActiveDetail() = runTest(testDispatcher) {
-        val viewModel = historyViewModel()
-        val epochDay = (viewModel.state.value as ReaderHistoryContract.UiState.Ready).todayEpochDay
-        viewModel.onIntent(ReaderHistoryContract.Intent.DayTapped(epochDay))
-
-        viewModel.onIntent(ReaderHistoryContract.Intent.DetailDismissed)
-
-        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
-        assertNull(state.activeDetail)
-    }
-
     /**
      * Builds the ViewModel and starts collecting its state. `stateIn(WhileSubscribed)` is cold
      * until a subscriber is present, so an active collector in [backgroundScope] is required for
@@ -169,10 +142,8 @@ class ReaderHistoryViewModelTest {
         val dayAssignmentRepo = HistoryFakeDayAssignmentRepository(MutableStateFlow(assignments))
         val quoteRepo = HistoryFakeQuoteRepository()
         val reflectionRepo = HistoryFakeDailyReflectionRepository(briefings)
-        val encouragementRepo = HistoryFakeEncouragementRepository()
         val viewModel = ReaderHistoryViewModel(
             getReaderCalendar = GetReaderCalendarUseCase(figureRepo, dayAssignmentRepo, quoteRepo, reflectionRepo),
-            getDayDetail = GetDayDetailUseCase(reflectionRepo, encouragementRepo),
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         return viewModel
@@ -210,7 +181,7 @@ private class HistoryFakeDailyReflectionRepository(
     ): DailyReflection = throw UnsupportedOperationException()
     override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
         MutableStateFlow(briefings.filter { it.epochDay in startEpochDay..endEpochDay })
-    override suspend fun getForDay(epochDay: Long): DailyReflection? = null
+    override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? = null
 }
 
 private class HistoryFakeQuoteRepository(private val latestQuote: Quote? = null) : QuoteRepository {
@@ -219,22 +190,4 @@ private class HistoryFakeQuoteRepository(private val latestQuote: Quote? = null)
     override suspend fun getQuoteById(id: Long): Quote? = latestQuote?.takeIf { it.id == id }
     override suspend fun getLatestQuoteForFigure(figureId: Long): Quote? = latestQuote
     override suspend fun saveQuote(text: String, source: String, themes: List<String>, figureId: Long) = Unit
-}
-
-private class HistoryFakeEncouragementRepository : EncouragementRepository {
-    override suspend fun getEncouragement(
-        headlineTitle: String,
-        headlineSource: String,
-        headlineImageUrl: String?,
-        articleUrl: String?,
-        articleSnippet: String?,
-    ): Encouragement = throw UnsupportedOperationException()
-    override fun observeAll(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
-    override fun observeBookmarked(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
-    override fun observeCountByFigureName(): Flow<Map<String, Int>> = MutableStateFlow(emptyMap())
-    override fun observeByFigureId(figureId: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
-    override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> = MutableStateFlow(false)
-    override suspend fun toggleBookmark(articleUrl: String) = Unit
-    override fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
-    override fun observeActiveEpochDays(): Flow<Set<Long>> = MutableStateFlow(emptySet())
 }

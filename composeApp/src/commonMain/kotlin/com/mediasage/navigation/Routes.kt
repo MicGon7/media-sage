@@ -38,6 +38,14 @@ sealed interface Route : NavKey {
     @Serializable
     data object ReaderHistory : Route
 
+    /** Read-only detail for a single day's briefings and saved articles, pushed from [ReaderHistory]. */
+    @Serializable
+    data class DayDetail(
+        val epochDay: Long,
+        val figureName: String? = null,
+        val figureImageUrl: String? = null,
+    ) : Route
+
     /** Bookmarks screen — saved matches (shell). */
     @Serializable
     data object Bookmarks : Route
@@ -57,6 +65,7 @@ val navSerializersModule = SerializersModule {
         subclass(Route.FigureDetail::class)
         subclass(Route.You::class)
         subclass(Route.ReaderHistory::class)
+        subclass(Route.DayDetail::class)
         subclass(Route.Bookmarks::class)
         subclass(Route.Settings::class)
     }

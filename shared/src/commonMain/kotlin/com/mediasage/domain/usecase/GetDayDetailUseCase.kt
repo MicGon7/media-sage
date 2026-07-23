@@ -9,23 +9,34 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 /**
- * Combines the two repository reads a day-detail view needs — the one-shot daily reflection and the
- * live stream of encouragements saved that day — into a single [DayDetailData] flow.
+ * Combines the three repository reads a day-detail view needs — the one-shot morning and evening
+ * daily reflections and the live stream of encouragements saved that day — into a single
+ * [DayDetailData] flow.
  *
  * NiA domain-layer pattern: a use case combines reads from more than one repository so the ViewModel
- * receives one stream. The reflection is fetched once, then merged with the encouragement stream so
- * the detail stays live as encouragements are added or bookmarked.
+ * receives one stream. The reflections are fetched once each, then merged with the encouragement
+ * stream so the detail stays live as encouragements are added or bookmarked.
  */
 class GetDayDetailUseCase(
     private val reflectionRepository: DailyReflectionRepository,
     private val encouragementRepository: EncouragementRepository,
 ) {
     operator fun invoke(epochDay: Long): Flow<DayDetailData> = flow {
-        val reflection = reflectionRepository.getForDay(epochDay)
+        val morningReflection = reflectionRepository.getForDay(epochDay, TONE_MORNING)
+        val eveningReflection = reflectionRepository.getForDay(epochDay, TONE_EVENING)
         emitAll(
             encouragementRepository.observeByEpochDay(epochDay).map { encouragements ->
-                DayDetailData(reflection = reflection, encouragements = encouragements)
+                DayDetailData(
+                    morningReflection = morningReflection,
+                    eveningReflection = eveningReflection,
+                    encouragements = encouragements,
+                )
             },
         )
+    }
+
+    private companion object {
+        const val TONE_MORNING = "morning"
+        const val TONE_EVENING = "evening"
     }
 }

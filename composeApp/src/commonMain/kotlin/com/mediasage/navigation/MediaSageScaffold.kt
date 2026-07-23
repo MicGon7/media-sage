@@ -41,6 +41,8 @@ import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
 import com.mediasage.feature.settings.SettingsContract
 import com.mediasage.feature.settings.SettingsScreen
 import com.mediasage.feature.settings.SettingsViewModel
+import com.mediasage.feature.daydetail.DayDetailScreen
+import com.mediasage.feature.daydetail.DayDetailViewModel
 import com.mediasage.feature.you.ReaderHistoryScreen
 import com.mediasage.feature.you.ReaderHistoryViewModel
 import com.mediasage.feature.you.ReaderScreen
@@ -191,6 +193,21 @@ fun MediaSageScaffold(
                     val vm = koinViewModel<ReaderHistoryViewModel>()
                     val state by vm.state.collectAsState()
                     ReaderHistoryScreen(
+                        state = state,
+                        onIntent = vm::onIntent,
+                        onNavigateBack = { appState.navigateBack() },
+                        onNavigateToDayDetail = { epochDay, figureName, figureImageUrl ->
+                            appState.navigateToDayDetail(epochDay, figureName, figureImageUrl)
+                        },
+                    )
+                }
+                is Route.DayDetail -> NavEntry(route) {
+                    val vm = koinViewModel<DayDetailViewModel>(
+                        key = "day-detail-${route.epochDay}",
+                        parameters = { parametersOf(route.epochDay, route.figureName, route.figureImageUrl) }
+                    )
+                    val state by vm.state.collectAsState()
+                    DayDetailScreen(
                         state = state,
                         onIntent = vm::onIntent,
                         onNavigateBack = { appState.navigateBack() },

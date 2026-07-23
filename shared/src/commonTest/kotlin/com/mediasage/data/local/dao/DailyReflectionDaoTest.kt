@@ -7,15 +7,16 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DailyReflectionDaoTest {
 
-    private fun entity(id: String, epochDay: Long) = DailyReflectionEntity(
+    private fun entity(id: String, epochDay: Long, tone: String = "morning") = DailyReflectionEntity(
         id = id,
         figureId = 1L,
         epochDay = epochDay,
-        tone = "morning",
+        tone = tone,
         scriptureReference = "John 3:16",
         scriptureText = "For God so loved the world",
         insight = "insight",
@@ -57,6 +58,26 @@ class DailyReflectionDaoTest {
         assertEquals(3, result.size)
         assertEquals(listOf(day1, day2, day3), result)
     }
+
+    @Test
+    fun getForDayAndTone_returnsNullWhenToneMissing() = runTest {
+        val dao = FakeDailyReflectionDao(listOf(entity("a", 10L, tone = "morning")))
+
+        val result = dao.getForDayAndTone(epochDay = 10L, tone = "evening")
+
+        assertNull(result)
+    }
+
+    @Test
+    fun getForDayAndTone_returnsMatchingToneOnly() = runTest {
+        val morning = entity("a", 10L, tone = "morning")
+        val evening = entity("b", 10L, tone = "evening")
+        val dao = FakeDailyReflectionDao(listOf(morning, evening))
+
+        val result = dao.getForDayAndTone(epochDay = 10L, tone = "evening")
+
+        assertEquals(evening, result)
+    }
 }
 
 private class FakeDailyReflectionDao(private val store: List<DailyReflectionEntity> = emptyList()) : DailyReflectionDao {
@@ -77,8 +98,8 @@ private class FakeDailyReflectionDao(private val store: List<DailyReflectionEnti
     override fun getByEpochDayRange(start: Long, end: Long): Flow<List<DailyReflectionEntity>> =
         flowOf(store.filter { it.epochDay in start..end }.sortedBy { it.epochDay })
 
-    override suspend fun getFirstForDay(epochDay: Long): DailyReflectionEntity? =
-        store.firstOrNull { it.epochDay == epochDay }
+    override suspend fun getForDayAndTone(epochDay: Long, tone: String): DailyReflectionEntity? =
+        store.firstOrNull { it.epochDay == epochDay && it.tone == tone }
 
     override suspend fun upsert(entity: DailyReflectionEntity) {}
 }

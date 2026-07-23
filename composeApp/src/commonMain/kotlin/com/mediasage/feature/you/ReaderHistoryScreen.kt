@@ -13,14 +13,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.Today
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
@@ -50,25 +47,14 @@ import org.jetbrains.compose.resources.stringResource
 private const val PRE_RELEASE_START_YEAR = 2025
 private const val RELEASE_START_YEAR = 2026
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderHistoryScreen(
     state: ReaderHistoryContract.UiState,
     onIntent: (ReaderHistoryContract.Intent) -> Unit,
     onNavigateBack: () -> Unit = {},
+    onNavigateToDayDetail: (epochDay: Long, figureName: String?, figureImageUrl: String?) -> Unit = { _, _, _ -> },
 ) {
     val ready = state as? ReaderHistoryContract.UiState.Ready
-    val activeDetail = ready?.activeDetail
-    if (activeDetail != null) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(
-            onDismissRequest = { onIntent(ReaderHistoryContract.Intent.DetailDismissed) },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            DayDetailSheetContent(dayDetail = activeDetail)
-        }
-    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -89,6 +75,7 @@ fun ReaderHistoryScreen(
                     todayEpochDay = ready.todayEpochDay,
                     calendarDays = ready.calendarDays,
                     onIntent = onIntent,
+                    onNavigateToDayDetail = onNavigateToDayDetail,
                 )
             }
         }
@@ -100,6 +87,7 @@ private fun HistoryCalendarCarousel(
     todayEpochDay: Long,
     calendarDays: List<ReaderHistoryContract.CalendarDay>,
     onIntent: (ReaderHistoryContract.Intent) -> Unit,
+    onNavigateToDayDetail: (epochDay: Long, figureName: String?, figureImageUrl: String?) -> Unit,
 ) {
     val todayDate = remember(todayEpochDay) { LocalDate.fromEpochDays(todayEpochDay.toInt()) }
     val isDebugBuild = LocalIsDebugBuild.current
@@ -153,7 +141,7 @@ private fun HistoryCalendarCarousel(
                 onDayTapped = { epochDay ->
                     val day = daysForPage.find { it.epochDay == epochDay }
                     if (day?.isFuture != true) {
-                        onIntent(ReaderHistoryContract.Intent.DayTapped(epochDay))
+                        onNavigateToDayDetail(epochDay, day?.figureName, day?.figurePortraitUrl)
                     }
                 },
                 modifier = Modifier.padding(bottom = 16.dp),

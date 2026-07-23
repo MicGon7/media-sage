@@ -149,7 +149,7 @@ private class FakeDailyReflectionRepository(
     ): DailyReflection = throw UnsupportedOperationException()
     override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
         MutableStateFlow(briefings.filter { it.epochDay in startEpochDay..endEpochDay })
-    override suspend fun getForDay(epochDay: Long): DailyReflection? = null
+    override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? = null
 }
 
 private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteRepository {
