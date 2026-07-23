@@ -84,6 +84,12 @@ jobs:
       # next worker image build. The model + effort a run used are recorded on its
       # jobs row (model_version, effort) and shown by the advisor's compare_runs.
       #
+      # WORKER_EFFORT defaults to `medium`: at high effort the worker serialises tool
+      # calls (one read/edit per turn), while medium lets it batch parallel reads/edits
+      # — materially cheaper at equal-or-better quality on well-specified tickets. Bump a
+      # specific run to `high` via the override above for unusually complex or ambiguous
+      # work where deeper step-by-step reasoning is worth the cost.
+      #
       # Per-target values (swap these + the matching secrets to stand up a new
       # client target): GITHUB_OWNER, GITHUB_REPO, SUPABASE_REST_URL, and the
       # SUPABASE_SERVICE_ROLE_KEY / JIRA_* secret bindings. Everything else is
@@ -97,7 +103,7 @@ jobs:
           env_vars: |
             ANTHROPIC_BASE_URL=https://api.fuelix.ai
             ANTHROPIC_MODEL=claude-sonnet-5
-            WORKER_EFFORT=high
+            WORKER_EFFORT=medium
             GCP_PROJECT_ID=media-sage-agent
             PUBSUB_TOPIC=cloud-run-job-completions
             GITHUB_APP_ID=3848870

@@ -1,11 +1,14 @@
 # /create-ticket — Write a well-structured Jira ticket for the MS project
 
-Use this skill whenever the user asks to create, draft, or write a Jira ticket. It produces
-**goal-driven** tickets: each ticket states *why* the work is needed (Context) and *what verifiable
-done-state* it must reach (Acceptance Criteria), and nothing else. It does not tell the worker which
-files to touch or how to build the change — a capable worker discovers that itself, and prescribing it
-at best adds no value and at worst mis-steers. The skill's job is to size the work correctly and state
-the goal honestly, not to pre-solve the implementation.
+Use this skill whenever the user asks to create, draft, or write a Jira ticket. Every ticket leads
+with the goal — *why* the work is needed (Context) and *what verifiable done-state* it must reach
+(Acceptance Criteria). Because authoring a good ticket already requires exploring the codebase (to
+size the work, write honest AC, and verify technical claims), the skill also **captures that
+discovery** — the files the change touches and any non-obvious constraints — as `Relevant Files` and
+`Implementation Notes`. These are a **verified starting point the worker confirms, not a prescription
+it obeys**: handing over the files the author already found spares the worker from re-discovering them
+from scratch, while the goal (Context + AC) stays the source of truth. Do not invent mechanics the
+discovery did not surface, and never let the hint stand in for a clear goal.
 
 ---
 
@@ -55,7 +58,9 @@ slice compiles as a unit within one PR, so compile order is not a reason to spli
 
 ### 3. Draft the ticket body
 
-Use this exact structure — both sections are required, and these are the **only** two sections:
+Use this exact structure. **Context** and **Acceptance Criteria** are the goal — required and
+authoritative. **Implementation Notes** and **Relevant Files** capture the discovery you did while
+authoring and are handed to the worker as hints:
 
 ```
 ## Context
@@ -71,15 +76,37 @@ is the goal's verifiable definition of done.}
 
 - [ ] {observable outcome}
 - [ ] {observable outcome}
+
+## Implementation Notes
+
+{Non-obvious constraints, patterns to follow, or edge cases you surfaced while researching —
+at the intent/constraint altitude, never a step-by-step plan. Omit this section entirely if
+nothing non-obvious came up.}
+
+## Relevant Files
+
+{The files the change touches, as best you could determine — the discovery you already did,
+handed forward so the worker need not repeat it. One per line with a short note on why each
+matters. This is a verified starting point, NOT an exhaustive or binding list: the worker
+confirms each path against current code and discovers anything you missed.}
+
+- `path/to/File.kt` — {why it matters}
 ```
 
-Do **not** add an Implementation Notes section and do **not** add a Relevant Files section. The worker
-discovers the files and the approach on its own; a supplied file list or step-by-step plan is at best
-redundant and at worst steers the worker into placement or mechanics a reviewer later flags as drift.
+**Research the Relevant Files before drafting — you are exploring the codebase anyway.** Verifying the
+technical claims your Context/AC depend on (see "Verify before you assert" below) already takes you into
+the code; record what you find rather than throw it away. `grep`/`Glob`/`Read` for the files the change touches: the obvious target plus the co-located
+files a change fans out to — a ViewModel's Contract and Screen; a DAO's entity, repository, and every
+`commonTest` Fake; a new component's nearest sibling and its test. List only files a worker would open;
+**never** list `scripts/worker-*.sh` (pipeline tools, not implementation context). For net-new work with
+no existing file, name the directory the new file will live in and one reference file to model it after.
+Keep it best-effort — do not exhaustively trace every transitive reference; the worker verifies and fills
+gaps. Both hint sections are optional: omit them only when authoring genuinely surfaced nothing useful.
 
 **AC rule — enforce strictly.** Every AC item must describe *what a user or reviewer can observe*, and
 must **never** name a file path, module or package placement, function or type signature, or a
-step-by-step instruction. Those are mechanics; they belong to the worker, not the ticket.
+step-by-step instruction. Those are mechanics — they belong in `Implementation Notes` or `Relevant
+Files`, never in AC.
 
 | Prohibited | Correct (observable) |
 |---|---|
