@@ -125,7 +125,10 @@ private fun MonthDayCell(
     }
     val portraitMod = sharedElementModifierFor(day.epochDay)
     Column(
-        modifier = modifier.height(MonthDayCellHeight).clickable(onClick = onClick).padding(vertical = 2.dp),
+        modifier = modifier
+            .height(MonthDayCellHeight)
+            .then(if (day.isFuture) Modifier else Modifier.clickable(onClick = onClick))
+            .padding(vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
     ) {

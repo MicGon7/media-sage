@@ -68,7 +68,7 @@ class ReaderViewModel(
     private val calendarData: Flow<ReaderCalendarData> =
         input.map { it.visibleMonth }.distinctUntilChanged().flatMapLatest { month ->
             val range = monthRange(month)
-            getReaderCalendar(range.monthStart, range.monthEnd, range.overrideStart, range.overrideEnd)
+            getReaderCalendar(range.monthStart, range.monthEnd)
         }
 
     /** Detail for the open history day. flatMapLatest cancels the prior day's collection automatically. */
@@ -99,13 +99,6 @@ class ReaderViewModel(
             is ReaderContract.Intent.AssignmentCleared -> writeThenCloseSheet {
                 dayAssignmentRepository.clear(intent.dayOfWeek)
             }
-            is ReaderContract.Intent.SelectFutureDay -> input.update { it.copy(activeSheet = SheetSelection.FutureDay(intent.epochDay)) }
-            is ReaderContract.Intent.AssignOverride -> writeThenCloseSheet {
-                dayAssignmentRepository.setOverride(intent.epochDay, intent.figureId)
-            }
-            is ReaderContract.Intent.ClearOverride -> writeThenCloseSheet {
-                dayAssignmentRepository.clearOverride(intent.epochDay)
-            }
             is ReaderContract.Intent.ToggleCalendarExpanded -> input.update { it.copy(isCalendarExpanded = !it.isCalendarExpanded) }
             is ReaderContract.Intent.MonthPageChanged -> input.update { it.copy(visibleMonth = LocalDate(intent.year, intent.month, 1)) }
             is ReaderContract.Intent.HistoryDayTapped -> input.update { it.copy(activeSheet = SheetSelection.History(intent.epochDay)) }
@@ -130,7 +123,7 @@ class ReaderViewModel(
         val daysInMonth = (range.monthEnd - range.monthStart + 1).toInt()
         val quoteFigure = data.latestQuote?.let { figuresById[it.figureId] }
         return ReaderContract.UiState.Ready(
-            weekSlots = buildWeekSlots(figuresById, data.assignmentsByDayOfWeek, data.overridesByDay),
+            weekSlots = buildWeekSlots(figuresById, data.assignmentsByDayOfWeek),
             pickerFigures = data.figures,
             quoteCard = buildQuoteCard(data.latestQuote, quoteFigure),
             calendarDays = buildCalendarDays(
@@ -138,7 +131,6 @@ class ReaderViewModel(
                 daysInMonth,
                 figuresById,
                 data.briefingByDay,
-                data.overridesByDay,
                 data.assignmentsByDayOfWeek,
             ),
             isCalendarExpanded = input.isCalendarExpanded,
@@ -149,53 +141,47 @@ class ReaderViewModel(
     private fun buildWeekSlots(
         figuresById: Map<Long, Figure>,
         assignments: Map<Int, DayAssignment>,
-        overridesByDay: Map<Long, Long>,
     ): List<ReaderContract.DaySlot> {
         val startOfWeek = today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
         return (0..6).map { i ->
             val date = startOfWeek.plus(i, DateTimeUnit.DAY)
             val epochDay = date.toEpochDays().toLong()
-            val overrideFigureId = if (epochDay > todayEpochDay) overridesByDay[epochDay] else null
             val assignment = assignments[date.dayOfWeek.ordinal]
-            val figureId = overrideFigureId ?: assignment?.figureId
-            val figure = figureId?.let { figuresById[it] }
+            val figure = assignment?.figureId?.let { figuresById[it] }
             ReaderContract.DaySlot(
                 dayOfWeek = date.dayOfWeek,
                 epochDay = epochDay,
                 isToday = date == today,
                 assignedFigureName = figure?.name,
                 assignedFigureImageUrl = figure?.portraitUrl,
-                assignedLens = if (overrideFigureId != null) null else assignment?.lens,
+                assignedLens = assignment?.lens,
             )
         }
     }
 
     /**
-     * Precedence per day cell mirrors [buildWeekSlots] and `DayAssignmentRepository.resolveReporter`
-     * for the current week (override > weekly assignment), so the month grid and the week carousel
-     * agree on the days the carousel actually shows. The weekly-assignment fallback only reaches
-     * through the end of this week — future days beyond it show an explicit override or nothing.
-     * Past days ignore the schedule and show only the briefing that actually ran; the explicit
-     * override (future only) is carried on the cell so the override picker can prefill it.
+     * Precedence per day cell mirrors [buildWeekSlots] for the current week, so the month grid and
+     * the week carousel agree on the days the carousel actually shows. The weekly-assignment
+     * fallback only reaches through the end of this week — future days beyond it show nothing,
+     * since the calendar is a read-only history surface with no scheduling affordance of its own.
+     * Past days ignore the schedule and show only the briefing that actually ran.
      */
     private fun buildCalendarDays(
         monthStartEpoch: Long,
         daysInMonth: Int,
         figuresById: Map<Long, Figure>,
         briefingByDay: Map<Long, Long>,
-        overridesByDay: Map<Long, Long>,
         assignmentsByDayOfWeek: Map<Int, DayAssignment>,
     ): List<ReaderContract.CalendarDay> = (0 until daysInMonth).map { d ->
         val epochDay = monthStartEpoch + d
         val date = LocalDate.fromEpochDays(epochDay.toInt())
         val isFuture = epochDay > todayEpochDay
-        val overrideFigureId = if (isFuture) overridesByDay[epochDay] else null
         val weeklyFigureId = if (epochDay in todayEpochDay..endOfWeekEpochDay) {
             assignmentsByDayOfWeek[date.dayOfWeek.ordinal]?.figureId
         } else {
             null
         }
-        val figureId = if (epochDay < todayEpochDay) briefingByDay[epochDay] else overrideFigureId ?: weeklyFigureId
+        val figureId = if (epochDay < todayEpochDay) briefingByDay[epochDay] else weeklyFigureId
         val figure = figureId?.let { figuresById[it] }
         ReaderContract.CalendarDay(
             epochDay = epochDay,
@@ -205,7 +191,6 @@ class ReaderViewModel(
             hasData = figureId != null,
             figurePortraitUrl = figure?.portraitUrl,
             figureName = figure?.name,
-            overrideFigureId = overrideFigureId,
         )
     }
 
@@ -228,7 +213,6 @@ class ReaderViewModel(
     ): ReaderContract.ActiveSheet? = when (selection) {
         null -> null
         is SheetSelection.WeekSlot -> ReaderContract.ActiveSheet.WeekSlotPicker(selection.dayOfWeek)
-        is SheetSelection.FutureDay -> ReaderContract.ActiveSheet.FutureDayPicker(selection.epochDay)
         is SheetSelection.History ->
             ReaderContract.ActiveSheet.HistoryDetail(buildDayDetail(selection.epochDay, figuresById, data, detail))
     }
@@ -239,8 +223,7 @@ class ReaderViewModel(
         data: ReaderCalendarData,
         detail: ReaderContract.DayDetail?,
     ): ReaderContract.DayDetail {
-        val figureId = if (epochDay > todayEpochDay) data.overridesByDay[epochDay] else data.briefingByDay[epochDay]
-        val figure = figureId?.let { figuresById[it] }
+        val figure = data.briefingByDay[epochDay]?.let { figuresById[it] }
         return ReaderContract.DayDetail(
             epochDay = epochDay,
             reflection = detail?.reflection,
@@ -253,12 +236,7 @@ class ReaderViewModel(
     private fun monthRange(month: LocalDate): MonthRange {
         val start = month.toEpochDays().toLong()
         val end = month.plus(1, DateTimeUnit.MONTH).toEpochDays().toLong() - 1
-        return MonthRange(
-            monthStart = start,
-            monthEnd = end,
-            overrideStart = minOf(start, todayEpochDay - WEEK_WINDOW_DAYS),
-            overrideEnd = maxOf(end, todayEpochDay + WEEK_WINDOW_DAYS),
-        )
+        return MonthRange(monthStart = start, monthEnd = end)
     }
 
     /** The user-owned view selection — the single mutable input to the state pipeline. */
@@ -271,20 +249,16 @@ class ReaderViewModel(
     /** Which sheet the user opened — pure selection; loaded content is derived, never stored here. */
     private sealed interface SheetSelection {
         data class WeekSlot(val dayOfWeek: Int) : SheetSelection
-        data class FutureDay(val epochDay: Long) : SheetSelection
         data class History(val epochDay: Long) : SheetSelection
     }
 
     private data class MonthRange(
         val monthStart: Long,
         val monthEnd: Long,
-        val overrideStart: Long,
-        val overrideEnd: Long,
     )
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
-        const val WEEK_WINDOW_DAYS = 7L
     }
 }
 

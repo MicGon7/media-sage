@@ -248,14 +248,7 @@ private fun SharedTransitionScope.MonthCarouselContent(
             val daysForPage = pageCache[page] ?: buildSkeletonDays(page, startYear, todayEpochDay)
             CalendarCard(
                 days = daysForPage,
-                onDayTapped = { epochDay ->
-                    val day = daysForPage.find { it.epochDay == epochDay }
-                    if (day?.isFuture == true) {
-                        onIntent(ReaderContract.Intent.SelectFutureDay(epochDay))
-                    } else {
-                        onIntent(ReaderContract.Intent.HistoryDayTapped(epochDay))
-                    }
-                },
+                onDayTapped = { epochDay -> onIntent(ReaderContract.Intent.HistoryDayTapped(epochDay)) },
                 sharedElementModifierFor = sharedModifierForPage(page, initialPage, weekEpochDays, animatedVisibilityScope),
                 modifier = Modifier.padding(bottom = 16.dp),
             )
@@ -366,7 +359,6 @@ private fun buildSkeletonDays(
             hasData = false,
             figurePortraitUrl = null,
             figureName = null,
-            overrideFigureId = null,
         )
     }
 }
