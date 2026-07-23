@@ -10,12 +10,12 @@ import kotlinx.coroutines.flow.combine
 
 /**
  * Combines the repository streams that feed the Reader calendar into a single [ReaderCalendarData]
- * flow, scoped to the visible-month range (briefings) and the override window (week carousel).
+ * flow, scoped to the visible-month range.
  *
  * This is the Now in Android domain-layer pattern: a use case exists specifically to combine and
- * transform data from multiple repositories so a ViewModel receives one stream instead of five.
- * Event handling (assigning reporters, setting overrides) is not part of this — those stay in the
- * ViewModel, which calls the repository directly.
+ * transform data from multiple repositories so a ViewModel receives one stream instead of four.
+ * Event handling (assigning reporters) is not part of this — that stays in the ViewModel, which
+ * calls the repository directly.
  */
 class GetReaderCalendarUseCase(
     private val figureRepository: FigureRepository,
@@ -26,22 +26,18 @@ class GetReaderCalendarUseCase(
     operator fun invoke(
         monthStartEpochDay: Long,
         monthEndEpochDay: Long,
-        overrideStartEpochDay: Long,
-        overrideEndEpochDay: Long,
     ): Flow<ReaderCalendarData> =
         combine(
             figureRepository.observeAllFigures(),
             dayAssignmentRepository.observeAssignments(),
             quoteRepository.observeAllQuotes(),
             reflectionRepository.observeByEpochDayRange(monthStartEpochDay, monthEndEpochDay),
-            dayAssignmentRepository.observeOverridesByEpochDayRange(overrideStartEpochDay, overrideEndEpochDay),
-        ) { figures, assignments, quotes, briefingDays, overrides ->
+        ) { figures, assignments, quotes, briefingDays ->
             ReaderCalendarData(
                 figures = figures,
                 assignmentsByDayOfWeek = assignments,
                 latestQuote = quotes.maxByOrNull { it.id },
                 briefingByDay = briefingDays.associate { it.epochDay to it.figureId },
-                overridesByDay = overrides,
             )
         }
 }

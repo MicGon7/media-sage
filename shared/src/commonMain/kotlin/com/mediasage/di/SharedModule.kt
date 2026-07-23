@@ -58,7 +58,6 @@ fun sharedModule(
     single { get<MediaSageDatabase>().syncMetaDao() }
     single { get<MediaSageDatabase>().dailyReflectionDao() }
     single { get<MediaSageDatabase>().dayAssignmentDao() }
-    single { get<MediaSageDatabase>().scheduleOverrideDao() }
 
     // Repositories — interface bound to implementation
     single<FigureRepository> { FigureRepositoryImpl(get(), get(), get()) }
@@ -68,7 +67,7 @@ fun sharedModule(
     single<EncouragementRepository> { EncouragementRepositoryImpl(get(), get(), get()) }
     single<WikipediaRepository> { WikipediaRepositoryImpl(get()) }
     single<DailyReflectionRepository> { DailyReflectionRepositoryImpl(get(), get()) }
-    single<DayAssignmentRepository> { DayAssignmentRepositoryImpl(get(), get(), get(), get()) }
+    single<DayAssignmentRepository> { DayAssignmentRepositoryImpl(get(), get(), get()) }
     single<AuthRepository> { AuthRepositoryImpl(getOrNull<SupabaseClient>()) }
 
     // Domain use cases — combine/transform data from multiple repositories (NiA domain layer)
