@@ -88,7 +88,8 @@ nothing non-obvious came up.}
 {The files the change touches, as best you could determine — the discovery you already did,
 handed forward so the worker need not repeat it. One per line with a short note on why each
 matters. This is a verified starting point, NOT an exhaustive or binding list: the worker
-confirms each path against current code and discovers anything you missed.}
+reads these directly and only falls back to its own discovery to fill gaps or when a path's
+read fails.}
 
 - `path/to/File.kt` — {why it matters}
 ```
