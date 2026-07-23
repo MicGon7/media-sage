@@ -68,7 +68,7 @@ Tickets scoped to a single Gradle module reduce autonomous worker cache-read cos
 
 Encode this order with Jira `Blocks` links: the `:shared` ticket blocks the `:composeApp` ticket. Workers read these links to determine sequencing.
 
-**Infrastructure tickets:** Files outside the four Gradle modules (`.github/workflows/`, `Dockerfile*`, `gradle/`, `docs/`, etc.) are classified as infrastructure. If a ticket touches infrastructure and module files together, do not decompose — create a single `assisted` ticket and note the cross-cutting scope in Implementation Notes. Infrastructure-only tickets also remain as a single ticket; the compile-order concern that motivates splitting does not apply.
+**Infrastructure tickets:** Files outside the four Gradle modules (`.github/workflows/`, `Dockerfile*`, `gradle/`, `docs/`, etc.) are classified as infrastructure. If a ticket touches infrastructure and module files together, do not decompose — create a single `assisted` ticket and note the cross-cutting scope in Context. Infrastructure-only tickets also remain as a single ticket; the compile-order concern that motivates splitting does not apply.
 
 ## Automation levels
 
