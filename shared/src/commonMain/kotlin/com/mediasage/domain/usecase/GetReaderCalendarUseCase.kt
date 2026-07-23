@@ -26,22 +26,18 @@ class GetReaderCalendarUseCase(
     operator fun invoke(
         monthStartEpochDay: Long,
         monthEndEpochDay: Long,
-        overrideStartEpochDay: Long,
-        overrideEndEpochDay: Long,
     ): Flow<ReaderCalendarData> =
         combine(
             figureRepository.observeAllFigures(),
             dayAssignmentRepository.observeAssignments(),
             quoteRepository.observeAllQuotes(),
             reflectionRepository.observeByEpochDayRange(monthStartEpochDay, monthEndEpochDay),
-            dayAssignmentRepository.observeOverridesByEpochDayRange(overrideStartEpochDay, overrideEndEpochDay),
-        ) { figures, assignments, quotes, briefingDays, overrides ->
+        ) { figures, assignments, quotes, briefingDays ->
             ReaderCalendarData(
                 figures = figures,
                 assignmentsByDayOfWeek = assignments,
                 latestQuote = quotes.maxByOrNull { it.id },
                 briefingByDay = briefingDays.associate { it.epochDay to it.figureId },
-                overridesByDay = overrides,
             )
         }
 }

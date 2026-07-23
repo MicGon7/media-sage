@@ -77,46 +77,6 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun selectFutureDay_opensFutureDayPickerSheet() = runTest(testDispatcher) {
-        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
-        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
-            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
-
-        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
-
-        val state = viewModel.state.value as ReaderContract.UiState.Ready
-        val sheet = state.activeSheet as? ReaderContract.ActiveSheet.FutureDayPicker
-        assertNotNull(sheet)
-        assertEquals(futureEpochDay, sheet.epochDay)
-    }
-
-    @Test
-    fun assignOverride_closesActiveSheet() = runTest(testDispatcher) {
-        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
-        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
-            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
-        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
-
-        viewModel.onIntent(ReaderContract.Intent.AssignOverride(futureEpochDay, testFigure.id))
-
-        val state = viewModel.state.value as ReaderContract.UiState.Ready
-        assertNull(state.activeSheet)
-    }
-
-    @Test
-    fun clearOverride_closesActiveSheet() = runTest(testDispatcher) {
-        val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
-        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
-            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
-        viewModel.onIntent(ReaderContract.Intent.SelectFutureDay(futureEpochDay))
-
-        viewModel.onIntent(ReaderContract.Intent.ClearOverride(futureEpochDay))
-
-        val state = viewModel.state.value as ReaderContract.UiState.Ready
-        assertNull(state.activeSheet)
-    }
-
-    @Test
     fun daySlotTapped_opensWeekSlotPickerForThatDay() = runTest(testDispatcher) {
         val viewModel = readerViewModel(figure = testFigure, latestQuote = null)
 
@@ -163,7 +123,6 @@ class ReaderViewModelTest {
             assertTrue(cell.hasData)
             assertEquals("Augustine of Hippo", cell.figureName)
             assertEquals(slot.assignedFigureName, cell.figureName)
-            assertNull(cell.overrideFigureId)
         }
     }
 
@@ -180,24 +139,23 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun futureOverrideTakesPrecedenceOverWeeklyAssignment() = runTest(testDispatcher) {
+    fun previouslySetFutureOverrideNoLongerTakesEffect() = runTest(testDispatcher) {
         val override = testFigure.copy(id = 2L, name = "Teresa of Avila")
         val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
+        val probe = readerViewModel(figure = testFigure, latestQuote = null, assignments = assignments)
+        val futureEpochDay = (probe.state.value as ReaderContract.UiState.Ready)
+            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
         val viewModel = readerViewModel(
             figure = testFigure,
             latestQuote = null,
             extraFigures = listOf(override),
             assignments = assignments,
+            overrides = mapOf(futureEpochDay to override.id),
         )
-        val futureEpochDay = (viewModel.state.value as ReaderContract.UiState.Ready)
-            .calendarDays.firstOrNull { it.isFuture }?.epochDay ?: return@runTest
-
-        viewModel.onIntent(ReaderContract.Intent.AssignOverride(futureEpochDay, override.id))
 
         val cell = (viewModel.state.value as ReaderContract.UiState.Ready)
             .calendarDays.first { it.epochDay == futureEpochDay }
-        assertEquals("Teresa of Avila", cell.figureName)
-        assertEquals(override.id, cell.overrideFigureId)
+        assertEquals("Augustine of Hippo", cell.figureName)
     }
 
     @Test
@@ -239,9 +197,10 @@ class ReaderViewModelTest {
         extraFigures: List<Figure> = emptyList(),
         assignments: Map<Int, DayAssignment> = emptyMap(),
         briefings: List<BriefingDay> = emptyList(),
+        overrides: Map<Long, Long> = emptyMap(),
     ): ReaderViewModel {
         val figureRepo = FakeFigureRepository(listOf(figure) + extraFigures)
-        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(assignments))
+        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(assignments), overrides)
         val quoteRepo = FakeQuoteRepository(latestQuote)
         val reflectionRepo = FakeDailyReflectionRepository(briefings)
         val encouragementRepo = FakeEncouragementRepository()
@@ -265,10 +224,11 @@ private class FakeFigureRepository(private val figures: List<Figure>) : FigureRe
 }
 
 private class FakeDayAssignmentRepository(
-    private val assignmentsFlow: MutableStateFlow<Map<Int, DayAssignment>>
+    private val assignmentsFlow: MutableStateFlow<Map<Int, DayAssignment>>,
+    initialOverrides: Map<Long, Long> = emptyMap(),
 ) : DayAssignmentRepository {
-    val overrides = mutableMapOf<Long, Long>()
-    private val overridesFlow = MutableStateFlow<Map<Long, Long>>(emptyMap())
+    val overrides = initialOverrides.toMutableMap()
+    private val overridesFlow = MutableStateFlow<Map<Long, Long>>(initialOverrides)
 
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = assignmentsFlow
     override fun observeOverridesByEpochDayRange(start: Long, end: Long): Flow<Map<Long, Long>> = overridesFlow

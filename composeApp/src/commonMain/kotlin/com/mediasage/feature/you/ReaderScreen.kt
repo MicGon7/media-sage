@@ -149,21 +149,9 @@ fun ReaderScreen(
                         },
                     )
                 }
-                is ReaderContract.ActiveSheet.FutureDayPicker -> {
-                    val overrideDay = ready.calendarDays.find { it.epochDay == sheet.epochDay }
-                    OverridePickerSheet(
-                        figures = ready.pickerFigures,
-                        currentFigureId = overrideDay?.overrideFigureId,
-                        onFigureSelected = { figureId ->
-                            onIntent(ReaderContract.Intent.AssignOverride(sheet.epochDay, figureId))
-                        },
-                        onClear = { onIntent(ReaderContract.Intent.ClearOverride(sheet.epochDay)) },
-                    )
-                }
                 is ReaderContract.ActiveSheet.HistoryDetail -> {
                     DayDetailSheetContent(dayDetail = sheet.detail)
                 }
-                else -> {}
             }
         }
     }
