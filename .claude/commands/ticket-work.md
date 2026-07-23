@@ -83,6 +83,10 @@ MS-87 is the failure this prevents: the run improvised a name-lookup workaround 
 
 **No filler turns — every text response is a billable round-trip.** Beyond the "do not narrate between steps" rule below, do not emit a standalone text response that only summarizes progress, restates what a tool just printed, or announces what you are about to do next. Chain straight into the next tool call. In particular, when `run-affected-tests.sh` prints a skip notice (no Android/iOS SDK, or nothing affected), that notice is complete — do **not** `Read` or `cat` the script source to understand the skip, and do not narrate it. A skip is a non-failure; continue the run.
 
+**Verify a rename/delete before building — grep, don't wait for the compiler.** When implementing a refactor that renames or deletes a symbol (a class, function, field, or sealed-type subtype), `grep` the whole module for the old name before invoking any build or test script — do not treat the rename-fanout rule in step 2 as discovery-only; it applies again right before you build. A stale reference caught by `grep` costs one tool call; the same reference caught by a failed Gradle build costs a full build cycle plus the turns spent reading its output.
+
+**Check for test-double name collisions before authoring a new test file.** Before adding a new test file to a package that already has one, `grep` that package's existing test files for the private test-double/fake class name you're about to introduce (e.g. `class FakeXRepository`). A duplicate private class name in the same package fails the build with a compile error that a one-line `grep` would have caught for free.
+
 ---
 
 1. The ticket is already In Progress — do not transition it again. Fetch the ticket and set up the branch in one call:
