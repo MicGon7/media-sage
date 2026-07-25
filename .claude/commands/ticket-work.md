@@ -1,7 +1,5 @@
 ## Job-specific rules
 
-See CLAUDE.md's Agent Guidelines Rules for cross-job rules that also apply here: trust your operational inputs (do not verify them), no narration between steps, and no TodoWrite. What follows is ticket-work-specific.
-
 **Jira comment file:** Write a plain-text summary to `/tmp/jira_comment.txt` before exiting. Do NOT post via the Jira REST API — the entrypoint appends metrics and posts it directly after you exit. Use this exact format (plain text only — no `**bold**` or other markdown):
 
 ```

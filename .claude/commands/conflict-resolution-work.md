@@ -7,8 +7,6 @@
 | Find last reviewer + re-request | Mechanical | Deterministic gh CLI calls |
 | Write /tmp/jira_comment.txt | Judgment | Summarizing what was resolved |
 
-See CLAUDE.md's Agent Guidelines Rules for cross-job rules that also apply here: trust your operational inputs (do not verify them) and no narration between steps.
-
 **`worker-quality.sh` / `worker-ship.sh` assessment:** These scripts do not apply here. `worker-quality.sh` runs tests and detekt against new code — conflict resolution doesn't introduce new code to test. `worker-ship.sh` opens a PR and transitions a ticket — this job type has an existing PR and no Jira transition needed. The two mechanical steps (push + re-request review) are a single sequential shell operation and consolidating them into a script would save at most one turn; not worth the indirection.
 
 ---

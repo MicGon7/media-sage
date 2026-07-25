@@ -21,10 +21,9 @@ Env already set by the entrypoint (do not re-derive): `PR_NUMBER`, `JIRA_TICKET_
 **Runaway guard:** this is a bounded review, not an implementation job. Do not clone extra repos,
 run builds, or open files unrelated to the diff. Read what you need to judge the change, then post.
 
-See CLAUDE.md's Agent Guidelines Rules for cross-job rules that also apply here: trust your
-operational inputs (`PR_NUMBER`, `JIRA_TICKET_KEY`, `GITHUB_OWNER`, `GITHUB_REPO`, and every var
-sourced from `/tmp/worker_pr.env` are valid when the job starts — do not verify them) and no
-narration between steps. After sourcing `worker-pr-fetch.sh` output, proceed directly to the review.
+`PR_NUMBER`, `JIRA_TICKET_KEY`, `GITHUB_OWNER`, `GITHUB_REPO`, and every var sourced from
+`/tmp/worker_pr.env` are valid when the job starts. After sourcing `worker-pr-fetch.sh` output,
+proceed directly to the review.
 
 ---
 
