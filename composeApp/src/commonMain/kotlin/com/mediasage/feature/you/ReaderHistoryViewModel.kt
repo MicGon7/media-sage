@@ -75,17 +75,20 @@ class ReaderHistoryViewModel(
             getReaderCalendar(range.monthStart, range.monthEnd)
         }
 
-    /** Calendar material for the entire bounded history — the source for the flat list view. */
-    private val fullRangeCalendarData: Flow<ReaderCalendarData> =
-        earliestEpochDay.flatMapLatest { earliest -> getReaderCalendar(earliest, todayEpochDay) }
+    /** Earliest day paired with the calendar material for the entire bounded history. */
+    private val fullRangeCalendarData: Flow<Pair<Long, ReaderCalendarData>> =
+        earliestEpochDay.flatMapLatest { earliest -> getReaderCalendar(earliest, todayEpochDay).map { earliest to it } }
 
     val state: StateFlow<ReaderHistoryContract.UiState> =
-        combine(input, monthCalendarData, fullRangeCalendarData, earliestEpochDay) { input, monthData, fullData, earliest ->
+        combine(input, monthCalendarData, fullRangeCalendarData) { input, monthData, (earliest, fullData) ->
             buildReady(input, monthData, fullData, earliest)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
-            initialValue = ReaderHistoryContract.UiState.Ready(todayEpochDay = todayEpochDay),
+            initialValue = ReaderHistoryContract.UiState.Ready(
+                todayEpochDay = todayEpochDay,
+                earliestEpochDay = todayEpochDay,
+            ),
         )
 
     fun onIntent(intent: ReaderHistoryContract.Intent) {

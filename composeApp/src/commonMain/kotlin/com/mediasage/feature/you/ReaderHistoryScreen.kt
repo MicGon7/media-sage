@@ -17,6 +17,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -48,11 +49,11 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
 import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.history_empty_subtitle
-import mediasage.composeapp.generated.resources.history_empty_title
 import mediasage.composeapp.generated.resources.reader_calendar_next_year
 import mediasage.composeapp.generated.resources.reader_calendar_prev_year
 import mediasage.composeapp.generated.resources.reader_calendar_today
+import mediasage.composeapp.generated.resources.reader_history_list_empty_subtitle
+import mediasage.composeapp.generated.resources.reader_history_list_empty_title
 import mediasage.composeapp.generated.resources.reader_history_view_calendar
 import mediasage.composeapp.generated.resources.reader_history_view_list
 import mediasage.composeapp.generated.resources.you_calendar_section_title
@@ -269,8 +270,8 @@ private fun HistoryListView(
 ) {
     if (listDays.isEmpty()) {
         MediaSageEmptyState(
-            title = stringResource(Res.string.history_empty_title),
-            subtitle = stringResource(Res.string.history_empty_subtitle),
+            title = stringResource(Res.string.reader_history_list_empty_title),
+            subtitle = stringResource(Res.string.reader_history_list_empty_subtitle),
         )
         return
     }
@@ -310,10 +311,11 @@ private fun HistoryDayCard(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "†",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(40.dp),
                 )
             }
         }

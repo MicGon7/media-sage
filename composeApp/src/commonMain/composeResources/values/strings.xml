@@ -111,6 +111,8 @@
     <string name="reader_calendar_prev_year">Previous year</string>
     <string name="reader_calendar_next_year">Next year</string>
     <string name="reader_calendar_today">Today</string>
+    <string name="reader_history_list_empty_title">No briefings yet</string>
+    <string name="reader_history_list_empty_subtitle">Briefings you receive will appear here</string>
     <string name="reader_history_view_calendar">Calendar</string>
     <string name="reader_history_view_list">List</string>
     <string name="history_tab_briefing">Briefings</string>
