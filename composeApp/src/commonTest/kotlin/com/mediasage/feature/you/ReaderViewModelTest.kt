@@ -150,6 +150,7 @@ private class FakeDailyReflectionRepository(
     override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
         MutableStateFlow(briefings.filter { it.epochDay in startEpochDay..endEpochDay })
     override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? = null
+    override suspend fun getEarliestBriefingEpochDay(): Long? = briefings.minOfOrNull { it.epochDay }
 }
 
 private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteRepository {

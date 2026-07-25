@@ -16,4 +16,6 @@ interface DailyReflectionRepository {
     fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>>
 
     suspend fun getForDay(epochDay: Long, tone: String): DailyReflection?
+
+    suspend fun getEarliestBriefingEpochDay(): Long?
 }

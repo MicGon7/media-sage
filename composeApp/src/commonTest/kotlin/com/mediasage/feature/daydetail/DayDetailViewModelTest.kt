@@ -148,6 +148,8 @@ private class FakeDailyReflectionRepository(
 
     override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? =
         if (tone == "morning") morning else evening
+
+    override suspend fun getEarliestBriefingEpochDay(): Long? = null
 }
 
 private class FakeEncouragementRepository(

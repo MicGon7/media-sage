@@ -76,6 +76,8 @@ class DailyReflectionRepositoryImpl(
 
     override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? =
         dao.getForDayAndTone(epochDay, tone)?.toDomain()
+
+    override suspend fun getEarliestBriefingEpochDay(): Long? = dao.getEarliestEpochDay()
 }
 
 private fun DailyReflectionEntity.toDomain() = DailyReflection(

@@ -129,6 +129,56 @@ class ReaderHistoryViewModelTest {
         assertTrue(state.calendarDays.all { LocalDate.fromEpochDays(it.epochDay.toInt()).monthNumber == previousMonth.monthNumber })
     }
 
+    @Test
+    fun earliestEpochDayDefaultsToTodayWhenNoBriefingsExist() = runTest(testDispatcher) {
+        val viewModel = historyViewModel()
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        assertEquals(state.todayEpochDay, state.earliestEpochDay)
+    }
+
+    @Test
+    fun earliestEpochDayReflectsEarliestBriefing() = runTest(testDispatcher) {
+        val pastEpochDay = today.toEpochDays().toLong() - 5
+        val viewModel = historyViewModel(briefings = listOf(BriefingDay(pastEpochDay, testFigure.id)))
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        assertEquals(pastEpochDay, state.earliestEpochDay)
+    }
+
+    @Test
+    fun defaultViewModeIsCalendar() = runTest(testDispatcher) {
+        val viewModel = historyViewModel()
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        assertEquals(ReaderHistoryContract.ViewMode.CALENDAR, state.viewMode)
+    }
+
+    @Test
+    fun viewModeChangedIntentSwitchesToList() = runTest(testDispatcher) {
+        val viewModel = historyViewModel()
+
+        viewModel.onIntent(ReaderHistoryContract.Intent.ViewModeChanged(ReaderHistoryContract.ViewMode.LIST))
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        assertEquals(ReaderHistoryContract.ViewMode.LIST, state.viewMode)
+    }
+
+    @Test
+    fun listDaysIncludesOnlyDaysWithData() = runTest(testDispatcher) {
+        val pastEpochDay = today.toEpochDays().toLong() - 5
+        val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
+        val viewModel = historyViewModel(
+            assignments = assignments,
+            briefings = listOf(BriefingDay(pastEpochDay, testFigure.id)),
+        )
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        assertTrue(state.listDays.any { it.epochDay == pastEpochDay })
+        assertTrue(state.listDays.any { it.epochDay == state.todayEpochDay })
+        assertEquals(state.listDays, state.listDays.sortedByDescending { it.epochDay })
+    }
+
     /**
      * Builds the ViewModel and starts collecting its state. `stateIn(WhileSubscribed)` is cold
      * until a subscriber is present, so an active collector in [backgroundScope] is required for
@@ -144,6 +194,7 @@ class ReaderHistoryViewModelTest {
         val reflectionRepo = HistoryFakeDailyReflectionRepository(briefings)
         val viewModel = ReaderHistoryViewModel(
             getReaderCalendar = GetReaderCalendarUseCase(figureRepo, dayAssignmentRepo, quoteRepo, reflectionRepo),
+            reflectionRepository = reflectionRepo,
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         return viewModel
@@ -182,6 +233,7 @@ private class HistoryFakeDailyReflectionRepository(
     override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
         MutableStateFlow(briefings.filter { it.epochDay in startEpochDay..endEpochDay })
     override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? = null
+    override suspend fun getEarliestBriefingEpochDay(): Long? = briefings.minOfOrNull { it.epochDay }
 }
 
 private class HistoryFakeQuoteRepository(private val latestQuote: Quote? = null) : QuoteRepository {
