@@ -10,6 +10,8 @@
 | Re-request review | Mechanical | Single gh CLI call |
 | Write /tmp/jira_comment.txt | Judgment | Summarizing what changed |
 
+See CLAUDE.md's Agent Guidelines Rules for cross-job rules that also apply here: trust your operational inputs (do not verify them) and no narration between steps.
+
 **Inline PR comment posting assessment:** The `gh pr comment` for explanations is a single command that follows a judgment step (composing the explanation). Consolidating it into a script saves zero turns.
 
 **MS-357 rule:** `scripts/worker-*.sh` must never appear in a ticket's "Relevant files" section.
