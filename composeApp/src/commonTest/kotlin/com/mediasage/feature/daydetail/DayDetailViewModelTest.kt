@@ -37,21 +37,6 @@ class DayDetailViewModelTest {
         tone = tone,
     )
 
-    private fun article(url: String) = Encouragement(
-        summary = null,
-        quoteText = "Our heart is restless.",
-        figureName = "Augustine of Hippo",
-        figureRole = "Bishop of Hippo",
-        scriptureReference = "John 3:16",
-        scriptureText = "For God so loved the world",
-        explanation = "explanation",
-        connectionThemes = emptyList(),
-        matchTheme = "hope",
-        tone = "morning",
-        headlineTitle = "Headline",
-        articleUrl = url,
-    )
-
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
@@ -91,21 +76,13 @@ class DayDetailViewModelTest {
     }
 
     @Test
-    fun articlesReflectSavedEncouragementsForThatDay() = runTest(testDispatcher) {
-        val viewModel = dayDetailViewModel(articles = listOf(article("https://example.com/a")))
-
-        val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals(1, state.articles.size)
-    }
-
-    @Test
     fun tabSelectedUpdatesSelectedTab() = runTest(testDispatcher) {
         val viewModel = dayDetailViewModel()
 
-        viewModel.onIntent(DayDetailContract.Intent.TabSelected(DayDetailContract.Tab.ARTICLES))
+        viewModel.onIntent(DayDetailContract.Intent.TabSelected(DayDetailContract.Tab.EVENING))
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals(DayDetailContract.Tab.ARTICLES, state.selectedTab)
+        assertEquals(DayDetailContract.Tab.EVENING, state.selectedTab)
     }
 
     /**
@@ -116,10 +93,9 @@ class DayDetailViewModelTest {
     private fun TestScope.dayDetailViewModel(
         morning: DailyReflection? = null,
         evening: DailyReflection? = null,
-        articles: List<Encouragement> = emptyList(),
     ): DayDetailViewModel {
         val reflectionRepo = FakeDailyReflectionRepository(morning, evening)
-        val encouragementRepo = FakeEncouragementRepository(articles)
+        val encouragementRepo = FakeEncouragementRepository(emptyList())
         val viewModel = DayDetailViewModel(
             epochDay = 10L,
             figureName = "Augustine of Hippo",

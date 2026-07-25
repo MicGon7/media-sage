@@ -10,8 +10,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Renders the pushed day-detail screen with both a morning and evening reflection plus a saved
- * article, so a reviewer can confirm the Briefings carousel peek and the Articles tab layout.
+ * Renders the pushed day-detail screen with both a morning and evening reflection, so a reviewer
+ * can confirm the Morning/Evening tab layout and the briefing-card-style reflection view.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -35,7 +35,7 @@ private fun sampleState(): DayDetailContract.UiState.Ready = DayDetailContract.U
     epochDay = 20289L,
     figureName = "Augustine of Hippo",
     figureImageUrl = null,
-    selectedTab = DayDetailContract.Tab.BRIEFINGS,
+    selectedTab = DayDetailContract.Tab.MORNING,
     reflections = listOf(
         DayDetailContract.ReflectionSummary(
             scriptureReference = "John 3:16",
@@ -52,16 +52,6 @@ private fun sampleState(): DayDetailContract.UiState.Ready = DayDetailContract.U
             implication = "Anxiety about the day's news can coexist with settled trust.",
             inspiration = "Rest tonight in the same shepherding care that carried you through today.",
             tone = "evening",
-        ),
-    ),
-    articles = listOf(
-        DayDetailContract.ArticleItem(
-            headlineTitle = "City council approves new housing initiative",
-            quoteText = "Our heart is restless until it rests in you.",
-            figureName = "Augustine of Hippo",
-            figureRole = "Bishop of Hippo",
-            figureImageUrl = null,
-            articleUrl = "https://example.com/housing-initiative",
         ),
     ),
 )
