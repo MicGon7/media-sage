@@ -21,17 +21,9 @@ Env already set by the entrypoint (do not re-derive): `PR_NUMBER`, `JIRA_TICKET_
 **Runaway guard:** this is a bounded review, not an implementation job. Do not clone extra repos,
 run builds, or open files unrelated to the diff. Read what you need to judge the change, then post.
 
-**Trust your inputs — do not verify them.** This is a non-interactive Cloud Run Job, not an
-interactive session. Treat inputs the way a shell script treats its arguments: use them directly,
-never inspect them first. `PR_NUMBER`, `JIRA_TICKET_KEY`, `GITHUB_OWNER`, `GITHUB_REPO`, and every
-var sourced from `/tmp/worker_pr.env` are valid when the job starts. Do not `echo` a var, `cat` an
-env file, or run any command whose only purpose is to confirm a previous step worked — the exit
-code is the signal. After sourcing `worker-pr-fetch.sh` output, proceed directly to the review.
-
-**Do not narrate between steps.** Never emit a text response between tool calls. Every text
-response is a billable API round-trip, and no human is watching the session UI in a Cloud Run Job.
-The only allowed narration is `echo` inside bash commands. Proceed directly from one tool call to
-the next; a text response is appropriate only when a step fails or genuinely requires a decision.
+`PR_NUMBER`, `JIRA_TICKET_KEY`, `GITHUB_OWNER`, `GITHUB_REPO`, and every var sourced from
+`/tmp/worker_pr.env` are valid when the job starts. After sourcing `worker-pr-fetch.sh` output,
+proceed directly to the review.
 
 ---
 
