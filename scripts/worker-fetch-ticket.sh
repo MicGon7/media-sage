@@ -71,6 +71,18 @@ def extract_adf(node):
         return "\n".join(items) + "\n"
     if node_type == "listItem":
         return "".join(extract_adf(c) for c in node.get("content", []))
+    if node_type == "taskList":
+        # Jira renders a markdown "- [ ]" checklist (e.g. Acceptance Criteria) as a
+        # native taskList/taskItem pair, not bulletList/listItem — without this case
+        # every taskItem falls through to the generic fallback below, which recurses
+        # with no trailing newline, running all items together into one string and
+        # erasing the line-start boundary the next heading's regex split depends on.
+        items = []
+        for child in node.get("content", []):
+            items.append("- " + extract_adf(child).strip())
+        return "\n".join(items) + "\n"
+    if node_type == "taskItem":
+        return "".join(extract_adf(c) for c in node.get("content", []))
     if node_type == "inlineCard":
         return node.get("attrs", {}).get("url", "")
     if node_type == "doc":
@@ -133,7 +145,23 @@ if relevant_file_paths:
     for path in relevant_file_paths:
         print(f"      {path}")
 else:
-    print(f"    Relevant files: none parsed — read $TICKET_DESCRIPTION for file paths")
+    print(f"    Relevant files: none parsed — see Relevant Files text below, if any")
+
+# Print full ticket text directly — this is what step 1 of ticket-work.md relies on
+# as the model's actual input. Env vars in /tmp/worker_ticket.env only live in the
+# shell process that sources them; a later, separate Bash call cannot see them, so
+# printing here (not just to the env file) is what makes this content available for
+# the rest of the run without an extra echo/cat round-trip.
+print("")
+print("--- Context ---")
+print(description_body)
+print("")
+print("--- Acceptance Criteria ---")
+print(acceptance_criteria)
+if relevant_files_section:
+    print("")
+    print("--- Relevant Files ---")
+    print(relevant_files_section)
 PYEOF
 
 echo ""
