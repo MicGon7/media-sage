@@ -5,13 +5,9 @@ package com.mediasage.feature.you
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
-import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
-import com.mediasage.domain.model.DayDetailData
-import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.ReaderCalendarData
-import com.mediasage.domain.usecase.GetDayDetailUseCase
 import com.mediasage.domain.usecase.GetReaderCalendarUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +16,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -36,9 +31,13 @@ import kotlin.time.Instant
  * reached from a card on the main Reader screen (see [ReaderViewModel], which owns only the
  * recurring weekly schedule).
  *
- * Reuses [GetReaderCalendarUseCase] and [GetDayDetailUseCase] — the same domain streams
- * [ReaderViewModel] used before this screen was split out — but never touches
- * `DayAssignmentRepository`'s write methods: this screen has no way to assign or change a reporter.
+ * Reuses [GetReaderCalendarUseCase] — the same domain stream [ReaderViewModel] used before this
+ * screen was split out — but never touches `DayAssignmentRepository`'s write methods: this screen
+ * has no way to assign or change a reporter.
+ *
+ * Tapping a day navigates straight to the pushed day-detail screen (which owns its own
+ * `GetDayDetailUseCase` fetch); this ViewModel only ever needs to know which reporter's portrait to
+ * show on each calendar cell.
  *
  * Future days are never populated from the recurring schedule here. That blending of "planned" and
  * "happened" on one visual was the ambiguity this screen exists to remove — the schedule preview
@@ -46,7 +45,6 @@ import kotlin.time.Instant
  */
 class ReaderHistoryViewModel(
     private val getReaderCalendar: GetReaderCalendarUseCase,
-    private val getDayDetail: GetDayDetailUseCase,
 ) : ViewModel() {
 
     private val today = Instant.fromEpochMilliseconds(epochMillis())
@@ -64,18 +62,9 @@ class ReaderHistoryViewModel(
             getReaderCalendar(range.monthStart, range.monthEnd)
         }
 
-    /** Detail for the open day. flatMapLatest cancels the prior day's collection automatically. */
-    private val dayDetail: Flow<ReaderHistoryContract.DayDetail?> =
-        input.map { it.openDetailEpochDay }
-            .distinctUntilChanged()
-            .flatMapLatest { epochDay ->
-                if (epochDay == null) flowOf(null)
-                else getDayDetail(epochDay).map { it.toHistoryDetail(epochDay) }
-            }
-
     val state: StateFlow<ReaderHistoryContract.UiState> =
-        combine(input, calendarData, dayDetail) { input, data, detail ->
-            buildReady(input, data, detail)
+        combine(input, calendarData) { input, data ->
+            buildReady(input, data)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -86,17 +75,12 @@ class ReaderHistoryViewModel(
         when (intent) {
             is ReaderHistoryContract.Intent.MonthPageChanged ->
                 input.update { it.copy(visibleMonth = LocalDate(intent.year, intent.month, 1)) }
-            is ReaderHistoryContract.Intent.DayTapped ->
-                input.update { it.copy(openDetailEpochDay = intent.epochDay) }
-            is ReaderHistoryContract.Intent.DetailDismissed ->
-                input.update { it.copy(openDetailEpochDay = null) }
         }
     }
 
     private fun buildReady(
         input: HistoryInput,
         data: ReaderCalendarData,
-        detail: ReaderHistoryContract.DayDetail?,
     ): ReaderHistoryContract.UiState.Ready {
         val figuresById = data.figures.associateBy { it.id }
         val range = monthRange(input.visibleMonth)
@@ -104,7 +88,6 @@ class ReaderHistoryViewModel(
         return ReaderHistoryContract.UiState.Ready(
             todayEpochDay = todayEpochDay,
             calendarDays = buildCalendarDays(range.monthStart, daysInMonth, figuresById, data),
-            activeDetail = input.openDetailEpochDay?.let { buildDayDetail(it, figuresById, data, detail) },
         )
     }
 
@@ -125,23 +108,6 @@ class ReaderHistoryViewModel(
             hasData = figureId != null,
             figurePortraitUrl = figure?.portraitUrl,
             figureName = figure?.name,
-        )
-    }
-
-    private fun buildDayDetail(
-        epochDay: Long,
-        figuresById: Map<Long, Figure>,
-        data: ReaderCalendarData,
-        detail: ReaderHistoryContract.DayDetail?,
-    ): ReaderHistoryContract.DayDetail {
-        val figureId = resolveFigureId(epochDay, data.briefingByDay, data.assignmentsByDayOfWeek)
-        val figure = figureId?.let { figuresById[it] }
-        return ReaderHistoryContract.DayDetail(
-            epochDay = epochDay,
-            reflection = detail?.reflection,
-            articles = detail?.articles ?: emptyList(),
-            figureName = figure?.name,
-            figureImageUrl = figure?.portraitUrl,
         )
     }
 
@@ -171,7 +137,6 @@ class ReaderHistoryViewModel(
     /** The user-owned view selection — the single mutable input to the state pipeline. */
     private data class HistoryInput(
         val visibleMonth: LocalDate,
-        val openDetailEpochDay: Long? = null,
     )
 
     private data class MonthRange(
@@ -183,29 +148,3 @@ class ReaderHistoryViewModel(
         const val STOP_TIMEOUT_MS = 5_000L
     }
 }
-
-private fun DayDetailData.toHistoryDetail(epochDay: Long) = ReaderHistoryContract.DayDetail(
-    epochDay = epochDay,
-    reflection = reflection?.toHistorySummary(),
-    articles = encouragements.map { it.toHistoryArticleItem() },
-    figureName = null,
-    figureImageUrl = null,
-)
-
-private fun DailyReflection.toHistorySummary() = ReaderHistoryContract.ReflectionSummary(
-    scriptureReference = scriptureReference,
-    scriptureText = scriptureText,
-    insight = insight,
-    implication = implication,
-    inspiration = inspiration,
-    sources = sources,
-)
-
-private fun Encouragement.toHistoryArticleItem() = ReaderHistoryContract.ArticleItem(
-    headlineTitle = headlineTitle,
-    quoteText = quoteText,
-    figureName = figureName,
-    figureRole = figureRole,
-    figureImageUrl = figureImageUrl,
-    articleUrl = articleUrl ?: "",
-)
