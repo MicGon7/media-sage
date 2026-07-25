@@ -78,6 +78,24 @@ class DailyReflectionDaoTest {
 
         assertEquals(evening, result)
     }
+
+    @Test
+    fun getEarliestEpochDay_returnsNullWhenEmpty() = runTest {
+        val dao = FakeDailyReflectionDao()
+
+        val result = dao.getEarliestEpochDay()
+
+        assertNull(result)
+    }
+
+    @Test
+    fun getEarliestEpochDay_returnsMinimumEpochDay() = runTest {
+        val dao = FakeDailyReflectionDao(listOf(entity("a", 30L), entity("b", 10L), entity("c", 20L)))
+
+        val result = dao.getEarliestEpochDay()
+
+        assertEquals(10L, result)
+    }
 }
 
 private class FakeDailyReflectionDao(private val store: List<DailyReflectionEntity> = emptyList()) : DailyReflectionDao {
@@ -100,6 +118,8 @@ private class FakeDailyReflectionDao(private val store: List<DailyReflectionEnti
 
     override suspend fun getForDayAndTone(epochDay: Long, tone: String): DailyReflectionEntity? =
         store.firstOrNull { it.epochDay == epochDay && it.tone == tone }
+
+    override suspend fun getEarliestEpochDay(): Long? = store.minOfOrNull { it.epochDay }
 
     override suspend fun upsert(entity: DailyReflectionEntity) {}
 }

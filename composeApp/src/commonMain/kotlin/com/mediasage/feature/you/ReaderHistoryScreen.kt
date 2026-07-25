@@ -1,21 +1,31 @@
 package com.mediasage.feature.you
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,10 +36,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mediasage.LocalIsDebugBuild
+import coil3.compose.AsyncImage
 import com.mediasage.ui.MediaSageBackRow
+import com.mediasage.ui.MediaSageEmptyState
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -38,14 +52,16 @@ import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.reader_calendar_next_year
 import mediasage.composeapp.generated.resources.reader_calendar_prev_year
 import mediasage.composeapp.generated.resources.reader_calendar_today
+import mediasage.composeapp.generated.resources.reader_history_list_empty_subtitle
+import mediasage.composeapp.generated.resources.reader_history_list_empty_title
+import mediasage.composeapp.generated.resources.reader_history_view_calendar
+import mediasage.composeapp.generated.resources.reader_history_view_list
 import mediasage.composeapp.generated.resources.you_calendar_section_title
 import mediasage.composeapp.generated.resources.you_nav_history
 import org.jetbrains.compose.resources.stringResource
 
-// Earliest year the carousel scrolls back to. Debug/pre-release builds expose seed
-// data from 2025; release builds only carry production data from 2026 onward.
-private const val PRE_RELEASE_START_YEAR = 2025
-private const val RELEASE_START_YEAR = 2026
+private const val MONTHS_PER_YEAR = 12
+private val HistoryCardImageHeight: Dp = 160.dp
 
 @Composable
 fun ReaderHistoryScreen(
@@ -65,43 +81,78 @@ fun ReaderHistoryScreen(
                 )
             }
             if (ready != null) {
-                Text(
-                    text = stringResource(Res.string.you_calendar_section_title),
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
-                )
-                HistoryCalendarCarousel(
-                    todayEpochDay = ready.todayEpochDay,
-                    calendarDays = ready.calendarDays,
-                    onIntent = onIntent,
-                    onNavigateToDayDetail = onNavigateToDayDetail,
-                )
+                ViewModeToggle(viewMode = ready.viewMode, onIntent = onIntent)
+                when (ready.viewMode) {
+                    ReaderHistoryContract.ViewMode.CALENDAR -> {
+                        Text(
+                            text = stringResource(Res.string.you_calendar_section_title),
+                            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
+                        )
+                        HistoryCalendarCarousel(
+                            todayEpochDay = ready.todayEpochDay,
+                            earliestEpochDay = ready.earliestEpochDay,
+                            calendarDays = ready.calendarDays,
+                            onIntent = onIntent,
+                            onNavigateToDayDetail = onNavigateToDayDetail,
+                        )
+                    }
+                    ReaderHistoryContract.ViewMode.LIST -> HistoryListView(
+                        listDays = ready.listDays,
+                        onNavigateToDayDetail = onNavigateToDayDetail,
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
+private fun ViewModeToggle(
+    viewMode: ReaderHistoryContract.ViewMode,
+    onIntent: (ReaderHistoryContract.Intent) -> Unit,
+) {
+    val options = ReaderHistoryContract.ViewMode.entries
+    SingleChoiceSegmentedButtonRow(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        options.forEachIndexed { index, option ->
+            SegmentedButton(
+                selected = viewMode == option,
+                onClick = { onIntent(ReaderHistoryContract.Intent.ViewModeChanged(option)) },
+                shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                label = { Text(stringResource(option.labelRes())) },
+            )
+        }
+    }
+}
+
+private fun ReaderHistoryContract.ViewMode.labelRes() = when (this) {
+    ReaderHistoryContract.ViewMode.CALENDAR -> Res.string.reader_history_view_calendar
+    ReaderHistoryContract.ViewMode.LIST -> Res.string.reader_history_view_list
+}
+
+@Composable
 private fun HistoryCalendarCarousel(
     todayEpochDay: Long,
+    earliestEpochDay: Long,
     calendarDays: List<ReaderHistoryContract.CalendarDay>,
     onIntent: (ReaderHistoryContract.Intent) -> Unit,
     onNavigateToDayDetail: (epochDay: Long, figureName: String?, figureImageUrl: String?) -> Unit,
 ) {
     val todayDate = remember(todayEpochDay) { LocalDate.fromEpochDays(todayEpochDay.toInt()) }
-    val isDebugBuild = LocalIsDebugBuild.current
-    val startYear = remember(todayDate, isDebugBuild) {
-        val earliest = if (isDebugBuild) PRE_RELEASE_START_YEAR else RELEASE_START_YEAR
-        minOf(earliest, todayDate.year)
-    }
-    val lastYear = remember(todayDate) { todayDate.year }
-    val totalMonths = remember(todayDate) { (lastYear - startYear + 1) * 12 }
-    val initialPage = remember(todayDate) { (todayDate.year - startYear) * 12 + (todayDate.monthNumber - 1) }
+    val earliestDate = remember(earliestEpochDay) { LocalDate.fromEpochDays(earliestEpochDay.toInt()) }
+    val baseMonthIndex = remember(earliestDate) { earliestDate.year * MONTHS_PER_YEAR + (earliestDate.monthNumber - 1) }
+    val todayMonthIndex = remember(todayDate) { todayDate.year * MONTHS_PER_YEAR + (todayDate.monthNumber - 1) }
+    val totalMonths = remember(baseMonthIndex, todayMonthIndex) { todayMonthIndex - baseMonthIndex + 1 }
+    val initialPage = remember(totalMonths) { totalMonths - 1 }
     val pagerState = rememberPagerState(initialPage = initialPage) { totalMonths }
     val coroutineScope = rememberCoroutineScope()
-    val currentYear = startYear + pagerState.currentPage / 12
-    val loadedPage = remember(calendarDays) { epochDayToPage(calendarDays, startYear, initialPage) }
+    val currentYear = remember(baseMonthIndex, pagerState.currentPage) {
+        (baseMonthIndex + pagerState.currentPage) / MONTHS_PER_YEAR
+    }
+    val loadedPage = remember(calendarDays) { epochDayToPage(calendarDays, baseMonthIndex, initialPage) }
     val pageCache = remember { mutableStateMapOf<Int, List<ReaderHistoryContract.CalendarDay>>() }
 
     LaunchedEffect(calendarDays) {
@@ -109,10 +160,11 @@ private fun HistoryCalendarCarousel(
     }
 
     LaunchedEffect(pagerState.settledPage) {
+        val absoluteIndex = baseMonthIndex + pagerState.settledPage
         onIntent(
             ReaderHistoryContract.Intent.MonthPageChanged(
-                year = startYear + pagerState.settledPage / 12,
-                month = pagerState.settledPage % 12 + 1,
+                year = absoluteIndex / MONTHS_PER_YEAR,
+                month = absoluteIndex % MONTHS_PER_YEAR + 1,
             ),
         )
     }
@@ -120,22 +172,22 @@ private fun HistoryCalendarCarousel(
     Column {
         YearSelector(
             year = currentYear,
-            prevEnabled = currentYear > startYear,
-            nextEnabled = currentYear < lastYear,
+            prevEnabled = pagerState.currentPage > 0,
+            nextEnabled = pagerState.currentPage < totalMonths - 1,
             prevYearDescription = stringResource(Res.string.reader_calendar_prev_year),
             nextYearDescription = stringResource(Res.string.reader_calendar_next_year),
             onPrevYear = {
-                val target = ((currentYear - 1 - startYear) * 12).coerceAtLeast(0)
+                val target = (pagerState.currentPage - MONTHS_PER_YEAR).coerceAtLeast(0)
                 coroutineScope.launch { pagerState.animateScrollToPage(target) }
             },
             onNextYear = {
-                val target = ((currentYear + 1 - startYear) * 12).coerceAtMost(totalMonths - 1)
+                val target = (pagerState.currentPage + MONTHS_PER_YEAR).coerceAtMost(totalMonths - 1)
                 coroutineScope.launch { pagerState.animateScrollToPage(target) }
             },
             onToday = { coroutineScope.launch { pagerState.animateScrollToPage(initialPage) } },
         )
         HorizontalPager(state = pagerState) { page ->
-            val daysForPage = pageCache[page] ?: buildSkeletonDays(page, startYear, todayEpochDay)
+            val daysForPage = pageCache[page] ?: buildSkeletonDays(page, baseMonthIndex, todayEpochDay)
             CalendarCard(
                 days = daysForPage,
                 onDayTapped = { epochDay ->
@@ -211,12 +263,91 @@ private fun YearSelector(
     }
 }
 
+@Composable
+private fun HistoryListView(
+    listDays: List<ReaderHistoryContract.ListDay>,
+    onNavigateToDayDetail: (epochDay: Long, figureName: String?, figureImageUrl: String?) -> Unit,
+) {
+    if (listDays.isEmpty()) {
+        MediaSageEmptyState(
+            title = stringResource(Res.string.reader_history_list_empty_title),
+            subtitle = stringResource(Res.string.reader_history_list_empty_subtitle),
+        )
+        return
+    }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(listDays, key = { it.epochDay }) { day ->
+            HistoryDayCard(
+                day = day,
+                onClick = { onNavigateToDayDetail(day.epochDay, day.figureName, day.figurePortraitUrl) },
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 0.5.dp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HistoryDayCard(
+    day: ReaderHistoryContract.ListDay,
+    onClick: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        if (day.figurePortraitUrl != null) {
+            AsyncImage(
+                model = day.figurePortraitUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth().height(HistoryCardImageHeight),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(HistoryCardImageHeight)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(40.dp),
+                )
+            }
+        }
+        Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)) {
+            Text(
+                text = formatListDate(day.epochDay),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = day.figureName,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+private fun formatListDate(epochDay: Long): String {
+    val date = LocalDate.fromEpochDays(epochDay.toInt())
+    val monthName = date.month.name.lowercase().replaceFirstChar { it.titlecase() }
+    return "$monthName ${date.dayOfMonth}, ${date.year}"
+}
+
 private fun buildSkeletonDays(
     page: Int,
-    startYear: Int,
+    baseMonthIndex: Int,
     todayEpochDay: Long,
 ): List<ReaderHistoryContract.CalendarDay> {
-    val monthStart = LocalDate(startYear + page / 12, page % 12 + 1, 1)
+    val absoluteIndex = baseMonthIndex + page
+    val monthStart = LocalDate(absoluteIndex / MONTHS_PER_YEAR, absoluteIndex % MONTHS_PER_YEAR + 1, 1)
     val monthStartEpoch = monthStart.toEpochDays().toLong()
     val daysInMonth = monthStart.plus(1, DateTimeUnit.MONTH).toEpochDays() - monthStart.toEpochDays()
     return (0 until daysInMonth.toInt()).map { d ->
@@ -235,10 +366,10 @@ private fun buildSkeletonDays(
 
 private fun epochDayToPage(
     calendarDays: List<ReaderHistoryContract.CalendarDay>,
-    startYear: Int,
+    baseMonthIndex: Int,
     fallback: Int,
 ): Int {
     val epochDay = calendarDays.firstOrNull()?.epochDay ?: return fallback
     val date = LocalDate.fromEpochDays(epochDay.toInt())
-    return (date.year - startYear) * 12 + (date.monthNumber - 1)
+    return date.year * MONTHS_PER_YEAR + (date.monthNumber - 1) - baseMonthIndex
 }

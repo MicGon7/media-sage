@@ -22,11 +22,23 @@ import org.robolectric.annotation.GraphicsMode
 class ReaderHistoryScreenRenderTest {
 
     @Test
-    fun rendersReaderHistoryScreen() {
-        captureRoboImage("build/outputs/roborazzi/reader_history_screen.png") {
+    fun rendersReaderHistoryScreenCalendarView() {
+        captureRoboImage("build/outputs/roborazzi/reader_history_screen_calendar.png") {
             MediaSageTheme {
                 ReaderHistoryScreen(
-                    state = sampleState(),
+                    state = sampleCalendarState(),
+                    onIntent = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun rendersReaderHistoryScreenListView() {
+        captureRoboImage("build/outputs/roborazzi/reader_history_screen_list.png") {
+            MediaSageTheme {
+                ReaderHistoryScreen(
+                    state = sampleListState(),
                     onIntent = {},
                 )
             }
@@ -34,27 +46,48 @@ class ReaderHistoryScreenRenderTest {
     }
 }
 
-private fun sampleState(): ReaderHistoryContract.UiState.Ready {
+private val SampleNames = listOf("Augustine of Hippo", "Teresa of Ávila", "C.S. Lewis")
+private val SampleTodayEpoch = LocalDate(2026, 7, 22).toEpochDays().toLong()
+private val SampleEarliestEpoch = LocalDate(2026, 5, 1).toEpochDays().toLong()
+
+private fun sampleCalendarState(): ReaderHistoryContract.UiState.Ready {
     val monthStart = LocalDate(2026, 7, 1)
     val monthStartEpoch = monthStart.toEpochDays().toLong()
     val daysInMonth = monthStart.plus(1, DateTimeUnit.MONTH).toEpochDays() - monthStart.toEpochDays()
-    val todayEpoch = LocalDate(2026, 7, 22).toEpochDays().toLong()
-    val names = listOf("Augustine of Hippo", "Teresa of Ávila", "C.S. Lewis")
     val calendarDays = (0 until daysInMonth).map { d ->
         val epochDay = monthStartEpoch + d
-        val hasData = epochDay <= todayEpoch
+        val hasData = epochDay <= SampleTodayEpoch
         ReaderHistoryContract.CalendarDay(
             epochDay = epochDay,
             dateNumber = LocalDate.fromEpochDays(epochDay.toInt()).dayOfMonth,
-            isToday = epochDay == todayEpoch,
-            isFuture = epochDay > todayEpoch,
+            isToday = epochDay == SampleTodayEpoch,
+            isFuture = epochDay > SampleTodayEpoch,
             hasData = hasData,
             figurePortraitUrl = null,
-            figureName = if (hasData) names[(d % names.size).toInt()] else null,
+            figureName = if (hasData) SampleNames[(d % SampleNames.size).toInt()] else null,
         )
     }
     return ReaderHistoryContract.UiState.Ready(
-        todayEpochDay = todayEpoch,
+        todayEpochDay = SampleTodayEpoch,
+        earliestEpochDay = SampleEarliestEpoch,
+        viewMode = ReaderHistoryContract.ViewMode.CALENDAR,
         calendarDays = calendarDays,
+    )
+}
+
+private fun sampleListState(): ReaderHistoryContract.UiState.Ready {
+    val listDays = (0..10).map { i ->
+        val epochDay = SampleTodayEpoch - i
+        ReaderHistoryContract.ListDay(
+            epochDay = epochDay,
+            figurePortraitUrl = null,
+            figureName = SampleNames[i % SampleNames.size],
+        )
+    }
+    return ReaderHistoryContract.UiState.Ready(
+        todayEpochDay = SampleTodayEpoch,
+        earliestEpochDay = SampleEarliestEpoch,
+        viewMode = ReaderHistoryContract.ViewMode.LIST,
+        listDays = listDays,
     )
 }

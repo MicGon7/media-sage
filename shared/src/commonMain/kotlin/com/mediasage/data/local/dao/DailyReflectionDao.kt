@@ -24,6 +24,9 @@ interface DailyReflectionDao {
     @Query("SELECT * FROM daily_reflection WHERE epochDay >= :start AND epochDay <= :end ORDER BY epochDay ASC")
     fun getByEpochDayRange(start: Long, end: Long): Flow<List<DailyReflectionEntity>>
 
+    @Query("SELECT MIN(epochDay) FROM daily_reflection")
+    suspend fun getEarliestEpochDay(): Long?
+
     @Query("SELECT * FROM daily_reflection WHERE epochDay = :epochDay AND tone = :tone LIMIT 1")
     suspend fun getForDayAndTone(epochDay: Long, tone: String): DailyReflectionEntity?
 
