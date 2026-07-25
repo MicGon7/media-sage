@@ -93,6 +93,8 @@ import mediasage.composeapp.generated.resources.reader_hero_caption
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
 import mediasage.composeapp.generated.resources.you_history_entry_subtitle
 import mediasage.composeapp.generated.resources.you_nav_history
+import mediasage.composeapp.generated.resources.you_nav_saved
+import mediasage.composeapp.generated.resources.you_saved_entry_subtitle
 import mediasage.composeapp.generated.resources.you_lens_faith
 import mediasage.composeapp.generated.resources.you_lens_grace
 import mediasage.composeapp.generated.resources.you_lens_grief
@@ -127,6 +129,7 @@ fun ReaderScreen(
     onNavigateToFigureDetail: (figureId: Long) -> Unit = {},
     onNavigateToArticleDetail: (url: String) -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
+    onNavigateToBookmarks: () -> Unit = {},
 ) {
     val ready = state as? ReaderContract.UiState.Ready
     val activeSheet = ready?.activeSheet as? ReaderContract.ActiveSheet.WeekSlotPicker
@@ -206,10 +209,21 @@ fun ReaderScreen(
                 }
 
                 item {
-                    HistoryEntryCard(
-                        onClick = onNavigateToHistory,
+                    Column(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-                    )
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        EntryCard(
+                            title = stringResource(Res.string.you_nav_history),
+                            subtitle = stringResource(Res.string.you_history_entry_subtitle),
+                            onClick = onNavigateToHistory,
+                        )
+                        EntryCard(
+                            title = stringResource(Res.string.you_nav_saved),
+                            subtitle = stringResource(Res.string.you_saved_entry_subtitle),
+                            onClick = onNavigateToBookmarks,
+                        )
+                    }
                 }
 
                 ready.quoteCard?.let { quote ->
@@ -231,7 +245,7 @@ fun ReaderScreen(
 }
 
 @Composable
-private fun HistoryEntryCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun EntryCard(title: String, subtitle: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.large,
@@ -246,12 +260,12 @@ private fun HistoryEntryCard(onClick: () -> Unit, modifier: Modifier = Modifier)
         ) {
             Column {
                 Text(
-                    text = stringResource(Res.string.you_nav_history),
+                    text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = stringResource(Res.string.you_history_entry_subtitle),
+                    text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp),
