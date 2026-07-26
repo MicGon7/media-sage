@@ -18,8 +18,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -140,8 +140,9 @@ private fun ViewModeMenuButton(
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ViewList,
+                imageVector = Icons.Filled.MoreVert,
                 contentDescription = stringResource(Res.string.reader_history_view_options),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         DropdownMenu(
