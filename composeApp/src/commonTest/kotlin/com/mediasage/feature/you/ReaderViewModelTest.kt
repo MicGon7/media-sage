@@ -106,7 +106,7 @@ class ReaderViewModelTest {
 
         viewModel.onIntent(ReaderContract.Intent.FigureAssigned(dayOfWeek = todayOrdinal, figureId = 2L, lens = null))
 
-        assertEquals(listOf(Triple(todayOrdinal, 2L, null)), dayAssignmentRepo.assignCalls)
+        assertEquals(listOf(Triple(todayOrdinal, 2L, null as LensFilter?)), dayAssignmentRepo.assignCalls)
         val state = viewModel.state.value as ReaderContract.UiState.Ready
         assertNull(state.pendingReassignment)
     }
@@ -144,7 +144,7 @@ class ReaderViewModelTest {
 
         viewModel.onIntent(ReaderContract.Intent.ConfirmReassignment)
 
-        assertEquals(listOf(Triple(todayOrdinal, 2L, null)), dayAssignmentRepo.assignCalls)
+        assertEquals(listOf(Triple(todayOrdinal, 2L, null as LensFilter?)), dayAssignmentRepo.assignCalls)
         val state = viewModel.state.value as ReaderContract.UiState.Ready
         assertNull(state.pendingReassignment)
     }

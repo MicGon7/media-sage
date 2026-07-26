@@ -59,7 +59,7 @@ class FigureDetailViewModelTest {
 
         viewModel.onIntent(FigureDetailContract.Intent.PinToHome)
 
-        assertEquals(listOf(Triple(todayOrdinal, 2L, null)), dayAssignmentRepo.assignCalls)
+        assertEquals(listOf(Triple(todayOrdinal, 2L, null as LensFilter?)), dayAssignmentRepo.assignCalls)
         val state = viewModel.state.value as FigureDetailContract.UiState.Success
         assertNull(state.pendingReassignment)
     }
@@ -93,7 +93,7 @@ class FigureDetailViewModelTest {
 
         viewModel.onIntent(FigureDetailContract.Intent.ConfirmReassignment)
 
-        assertEquals(listOf(Triple(todayOrdinal, 2L, null)), dayAssignmentRepo.assignCalls)
+        assertEquals(listOf(Triple(todayOrdinal, 2L, null as LensFilter?)), dayAssignmentRepo.assignCalls)
         val state = viewModel.state.value as FigureDetailContract.UiState.Success
         assertNull(state.pendingReassignment)
     }
@@ -140,10 +140,10 @@ class FigureDetailViewModelTest {
         figures: List<Figure>,
         assignments: Map<Int, DayAssignment> = emptyMap(),
         lockedFigureIdsByEpochDay: Map<Long, Long> = emptyMap(),
-    ): Pair<FigureDetailViewModel, FakeDayAssignmentRepository> {
-        val figureRepo = FakeFigureRepository(figures)
-        val encouragementRepo = FakeEncouragementRepository()
-        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(assignments))
+    ): Pair<FigureDetailViewModel, DetailFakeDayAssignmentRepository> {
+        val figureRepo = DetailFakeFigureRepository(figures)
+        val encouragementRepo = DetailFakeEncouragementRepository()
+        val dayAssignmentRepo = DetailFakeDayAssignmentRepository(MutableStateFlow(assignments))
         val reflectionRepo = FakeDailyReflectionRepository(lockedFigureIdsByEpochDay)
         val viewModel = FigureDetailViewModel(figureId, figureRepo, encouragementRepo, dayAssignmentRepo, reflectionRepo)
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
@@ -157,7 +157,7 @@ class FigureDetailViewModelTest {
     }
 }
 
-private class FakeFigureRepository(private val figures: List<Figure>) : FigureRepository {
+private class DetailFakeFigureRepository(private val figures: List<Figure>) : FigureRepository {
     private val flow = MutableStateFlow(figures)
     override fun observeAllFigures(): Flow<List<Figure>> = flow
     override fun observeFiguresByCategory(category: FigureCategory): Flow<List<Figure>> = MutableStateFlow(emptyList())
@@ -166,7 +166,7 @@ private class FakeFigureRepository(private val figures: List<Figure>) : FigureRe
     override suspend fun syncFigures() = Unit
 }
 
-private class FakeEncouragementRepository : EncouragementRepository {
+private class DetailFakeEncouragementRepository : EncouragementRepository {
     override suspend fun getEncouragement(
         headlineTitle: String,
         headlineSource: String,
@@ -184,7 +184,7 @@ private class FakeEncouragementRepository : EncouragementRepository {
     override fun observeActiveEpochDays(): Flow<Set<Long>> = MutableStateFlow(emptySet())
 }
 
-private class FakeDayAssignmentRepository(
+private class DetailFakeDayAssignmentRepository(
     private val assignmentsFlow: MutableStateFlow<Map<Int, DayAssignment>>
 ) : DayAssignmentRepository {
     val assignCalls = mutableListOf<Triple<Int, Long, LensFilter?>>()

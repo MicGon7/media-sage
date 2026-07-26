@@ -2,6 +2,7 @@
 
 package com.mediasage.feature.briefing
 
+import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.model.BriefingDay
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
@@ -22,10 +23,13 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.Instant
 
 class BriefingViewModelTest {
 
@@ -50,7 +54,7 @@ class BriefingViewModelTest {
         // already-displayed briefing, even though the weekday assignment row now points elsewhere.
         val viewModel = briefingViewModel(
             figures = listOf(judson, lincoln),
-            assignments = mapOf(0 to DayAssignment(figureId = 2L, lens = null)),
+            assignments = mapOf(todayOrdinal to DayAssignment(figureId = 2L, lens = null)),
             resolveReporterResult = 1L,
         )
 
@@ -64,7 +68,7 @@ class BriefingViewModelTest {
     fun loadCard_usesCurrentAssignmentWhenTodayIsNotLocked() = runTest(testDispatcher) {
         val viewModel = briefingViewModel(
             figures = listOf(judson, lincoln),
-            assignments = mapOf(0 to DayAssignment(figureId = 2L, lens = null)),
+            assignments = mapOf(todayOrdinal to DayAssignment(figureId = 2L, lens = null)),
             resolveReporterResult = null,
         )
 
@@ -101,6 +105,11 @@ class BriefingViewModelTest {
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         return viewModel
     }
+
+    private companion object {
+        val todayOrdinal = Instant.fromEpochMilliseconds(epochMillis())
+            .toLocalDateTime(TimeZone.currentSystemDefault()).date.dayOfWeek.ordinal
+    }
 }
 
 private class FakeFigureRepository(private val figures: List<Figure>) : FigureRepository {
@@ -120,7 +129,8 @@ private class FakeDayAssignmentRepository(
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
-    override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = resolveReporterResult
+    override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? =
+        resolveReporterResult ?: assignmentsFlow.value[dayOfWeek]?.figureId
 }
 
 private class FakeDailyReflectionRepository : DailyReflectionRepository {
