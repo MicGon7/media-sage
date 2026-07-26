@@ -21,6 +21,9 @@ interface FigureDao {
     @Query("SELECT * FROM figures WHERE id = :id")
     suspend fun getById(id: Long): FigureEntity?
 
+    @Query("SELECT * FROM figures WHERE serverId = :serverId LIMIT 1")
+    suspend fun getByServerId(serverId: Long): FigureEntity?
+
     @Query("SELECT * FROM figures WHERE category = :category ORDER BY name ASC")
     fun observeByCategory(category: String): Flow<List<FigureEntity>>
 

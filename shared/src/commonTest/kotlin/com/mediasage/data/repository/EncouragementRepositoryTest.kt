@@ -261,6 +261,9 @@ private class FakeFigureDao(figures: List<FigureEntity> = emptyList()) : FigureD
 
     override suspend fun getById(id: Long): FigureEntity? = store.values.find { it.id == id }
 
+    override suspend fun getByServerId(serverId: Long): FigureEntity? =
+        store.values.find { it.serverId == serverId }
+
     override fun observeByCategory(category: String): Flow<List<FigureEntity>> =
         flowOf(store.values.filter { it.category == category })
 

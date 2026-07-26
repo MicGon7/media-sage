@@ -131,6 +131,7 @@ private class FakeDayAssignmentRepository(
     override suspend fun seedDefaultsIfEmpty() = Unit
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? =
         resolveReporterResult ?: assignmentsFlow.value[dayOfWeek]?.figureId
+    override suspend fun syncWithRemote(userId: String) = Unit
 }
 
 private class FakeDailyReflectionRepository : DailyReflectionRepository {

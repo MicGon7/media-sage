@@ -65,6 +65,14 @@ val MIGRATION_24_25 = object : Migration(24, 25) {
     }
 }
 
+val MIGRATION_25_26 = object : Migration(25, 26) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE day_assignment ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("ALTER TABLE day_assignment ADD COLUMN pendingDelete INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("ALTER TABLE sync_meta ADD COLUMN lastDayAssignmentSyncUserId TEXT")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

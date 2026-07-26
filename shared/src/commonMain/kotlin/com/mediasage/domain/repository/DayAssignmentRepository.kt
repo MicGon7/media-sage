@@ -10,4 +10,5 @@ interface DayAssignmentRepository {
     suspend fun clear(dayOfWeek: Int)
     suspend fun seedDefaultsIfEmpty()
     suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long?
+    suspend fun syncWithRemote(userId: String)
 }

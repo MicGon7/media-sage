@@ -60,6 +60,7 @@ kotlin {
 
             // Supabase
             implementation(libs.supabase.auth)
+            implementation(libs.supabase.postgrest)
         }
 
         commonTest.dependencies {

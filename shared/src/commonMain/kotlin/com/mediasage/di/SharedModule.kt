@@ -6,13 +6,15 @@ import com.mediasage.data.remote.MediaSageApiImpl
 import com.mediasage.data.remote.createHttpClient
 import com.mediasage.data.repository.AuthRepositoryImpl
 import com.mediasage.data.repository.DailyReflectionRepositoryImpl
+import com.mediasage.data.repository.DayAssignmentRemoteDataSource
 import com.mediasage.data.repository.DayAssignmentRepositoryImpl
 import com.mediasage.data.repository.EncouragementRepositoryImpl
 import com.mediasage.data.repository.FigureRepositoryImpl
-import com.mediasage.data.repository.WikipediaRepositoryImpl
 import com.mediasage.data.repository.HeadlineRepositoryImpl
 import com.mediasage.data.repository.MatchRepositoryImpl
+import com.mediasage.data.repository.PostgrestDayAssignmentRemoteDataSource
 import com.mediasage.data.repository.QuoteRepositoryImpl
+import com.mediasage.data.repository.WikipediaRepositoryImpl
 import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
@@ -27,6 +29,7 @@ import com.mediasage.domain.usecase.GetReaderCalendarUseCase
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
 import org.koin.dsl.module
 
 fun sharedModule(
@@ -39,8 +42,10 @@ fun sharedModule(
         single<SupabaseClient> {
             createSupabaseClient(supabaseUrl, supabaseAnonKey) {
                 install(Auth)
+                install(Postgrest)
             }
         }
+        single<DayAssignmentRemoteDataSource> { PostgrestDayAssignmentRemoteDataSource(get()) }
     }
 
     // HTTP client for communicating with the Media Sage server
@@ -67,8 +72,10 @@ fun sharedModule(
     single<EncouragementRepository> { EncouragementRepositoryImpl(get(), get(), get()) }
     single<WikipediaRepository> { WikipediaRepositoryImpl(get()) }
     single<DailyReflectionRepository> { DailyReflectionRepositoryImpl(get(), get()) }
-    single<DayAssignmentRepository> { DayAssignmentRepositoryImpl(get(), get(), get(), get()) }
     single<AuthRepository> { AuthRepositoryImpl(getOrNull<SupabaseClient>()) }
+    single<DayAssignmentRepository> {
+        DayAssignmentRepositoryImpl(get(), get(), get(), get(), getOrNull(), get(), get())
+    }
 
     // Domain use cases — combine/transform data from multiple repositories (NiA domain layer)
     single { GetReaderCalendarUseCase(get(), get(), get(), get()) }
