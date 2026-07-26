@@ -1,10 +1,11 @@
 package com.mediasage.feature.you
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,33 +18,35 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.mediasage.ui.MediaSageBackRow
+import com.mediasage.ui.MediaSageBriefingHeader
+import com.mediasage.ui.MediaSageDateDivider
 import com.mediasage.ui.MediaSageEmptyState
+import com.mediasage.ui.MediaSageScriptureBlock
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -52,16 +55,17 @@ import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.reader_calendar_next_year
 import mediasage.composeapp.generated.resources.reader_calendar_prev_year
 import mediasage.composeapp.generated.resources.reader_calendar_today
+import mediasage.composeapp.generated.resources.reader_history_intro
 import mediasage.composeapp.generated.resources.reader_history_list_empty_subtitle
 import mediasage.composeapp.generated.resources.reader_history_list_empty_title
 import mediasage.composeapp.generated.resources.reader_history_view_calendar
 import mediasage.composeapp.generated.resources.reader_history_view_list
+import mediasage.composeapp.generated.resources.reader_history_view_options
 import mediasage.composeapp.generated.resources.you_calendar_section_title
 import mediasage.composeapp.generated.resources.you_nav_history
 import org.jetbrains.compose.resources.stringResource
 
 private const val MONTHS_PER_YEAR = 12
-private val HistoryCardImageHeight: Dp = 160.dp
 
 @Composable
 fun ReaderHistoryScreen(
@@ -75,13 +79,27 @@ fun ReaderHistoryScreen(
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             MediaSageBackRow(onNavigateBack = onNavigateBack) {
-                Text(
-                    text = stringResource(Res.string.you_nav_history),
-                    style = MaterialTheme.typography.titleLarge,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(Res.string.you_nav_history),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    if (ready != null) {
+                        ViewModeMenuButton(viewMode = ready.viewMode, onIntent = onIntent)
+                    }
+                }
             }
             if (ready != null) {
-                ViewModeToggle(viewMode = ready.viewMode, onIntent = onIntent)
+                Text(
+                    text = stringResource(Res.string.reader_history_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
                 when (ready.viewMode) {
                     ReaderHistoryContract.ViewMode.CALENDAR -> {
                         Text(
@@ -108,22 +126,45 @@ fun ReaderHistoryScreen(
     }
 }
 
+/**
+ * A trailing icon button in the top bar that opens a [DropdownMenu] anchored to itself — Compose's
+ * equivalent of the near-touch-point popover iOS apps use for a view-mode switch, rather than a
+ * second row of tabs competing with the back row for space.
+ */
 @Composable
-private fun ViewModeToggle(
+private fun ViewModeMenuButton(
     viewMode: ReaderHistoryContract.ViewMode,
     onIntent: (ReaderHistoryContract.Intent) -> Unit,
 ) {
-    val options = ReaderHistoryContract.ViewMode.entries
-    SingleChoiceSegmentedButtonRow(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        options.forEachIndexed { index, option ->
-            SegmentedButton(
-                selected = viewMode == option,
-                onClick = { onIntent(ReaderHistoryContract.Intent.ViewModeChanged(option)) },
-                shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                label = { Text(stringResource(option.labelRes())) },
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                imageVector = Icons.Filled.MoreVert,
+                contentDescription = stringResource(Res.string.reader_history_view_options),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+        ) {
+            ReaderHistoryContract.ViewMode.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(option.labelRes())) },
+                    onClick = {
+                        onIntent(ReaderHistoryContract.Intent.ViewModeChanged(option))
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        if (option == viewMode) {
+                            Icon(imageVector = Icons.Filled.Check, contentDescription = null)
+                        }
+                    },
+                )
+            }
         }
     }
 }
@@ -296,41 +337,20 @@ private fun HistoryDayCard(
     onClick: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        if (day.figurePortraitUrl != null) {
-            AsyncImage(
-                model = day.figurePortraitUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().height(HistoryCardImageHeight),
-                contentScale = ContentScale.Crop,
+        MediaSageDateDivider(dateLabel = formatListDate(day.epochDay))
+        MediaSageBriefingHeader(
+            figureName = day.figureName,
+            figureImageUrl = day.figurePortraitUrl,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp),
+        )
+        if (day.scriptureReference != null && day.scriptureText != null) {
+            MediaSageScriptureBlock(
+                scriptureReference = day.scriptureReference,
+                scriptureText = day.scriptureText,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
             )
         } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(HistoryCardImageHeight)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Person,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(40.dp),
-                )
-            }
-        }
-        Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)) {
-            Text(
-                text = formatListDate(day.epochDay),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = day.figureName,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }

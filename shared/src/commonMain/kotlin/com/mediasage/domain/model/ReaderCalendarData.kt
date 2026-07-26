@@ -11,5 +11,5 @@ data class ReaderCalendarData(
     val figures: List<Figure>,
     val assignmentsByDayOfWeek: Map<Int, DayAssignment>,
     val latestQuote: Quote?,
-    val briefingByDay: Map<Long, Long>,
+    val briefingByDay: Map<Long, BriefingDay>,
 )

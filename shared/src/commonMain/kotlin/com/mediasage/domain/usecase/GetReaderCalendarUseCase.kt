@@ -37,7 +37,7 @@ class GetReaderCalendarUseCase(
                 figures = figures,
                 assignmentsByDayOfWeek = assignments,
                 latestQuote = quotes.maxByOrNull { it.id },
-                briefingByDay = briefingDays.associate { it.epochDay to it.figureId },
+                briefingByDay = briefingDays.associateBy { it.epochDay },
             )
         }
 }

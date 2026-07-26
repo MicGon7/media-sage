@@ -147,21 +147,21 @@ class ReaderHistoryViewModelTest {
     }
 
     @Test
-    fun defaultViewModeIsCalendar() = runTest(testDispatcher) {
+    fun defaultViewModeIsList() = runTest(testDispatcher) {
         val viewModel = historyViewModel()
-
-        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
-        assertEquals(ReaderHistoryContract.ViewMode.CALENDAR, state.viewMode)
-    }
-
-    @Test
-    fun viewModeChangedIntentSwitchesToList() = runTest(testDispatcher) {
-        val viewModel = historyViewModel()
-
-        viewModel.onIntent(ReaderHistoryContract.Intent.ViewModeChanged(ReaderHistoryContract.ViewMode.LIST))
 
         val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
         assertEquals(ReaderHistoryContract.ViewMode.LIST, state.viewMode)
+    }
+
+    @Test
+    fun viewModeChangedIntentSwitchesToCalendar() = runTest(testDispatcher) {
+        val viewModel = historyViewModel()
+
+        viewModel.onIntent(ReaderHistoryContract.Intent.ViewModeChanged(ReaderHistoryContract.ViewMode.CALENDAR))
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        assertEquals(ReaderHistoryContract.ViewMode.CALENDAR, state.viewMode)
     }
 
     @Test
@@ -177,6 +177,37 @@ class ReaderHistoryViewModelTest {
         assertTrue(state.listDays.any { it.epochDay == pastEpochDay })
         assertTrue(state.listDays.any { it.epochDay == state.todayEpochDay })
         assertEquals(state.listDays, state.listDays.sortedByDescending { it.epochDay })
+    }
+
+    @Test
+    fun listDayCarriesScriptureFromBriefing() = runTest(testDispatcher) {
+        val pastEpochDay = today.toEpochDays().toLong() - 5
+        val viewModel = historyViewModel(
+            briefings = listOf(
+                BriefingDay(
+                    epochDay = pastEpochDay,
+                    figureId = testFigure.id,
+                    scriptureReference = "John 3:16",
+                    scriptureText = "For God so loved the world",
+                ),
+            ),
+        )
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        val day = state.listDays.first { it.epochDay == pastEpochDay }
+        assertEquals("John 3:16", day.scriptureReference)
+        assertEquals("For God so loved the world", day.scriptureText)
+    }
+
+    @Test
+    fun listDayScriptureIsNullWhenNoBriefingRanThatDay() = runTest(testDispatcher) {
+        val assignments = (0..6).associateWith { DayAssignment(testFigure.id, null) }
+        val viewModel = historyViewModel(assignments = assignments)
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        val todayRow = state.listDays.first { it.epochDay == state.todayEpochDay }
+        assertEquals(null, todayRow.scriptureReference)
+        assertEquals(null, todayRow.scriptureText)
     }
 
     /**

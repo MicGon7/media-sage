@@ -43,6 +43,7 @@ import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBriefingCard
+import com.mediasage.ui.MediaSageDateDivider
 import com.mediasage.ui.MediaSageErrorState
 import com.mediasage.ui.SepiaColorFilter
 import com.mediasage.ui.ThemeChip
@@ -85,7 +86,7 @@ fun BriefingScreen(
 private fun BriefingLoading(todayLabel: String) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item { Masthead() }
-        item { NewspaperDateRow(todayLabel = todayLabel) }
+        item { MediaSageDateDivider(dateLabel = todayLabel) }
     }
 }
 
@@ -97,7 +98,7 @@ private fun BriefingContent(
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item { Masthead() }
-        item { NewspaperDateRow(todayLabel = todayLabel) }
+        item { MediaSageDateDivider(dateLabel = todayLabel) }
         item {
             AnimatedContent(
                 targetState = card,
@@ -134,34 +135,6 @@ private fun Masthead() {
             style = MaterialTheme.typography.bodyMedium,
             fontStyle = FontStyle.Italic,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun NewspaperDateRow(todayLabel: String) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            color = MaterialTheme.colorScheme.primary,
-            thickness = 1.dp
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            Text(
-                text = todayLabel,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            color = MaterialTheme.colorScheme.primary,
-            thickness = 1.dp
         )
     }
 }

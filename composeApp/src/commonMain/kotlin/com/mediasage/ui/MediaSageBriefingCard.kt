@@ -130,19 +130,7 @@ fun MediaSageBriefingBody(
         HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            text = scriptureReference,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "“$scriptureText”",
-            style = MaterialTheme.typography.bodyMedium,
-            fontStyle = FontStyle.Italic,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        MediaSageScriptureBlock(scriptureReference = scriptureReference, scriptureText = scriptureText)
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(text = insight, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -192,6 +180,33 @@ fun MediaSageBriefingCard(
             inspiration = inspiration,
             sources = sources,
             trailingContent = trailingContent,
+        )
+    }
+}
+
+/**
+ * A scripture citation and its quoted text — the piece of a briefing that stays meaningful shown
+ * on its own, e.g. on a Past Briefings list row where the full reflection body doesn't fit.
+ */
+@Composable
+fun MediaSageScriptureBlock(
+    scriptureReference: String,
+    scriptureText: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = scriptureReference,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "“$scriptureText”",
+            style = MaterialTheme.typography.bodyMedium,
+            fontStyle = FontStyle.Italic,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
