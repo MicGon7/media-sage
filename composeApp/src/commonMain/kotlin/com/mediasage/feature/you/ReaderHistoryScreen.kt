@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,6 +46,7 @@ import com.mediasage.ui.MediaSageBackRow
 import com.mediasage.ui.MediaSageBriefingHeader
 import com.mediasage.ui.MediaSageDateDivider
 import com.mediasage.ui.MediaSageEmptyState
+import com.mediasage.ui.MediaSageScriptureBlock
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -337,8 +340,17 @@ private fun HistoryDayCard(
         MediaSageBriefingHeader(
             figureName = day.figureName,
             figureImageUrl = day.figurePortraitUrl,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp),
         )
+        if (day.scriptureReference != null && day.scriptureText != null) {
+            MediaSageScriptureBlock(
+                scriptureReference = day.scriptureReference,
+                scriptureText = day.scriptureText,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+            )
+        } else {
+            Spacer(modifier = Modifier.height(12.dp))
+        }
     }
 }
 

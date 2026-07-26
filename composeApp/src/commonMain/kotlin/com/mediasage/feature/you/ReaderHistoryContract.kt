@@ -18,6 +18,8 @@ object ReaderHistoryContract {
         val epochDay: Long,
         val figurePortraitUrl: String?,
         val figureName: String,
+        val scriptureReference: String? = null,
+        val scriptureText: String? = null,
     )
 
     sealed interface UiState {

@@ -71,13 +71,25 @@ class DailyReflectionRepositoryImpl(
 
     override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
         dao.getByEpochDayRange(startEpochDay, endEpochDay).map { entities ->
-            entities.groupBy { it.epochDay }.map { (day, list) -> BriefingDay(day, list.first().figureId) }
+            entities.groupBy { it.epochDay }.map { (day, list) ->
+                val entity = list.firstOrNull { it.tone == TONE_MORNING } ?: list.first()
+                BriefingDay(
+                    epochDay = day,
+                    figureId = entity.figureId,
+                    scriptureReference = entity.scriptureReference,
+                    scriptureText = entity.scriptureText,
+                )
+            }
         }
 
     override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? =
         dao.getForDayAndTone(epochDay, tone)?.toDomain()
 
     override suspend fun getEarliestBriefingEpochDay(): Long? = dao.getEarliestEpochDay()
+
+    private companion object {
+        const val TONE_MORNING = "morning"
+    }
 }
 
 private fun DailyReflectionEntity.toDomain() = DailyReflection(

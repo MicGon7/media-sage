@@ -5,6 +5,7 @@ package com.mediasage.feature.you
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.BriefingDay
 import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.ReaderCalendarData
@@ -146,10 +147,13 @@ class ReaderHistoryViewModel(
         return (earliestEpochDay..todayEpochDay).mapNotNull { epochDay ->
             val figureId = resolveFigureId(epochDay, data.briefingByDay, data.assignmentsByDayOfWeek)
             val figure = figureId?.let { figuresById[it] } ?: return@mapNotNull null
+            val briefing = data.briefingByDay[epochDay]
             ReaderHistoryContract.ListDay(
                 epochDay = epochDay,
                 figurePortraitUrl = figure.portraitUrl,
                 figureName = figure.name,
+                scriptureReference = briefing?.scriptureReference,
+                scriptureText = briefing?.scriptureText,
             )
         }.sortedByDescending { it.epochDay }
     }
@@ -162,13 +166,13 @@ class ReaderHistoryViewModel(
      */
     private fun resolveFigureId(
         epochDay: Long,
-        briefingByDay: Map<Long, Long>,
+        briefingByDay: Map<Long, BriefingDay>,
         assignmentsByDayOfWeek: Map<Int, DayAssignment>,
     ): Long? = when {
         epochDay > todayEpochDay -> null
         epochDay == todayEpochDay ->
             assignmentsByDayOfWeek[LocalDate.fromEpochDays(epochDay.toInt()).dayOfWeek.ordinal]?.figureId
-        else -> briefingByDay[epochDay]
+        else -> briefingByDay[epochDay]?.figureId
     }
 
     private fun monthRange(month: LocalDate): MonthRange {
