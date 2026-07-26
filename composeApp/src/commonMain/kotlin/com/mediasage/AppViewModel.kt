@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -66,24 +65,26 @@ class AppViewModel(
             } catch (e: Exception) {
                 // Sync failure is non-fatal — app works offline with cached figures
             }
-            try {
-                dayAssignmentRepository.seedDefaultsIfEmpty()
-            } catch (e: Exception) {
-                // Seeding failure is non-fatal — briefing will be empty until next launch
-            }
         }
 
+        // A single sequential collector — never run the local-only seed and the
+        // authenticated remote sync concurrently, or the seed can race ahead, fill the
+        // table with defaults, and get mistaken for a pending local edit that should
+        // win over the real pulled schedule.
         viewModelScope.launch {
             authState
-                .filterIsInstance<AuthUiState.Authenticated>()
-                .map { it.session.userId }
-                .filter { it.isNotBlank() }
+                .filter { it !is AuthUiState.Loading }
+                .map { state -> (state as? AuthUiState.Authenticated)?.session?.userId?.takeIf { it.isNotBlank() } }
                 .distinctUntilChanged()
                 .collect { userId ->
                     try {
-                        dayAssignmentRepository.syncWithRemote(userId)
+                        if (userId != null) {
+                            dayAssignmentRepository.syncWithRemote(userId)
+                        } else {
+                            dayAssignmentRepository.seedDefaultsIfEmpty()
+                        }
                     } catch (e: Exception) {
-                        // Sync failure is non-fatal — retried on next launch/sign-in
+                        // Failure is non-fatal — retried on next launch/sign-in
                     }
                 }
         }
