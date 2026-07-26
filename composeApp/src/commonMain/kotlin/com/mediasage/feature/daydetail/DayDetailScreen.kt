@@ -71,7 +71,7 @@ fun DayDetailScreen(
                     )
                     else -> MultipleBriefingsContent(
                         briefings = ready.briefings,
-                        expandedTones = ready.expandedTones,
+                        expandedTone = ready.expandedTone,
                         figureName = ready.figureName,
                         figureImageUrl = ready.figureImageUrl,
                         onIntent = onIntent,
@@ -134,14 +134,14 @@ private fun ToneHeader(tone: String) {
 
 /**
  * The figure's portrait and name never change between a day's morning and evening briefing, so
- * [MediaSageBriefingHeader] renders once above both. Each briefing is its own collapsible section —
- * both start collapsed, expand independently, and only [MediaSageBriefingBody] (theme, sources,
- * scripture, and the reflection text) toggles per section.
+ * [MediaSageBriefingHeader] renders once above both. The two briefings form an accordion — at most
+ * one is expanded at a time, so opening one collapses the other — and only [MediaSageBriefingBody]
+ * (theme, sources, scripture, and the reflection text) toggles per section.
  */
 @Composable
 private fun MultipleBriefingsContent(
     briefings: List<DayDetailContract.BriefingSummary>,
-    expandedTones: Set<String>,
+    expandedTone: String?,
     figureName: String?,
     figureImageUrl: String?,
     onIntent: (DayDetailContract.Intent) -> Unit,
@@ -152,7 +152,7 @@ private fun MultipleBriefingsContent(
         briefings.forEach { briefing ->
             ExpandableBriefingSection(
                 briefing = briefing,
-                expanded = briefing.tone in expandedTones,
+                expanded = briefing.tone == expandedTone,
                 onToggle = { onIntent(DayDetailContract.Intent.BriefingToggled(briefing.tone)) },
             )
         }

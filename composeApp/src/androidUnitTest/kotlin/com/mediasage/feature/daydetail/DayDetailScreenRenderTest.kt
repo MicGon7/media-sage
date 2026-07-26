@@ -35,7 +35,7 @@ private fun sampleState(): DayDetailContract.UiState.Ready = DayDetailContract.U
     epochDay = 20289L,
     figureName = "Augustine of Hippo",
     figureImageUrl = null,
-    expandedTones = setOf("morning"),
+    expandedTone = "morning",
     briefings = listOf(
         DayDetailContract.BriefingSummary(
             scriptureReference = "John 3:16",

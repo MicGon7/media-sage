@@ -98,17 +98,17 @@ class DayDetailViewModelTest {
         val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = briefing("evening"))
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals(setOf("morning"), state.expandedTones)
+        assertEquals("morning", state.expandedTone)
     }
 
     @Test
-    fun briefingToggledExpandsThatToneToo() = runTest(testDispatcher) {
+    fun expandingEveningCollapsesMorning() = runTest(testDispatcher) {
         val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = briefing("evening"))
 
         viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("evening"))
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals(setOf("morning", "evening"), state.expandedTones)
+        assertEquals("evening", state.expandedTone)
     }
 
     @Test
@@ -119,7 +119,7 @@ class DayDetailViewModelTest {
         viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("morning"))
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals(setOf("morning"), state.expandedTones)
+        assertEquals("morning", state.expandedTone)
     }
 
     @Test
@@ -129,7 +129,7 @@ class DayDetailViewModelTest {
         viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("morning"))
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertTrue(state.expandedTones.isEmpty())
+        assertEquals(null, state.expandedTone)
     }
 
     /**

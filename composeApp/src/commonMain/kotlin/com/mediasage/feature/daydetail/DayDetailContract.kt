@@ -18,7 +18,7 @@ object DayDetailContract {
             val epochDay: Long,
             val figureName: String? = null,
             val figureImageUrl: String? = null,
-            val expandedTones: Set<String> = emptySet(),
+            val expandedTone: String? = null,
             val briefings: List<BriefingSummary> = emptyList(),
         ) : UiState
     }
