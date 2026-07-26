@@ -141,7 +141,12 @@ private fun ViewModeMenuButton(
                 contentDescription = stringResource(Res.string.reader_history_view_options),
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+        ) {
             ReaderHistoryContract.ViewMode.entries.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(stringResource(option.labelRes())) },
