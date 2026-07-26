@@ -1,13 +1,11 @@
 package com.mediasage.feature.you
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -64,7 +62,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -88,8 +85,6 @@ import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.ScreenHeader
 import kotlinx.datetime.DayOfWeek
 import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.headline_nature_image_default
-import mediasage.composeapp.generated.resources.reader_hero_caption
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
 import mediasage.composeapp.generated.resources.you_history_entry_subtitle
 import mediasage.composeapp.generated.resources.you_nav_history
@@ -117,7 +112,6 @@ import mediasage.composeapp.generated.resources.you_saved_see_all
 import mediasage.composeapp.generated.resources.you_screen_title
 import mediasage.composeapp.generated.resources.you_settings_icon_description
 import com.mediasage.domain.model.LensFilter
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -197,10 +191,6 @@ fun ReaderScreen(
 
             if (ready != null) {
                 item {
-                    HeroPainting()
-                }
-
-                item {
                     ReporterScheduleSection(
                         weekSlots = ready.weekSlots,
                         onIntent = onIntent,
@@ -277,27 +267,6 @@ private fun EntryCard(title: String, subtitle: String, onClick: () -> Unit, modi
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    }
-}
-
-@Composable
-private fun HeroPainting() {
-    Column {
-        Image(
-            painter = painterResource(Res.drawable.headline_nature_image_default),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(2f),
-            contentScale = ContentScale.Crop
-        )
-        Text(
-            text = stringResource(Res.string.reader_hero_caption),
-            style = MaterialTheme.typography.labelSmall,
-            fontStyle = FontStyle.Italic,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
     }
 }
 
