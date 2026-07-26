@@ -4,9 +4,7 @@ package com.mediasage.feature.daydetail
 
 import com.mediasage.domain.model.BriefingDay
 import com.mediasage.domain.model.DailyReflection
-import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.repository.DailyReflectionRepository
-import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.usecase.GetDayDetailUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +25,7 @@ class DayDetailViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
-    private fun reflection(tone: String) = DailyReflection(
+    private fun briefing(tone: String) = DailyReflection(
         scriptureReference = "John 3:16",
         scriptureText = "For God so loved the world",
         insight = "insight-$tone",
@@ -35,21 +33,6 @@ class DayDetailViewModelTest {
         inspiration = "inspiration-$tone",
         sources = emptyList(),
         tone = tone,
-    )
-
-    private fun article(url: String) = Encouragement(
-        summary = null,
-        quoteText = "Our heart is restless.",
-        figureName = "Augustine of Hippo",
-        figureRole = "Bishop of Hippo",
-        scriptureReference = "John 3:16",
-        scriptureText = "For God so loved the world",
-        explanation = "explanation",
-        connectionThemes = emptyList(),
-        matchTheme = "hope",
-        tone = "morning",
-        headlineTitle = "Headline",
-        articleUrl = url,
     )
 
     @BeforeTest
@@ -63,49 +46,90 @@ class DayDetailViewModelTest {
     }
 
     @Test
-    fun bothReflectionsPresent_showsTwoReflectionSummaries() = runTest(testDispatcher) {
+    fun bothBriefingsPresent_showsTwoBriefingSummaries() = runTest(testDispatcher) {
         val viewModel = dayDetailViewModel(
-            morning = reflection("morning"),
-            evening = reflection("evening"),
+            morning = briefing("morning"),
+            evening = briefing("evening"),
         )
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals(2, state.reflections.size)
+        assertEquals(2, state.briefings.size)
     }
 
     @Test
-    fun onlyOneReflectionGenerated_showsSingleReflectionGracefully() = runTest(testDispatcher) {
-        val viewModel = dayDetailViewModel(morning = reflection("morning"), evening = null)
+    fun onlyOneBriefingGenerated_showsSingleBriefingGracefully() = runTest(testDispatcher) {
+        val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = null)
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals(1, state.reflections.size)
-        assertEquals("morning", state.reflections.first().tone)
+        assertEquals(1, state.briefings.size)
+        assertEquals("morning", state.briefings.first().tone)
     }
 
     @Test
-    fun noReflectionsGenerated_reflectionsListIsEmpty() = runTest(testDispatcher) {
+    fun noBriefingsGenerated_briefingsListIsEmpty() = runTest(testDispatcher) {
         val viewModel = dayDetailViewModel(morning = null, evening = null)
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertTrue(state.reflections.isEmpty())
+        assertTrue(state.briefings.isEmpty())
     }
 
     @Test
-    fun articlesReflectSavedEncouragementsForThatDay() = runTest(testDispatcher) {
-        val viewModel = dayDetailViewModel(articles = listOf(article("https://example.com/a")))
+    fun briefingSummaryCarriesSourcesAndTheme() = runTest(testDispatcher) {
+        val morning = DailyReflection(
+            scriptureReference = "John 3:16",
+            scriptureText = "For God so loved the world",
+            insight = "insight-morning",
+            implication = "implication-morning",
+            inspiration = "inspiration-morning",
+            sources = listOf("Mere Christianity, Book IV"),
+            tone = "morning",
+            theme = "HOPE",
+        )
+        val viewModel = dayDetailViewModel(morning = morning, evening = null)
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals(1, state.articles.size)
+        val summary = state.briefings.first()
+        assertEquals(listOf("Mere Christianity, Book IV"), summary.sources)
+        assertEquals("HOPE", summary.theme)
     }
 
     @Test
-    fun tabSelectedUpdatesSelectedTab() = runTest(testDispatcher) {
-        val viewModel = dayDetailViewModel()
-
-        viewModel.onIntent(DayDetailContract.Intent.TabSelected(DayDetailContract.Tab.ARTICLES))
+    fun morningStartsExpandedEveningStartsCollapsed() = runTest(testDispatcher) {
+        val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = briefing("evening"))
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals(DayDetailContract.Tab.ARTICLES, state.selectedTab)
+        assertEquals(setOf("morning"), state.expandedTones)
+    }
+
+    @Test
+    fun briefingToggledExpandsThatToneToo() = runTest(testDispatcher) {
+        val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = briefing("evening"))
+
+        viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("evening"))
+
+        val state = viewModel.state.value as DayDetailContract.UiState.Ready
+        assertEquals(setOf("morning", "evening"), state.expandedTones)
+    }
+
+    @Test
+    fun toggledTwiceReturnsToDefault() = runTest(testDispatcher) {
+        val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = briefing("evening"))
+
+        viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("morning"))
+        viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("morning"))
+
+        val state = viewModel.state.value as DayDetailContract.UiState.Ready
+        assertEquals(setOf("morning"), state.expandedTones)
+    }
+
+    @Test
+    fun toggledOnceCollapsesMorning() = runTest(testDispatcher) {
+        val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = briefing("evening"))
+
+        viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("morning"))
+
+        val state = viewModel.state.value as DayDetailContract.UiState.Ready
+        assertTrue(state.expandedTones.isEmpty())
     }
 
     /**
@@ -116,15 +140,13 @@ class DayDetailViewModelTest {
     private fun TestScope.dayDetailViewModel(
         morning: DailyReflection? = null,
         evening: DailyReflection? = null,
-        articles: List<Encouragement> = emptyList(),
     ): DayDetailViewModel {
         val reflectionRepo = FakeDailyReflectionRepository(morning, evening)
-        val encouragementRepo = FakeEncouragementRepository(articles)
         val viewModel = DayDetailViewModel(
             epochDay = 10L,
             figureName = "Augustine of Hippo",
             figureImageUrl = null,
-            getDayDetail = GetDayDetailUseCase(reflectionRepo, encouragementRepo),
+            getDayDetail = GetDayDetailUseCase(reflectionRepo),
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         return viewModel
@@ -150,25 +172,4 @@ private class FakeDailyReflectionRepository(
         if (tone == "morning") morning else evening
 
     override suspend fun getEarliestBriefingEpochDay(): Long? = null
-}
-
-private class FakeEncouragementRepository(
-    private val articles: List<Encouragement>,
-) : EncouragementRepository {
-    override suspend fun getEncouragement(
-        headlineTitle: String,
-        headlineSource: String,
-        headlineImageUrl: String?,
-        articleUrl: String?,
-        articleSnippet: String?,
-    ): Encouragement = throw UnsupportedOperationException()
-
-    override fun observeAll(): Flow<List<Encouragement>> = MutableStateFlow(articles)
-    override fun observeBookmarked(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
-    override fun observeCountByFigureName(): Flow<Map<String, Int>> = MutableStateFlow(emptyMap())
-    override fun observeByFigureId(figureId: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
-    override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> = MutableStateFlow(false)
-    override suspend fun toggleBookmark(articleUrl: String) = Unit
-    override fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>> = MutableStateFlow(articles)
-    override fun observeActiveEpochDays(): Flow<Set<Long>> = MutableStateFlow(emptySet())
 }

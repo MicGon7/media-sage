@@ -102,10 +102,6 @@
     <string name="history_mode_month">Month</string>
     <string name="history_mode_year">Year</string>
     <string name="history_reflection_section">DAILY BRIEFING</string>
-    <string name="history_scripture_label">SCRIPTURE</string>
-    <string name="history_insight_label">INSIGHT</string>
-    <string name="history_implication_label">IMPLICATION</string>
-    <string name="history_inspiration_label">INSPIRATION</string>
     <string name="history_empty_day_for">No entry for %1$s</string>
     <string name="history_empty_day_subtitle">Readings from this day will appear here</string>
     <string name="reader_calendar_prev_year">Previous year</string>
@@ -115,12 +111,10 @@
     <string name="reader_history_list_empty_subtitle">Briefings you receive will appear here</string>
     <string name="reader_history_view_calendar">Calendar</string>
     <string name="reader_history_view_list">List</string>
-    <string name="history_tab_briefing">Briefings</string>
     <string name="history_tab_articles">Articles</string>
     <string name="you_day_detail_articles_label">ARTICLES</string>
-    <string name="you_day_detail_articles_tab_count">Articles (%1$d)</string>
-    <string name="you_day_detail_no_articles">No articles saved this day</string>
-    <string name="you_day_detail_figure_attribution">— %1$s</string>
+    <string name="day_detail_notes_action">Notes</string>
+    <string name="day_detail_share_action">Share</string>
 
     <!-- Reader screen calendar card -->
     <string name="you_calendar_section_title">YOUR REPORTERS FOR THE MONTH</string>
@@ -146,8 +140,8 @@
     <string name="figure_detail_pinned_to_home">Pinned to Home</string>
     <string name="briefing_card_loading">Daily Briefing</string>
     <string name="briefing_card_based_on">Based on</string>
-    <string name="briefing_card_morning">Morning Reflection</string>
-    <string name="briefing_card_evening">Evening Reflection</string>
+    <string name="briefing_card_morning">Morning</string>
+    <string name="briefing_card_evening">Evening</string>
 
     <string name="login_masthead_line1">THE COURAGE</string>
     <string name="login_masthead_line2">POST</string>

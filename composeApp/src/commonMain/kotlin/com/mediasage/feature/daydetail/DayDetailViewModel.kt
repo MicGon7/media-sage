@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayDetailData
-import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.usecase.GetDayDetailUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,10 +13,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
 /**
- * Read-only detail for a single day's briefings and saved articles, pushed from
- * [com.mediasage.feature.you.ReaderHistoryScreen]. Tab selection is local-only state combined
- * with the live [GetDayDetailUseCase] stream — the reactive state-holder pattern, since the
- * encouragement list can change while this screen is open (e.g. a bookmark toggled elsewhere).
+ * Read-only detail for a single day's briefings, pushed from
+ * [com.mediasage.feature.you.ReaderHistoryScreen]. Which briefings are expanded is local-only state
+ * combined with the live [GetDayDetailUseCase] stream — the reactive state-holder pattern, since the
+ * briefing list can change while this screen is open. Morning starts expanded and evening collapsed
+ * when both exist; a single briefing has no toggle and is always shown expanded (see
+ * `DayDetailScreen`).
  */
 class DayDetailViewModel(
     private val epochDay: Long,
@@ -26,10 +27,10 @@ class DayDetailViewModel(
     getDayDetail: GetDayDetailUseCase,
 ) : ViewModel() {
 
-    private val selectedTab = MutableStateFlow(DayDetailContract.Tab.BRIEFINGS)
+    private val expandedTones = MutableStateFlow(setOf(TONE_MORNING))
 
     val state: StateFlow<DayDetailContract.UiState> =
-        combine(selectedTab, getDayDetail(epochDay)) { tab, data -> buildReady(tab, data) }
+        combine(expandedTones, getDayDetail(epochDay)) { expanded, data -> buildReady(expanded, data) }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -42,41 +43,36 @@ class DayDetailViewModel(
 
     fun onIntent(intent: DayDetailContract.Intent) {
         when (intent) {
-            is DayDetailContract.Intent.TabSelected -> selectedTab.update { intent.tab }
+            is DayDetailContract.Intent.BriefingToggled -> expandedTones.update { current ->
+                if (intent.tone in current) current - intent.tone else current + intent.tone
+            }
         }
     }
 
     private fun buildReady(
-        tab: DayDetailContract.Tab,
+        expandedTones: Set<String>,
         data: DayDetailData,
     ): DayDetailContract.UiState.Ready = DayDetailContract.UiState.Ready(
         epochDay = epochDay,
         figureName = figureName,
         figureImageUrl = figureImageUrl,
-        selectedTab = tab,
-        reflections = listOfNotNull(data.morningReflection, data.eveningReflection).map { it.toSummary() },
-        articles = data.encouragements.map { it.toArticleItem() },
+        expandedTones = expandedTones,
+        briefings = listOfNotNull(data.morningReflection, data.eveningReflection).map { it.toBriefingSummary() },
     )
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
+        const val TONE_MORNING = "morning"
     }
 }
 
-private fun DailyReflection.toSummary() = DayDetailContract.ReflectionSummary(
+private fun DailyReflection.toBriefingSummary() = DayDetailContract.BriefingSummary(
     scriptureReference = scriptureReference,
     scriptureText = scriptureText,
     insight = insight,
     implication = implication,
     inspiration = inspiration,
+    sources = sources,
     tone = tone,
-)
-
-private fun Encouragement.toArticleItem() = DayDetailContract.ArticleItem(
-    headlineTitle = headlineTitle,
-    quoteText = quoteText,
-    figureName = figureName,
-    figureRole = figureRole,
-    figureImageUrl = figureImageUrl,
-    articleUrl = articleUrl ?: "",
+    theme = theme,
 )
