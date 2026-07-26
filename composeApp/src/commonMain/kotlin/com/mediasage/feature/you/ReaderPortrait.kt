@@ -5,7 +5,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
@@ -22,7 +21,6 @@ internal fun FigurePortraitImage(
     name: String?,
     size: Dp,
     isToday: Boolean,
-    isPast: Boolean = false,
     showRing: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
@@ -32,8 +30,7 @@ internal fun FigurePortraitImage(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .then(if (isToday && showRing) Modifier.solidCircleBorder(BrandAmber, 2.dp) else Modifier)
-            .then(if (isPast) Modifier.alpha(0.6f) else Modifier),
+            .then(if (isToday && showRing) Modifier.solidCircleBorder(BrandAmber, 2.dp) else Modifier),
         contentScale = ContentScale.Crop,
         alignment = Alignment.TopCenter,
     )

@@ -19,7 +19,6 @@ import androidx.compose.runtime.remember
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,8 +40,8 @@ fun CalendarCard(
         Surface(
             shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth(),
-            tonalElevation = 0.dp,
-            shadowElevation = 2.dp
+            tonalElevation = 3.dp,
+            shadowElevation = 4.dp
         ) {
             Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                 MonthHeader(days)
@@ -139,20 +138,17 @@ private fun DayPortrait(
     day: ReaderHistoryContract.CalendarDay,
     showRing: Boolean = true,
 ) {
-    val isPast = !day.isToday && !day.isFuture
     if (day.figurePortraitUrl != null) {
         FigurePortraitImage(
             imageUrl = day.figurePortraitUrl,
             name = day.figureName,
             size = 28.dp,
             isToday = day.isToday,
-            isPast = isPast,
             showRing = showRing,
         )
     } else {
         val fallbackModifier = Modifier.size(28.dp).clip(CircleShape)
             .then(if (day.isToday && showRing) Modifier.solidCircleBorder(BrandAmber, 2.dp) else Modifier)
-            .then(if (isPast) Modifier.alpha(0.6f) else Modifier)
         Box(
             modifier = fallbackModifier.background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
