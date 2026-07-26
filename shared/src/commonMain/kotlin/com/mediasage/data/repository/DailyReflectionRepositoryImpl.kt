@@ -87,6 +87,8 @@ class DailyReflectionRepositoryImpl(
 
     override suspend fun getEarliestBriefingEpochDay(): Long? = dao.getEarliestEpochDay()
 
+    override suspend fun getLockedFigureId(epochDay: Long): Long? = dao.getFigureIdForDay(epochDay)
+
     private companion object {
         const val TONE_MORNING = "morning"
     }

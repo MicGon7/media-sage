@@ -50,6 +50,14 @@ class ReaderHistoryViewModelTest {
         role = "Bishop of Hippo",
     )
 
+    private val otherFigure = Figure(
+        id = 2L,
+        name = "C.S. Lewis",
+        category = FigureCategory.THEOLOGIAN,
+        century = "20th",
+        role = "Author",
+    )
+
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
@@ -92,6 +100,25 @@ class ReaderHistoryViewModelTest {
         val todayCell = state.calendarMonths.first().first { it.isToday }
         assertTrue(todayCell.hasData)
         assertEquals(testFigure.name, todayCell.figureName)
+    }
+
+    @Test
+    fun todayPrefersActualBriefingOverANewerConflictingAssignment() = runTest(testDispatcher) {
+        // Regression test for the MS-658 follow-up bug: once today is locked to a figure, a later
+        // weekday reassignment must not make Past Briefings show the newly-assigned figure instead
+        // of whoever's briefing actually ran today.
+        val probe = historyViewModel()
+        val todayEpochDay = (probe.state.value as ReaderHistoryContract.UiState.Ready).todayEpochDay
+        val assignments = (0..6).associateWith { DayAssignment(otherFigure.id, null) }
+        val viewModel = historyViewModel(
+            assignments = assignments,
+            briefings = listOf(BriefingDay(todayEpochDay, testFigure.id)),
+            figures = listOf(testFigure, otherFigure),
+        )
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        val todayRow = state.listDays.first { it.epochDay == todayEpochDay }
+        assertEquals(testFigure.name, todayRow.figureName)
     }
 
     @Test
@@ -218,8 +245,9 @@ class ReaderHistoryViewModelTest {
     private fun TestScope.historyViewModel(
         assignments: Map<Int, DayAssignment> = emptyMap(),
         briefings: List<BriefingDay> = emptyList(),
+        figures: List<Figure> = listOf(testFigure),
     ): ReaderHistoryViewModel {
-        val figureRepo = HistoryFakeFigureRepository(listOf(testFigure))
+        val figureRepo = HistoryFakeFigureRepository(figures)
         val dayAssignmentRepo = HistoryFakeDayAssignmentRepository(MutableStateFlow(assignments))
         val quoteRepo = HistoryFakeQuoteRepository()
         val reflectionRepo = HistoryFakeDailyReflectionRepository(briefings)
@@ -265,6 +293,7 @@ private class HistoryFakeDailyReflectionRepository(
         MutableStateFlow(briefings.filter { it.epochDay in startEpochDay..endEpochDay })
     override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? = null
     override suspend fun getEarliestBriefingEpochDay(): Long? = briefings.minOfOrNull { it.epochDay }
+    override suspend fun getLockedFigureId(epochDay: Long): Long? = null
 }
 
 private class HistoryFakeQuoteRepository(private val latestQuote: Quote? = null) : QuoteRepository {

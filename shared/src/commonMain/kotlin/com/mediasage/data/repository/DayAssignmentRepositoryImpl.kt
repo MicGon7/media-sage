@@ -6,6 +6,7 @@ import com.mediasage.data.local.entity.DayAssignmentEntity
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.LensFilter
+import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -15,6 +16,7 @@ class DayAssignmentRepositoryImpl(
     private val dao: DayAssignmentDao,
     private val figureDao: FigureDao,
     private val api: MediaSageApi,
+    private val dailyReflectionRepository: DailyReflectionRepository,
 ) : DayAssignmentRepository {
 
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> =
@@ -36,7 +38,7 @@ class DayAssignmentRepositoryImpl(
     }
 
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? =
-        dao.getByDayOfWeek(dayOfWeek)?.figureId
+        dailyReflectionRepository.getLockedFigureId(epochDay) ?: dao.getByDayOfWeek(dayOfWeek)?.figureId
 
     override suspend fun seedDefaultsIfEmpty() {
         if (dao.countAll() > 0) return

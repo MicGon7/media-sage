@@ -172,4 +172,6 @@ private class FakeDailyReflectionRepository(
         if (tone == "morning") morning else evening
 
     override suspend fun getEarliestBriefingEpochDay(): Long? = null
+
+    override suspend fun getLockedFigureId(epochDay: Long): Long? = null
 }

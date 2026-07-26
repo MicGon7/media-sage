@@ -19,7 +19,11 @@ import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.data.remote.NewsArticleDto
 import com.mediasage.data.remote.ScripturePassageDto
 import com.mediasage.data.remote.ScriptureVerseDto
+import com.mediasage.domain.model.BriefingDay
+import com.mediasage.domain.model.DailyReflection
+import com.mediasage.domain.repository.DailyReflectionRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -53,7 +57,7 @@ class DayAssignmentRepositoryTest {
                 AssignmentDefaultDto(6, "Mother Teresa"),
             )
         )
-        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
+        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api, FakeDailyReflectionRepository())
 
         repo.seedDefaultsIfEmpty()
 
@@ -65,7 +69,7 @@ class DayAssignmentRepositoryTest {
         val dao = FakeDayAssignmentDao(initialCount = 3)
         val figureDao = FakeFigureDaoForSeeding(allFigures)
         val api = FakeAssignmentApi()
-        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
+        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api, FakeDailyReflectionRepository())
 
         repo.seedDefaultsIfEmpty()
 
@@ -78,7 +82,7 @@ class DayAssignmentRepositoryTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         val figureDao = FakeFigureDaoForSeeding(allFigures)
         val api = FakeAssignmentApi(shouldThrow = true)
-        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
+        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api, FakeDailyReflectionRepository())
 
         repo.seedDefaultsIfEmpty()
 
@@ -95,7 +99,7 @@ class DayAssignmentRepositoryTest {
                 AssignmentDefaultDto(1, "Unknown Figure"),
             )
         )
-        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
+        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api, FakeDailyReflectionRepository())
 
         repo.seedDefaultsIfEmpty()
 
@@ -112,7 +116,7 @@ class DayAssignmentRepositoryTest {
                 AssignmentDefaultDto(0, "augustine of hippo"),
             )
         )
-        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api)
+        val repo = DayAssignmentRepositoryImpl(dao, figureDao, api, FakeDailyReflectionRepository())
 
         repo.seedDefaultsIfEmpty()
 
@@ -129,7 +133,9 @@ class DayAssignmentRepositoryTest {
     fun resolveReporter_returnsDayAssignmentFigureId() = runTest {
         val dao = FakeDayAssignmentDao()
         dao.upsert(DayAssignmentEntity(dayOfWeek = 3, figureId = 42L))
-        val repo = DayAssignmentRepositoryImpl(dao, FakeFigureDaoForSeeding(), FakeAssignmentApi())
+        val repo = DayAssignmentRepositoryImpl(
+            dao, FakeFigureDaoForSeeding(), FakeAssignmentApi(), FakeDailyReflectionRepository()
+        )
 
         val result = repo.resolveReporter(epochDay = 20001L, dayOfWeek = 3)
 
@@ -138,12 +144,59 @@ class DayAssignmentRepositoryTest {
 
     @Test
     fun resolveReporter_returnsNullWhenNoAssignmentExists() = runTest {
-        val repo = DayAssignmentRepositoryImpl(FakeDayAssignmentDao(), FakeFigureDaoForSeeding(), FakeAssignmentApi())
+        val repo = DayAssignmentRepositoryImpl(
+            FakeDayAssignmentDao(), FakeFigureDaoForSeeding(), FakeAssignmentApi(), FakeDailyReflectionRepository()
+        )
 
         val result = repo.resolveReporter(epochDay = 20002L, dayOfWeek = 5)
 
         assertEquals(null, result)
     }
+
+    @Test
+    fun resolveReporter_prefersLockedFigureOverCurrentAssignment() = runTest {
+        val dao = FakeDayAssignmentDao()
+        dao.upsert(DayAssignmentEntity(dayOfWeek = 3, figureId = 99L))
+        val reflectionRepo = FakeDailyReflectionRepository(lockedFigureIdsByEpochDay = mapOf(20001L to 42L))
+        val repo = DayAssignmentRepositoryImpl(dao, FakeFigureDaoForSeeding(), FakeAssignmentApi(), reflectionRepo)
+
+        val result = repo.resolveReporter(epochDay = 20001L, dayOfWeek = 3)
+
+        assertEquals(42L, result)
+    }
+
+    @Test
+    fun resolveReporter_fallsBackToAssignmentWhenDayNotLocked() = runTest {
+        val dao = FakeDayAssignmentDao()
+        dao.upsert(DayAssignmentEntity(dayOfWeek = 3, figureId = 99L))
+        val reflectionRepo = FakeDailyReflectionRepository(lockedFigureIdsByEpochDay = mapOf(30000L to 42L))
+        val repo = DayAssignmentRepositoryImpl(dao, FakeFigureDaoForSeeding(), FakeAssignmentApi(), reflectionRepo)
+
+        val result = repo.resolveReporter(epochDay = 20001L, dayOfWeek = 3)
+
+        assertEquals(99L, result)
+    }
+}
+
+private class FakeDailyReflectionRepository(
+    private val lockedFigureIdsByEpochDay: Map<Long, Long> = emptyMap(),
+) : DailyReflectionRepository {
+    override suspend fun getOrFetch(
+        figureId: Long,
+        figureName: String,
+        headlines: List<String>,
+        tone: String,
+        theme: String?,
+    ): DailyReflection = throw UnsupportedOperationException()
+
+    override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
+        MutableStateFlow(emptyList())
+
+    override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? = null
+
+    override suspend fun getEarliestBriefingEpochDay(): Long? = null
+
+    override suspend fun getLockedFigureId(epochDay: Long): Long? = lockedFigureIdsByEpochDay[epochDay]
 }
 
 private class FakeDayAssignmentDao(private val initialCount: Int = 0) : DayAssignmentDao {

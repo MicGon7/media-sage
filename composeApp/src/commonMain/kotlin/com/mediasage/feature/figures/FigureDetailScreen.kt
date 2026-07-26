@@ -47,6 +47,7 @@ import coil3.compose.AsyncImage
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
 import com.mediasage.ui.MediaSageBottomSheet
+import com.mediasage.ui.ReassignConfirmationDialog
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.figure_detail_biography
 import mediasage.composeapp.generated.resources.figure_detail_pin_to_home
@@ -107,6 +108,16 @@ fun FigureDetailScreen(
                         ) {
                             QuotesSheetContent(quotes = state.quotes)
                         }
+                    }
+
+                    state.pendingReassignment?.let { pending ->
+                        ReassignConfirmationDialog(
+                            currentFigureName = pending.currentFigureName,
+                            newFigureName = pending.newFigureName,
+                            nextWeekdayLabel = pending.nextWeekdayLabel,
+                            onConfirm = { onIntent(FigureDetailContract.Intent.ConfirmReassignment) },
+                            onDismiss = { onIntent(FigureDetailContract.Intent.CancelReassignment) },
+                        )
                     }
                 }
             }

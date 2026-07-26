@@ -14,7 +14,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
@@ -45,14 +47,15 @@ class ReaderViewModel(
     private val startOfWeekEpochDay = startOfWeek.toEpochDays().toLong()
     private val endOfWeekEpochDay =
         today.plus(DayOfWeek.SUNDAY.ordinal - today.dayOfWeek.ordinal, DateTimeUnit.DAY).toEpochDays().toLong()
+    private val todayEpochDay = today.toEpochDays().toLong()
 
-    /** The only user selection this screen owns: which day's picker sheet, if any, is open. */
-    private val input = MutableStateFlow<ReaderContract.ActiveSheet?>(null)
+    /** The only user selection this screen owns: the open picker sheet and any pending reassignment. */
+    private val input = MutableStateFlow(ScreenInput())
 
     private val calendarData: Flow<ReaderCalendarData> = getReaderCalendar(startOfWeekEpochDay, endOfWeekEpochDay)
 
     val state: StateFlow<ReaderContract.UiState> =
-        combine(input, calendarData) { activeSheet, data -> buildReady(activeSheet, data) }.stateIn(
+        combine(input, calendarData) { screenInput, data -> buildReady(screenInput, data) }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
             initialValue = ReaderContract.UiState.Ready(),
@@ -61,14 +64,14 @@ class ReaderViewModel(
     fun onIntent(intent: ReaderContract.Intent) {
         when (intent) {
             is ReaderContract.Intent.DaySlotTapped ->
-                input.value = ReaderContract.ActiveSheet.WeekSlotPicker(intent.index)
-            is ReaderContract.Intent.PickerDismissed -> input.value = null
-            is ReaderContract.Intent.FigureAssigned -> writeThenCloseSheet {
-                dayAssignmentRepository.assign(intent.dayOfWeek, intent.figureId, intent.lens)
-            }
+                input.update { it.copy(activeSheet = ReaderContract.ActiveSheet.WeekSlotPicker(intent.index)) }
+            is ReaderContract.Intent.PickerDismissed -> input.update { it.copy(activeSheet = null) }
+            is ReaderContract.Intent.FigureAssigned -> handleFigureAssigned(intent)
             is ReaderContract.Intent.AssignmentCleared -> writeThenCloseSheet {
                 dayAssignmentRepository.clear(intent.dayOfWeek)
             }
+            is ReaderContract.Intent.ConfirmReassignment -> handleConfirmReassignment()
+            is ReaderContract.Intent.CancelReassignment -> input.update { it.copy(pendingReassignment = null) }
         }
     }
 
@@ -76,12 +79,65 @@ class ReaderViewModel(
     private fun writeThenCloseSheet(block: suspend () -> Unit) {
         viewModelScope.launch {
             block()
-            input.value = null
+            input.update { it.copy(activeSheet = null) }
         }
     }
 
+    /** Guards today's locked-in day: a different figure requires confirmation before it is assigned. */
+    private fun handleFigureAssigned(intent: ReaderContract.Intent.FigureAssigned) {
+        viewModelScope.launch {
+            val data = calendarData.first()
+            val lockedFigureId = lockedFigureIdFor(intent.dayOfWeek, data)
+            if (lockedFigureId != null && lockedFigureId != intent.figureId) {
+                promptReassignment(intent, lockedFigureId, data)
+            } else {
+                dayAssignmentRepository.assign(intent.dayOfWeek, intent.figureId, intent.lens)
+                input.update { it.copy(activeSheet = null) }
+            }
+        }
+    }
+
+    private fun lockedFigureIdFor(dayOfWeek: Int, data: ReaderCalendarData): Long? {
+        if (dayOfWeek != today.dayOfWeek.ordinal) return null
+        return data.briefingByDay[todayEpochDay]?.figureId
+    }
+
+    private fun promptReassignment(
+        intent: ReaderContract.Intent.FigureAssigned,
+        lockedFigureId: Long,
+        data: ReaderCalendarData,
+    ) {
+        val figuresById = data.figures.associateBy { it.id }
+        val currentName = figuresById[lockedFigureId]?.name ?: return
+        val newName = figuresById[intent.figureId]?.name ?: return
+        input.update {
+            it.copy(
+                activeSheet = null,
+                pendingReassignment = ReaderContract.PendingReassignment(
+                    dayOfWeek = intent.dayOfWeek,
+                    figureId = intent.figureId,
+                    lens = intent.lens,
+                    currentFigureName = currentName,
+                    newFigureName = newName,
+                    nextWeekdayLabel = weekdayLabel(intent.dayOfWeek),
+                ),
+            )
+        }
+    }
+
+    private fun handleConfirmReassignment() {
+        val pending = input.value.pendingReassignment ?: return
+        viewModelScope.launch {
+            dayAssignmentRepository.assign(pending.dayOfWeek, pending.figureId, pending.lens)
+            input.update { it.copy(pendingReassignment = null) }
+        }
+    }
+
+    private fun weekdayLabel(dayOfWeek: Int): String =
+        DayOfWeek.entries[dayOfWeek].name.lowercase().replaceFirstChar { it.uppercase() }
+
     private fun buildReady(
-        activeSheet: ReaderContract.ActiveSheet?,
+        screenInput: ScreenInput,
         data: ReaderCalendarData,
     ): ReaderContract.UiState.Ready {
         val figuresById = data.figures.associateBy { it.id }
@@ -90,7 +146,8 @@ class ReaderViewModel(
             weekSlots = buildWeekSlots(figuresById, data.assignmentsByDayOfWeek),
             pickerFigures = data.figures,
             quoteCard = buildQuoteCard(data.latestQuote, quoteFigure),
-            activeSheet = activeSheet,
+            activeSheet = screenInput.activeSheet,
+            pendingReassignment = screenInput.pendingReassignment,
         )
     }
 
@@ -122,6 +179,11 @@ class ReaderViewModel(
             figureId = quoteFigure.id,
         )
     }
+
+    private data class ScreenInput(
+        val activeSheet: ReaderContract.ActiveSheet? = null,
+        val pendingReassignment: ReaderContract.PendingReassignment? = null,
+    )
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L

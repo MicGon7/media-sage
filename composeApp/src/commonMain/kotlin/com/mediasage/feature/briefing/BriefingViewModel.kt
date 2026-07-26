@@ -3,6 +3,7 @@ package com.mediasage.feature.briefing
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
@@ -56,16 +57,30 @@ class BriefingViewModel(
                 .distinctUntilChanged()
                 .collectLatest { (assignments, figures) ->
                     val todayOrdinal = todayDayOfWeekOrdinal()
-                    val assignment = assignments[todayOrdinal]
-                    val figureId = assignment?.figureId ?: figures.firstOrNull()?.id
+                    val figureId = dayAssignmentRepository.resolveReporter(todayEpochDay(), todayOrdinal)
+                        ?: figures.firstOrNull()?.id
                     if (figureId == null) {
                         updateCard(BriefingContract.CardState.Hidden)
                         emitLoadingSuccess()
                         return@collectLatest
                     }
-                    fetchAndUpdateCard(figureId, assignment?.lens)
+                    fetchAndUpdateCard(figureId, resolveLens(figureId, todayOrdinal, assignments))
                 }
         }
+    }
+
+    /**
+     * Once today is locked to a figure, a newer weekday reassignment may no longer describe that
+     * figure's lens — fall back to the theme already cached on today's reflection in that case.
+     */
+    private suspend fun resolveLens(
+        figureId: Long,
+        dayOfWeek: Int,
+        assignments: Map<Int, DayAssignment>,
+    ): LensFilter? {
+        assignments[dayOfWeek]?.takeIf { it.figureId == figureId }?.let { return it.lens }
+        val cachedTheme = dailyReflectionRepository.getForDay(todayEpochDay(), currentTone())?.theme
+        return cachedTheme?.let { name -> LensFilter.entries.firstOrNull { it.name == name } }
     }
 
     private suspend fun fetchAndUpdateCard(figureId: Long, lens: LensFilter?) {
@@ -150,4 +165,8 @@ class BriefingViewModel(
     private fun todayDayOfWeekOrdinal(): Int =
         Instant.fromEpochMilliseconds(epochMillis())
             .toLocalDateTime(TimeZone.currentSystemDefault()).date.dayOfWeek.ordinal
+
+    private fun todayEpochDay(): Long =
+        Instant.fromEpochMilliseconds(epochMillis())
+            .toLocalDateTime(TimeZone.currentSystemDefault()).date.toEpochDays().toLong()
 }
