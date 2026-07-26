@@ -147,21 +147,21 @@ class ReaderHistoryViewModelTest {
     }
 
     @Test
-    fun defaultViewModeIsCalendar() = runTest(testDispatcher) {
+    fun defaultViewModeIsList() = runTest(testDispatcher) {
         val viewModel = historyViewModel()
-
-        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
-        assertEquals(ReaderHistoryContract.ViewMode.CALENDAR, state.viewMode)
-    }
-
-    @Test
-    fun viewModeChangedIntentSwitchesToList() = runTest(testDispatcher) {
-        val viewModel = historyViewModel()
-
-        viewModel.onIntent(ReaderHistoryContract.Intent.ViewModeChanged(ReaderHistoryContract.ViewMode.LIST))
 
         val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
         assertEquals(ReaderHistoryContract.ViewMode.LIST, state.viewMode)
+    }
+
+    @Test
+    fun viewModeChangedIntentSwitchesToCalendar() = runTest(testDispatcher) {
+        val viewModel = historyViewModel()
+
+        viewModel.onIntent(ReaderHistoryContract.Intent.ViewModeChanged(ReaderHistoryContract.ViewMode.CALENDAR))
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        assertEquals(ReaderHistoryContract.ViewMode.CALENDAR, state.viewMode)
     }
 
     @Test

@@ -24,7 +24,7 @@ object ReaderHistoryContract {
         data class Ready(
             val todayEpochDay: Long = 0L,
             val earliestEpochDay: Long = 0L,
-            val viewMode: ViewMode = ViewMode.CALENDAR,
+            val viewMode: ViewMode = ViewMode.LIST,
             val calendarDays: List<CalendarDay> = emptyList(),
             val listDays: List<ListDay> = emptyList(),
         ) : UiState

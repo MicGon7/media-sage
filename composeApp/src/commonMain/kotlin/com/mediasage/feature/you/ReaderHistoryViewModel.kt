@@ -180,7 +180,7 @@ class ReaderHistoryViewModel(
     /** The user-owned view selection — the single mutable input to the state pipeline. */
     private data class HistoryInput(
         val visibleMonth: LocalDate,
-        val viewMode: ReaderHistoryContract.ViewMode = ReaderHistoryContract.ViewMode.CALENDAR,
+        val viewMode: ReaderHistoryContract.ViewMode = ReaderHistoryContract.ViewMode.LIST,
     )
 
     private data class MonthRange(
