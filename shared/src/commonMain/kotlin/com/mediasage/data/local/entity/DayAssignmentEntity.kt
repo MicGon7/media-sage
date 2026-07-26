@@ -8,4 +8,6 @@ data class DayAssignmentEntity(
     @PrimaryKey val dayOfWeek: Int,
     val figureId: Long,
     val lens: String? = null,
+    val synced: Boolean = false,
+    val pendingDelete: Boolean = false,
 )

@@ -242,6 +242,7 @@ private class FakeDayAssignmentRepository(
     override suspend fun clear(dayOfWeek: Int) = Unit
     override suspend fun seedDefaultsIfEmpty() = Unit
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = null
+    override suspend fun syncWithRemote(userId: String) = Unit
 }
 
 private class FakeFigureRepository(

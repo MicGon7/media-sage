@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -68,6 +71,21 @@ class AppViewModel(
             } catch (e: Exception) {
                 // Seeding failure is non-fatal — briefing will be empty until next launch
             }
+        }
+
+        viewModelScope.launch {
+            authState
+                .filterIsInstance<AuthUiState.Authenticated>()
+                .map { it.session.userId }
+                .filter { it.isNotBlank() }
+                .distinctUntilChanged()
+                .collect { userId ->
+                    try {
+                        dayAssignmentRepository.syncWithRemote(userId)
+                    } catch (e: Exception) {
+                        // Sync failure is non-fatal — retried on next launch/sign-in
+                    }
+                }
         }
     }
 }
