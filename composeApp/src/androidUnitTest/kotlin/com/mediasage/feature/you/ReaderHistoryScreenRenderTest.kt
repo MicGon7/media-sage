@@ -51,10 +51,20 @@ private val SampleTodayEpoch = LocalDate(2026, 7, 22).toEpochDays().toLong()
 private val SampleEarliestEpoch = LocalDate(2026, 5, 1).toEpochDays().toLong()
 
 private fun sampleCalendarState(): ReaderHistoryContract.UiState.Ready {
-    val monthStart = LocalDate(2026, 7, 1)
+    val currentMonth = buildSampleMonth(LocalDate(2026, 7, 1))
+    val previousMonth = buildSampleMonth(LocalDate(2026, 6, 1))
+    return ReaderHistoryContract.UiState.Ready(
+        todayEpochDay = SampleTodayEpoch,
+        earliestEpochDay = SampleEarliestEpoch,
+        viewMode = ReaderHistoryContract.ViewMode.CALENDAR,
+        calendarMonths = listOf(currentMonth, previousMonth),
+    )
+}
+
+private fun buildSampleMonth(monthStart: LocalDate): List<ReaderHistoryContract.CalendarDay> {
     val monthStartEpoch = monthStart.toEpochDays().toLong()
     val daysInMonth = monthStart.plus(1, DateTimeUnit.MONTH).toEpochDays() - monthStart.toEpochDays()
-    val calendarDays = (0 until daysInMonth).map { d ->
+    return (0 until daysInMonth).map { d ->
         val epochDay = monthStartEpoch + d
         val hasData = epochDay <= SampleTodayEpoch
         ReaderHistoryContract.CalendarDay(
@@ -67,12 +77,6 @@ private fun sampleCalendarState(): ReaderHistoryContract.UiState.Ready {
             figureName = if (hasData) SampleNames[(d % SampleNames.size).toInt()] else null,
         )
     }
-    return ReaderHistoryContract.UiState.Ready(
-        todayEpochDay = SampleTodayEpoch,
-        earliestEpochDay = SampleEarliestEpoch,
-        viewMode = ReaderHistoryContract.ViewMode.CALENDAR,
-        calendarDays = calendarDays,
-    )
 }
 
 private fun sampleListState(): ReaderHistoryContract.UiState.Ready {

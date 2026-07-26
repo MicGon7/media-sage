@@ -27,13 +27,12 @@ object ReaderHistoryContract {
             val todayEpochDay: Long = 0L,
             val earliestEpochDay: Long = 0L,
             val viewMode: ViewMode = ViewMode.LIST,
-            val calendarDays: List<CalendarDay> = emptyList(),
+            val calendarMonths: List<List<CalendarDay>> = emptyList(),
             val listDays: List<ListDay> = emptyList(),
         ) : UiState
     }
 
     sealed interface Intent {
-        data class MonthPageChanged(val year: Int, val month: Int) : Intent
         data class ViewModeChanged(val viewMode: ViewMode) : Intent
     }
 }

@@ -61,14 +61,26 @@ class ReaderHistoryViewModelTest {
     }
 
     @Test
-    fun initialStateShowsCurrentMonth() = runTest(testDispatcher) {
+    fun currentMonthCalendarStartsAtDayOne() = runTest(testDispatcher) {
         val viewModel = historyViewModel()
 
         val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
-        val daysInMonth = today.let { LocalDate(it.year, it.monthNumber, 1) }
-        assertTrue(state.calendarDays.isNotEmpty())
-        assertEquals(1, state.calendarDays.first().dateNumber)
-        assertEquals(daysInMonth.monthNumber, LocalDate.fromEpochDays(state.calendarDays.first().epochDay.toInt()).monthNumber)
+        val currentMonth = state.calendarMonths.first()
+        assertTrue(currentMonth.isNotEmpty())
+        assertEquals(1, currentMonth.first().dateNumber)
+        assertEquals(today.monthNumber, LocalDate.fromEpochDays(currentMonth.first().epochDay.toInt()).monthNumber)
+    }
+
+    @Test
+    fun calendarMonthsAreOrderedMostRecentFirst() = runTest(testDispatcher) {
+        val pastEpochDay = today.toEpochDays().toLong() - 40
+        val viewModel = historyViewModel(briefings = listOf(BriefingDay(pastEpochDay, testFigure.id)))
+
+        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
+        assertTrue(state.calendarMonths.size >= 2)
+        val firstMonthDate = LocalDate.fromEpochDays(state.calendarMonths.first().first().epochDay.toInt())
+        val lastMonthDate = LocalDate.fromEpochDays(state.calendarMonths.last().first().epochDay.toInt())
+        assertTrue(firstMonthDate > lastMonthDate)
     }
 
     @Test
@@ -77,7 +89,7 @@ class ReaderHistoryViewModelTest {
         val viewModel = historyViewModel(assignments = assignments)
 
         val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
-        val todayCell = state.calendarDays.first { it.isToday }
+        val todayCell = state.calendarMonths.first().first { it.isToday }
         assertTrue(todayCell.hasData)
         assertEquals(testFigure.name, todayCell.figureName)
     }
@@ -88,7 +100,7 @@ class ReaderHistoryViewModelTest {
         val viewModel = historyViewModel(assignments = assignments)
 
         val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
-        val futureDay = state.calendarDays.firstOrNull { it.isFuture } ?: return@runTest
+        val futureDay = state.calendarMonths.flatten().firstOrNull { it.isFuture } ?: return@runTest
         assertFalse(futureDay.hasData)
         assertEquals(null, futureDay.figureName)
     }
@@ -99,7 +111,7 @@ class ReaderHistoryViewModelTest {
         val viewModel = historyViewModel(assignments = assignments)
 
         val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
-        val pastDay = state.calendarDays.firstOrNull { !it.isFuture && !it.isToday } ?: return@runTest
+        val pastDay = state.calendarMonths.flatten().firstOrNull { !it.isFuture && !it.isToday } ?: return@runTest
         assertFalse(pastDay.hasData)
         assertEquals(null, pastDay.figureName)
     }
@@ -108,25 +120,13 @@ class ReaderHistoryViewModelTest {
     fun pastDayShowsBriefingReporterThatActuallyRan() = runTest(testDispatcher) {
         val probe = historyViewModel()
         val pastEpochDay = (probe.state.value as ReaderHistoryContract.UiState.Ready)
-            .calendarDays.firstOrNull { !it.isFuture && !it.isToday }?.epochDay ?: return@runTest
+            .calendarMonths.flatten().firstOrNull { !it.isFuture && !it.isToday }?.epochDay ?: return@runTest
         val viewModel = historyViewModel(briefings = listOf(BriefingDay(pastEpochDay, testFigure.id)))
 
         val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
-        val cell = state.calendarDays.first { it.epochDay == pastEpochDay }
+        val cell = state.calendarMonths.flatten().first { it.epochDay == pastEpochDay }
         assertTrue(cell.hasData)
         assertEquals(testFigure.name, cell.figureName)
-    }
-
-    @Test
-    fun monthPageChangedUpdatesVisibleCalendarDays() = runTest(testDispatcher) {
-        val viewModel = historyViewModel()
-        val previousMonth = LocalDate(today.year, today.monthNumber, 1)
-            .let { kotlinx.datetime.LocalDate.fromEpochDays(it.toEpochDays() - 1) }
-
-        viewModel.onIntent(ReaderHistoryContract.Intent.MonthPageChanged(previousMonth.year, previousMonth.monthNumber))
-
-        val state = viewModel.state.value as ReaderHistoryContract.UiState.Ready
-        assertTrue(state.calendarDays.all { LocalDate.fromEpochDays(it.epochDay.toInt()).monthNumber == previousMonth.monthNumber })
     }
 
     @Test
