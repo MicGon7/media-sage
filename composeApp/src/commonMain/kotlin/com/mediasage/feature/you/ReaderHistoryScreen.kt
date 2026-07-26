@@ -16,7 +16,11 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,14 +29,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mediasage.ui.MediaSageBackRow
@@ -52,6 +57,7 @@ import mediasage.composeapp.generated.resources.reader_history_list_empty_subtit
 import mediasage.composeapp.generated.resources.reader_history_list_empty_title
 import mediasage.composeapp.generated.resources.reader_history_view_calendar
 import mediasage.composeapp.generated.resources.reader_history_view_list
+import mediasage.composeapp.generated.resources.reader_history_view_options
 import mediasage.composeapp.generated.resources.you_calendar_section_title
 import mediasage.composeapp.generated.resources.you_nav_history
 import org.jetbrains.compose.resources.stringResource
@@ -70,10 +76,19 @@ fun ReaderHistoryScreen(
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             MediaSageBackRow(onNavigateBack = onNavigateBack) {
-                Text(
-                    text = stringResource(Res.string.you_nav_history),
-                    style = MaterialTheme.typography.titleLarge,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(Res.string.you_nav_history),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    if (ready != null) {
+                        ViewModeMenuButton(viewMode = ready.viewMode, onIntent = onIntent)
+                    }
+                }
             }
             if (ready != null) {
                 Text(
@@ -82,7 +97,6 @@ fun ReaderHistoryScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
-                ViewModeToggle(viewMode = ready.viewMode, onIntent = onIntent)
                 when (ready.viewMode) {
                     ReaderHistoryContract.ViewMode.CALENDAR -> {
                         Text(
@@ -109,25 +123,39 @@ fun ReaderHistoryScreen(
     }
 }
 
+/**
+ * A trailing icon button in the top bar that opens a [DropdownMenu] anchored to itself — Compose's
+ * equivalent of the near-touch-point popover iOS apps use for a view-mode switch, rather than a
+ * second row of tabs competing with the back row for space.
+ */
 @Composable
-private fun ViewModeToggle(
+private fun ViewModeMenuButton(
     viewMode: ReaderHistoryContract.ViewMode,
     onIntent: (ReaderHistoryContract.Intent) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        ReaderHistoryContract.ViewMode.entries.forEach { option ->
-            val selected = option == viewMode
-            Text(
-                text = stringResource(option.labelRes()),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                textDecoration = if (selected) TextDecoration.Underline else TextDecoration.None,
-                modifier = Modifier.clickable { onIntent(ReaderHistoryContract.Intent.ViewModeChanged(option)) },
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ViewList,
+                contentDescription = stringResource(Res.string.reader_history_view_options),
             )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ReaderHistoryContract.ViewMode.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(option.labelRes())) },
+                    onClick = {
+                        onIntent(ReaderHistoryContract.Intent.ViewModeChanged(option))
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        if (option == viewMode) {
+                            Icon(imageVector = Icons.Filled.Check, contentDescription = null)
+                        }
+                    },
+                )
+            }
         }
     }
 }

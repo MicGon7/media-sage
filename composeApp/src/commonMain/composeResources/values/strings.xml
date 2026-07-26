@@ -112,6 +112,7 @@
     <string name="reader_history_intro">Every briefing your figure has given, in one place — browse past days as a list or on a calendar.</string>
     <string name="reader_history_view_calendar">Calendar</string>
     <string name="reader_history_view_list">List</string>
+    <string name="reader_history_view_options">View options</string>
     <string name="history_tab_articles">Articles</string>
     <string name="you_day_detail_articles_label">ARTICLES</string>
     <string name="day_detail_notes_action">Notes</string>
