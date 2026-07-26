@@ -87,5 +87,6 @@ private fun DailyReflectionEntity.toDomain() = DailyReflection(
     implication = implication,
     inspiration = inspiration,
     sources = sources,
-    tone = tone
+    tone = tone,
+    theme = theme.takeIf { it != "NEWS" }
 )

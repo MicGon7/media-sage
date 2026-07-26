@@ -2,15 +2,15 @@ package com.mediasage.feature.daydetail
 
 object DayDetailContract {
 
-    enum class Tab { MORNING, EVENING }
-
-    data class ReflectionSummary(
+    data class BriefingSummary(
         val scriptureReference: String,
         val scriptureText: String,
         val insight: String,
         val implication: String,
         val inspiration: String,
+        val sources: List<String>,
         val tone: String,
+        val theme: String? = null,
     )
 
     sealed interface UiState {
@@ -18,12 +18,12 @@ object DayDetailContract {
             val epochDay: Long,
             val figureName: String? = null,
             val figureImageUrl: String? = null,
-            val selectedTab: Tab = Tab.MORNING,
-            val reflections: List<ReflectionSummary> = emptyList(),
+            val expandedTones: Set<String> = emptySet(),
+            val briefings: List<BriefingSummary> = emptyList(),
         ) : UiState
     }
 
     sealed interface Intent {
-        data class TabSelected(val tab: Tab) : Intent
+        data class BriefingToggled(val tone: String) : Intent
     }
 }

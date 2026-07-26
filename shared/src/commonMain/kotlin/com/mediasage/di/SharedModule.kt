@@ -72,5 +72,5 @@ fun sharedModule(
 
     // Domain use cases — combine/transform data from multiple repositories (NiA domain layer)
     single { GetReaderCalendarUseCase(get(), get(), get(), get()) }
-    single { GetDayDetailUseCase(get(), get()) }
+    single { GetDayDetailUseCase(get()) }
 }

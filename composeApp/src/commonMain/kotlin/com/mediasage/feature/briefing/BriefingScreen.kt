@@ -12,7 +12,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -41,21 +39,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import coil3.compose.AsyncImage
-import com.mediasage.theme.LensFaith
-import com.mediasage.theme.LensGrace
-import com.mediasage.theme.LensGrief
-import com.mediasage.theme.LensHope
-import com.mediasage.theme.LensJustice
-import com.mediasage.theme.LensLove
-import com.mediasage.theme.LensPerseverance
-import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
+import com.mediasage.ui.MediaSageBriefingCard
 import com.mediasage.ui.MediaSageErrorState
 import com.mediasage.ui.SepiaColorFilter
+import com.mediasage.ui.ThemeChip
 import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.briefing_card_based_on
 import mediasage.composeapp.generated.resources.briefing_card_loading
 import mediasage.composeapp.generated.resources.app_name
 import mediasage.composeapp.generated.resources.home_error_generic
@@ -180,104 +171,18 @@ private fun BriefingCard(
     card: BriefingContract.CardState.Ready,
     onFigureTap: (Long) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .clip(MaterialTheme.shapes.small)
-                .clickable { onFigureTap(card.figureId) }
-        ) {
-            if (card.figureImageUrl != null) {
-                AsyncImage(
-                    model = card.figureImageUrl,
-                    contentDescription = card.figureName,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    colorFilter = SepiaColorFilter
-                )
-            } else {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        FigurePlaceholder(name = card.figureName, size = 80.dp)
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text(
-                text = card.figureName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            if (card.theme != null) {
-                Spacer(modifier = Modifier.width(8.dp))
-                ThemeChip(theme = card.theme)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        if (card.sources.isNotEmpty()) {
-            Text(
-                text = "${stringResource(Res.string.briefing_card_based_on)} ${card.sources.joinToString(", ")}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontStyle = FontStyle.Italic
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = card.scriptureReference,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "“${card.scriptureText}”",
-            style = MaterialTheme.typography.bodyMedium,
-            fontStyle = FontStyle.Italic,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = card.insight,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = card.implication,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = card.inspiration,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-    }
+    MediaSageBriefingCard(
+        figureName = card.figureName,
+        figureImageUrl = card.figureImageUrl,
+        scriptureReference = card.scriptureReference,
+        scriptureText = card.scriptureText,
+        insight = card.insight,
+        implication = card.implication,
+        inspiration = card.inspiration,
+        onFigureTap = { onFigureTap(card.figureId) },
+        theme = card.theme,
+        sources = card.sources,
+    )
 }
 
 @Composable
@@ -387,29 +292,6 @@ private fun BriefingCardSkeleton() {
         Spacer(modifier = Modifier.height(12.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
     }
-}
-
-@Composable
-private fun ThemeChip(theme: String) {
-    val color = when (theme.uppercase()) {
-        "LOVE" -> LensLove
-        "GRACE" -> LensGrace
-        "FAITH" -> LensFaith
-        "GRIEF" -> LensGrief
-        "REPENTANCE" -> LensRepentance
-        "HOPE" -> LensHope
-        "JUSTICE" -> LensJustice
-        "PERSEVERANCE" -> LensPerseverance
-        else -> MaterialTheme.colorScheme.primary
-    }
-    Text(
-        text = theme.lowercase().replaceFirstChar { it.uppercase() },
-        style = MaterialTheme.typography.labelSmall,
-        color = color,
-        modifier = Modifier
-            .border(width = 1.dp, color = color, shape = RoundedCornerShape(50))
-            .padding(horizontal = 8.dp, vertical = 2.dp)
-    )
 }
 
 @Preview(showBackground = true)

@@ -140,8 +140,8 @@
     <string name="figure_detail_pinned_to_home">Pinned to Home</string>
     <string name="briefing_card_loading">Daily Briefing</string>
     <string name="briefing_card_based_on">Based on</string>
-    <string name="briefing_card_morning">Morning Reflection</string>
-    <string name="briefing_card_evening">Evening Reflection</string>
+    <string name="briefing_card_morning">Morning</string>
+    <string name="briefing_card_evening">Evening</string>
 
     <string name="login_masthead_line1">THE COURAGE</string>
     <string name="login_masthead_line2">POST</string>
