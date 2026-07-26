@@ -2,6 +2,7 @@
 
 package com.mediasage.feature.you
 
+import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.model.BriefingDay
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
@@ -23,12 +24,16 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 class ReaderViewModelTest {
 
@@ -94,6 +99,74 @@ class ReaderViewModelTest {
         assertNull(state.activeSheet)
     }
 
+    @Test
+    fun figureAssigned_appliesImmediatelyWhenTodayHasNoBriefingYet() = runTest(testDispatcher) {
+        val otherFigure = Figure(id = 2L, name = "C.S. Lewis", category = FigureCategory.THEOLOGIAN, century = "20th", role = "Author")
+        val (viewModel, dayAssignmentRepo) = readerViewModelWithRepo(figure = testFigure, extraFigures = listOf(otherFigure))
+
+        viewModel.onIntent(ReaderContract.Intent.FigureAssigned(dayOfWeek = todayOrdinal, figureId = 2L, lens = null))
+
+        assertEquals(listOf(Triple(todayOrdinal, 2L, null)), dayAssignmentRepo.assignCalls)
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertNull(state.pendingReassignment)
+    }
+
+    @Test
+    fun figureAssigned_promptsConfirmationWhenTodayAlreadyBriefedForADifferentFigure() = runTest(testDispatcher) {
+        val otherFigure = Figure(id = 2L, name = "C.S. Lewis", category = FigureCategory.THEOLOGIAN, century = "20th", role = "Author")
+        val briefing = BriefingDay(epochDay = todayEpochDay, figureId = 1L, scriptureReference = "John 3:16", scriptureText = "…")
+        val (viewModel, dayAssignmentRepo) = readerViewModelWithRepo(
+            figure = testFigure,
+            extraFigures = listOf(otherFigure),
+            briefings = listOf(briefing),
+        )
+
+        viewModel.onIntent(ReaderContract.Intent.FigureAssigned(dayOfWeek = todayOrdinal, figureId = 2L, lens = null))
+
+        assertTrue(dayAssignmentRepo.assignCalls.isEmpty())
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        val pending = state.pendingReassignment
+        assertNotNull(pending)
+        assertEquals("Augustine of Hippo", pending.currentFigureName)
+        assertEquals("C.S. Lewis", pending.newFigureName)
+    }
+
+    @Test
+    fun confirmReassignment_appliesTheWriteAndClearsTheDialog() = runTest(testDispatcher) {
+        val otherFigure = Figure(id = 2L, name = "C.S. Lewis", category = FigureCategory.THEOLOGIAN, century = "20th", role = "Author")
+        val briefing = BriefingDay(epochDay = todayEpochDay, figureId = 1L, scriptureReference = "John 3:16", scriptureText = "…")
+        val (viewModel, dayAssignmentRepo) = readerViewModelWithRepo(
+            figure = testFigure,
+            extraFigures = listOf(otherFigure),
+            briefings = listOf(briefing),
+        )
+        viewModel.onIntent(ReaderContract.Intent.FigureAssigned(dayOfWeek = todayOrdinal, figureId = 2L, lens = null))
+
+        viewModel.onIntent(ReaderContract.Intent.ConfirmReassignment)
+
+        assertEquals(listOf(Triple(todayOrdinal, 2L, null)), dayAssignmentRepo.assignCalls)
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertNull(state.pendingReassignment)
+    }
+
+    @Test
+    fun cancelReassignment_leavesAssignmentUnchanged() = runTest(testDispatcher) {
+        val otherFigure = Figure(id = 2L, name = "C.S. Lewis", category = FigureCategory.THEOLOGIAN, century = "20th", role = "Author")
+        val briefing = BriefingDay(epochDay = todayEpochDay, figureId = 1L, scriptureReference = "John 3:16", scriptureText = "…")
+        val (viewModel, dayAssignmentRepo) = readerViewModelWithRepo(
+            figure = testFigure,
+            extraFigures = listOf(otherFigure),
+            briefings = listOf(briefing),
+        )
+        viewModel.onIntent(ReaderContract.Intent.FigureAssigned(dayOfWeek = todayOrdinal, figureId = 2L, lens = null))
+
+        viewModel.onIntent(ReaderContract.Intent.CancelReassignment)
+
+        assertTrue(dayAssignmentRepo.assignCalls.isEmpty())
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertNull(state.pendingReassignment)
+    }
+
     /**
      * Builds the ViewModel and starts collecting its state. `stateIn(WhileSubscribed)` is cold
      * until a subscriber is present, so an active collector in [backgroundScope] is required for
@@ -104,17 +177,31 @@ class ReaderViewModelTest {
         latestQuote: Quote?,
         extraFigures: List<Figure> = emptyList(),
         assignments: Map<Int, DayAssignment> = emptyMap(),
-    ): ReaderViewModel {
+    ): ReaderViewModel = readerViewModelWithRepo(figure, extraFigures, assignments, emptyList(), latestQuote).first
+
+    private fun TestScope.readerViewModelWithRepo(
+        figure: Figure,
+        extraFigures: List<Figure> = emptyList(),
+        assignments: Map<Int, DayAssignment> = emptyMap(),
+        briefings: List<BriefingDay> = emptyList(),
+        latestQuote: Quote? = null,
+    ): Pair<ReaderViewModel, FakeDayAssignmentRepository> {
         val figureRepo = FakeFigureRepository(listOf(figure) + extraFigures)
         val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(assignments))
         val quoteRepo = FakeQuoteRepository(latestQuote)
-        val reflectionRepo = FakeDailyReflectionRepository()
+        val reflectionRepo = FakeDailyReflectionRepository(briefings)
         val viewModel = ReaderViewModel(
             getReaderCalendar = GetReaderCalendarUseCase(figureRepo, dayAssignmentRepo, quoteRepo, reflectionRepo),
             dayAssignmentRepository = dayAssignmentRepo,
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
-        return viewModel
+        return viewModel to dayAssignmentRepo
+    }
+
+    private companion object {
+        val today = Instant.fromEpochMilliseconds(epochMillis()).toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val todayOrdinal = today.dayOfWeek.ordinal
+        val todayEpochDay = today.toEpochDays().toLong()
     }
 }
 
@@ -130,9 +217,15 @@ private class FakeFigureRepository(private val figures: List<Figure>) : FigureRe
 private class FakeDayAssignmentRepository(
     private val assignmentsFlow: MutableStateFlow<Map<Int, DayAssignment>>
 ) : DayAssignmentRepository {
+    val assignCalls = mutableListOf<Triple<Int, Long, LensFilter?>>()
+    val clearCalls = mutableListOf<Int>()
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = assignmentsFlow
-    override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
-    override suspend fun clear(dayOfWeek: Int) = Unit
+    override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) {
+        assignCalls.add(Triple(dayOfWeek, figureId, lens))
+    }
+    override suspend fun clear(dayOfWeek: Int) {
+        clearCalls.add(dayOfWeek)
+    }
     override suspend fun seedDefaultsIfEmpty() = Unit
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = null
 }
@@ -151,6 +244,8 @@ private class FakeDailyReflectionRepository(
         MutableStateFlow(briefings.filter { it.epochDay in startEpochDay..endEpochDay })
     override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? = null
     override suspend fun getEarliestBriefingEpochDay(): Long? = briefings.minOfOrNull { it.epochDay }
+    override suspend fun getLockedFigureId(epochDay: Long): Long? =
+        briefings.firstOrNull { it.epochDay == epochDay }?.figureId
 }
 
 private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteRepository {

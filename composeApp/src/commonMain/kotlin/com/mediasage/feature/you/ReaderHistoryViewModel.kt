@@ -158,10 +158,13 @@ class ReaderHistoryViewModel(
     }
 
     /**
-     * Past days show the reporter whose briefing actually ran. Today shows the reporter the
-     * recurring schedule currently resolves to, since today's content is generated from it. Future
-     * days never resolve to a reporter here — showing the recurring-schedule preview as if it were
-     * settled history is exactly the ambiguity this screen exists to avoid.
+     * Past days, and today once its briefing has been generated, show the reporter whose briefing
+     * actually ran — once generated, today's reporter is locked and no longer tracks the recurring
+     * schedule (see [com.mediasage.domain.repository.DayAssignmentRepository.resolveReporter]).
+     * Before today's briefing exists yet, it falls back to the reporter the recurring schedule
+     * currently resolves to. Future days never resolve to a reporter here — showing the
+     * recurring-schedule preview as if it were settled history is exactly the ambiguity this screen
+     * exists to avoid.
      */
     private fun resolveFigureId(
         epochDay: Long,
@@ -170,7 +173,8 @@ class ReaderHistoryViewModel(
     ): Long? = when {
         epochDay > todayEpochDay -> null
         epochDay == todayEpochDay ->
-            assignmentsByDayOfWeek[LocalDate.fromEpochDays(epochDay.toInt()).dayOfWeek.ordinal]?.figureId
+            briefingByDay[epochDay]?.figureId
+                ?: assignmentsByDayOfWeek[LocalDate.fromEpochDays(epochDay.toInt()).dayOfWeek.ordinal]?.figureId
         else -> briefingByDay[epochDay]?.figureId
     }
 

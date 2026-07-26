@@ -96,6 +96,24 @@ class DailyReflectionDaoTest {
 
         assertEquals(10L, result)
     }
+
+    @Test
+    fun getFigureIdForDay_returnsNullWhenNoReflectionExists() = runTest {
+        val dao = FakeDailyReflectionDao()
+
+        val result = dao.getFigureIdForDay(epochDay = 10L)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun getFigureIdForDay_returnsFigureIdWhenReflectionExists() = runTest {
+        val dao = FakeDailyReflectionDao(listOf(entity("a", 10L)))
+
+        val result = dao.getFigureIdForDay(epochDay = 10L)
+
+        assertEquals(1L, result)
+    }
 }
 
 private class FakeDailyReflectionDao(private val store: List<DailyReflectionEntity> = emptyList()) : DailyReflectionDao {
@@ -120,6 +138,9 @@ private class FakeDailyReflectionDao(private val store: List<DailyReflectionEnti
         store.firstOrNull { it.epochDay == epochDay && it.tone == tone }
 
     override suspend fun getEarliestEpochDay(): Long? = store.minOfOrNull { it.epochDay }
+
+    override suspend fun getFigureIdForDay(epochDay: Long): Long? =
+        store.firstOrNull { it.epochDay == epochDay }?.figureId
 
     override suspend fun upsert(entity: DailyReflectionEntity) {}
 }

@@ -82,6 +82,7 @@ import com.mediasage.theme.LensPerseverance
 import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
+import com.mediasage.ui.ReassignConfirmationDialog
 import com.mediasage.ui.ScreenHeader
 import kotlinx.datetime.DayOfWeek
 import mediasage.composeapp.generated.resources.Res
@@ -148,6 +149,17 @@ fun ReaderScreen(
                 },
             )
         }
+    }
+
+    ready?.pendingReassignment?.let { pending ->
+        ReassignConfirmationDialog(
+            currentFigureName = pending.currentFigureName,
+            newFigureName = pending.newFigureName,
+            nextWeekdayLabel = pending.nextWeekdayLabel,
+            onConfirm = { onIntent(ReaderContract.Intent.ConfirmReassignment) },
+            onDismiss = { onIntent(ReaderContract.Intent.CancelReassignment) },
+            showSchedulerHint = false,
+        )
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {

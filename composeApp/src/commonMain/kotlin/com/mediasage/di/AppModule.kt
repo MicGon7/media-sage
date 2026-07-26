@@ -33,7 +33,15 @@ val appModule = module {
     viewModel { HeadlinesViewModel(get<HeadlineRepository>()) }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get(), get(), get()) }
     viewModel { FiguresViewModel(get<FigureRepository>(), get<EncouragementRepository>(), get<DayAssignmentRepository>()) }
-    viewModel { (figureId: Long) -> FigureDetailViewModel(figureId, get<FigureRepository>(), get<EncouragementRepository>(), get<DayAssignmentRepository>()) }
+    viewModel { (figureId: Long) ->
+        FigureDetailViewModel(
+            figureId,
+            get<FigureRepository>(),
+            get<EncouragementRepository>(),
+            get<DayAssignmentRepository>(),
+            get<DailyReflectionRepository>(),
+        )
+    }
     viewModel { LoginViewModel(get<AuthRepository>(), get<AuthPreferencesRepository>()) }
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
     viewModel { ReaderViewModel(get<GetReaderCalendarUseCase>(), get<DayAssignmentRepository>()) }

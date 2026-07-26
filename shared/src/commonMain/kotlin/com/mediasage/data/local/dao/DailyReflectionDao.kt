@@ -30,6 +30,9 @@ interface DailyReflectionDao {
     @Query("SELECT * FROM daily_reflection WHERE epochDay = :epochDay AND tone = :tone LIMIT 1")
     suspend fun getForDayAndTone(epochDay: Long, tone: String): DailyReflectionEntity?
 
+    @Query("SELECT figureId FROM daily_reflection WHERE epochDay = :epochDay LIMIT 1")
+    suspend fun getFigureIdForDay(epochDay: Long): Long?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: DailyReflectionEntity)
 }

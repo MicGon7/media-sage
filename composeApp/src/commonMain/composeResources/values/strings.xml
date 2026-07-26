@@ -134,6 +134,13 @@
 
     <string name="figure_detail_pin_to_home">Pin to Home</string>
     <string name="figure_detail_pinned_to_home">Pinned to Home</string>
+
+    <!-- Reassignment confirmation dialog (Reader carousel + Reporter Detail pin) -->
+    <string name="reassign_dialog_title">Today’s briefing already exists</string>
+    <string name="reassign_dialog_message">You already have a briefing from %1$s today. %2$s will start next %3$s.</string>
+    <string name="reassign_dialog_hint">To change other days, use the weekly schedule on the Reader screen.</string>
+    <string name="reassign_dialog_confirm">Confirm</string>
+    <string name="reassign_dialog_cancel">Cancel</string>
     <string name="briefing_card_loading">Daily Briefing</string>
     <string name="briefing_card_based_on">Based on</string>
     <string name="briefing_card_morning">Morning</string>

@@ -18,4 +18,7 @@ interface DailyReflectionRepository {
     suspend fun getForDay(epochDay: Long, tone: String): DailyReflection?
 
     suspend fun getEarliestBriefingEpochDay(): Long?
+
+    /** The figure id already briefed for [epochDay], if any — that day's reporter is locked. */
+    suspend fun getLockedFigureId(epochDay: Long): Long?
 }
