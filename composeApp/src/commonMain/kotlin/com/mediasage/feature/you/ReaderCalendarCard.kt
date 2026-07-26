@@ -40,6 +40,7 @@ fun CalendarCard(
         Surface(
             shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surfaceVariant,
             tonalElevation = 0.dp,
             shadowElevation = 6.dp
         ) {
