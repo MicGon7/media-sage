@@ -40,8 +40,8 @@ fun CalendarCard(
         Surface(
             shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth(),
-            tonalElevation = 3.dp,
-            shadowElevation = 4.dp
+            tonalElevation = 0.dp,
+            shadowElevation = 6.dp
         ) {
             Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                 MonthHeader(days)
