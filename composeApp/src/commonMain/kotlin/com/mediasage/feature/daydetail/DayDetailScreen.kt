@@ -15,12 +15,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Notes
+import androidx.compose.material.icons.automirrored.outlined.StickyNote2
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -69,6 +70,7 @@ fun DayDetailScreen(
                         figureName = ready.figureName,
                         figureImageUrl = ready.figureImageUrl,
                     )
+
                     else -> MultipleBriefingsContent(
                         briefings = ready.briefings,
                         expandedTone = ready.expandedTone,
@@ -95,7 +97,11 @@ private fun toneLabelRes(tone: String): StringResource =
 @Composable
 private fun DayDetailHeader(epochDay: Long) {
     val dateText = remember(epochDay) { formatEpochDay(epochDay) }
-    Text(text = dateText, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+    Text(
+        text = dateText,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold
+    )
 }
 
 @Composable
@@ -104,9 +110,7 @@ private fun SingleBriefingContent(
     figureName: String?,
     figureImageUrl: String?,
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-        ToneHeader(tone = briefing.tone)
-        Spacer(modifier = Modifier.height(8.dp))
+    Column(modifier = Modifier.fillMaxWidth()) {
         MediaSageBriefingCard(
             figureName = figureName,
             figureImageUrl = figureImageUrl,
@@ -120,16 +124,6 @@ private fun SingleBriefingContent(
             trailingContent = { BriefingActions() },
         )
     }
-}
-
-@Composable
-private fun ToneHeader(tone: String) {
-    Text(
-        text = stringResource(toneLabelRes(tone)),
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 16.dp),
-    )
 }
 
 /**
@@ -167,7 +161,8 @@ private fun ExpandableBriefingSection(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle)
+                .padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -207,27 +202,29 @@ private fun ExpandableBriefingSection(
 private fun BriefingActions() {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
+        horizontalArrangement = Arrangement.End
     ) {
-        BriefingActionButton(icon = Icons.AutoMirrored.Outlined.Notes, label = stringResource(Res.string.day_detail_notes_action))
-        BriefingActionButton(icon = Icons.Outlined.Share, label = stringResource(Res.string.day_detail_share_action))
+        BriefingActionButton(
+            icon = Icons.AutoMirrored.Outlined.StickyNote2,
+            contentDescription = stringResource(Res.string.day_detail_notes_action),
+        )
+        Spacer(modifier = Modifier.width(24.dp))
+        BriefingActionButton(
+            icon = Icons.Outlined.Share,
+            contentDescription = stringResource(Res.string.day_detail_share_action),
+        )
     }
 }
 
 @Composable
-private fun BriefingActionButton(icon: ImageVector, label: String) {
-    Row(
-        modifier = Modifier.clickable(onClick = {}),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+private fun BriefingActionButton(icon: ImageVector, contentDescription: String) {
+    IconButton(onClick = {}) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = contentDescription,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(18.dp),
         )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

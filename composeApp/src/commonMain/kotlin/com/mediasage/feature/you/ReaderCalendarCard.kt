@@ -19,7 +19,6 @@ import androidx.compose.runtime.remember
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,19 +26,9 @@ import androidx.compose.ui.unit.sp
 import com.mediasage.theme.BrandAmber
 import kotlinx.datetime.LocalDate
 
-// A month spans at most six week rows. Reserving a fixed six-row grid area keeps
-// every month card the same height, so the carousel does not jump when scrolling
-// between months with different week counts (e.g. a 5-row month next to a 6-row one).
-private const val CALENDAR_WEEK_ROWS = 6
-
-// Fixed height for every day cell (date label + 28.dp portrait + padding) so filled
-// and empty rows measure identically and month heights stay constant.
+// Fixed height for every day cell (date label + 28.dp portrait + padding) so week rows
+// within a month card measure consistently.
 private val MonthDayCellHeight = 50.dp
-
-// The grid always reserves six rows so the card height never changes between months.
-// Shorter months leave a small gap at the bottom — intentional space held for future
-// Reader features.
-private val CalendarBodyHeight = MonthDayCellHeight * CALENDAR_WEEK_ROWS
 
 @Composable
 fun CalendarCard(
@@ -51,26 +40,25 @@ fun CalendarCard(
         Surface(
             shape = MaterialTheme.shapes.large,
             modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surfaceVariant,
             tonalElevation = 0.dp,
-            shadowElevation = 2.dp
+            shadowElevation = 6.dp
         ) {
             Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                 MonthHeader(days)
                 WeekDayHeaderRow()
-                Column(modifier = Modifier.height(CalendarBodyHeight)) {
-                    val firstDayOffset = days.firstOrNull()?.let {
-                        LocalDate.fromEpochDays(it.epochDay.toInt()).dayOfWeek.ordinal
-                    } ?: 0
-                    val cells = buildMonthCells(days, firstDayOffset)
-                    cells.chunked(7).forEach { week ->
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            week.forEach { day ->
-                                MonthDayCell(
-                                    day = day,
-                                    onClick = { day?.let { onDayTapped(it.epochDay) } },
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
+                val firstDayOffset = days.firstOrNull()?.let {
+                    LocalDate.fromEpochDays(it.epochDay.toInt()).dayOfWeek.ordinal
+                } ?: 0
+                val cells = buildMonthCells(days, firstDayOffset)
+                cells.chunked(7).forEach { week ->
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        week.forEach { day ->
+                            MonthDayCell(
+                                day = day,
+                                onClick = { day?.let { onDayTapped(it.epochDay) } },
+                                modifier = Modifier.weight(1f),
+                            )
                         }
                     }
                 }
@@ -151,20 +139,17 @@ private fun DayPortrait(
     day: ReaderHistoryContract.CalendarDay,
     showRing: Boolean = true,
 ) {
-    val isPast = !day.isToday && !day.isFuture
     if (day.figurePortraitUrl != null) {
         FigurePortraitImage(
             imageUrl = day.figurePortraitUrl,
             name = day.figureName,
             size = 28.dp,
             isToday = day.isToday,
-            isPast = isPast,
             showRing = showRing,
         )
     } else {
         val fallbackModifier = Modifier.size(28.dp).clip(CircleShape)
             .then(if (day.isToday && showRing) Modifier.solidCircleBorder(BrandAmber, 2.dp) else Modifier)
-            .then(if (isPast) Modifier.alpha(0.6f) else Modifier)
         Box(
             modifier = fallbackModifier.background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,

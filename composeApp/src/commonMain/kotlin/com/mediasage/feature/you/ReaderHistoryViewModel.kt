@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -42,6 +41,10 @@ import kotlin.time.Instant
  * earliest recorded briefing, not a hardcoded release date — a month with no briefings is never
  * reachable.
  *
+ * The calendar view renders every month from the earliest recorded briefing through the current
+ * month as a single scrollable list (most recent first), all derived from one full-range fetch —
+ * there is no per-month paging or lazy loading to coordinate.
+ *
  * Tapping a day navigates straight to the pushed day-detail screen (which owns its own
  * `GetDayDetailUseCase` fetch); this ViewModel only ever needs to know which reporter's portrait to
  * show on each calendar cell or list row.
@@ -58,10 +61,10 @@ class ReaderHistoryViewModel(
     private val today = Instant.fromEpochMilliseconds(epochMillis())
         .toLocalDateTime(TimeZone.currentSystemDefault()).date
     private val todayEpochDay = today.toEpochDays().toLong()
+    private val currentMonthEndEpochDay = LocalDate(today.year, today.monthNumber, 1)
+        .plus(1, DateTimeUnit.MONTH).toEpochDays().toLong() - 1
 
-    private val input = MutableStateFlow(
-        HistoryInput(visibleMonth = LocalDate(today.year, today.monthNumber, 1)),
-    )
+    private val viewMode = MutableStateFlow(ReaderHistoryContract.ViewMode.LIST)
 
     /** The earliest day with a real briefing, resolved once. Falls back to today when there is none. */
     private val earliestEpochDay: Flow<Long> = flow {
@@ -69,20 +72,13 @@ class ReaderHistoryViewModel(
         emit(minOf(earliest, todayEpochDay))
     }
 
-    /** Calendar material for the visible month. Restarts only when the month changes. */
-    private val monthCalendarData: Flow<ReaderCalendarData> =
-        input.map { it.visibleMonth }.distinctUntilChanged().flatMapLatest { month ->
-            val range = monthRange(month)
-            getReaderCalendar(range.monthStart, range.monthEnd)
-        }
-
     /** Earliest day paired with the calendar material for the entire bounded history. */
     private val fullRangeCalendarData: Flow<Pair<Long, ReaderCalendarData>> =
         earliestEpochDay.flatMapLatest { earliest -> getReaderCalendar(earliest, todayEpochDay).map { earliest to it } }
 
     val state: StateFlow<ReaderHistoryContract.UiState> =
-        combine(input, monthCalendarData, fullRangeCalendarData) { input, monthData, (earliest, fullData) ->
-            buildReady(input, monthData, fullData, earliest)
+        combine(viewMode, fullRangeCalendarData) { mode, (earliest, data) ->
+            buildReady(mode, data, earliest)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -94,49 +90,52 @@ class ReaderHistoryViewModel(
 
     fun onIntent(intent: ReaderHistoryContract.Intent) {
         when (intent) {
-            is ReaderHistoryContract.Intent.MonthPageChanged ->
-                input.update { it.copy(visibleMonth = LocalDate(intent.year, intent.month, 1)) }
-            is ReaderHistoryContract.Intent.ViewModeChanged ->
-                input.update { it.copy(viewMode = intent.viewMode) }
+            is ReaderHistoryContract.Intent.ViewModeChanged -> viewMode.update { intent.viewMode }
         }
     }
 
     private fun buildReady(
-        input: HistoryInput,
-        monthData: ReaderCalendarData,
-        fullData: ReaderCalendarData,
-        earliestEpochDay: Long,
-    ): ReaderHistoryContract.UiState.Ready {
-        val monthFiguresById = monthData.figures.associateBy { it.id }
-        val range = monthRange(input.visibleMonth)
-        val daysInMonth = (range.monthEnd - range.monthStart + 1).toInt()
-        return ReaderHistoryContract.UiState.Ready(
-            todayEpochDay = todayEpochDay,
-            earliestEpochDay = earliestEpochDay,
-            viewMode = input.viewMode,
-            calendarDays = buildCalendarDays(range.monthStart, daysInMonth, monthFiguresById, monthData),
-            listDays = buildListDays(earliestEpochDay, fullData),
-        )
-    }
-
-    private fun buildCalendarDays(
-        monthStartEpoch: Long,
-        daysInMonth: Int,
-        figuresById: Map<Long, Figure>,
+        mode: ReaderHistoryContract.ViewMode,
         data: ReaderCalendarData,
-    ): List<ReaderHistoryContract.CalendarDay> = (0 until daysInMonth).map { d ->
-        val epochDay = monthStartEpoch + d
-        val figureId = resolveFigureId(epochDay, data.briefingByDay, data.assignmentsByDayOfWeek)
-        val figure = figureId?.let { figuresById[it] }
-        ReaderHistoryContract.CalendarDay(
-            epochDay = epochDay,
-            dateNumber = LocalDate.fromEpochDays(epochDay.toInt()).dayOfMonth,
-            isToday = epochDay == todayEpochDay,
-            isFuture = epochDay > todayEpochDay,
-            hasData = figureId != null,
-            figurePortraitUrl = figure?.portraitUrl,
-            figureName = figure?.name,
-        )
+        earliestEpochDay: Long,
+    ): ReaderHistoryContract.UiState.Ready = ReaderHistoryContract.UiState.Ready(
+        todayEpochDay = todayEpochDay,
+        earliestEpochDay = earliestEpochDay,
+        viewMode = mode,
+        calendarMonths = buildCalendarMonths(earliestEpochDay, data),
+        listDays = buildListDays(earliestEpochDay, data),
+    )
+
+    /**
+     * Builds every full calendar month from the month containing [earliestEpochDay] through the
+     * current month, grouped and ordered most-recent-first for the scrollable Calendar view. Each
+     * month is generated in full (day 1 through its last day) — not clipped to the earliest/today
+     * bounds — so the weekday grid always aligns correctly; days outside the real data range simply
+     * resolve to `hasData = false`.
+     */
+    private fun buildCalendarMonths(
+        earliestEpochDay: Long,
+        data: ReaderCalendarData,
+    ): List<List<ReaderHistoryContract.CalendarDay>> {
+        val figuresById = data.figures.associateBy { it.id }
+        val earliestMonthStart = LocalDate.fromEpochDays(earliestEpochDay.toInt())
+            .let { LocalDate(it.year, it.monthNumber, 1) }.toEpochDays().toLong()
+        val days = (earliestMonthStart..currentMonthEndEpochDay).map { epochDay ->
+            val figureId = resolveFigureId(epochDay, data.briefingByDay, data.assignmentsByDayOfWeek)
+            val figure = figureId?.let { figuresById[it] }
+            ReaderHistoryContract.CalendarDay(
+                epochDay = epochDay,
+                dateNumber = LocalDate.fromEpochDays(epochDay.toInt()).dayOfMonth,
+                isToday = epochDay == todayEpochDay,
+                isFuture = epochDay > todayEpochDay,
+                hasData = figureId != null,
+                figurePortraitUrl = figure?.portraitUrl,
+                figureName = figure?.name,
+            )
+        }
+        return days
+            .groupBy { LocalDate.fromEpochDays(it.epochDay.toInt()).let { d -> d.year to d.monthNumber } }
+            .values.toList().asReversed()
     }
 
     private fun buildListDays(
@@ -174,23 +173,6 @@ class ReaderHistoryViewModel(
             assignmentsByDayOfWeek[LocalDate.fromEpochDays(epochDay.toInt()).dayOfWeek.ordinal]?.figureId
         else -> briefingByDay[epochDay]?.figureId
     }
-
-    private fun monthRange(month: LocalDate): MonthRange {
-        val start = month.toEpochDays().toLong()
-        val end = month.plus(1, DateTimeUnit.MONTH).toEpochDays().toLong() - 1
-        return MonthRange(monthStart = start, monthEnd = end)
-    }
-
-    /** The user-owned view selection — the single mutable input to the state pipeline. */
-    private data class HistoryInput(
-        val visibleMonth: LocalDate,
-        val viewMode: ReaderHistoryContract.ViewMode = ReaderHistoryContract.ViewMode.LIST,
-    )
-
-    private data class MonthRange(
-        val monthStart: Long,
-        val monthEnd: Long,
-    )
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
