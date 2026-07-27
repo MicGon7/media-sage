@@ -56,6 +56,11 @@ class DayAssignmentRepositoryImpl(
         dailyReflectionRepository.getLockedFigureId(epochDay) ?: dao.getByDayOfWeek(dayOfWeek)?.figureId
 
     override suspend fun resolve(userId: String?) {
+        // Flips back to false for the duration of *every* resolve pass, not just the first —
+        // otherwise a later correction (e.g. the real signed-in schedule replacing fallback
+        // defaults seeded moments earlier on a fresh install) mutates the data a live collector
+        // is already showing with no signal to prefer a loading state over the stale content.
+        _isResolved.value = false
         try {
             // A signed-out resolve() has no account to push these rows to — mark them
             // already-synced so they're pure local placeholder content, never a "pending

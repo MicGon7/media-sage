@@ -5,6 +5,7 @@ import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.data.remote.MediaSageApiImpl
 import com.mediasage.data.remote.createHttpClient
 import com.mediasage.data.repository.AuthRepositoryImpl
+import com.mediasage.data.repository.DailyReflectionRemoteDataSource
 import com.mediasage.data.repository.DailyReflectionRepositoryImpl
 import com.mediasage.data.repository.DayAssignmentRemoteDataSource
 import com.mediasage.data.repository.DayAssignmentRepositoryImpl
@@ -12,6 +13,7 @@ import com.mediasage.data.repository.EncouragementRepositoryImpl
 import com.mediasage.data.repository.FigureRepositoryImpl
 import com.mediasage.data.repository.HeadlineRepositoryImpl
 import com.mediasage.data.repository.MatchRepositoryImpl
+import com.mediasage.data.repository.PostgrestDailyReflectionRemoteDataSource
 import com.mediasage.data.repository.PostgrestDayAssignmentRemoteDataSource
 import com.mediasage.data.repository.QuoteRepositoryImpl
 import com.mediasage.data.repository.WikipediaRepositoryImpl
@@ -46,6 +48,7 @@ fun sharedModule(
             }
         }
         single<DayAssignmentRemoteDataSource> { PostgrestDayAssignmentRemoteDataSource(get()) }
+        single<DailyReflectionRemoteDataSource> { PostgrestDailyReflectionRemoteDataSource(get()) }
     }
 
     // HTTP client for communicating with the Media Sage server
@@ -71,7 +74,9 @@ fun sharedModule(
     single<MatchRepository> { MatchRepositoryImpl(get()) }
     single<EncouragementRepository> { EncouragementRepositoryImpl(get(), get(), get()) }
     single<WikipediaRepository> { WikipediaRepositoryImpl(get()) }
-    single<DailyReflectionRepository> { DailyReflectionRepositoryImpl(get(), get()) }
+    single<DailyReflectionRepository> {
+        DailyReflectionRepositoryImpl(get(), get(), get(), getOrNull(), get(), get())
+    }
     single<AuthRepository> { AuthRepositoryImpl(getOrNull<SupabaseClient>()) }
     single<DayAssignmentRepository> {
         DayAssignmentRepositoryImpl(get(), get(), get(), get(), getOrNull(), get(), get())

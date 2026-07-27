@@ -248,6 +248,8 @@ private class FakeDailyReflectionRepository(
     override suspend fun getEarliestBriefingEpochDay(): Long? = briefings.minOfOrNull { it.epochDay }
     override suspend fun getLockedFigureId(epochDay: Long): Long? =
         briefings.firstOrNull { it.epochDay == epochDay }?.figureId
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
+    override suspend fun resolve(userId: String?) = Unit
 }
 
 private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteRepository {
