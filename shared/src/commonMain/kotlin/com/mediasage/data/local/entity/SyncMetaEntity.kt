@@ -9,4 +9,5 @@ data class SyncMetaEntity(
     val lastFigureSyncAt: Long? = null,
     val lastDayAssignmentSyncUserId: String? = null,
     val lastDailyReflectionSyncUserId: String? = null,
+    val lastSavedInsightSyncUserId: String? = null,
 )

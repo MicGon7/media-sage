@@ -7,6 +7,7 @@ import com.mediasage.domain.model.UserSession
 import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
+import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.theme.AppTheme
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,7 @@ class AppViewModel(
     private val figureRepository: FigureRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val dailyReflectionRepository: DailyReflectionRepository,
+    private val encouragementRepository: EncouragementRepository,
     themePreferencesRepository: ThemePreferencesRepository,
     authRepository: AuthRepository,
 ) : ViewModel() {
@@ -87,6 +89,7 @@ class AppViewModel(
                 .collect { userId ->
                     dayAssignmentRepository.resolve(userId)
                     dailyReflectionRepository.resolve(userId)
+                    encouragementRepository.resolve(userId)
                 }
         }
     }

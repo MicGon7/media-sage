@@ -183,6 +183,8 @@ private class DetailFakeEncouragementRepository : EncouragementRepository {
     override suspend fun toggleBookmark(articleUrl: String) = Unit
     override fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
     override fun observeActiveEpochDays(): Flow<Set<Long>> = MutableStateFlow(emptySet())
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
+    override suspend fun resolve(userId: String?) = Unit
 }
 
 private class DetailFakeDayAssignmentRepository(
