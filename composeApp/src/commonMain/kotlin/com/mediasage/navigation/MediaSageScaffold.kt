@@ -185,7 +185,6 @@ fun MediaSageScaffold(
                         onIntent = vm::onIntent,
                         onNavigateToSettings = { appState.navigateToSettings() },
                         onNavigateToFigureDetail = { id -> appState.navigateToFigureDetail(id) },
-                        onNavigateToArticleDetail = { url -> appState.navigateToHeadlineDetail(url) },
                         onNavigateToHistory = { appState.navigateToReaderHistory() },
                         onNavigateToBookmarks = { appState.navigateToBookmarks() },
                     )

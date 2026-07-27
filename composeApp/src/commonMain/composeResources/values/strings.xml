@@ -42,7 +42,6 @@
 
     <!-- You screen -->
     <string name="you_screen_title">Reader</string>
-    <string name="you_screen_greeting">Welcome back, %1$s</string>
     <string name="you_nav_saved">Saved</string>
     <string name="you_nav_history">Past Briefings</string>
     <string name="you_settings_icon_description">Settings</string>
