@@ -18,6 +18,7 @@ import com.mediasage.domain.usecase.GetReaderCalendarUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -226,9 +227,9 @@ private class FakeDayAssignmentRepository(
     override suspend fun clear(dayOfWeek: Int) {
         clearCalls.add(dayOfWeek)
     }
-    override suspend fun seedDefaultsIfEmpty() = Unit
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = null
-    override suspend fun syncWithRemote(userId: String) = Unit
+    override suspend fun resolve(userId: String?) = Unit
 }
 
 private class FakeDailyReflectionRepository(

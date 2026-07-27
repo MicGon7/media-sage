@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.mediasage.data.repository
 
 import com.mediasage.data.local.dao.DayAssignmentDao
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -57,7 +60,7 @@ class DayAssignmentRepositoryTest {
     ) = DayAssignmentRepositoryImpl(dao, figureDao, api, dailyReflectionRepository, remote, syncMetaDao, authRepository)
 
     @Test
-    fun seedDefaultsIfEmpty_seeds7AssignmentsWhenTableEmpty() = runTest {
+    fun resolve_seeds7AssignmentsWhenTableEmptyAndNoUser() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         val api = FakeAssignmentApi(
             defaults = listOf(
@@ -71,34 +74,34 @@ class DayAssignmentRepositoryTest {
             )
         )
 
-        repo(dao = dao, api = api).seedDefaultsIfEmpty()
+        repo(dao = dao, api = api).resolve(null)
 
         assertEquals(7, dao.upsertCalls.size)
     }
 
     @Test
-    fun seedDefaultsIfEmpty_skipsWhenTableNonEmpty() = runTest {
+    fun resolve_skipsSeedingWhenTableNonEmptyAndNoUser() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 3)
         val api = FakeAssignmentApi()
 
-        repo(dao = dao, api = api).seedDefaultsIfEmpty()
+        repo(dao = dao, api = api).resolve(null)
 
         assertTrue(dao.upsertCalls.isEmpty())
         assertEquals(0, api.callCount)
     }
 
     @Test
-    fun seedDefaultsIfEmpty_usesFallbackOnNetworkFailure() = runTest {
+    fun resolve_usesFallbackDefaultsOnNetworkFailureWhenNoUser() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         val api = FakeAssignmentApi(shouldThrow = true)
 
-        repo(dao = dao, api = api).seedDefaultsIfEmpty()
+        repo(dao = dao, api = api).resolve(null)
 
         assertEquals(7, dao.upsertCalls.size)
     }
 
     @Test
-    fun seedDefaultsIfEmpty_gracefullySkipsNamesNotInLocalDb() = runTest {
+    fun resolve_gracefullySkipsNamesNotInLocalDbWhenNoUser() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         val figureDao = FakeFigureDaoForSeeding(listOf(augustine))
         val api = FakeAssignmentApi(
@@ -108,26 +111,26 @@ class DayAssignmentRepositoryTest {
             )
         )
 
-        repo(dao = dao, figureDao = figureDao, api = api).seedDefaultsIfEmpty()
+        repo(dao = dao, figureDao = figureDao, api = api).resolve(null)
 
         assertEquals(1, dao.upsertCalls.size)
         assertEquals(1L, dao.upsertCalls.first().figureId)
     }
 
     @Test
-    fun seedDefaultsIfEmpty_isCaseInsensitiveForFigureNameLookup() = runTest {
+    fun resolve_isCaseInsensitiveForFigureNameLookupWhenNoUser() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         val figureDao = FakeFigureDaoForSeeding(listOf(augustine))
         val api = FakeAssignmentApi(defaults = listOf(AssignmentDefaultDto(0, "augustine of hippo")))
 
-        repo(dao = dao, figureDao = figureDao, api = api).seedDefaultsIfEmpty()
+        repo(dao = dao, figureDao = figureDao, api = api).resolve(null)
 
         assertEquals(1, dao.upsertCalls.size)
         assertEquals(1L, dao.upsertCalls.first().figureId)
     }
 
     @Test
-    fun seedDefaultsIfEmpty_fallbackContains7Entries() = runTest {
+    fun resolve_fallbackDefaultsContains7Entries() = runTest {
         assertEquals(7, DayAssignmentRepositoryImpl.FALLBACK_DEFAULTS.size)
     }
 
@@ -220,21 +223,46 @@ class DayAssignmentRepositoryTest {
     }
 
     @Test
-    fun syncWithRemote_bootstrapsBrandNewUserFromDefaultsAndPushesThemUp() = runTest {
+    fun resolve_doesNotClobberExistingRemoteScheduleWithDefaultsSeededWhileSignedOut() = runTest {
+        // Regression test for a real-device bug found while validating MS-663 AC 3: on a
+        // fresh install, authState genuinely passes through Unauthenticated before a real
+        // sign-in completes (a device with an already-persisted session skips straight to
+        // Authenticated, which is why this only reproduced on fresh installs). resolve(null)
+        // fires first and seeds local fallback defaults; moments later resolve(userId) fires
+        // for the real sign-in. Those seeded rows must never look like a pending edit that
+        // pushPending() pushes up and overwrites the account's real existing schedule with,
+        // before pullAndReconcile() ever gets to pull the real schedule down.
+        val dao = FakeDayAssignmentDao(initialCount = 0)
+        val figureDao = FakeFigureDaoForSeeding(allFigures)
+        val api = FakeAssignmentApi(defaults = listOf(AssignmentDefaultDto(0, "Augustine of Hippo")))
+        val remote = FakeDayAssignmentRemoteDataSource(
+            initialRows = listOf(DayAssignmentRow(userId = USER_ID, dayOfWeek = 0, figureServerId = brother.serverId))
+        )
+        val repository = repo(dao = dao, figureDao = figureDao, api = api, remote = remote)
+
+        repository.resolve(null) // briefly signed-out at cold start on a fresh install
+        repository.resolve(USER_ID) // the real sign-in completes moments later
+
+        assertEquals(brother.id, dao.getByDayOfWeek(0)?.figureId)
+        assertTrue(remote.pushedRows.isEmpty())
+    }
+
+    @Test
+    fun resolve_bootstrapsBrandNewUserFromDefaultsAndPushesThemUp() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         val remote = FakeDayAssignmentRemoteDataSource()
         val api = FakeAssignmentApi(
             defaults = listOf(AssignmentDefaultDto(0, "Augustine of Hippo"))
         )
 
-        repo(dao = dao, api = api, remote = remote).syncWithRemote(USER_ID)
+        repo(dao = dao, api = api, remote = remote).resolve(USER_ID)
 
         assertEquals(1, remote.pushedRows.size)
         assertTrue(dao.getByDayOfWeek(0)!!.synced)
     }
 
     @Test
-    fun syncWithRemote_pullsExistingScheduleInsteadOfDefaults() = runTest {
+    fun resolve_pullsExistingScheduleInsteadOfDefaultsForSignedInUser() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         val remote = FakeDayAssignmentRemoteDataSource(
             initialRows = listOf(
@@ -243,7 +271,7 @@ class DayAssignmentRepositoryTest {
         )
         val api = FakeAssignmentApi(defaults = listOf(AssignmentDefaultDto(0, "Augustine of Hippo")))
 
-        repo(dao = dao, api = api, remote = remote).syncWithRemote(USER_ID)
+        repo(dao = dao, api = api, remote = remote).resolve(USER_ID)
 
         assertEquals(luther.id, dao.getByDayOfWeek(2)?.figureId)
         assertTrue(dao.getByDayOfWeek(2)!!.synced)
@@ -251,7 +279,7 @@ class DayAssignmentRepositoryTest {
     }
 
     @Test
-    fun syncWithRemote_doesNotClobberAnUnsyncedLocalEdit() = runTest {
+    fun resolve_doesNotClobberAnUnsyncedLocalEditForSignedInUser() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         dao.upsert(DayAssignmentEntity(dayOfWeek = 2, figureId = brother.id, synced = false))
         val remote = FakeDayAssignmentRemoteDataSource(
@@ -261,13 +289,13 @@ class DayAssignmentRepositoryTest {
             shouldThrowOnPush = true,
         )
 
-        repo(dao = dao, remote = remote).syncWithRemote(USER_ID)
+        repo(dao = dao, remote = remote).resolve(USER_ID)
 
         assertEquals(brother.id, dao.getByDayOfWeek(2)?.figureId)
     }
 
     @Test
-    fun syncWithRemote_purgesLocalRowRemovedRemotelyFromAnotherDevice() = runTest {
+    fun resolve_purgesLocalRowRemovedRemotelyFromAnotherDevice() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         dao.upsert(DayAssignmentEntity(dayOfWeek = 3, figureId = luther.id, synced = true))
         val remote = FakeDayAssignmentRemoteDataSource(
@@ -276,31 +304,87 @@ class DayAssignmentRepositoryTest {
             )
         )
 
-        repo(dao = dao, remote = remote).syncWithRemote(USER_ID)
+        repo(dao = dao, remote = remote).resolve(USER_ID)
 
         assertNull(dao.getByDayOfWeek(3))
     }
 
     @Test
-    fun syncWithRemote_wipesLocalDataWhenADifferentAccountSignsIn() = runTest {
+    fun resolve_wipesLocalDataWhenADifferentAccountSignsIn() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         dao.upsert(DayAssignmentEntity(dayOfWeek = 4, figureId = corrie.id, synced = true))
         val syncMetaDao = FakeSyncMetaDao(SyncMetaEntity(lastDayAssignmentSyncUserId = "previous-user"))
         val remote = FakeDayAssignmentRemoteDataSource()
 
-        repo(dao = dao, remote = remote, syncMetaDao = syncMetaDao).syncWithRemote(USER_ID)
+        repo(dao = dao, remote = remote, syncMetaDao = syncMetaDao).resolve(USER_ID)
 
         assertNull(dao.getRawByDayOfWeek(4))
         assertEquals(USER_ID, syncMetaDao.get()?.lastDayAssignmentSyncUserId)
     }
 
     @Test
-    fun syncWithRemote_isNoOpWhenRemoteDataSourceIsUnconfigured() = runTest {
+    fun resolve_isNoOpBeyondFlippingIsResolvedWhenRemoteDataSourceIsUnconfigured() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 3)
 
-        repo(dao = dao, remote = null).syncWithRemote(USER_ID)
+        repo(dao = dao, remote = null).resolve(USER_ID)
 
         assertTrue(dao.upsertCalls.isEmpty())
+    }
+
+    @Test
+    fun resolve_pushesCurrentRoomStateNotAStaleSnapshotWhenAssignRacesPushPending() = runTest {
+        // Regression test for a real-device bug found while validating MS-663: pushPending()
+        // used to push the figureId captured in its getPendingSync() snapshot even if a
+        // concurrent assign() had already updated Room to a different figure by the time the
+        // loop reached that row — silently overwriting the server with stale data (with a
+        // fresh updated_at) while Room, and every other device pulling from Room, already had
+        // the correct newer value.
+        lateinit var dao: FakeDayAssignmentDao
+        dao = FakeDayAssignmentDao(
+            onGetPendingSync = {
+                // Simulates assign() landing on this row right after pushPending's snapshot is taken.
+                dao.upsert(DayAssignmentEntity(dayOfWeek = 3, figureId = brother.id, synced = false))
+            }
+        )
+        dao.upsert(DayAssignmentEntity(dayOfWeek = 3, figureId = augustine.id, synced = false))
+        val remote = FakeDayAssignmentRemoteDataSource()
+
+        repo(dao = dao, remote = remote).resolve(USER_ID)
+
+        assertEquals(brother.serverId, remote.pushedRows.single { it.dayOfWeek == 3 }.figureServerId)
+    }
+
+    @Test
+    fun isResolved_isFalseBeforeResolveIsCalled() = runTest {
+        assertFalse(repo().isResolved.value)
+    }
+
+    @Test
+    fun resolve_setsIsResolvedTrueAfterSeedingWithNoUser() = runTest {
+        val repository = repo(dao = FakeDayAssignmentDao(initialCount = 0))
+
+        repository.resolve(null)
+
+        assertTrue(repository.isResolved.value)
+    }
+
+    @Test
+    fun resolve_setsIsResolvedTrueAfterSyncingForSignedInUser() = runTest {
+        val repository = repo()
+
+        repository.resolve(USER_ID)
+
+        assertTrue(repository.isResolved.value)
+    }
+
+    @Test
+    fun resolve_setsIsResolvedTrueEvenWhenSyncThrows() = runTest {
+        val remote = FakeDayAssignmentRemoteDataSource(shouldThrowOnFetch = true)
+        val repository = repo(remote = remote)
+
+        repository.resolve(USER_ID)
+
+        assertTrue(repository.isResolved.value)
     }
 }
 
@@ -325,7 +409,10 @@ private class FakeDailyReflectionRepository(
     override suspend fun getLockedFigureId(epochDay: Long): Long? = lockedFigureIdsByEpochDay[epochDay]
 }
 
-private class FakeDayAssignmentDao(initialCount: Int = 0) : DayAssignmentDao {
+private class FakeDayAssignmentDao(
+    initialCount: Int = 0,
+    private val onGetPendingSync: suspend () -> Unit = {},
+) : DayAssignmentDao {
     val upsertCalls = mutableListOf<DayAssignmentEntity>()
     private val store = (0 until initialCount)
         .associateWith { DayAssignmentEntity(dayOfWeek = it, figureId = 0L, synced = true) }
@@ -354,7 +441,11 @@ private class FakeDayAssignmentDao(initialCount: Int = 0) : DayAssignmentDao {
 
     override suspend fun getRawByDayOfWeek(dayOfWeek: Int): DayAssignmentEntity? = store[dayOfWeek]
 
-    override suspend fun getPendingSync(): List<DayAssignmentEntity> = store.values.filterNot { it.synced }
+    override suspend fun getPendingSync(): List<DayAssignmentEntity> {
+        val snapshot = store.values.filterNot { it.synced }
+        onGetPendingSync()
+        return snapshot
+    }
 
     override suspend fun markSynced(dayOfWeek: Int) {
         store[dayOfWeek]?.let { store[dayOfWeek] = it.copy(synced = true) }
@@ -412,6 +503,7 @@ private class FakeDayAssignmentRemoteDataSource(
     initialRows: List<DayAssignmentRow> = emptyList(),
     private val shouldThrowOnPush: Boolean = false,
     private val shouldThrowOnDelete: Boolean = false,
+    private val shouldThrowOnFetch: Boolean = false,
 ) : DayAssignmentRemoteDataSource {
     private val rows = initialRows.associateBy { it.dayOfWeek }.toMutableMap()
     val pushedRows = mutableListOf<DayAssignmentRow>()
@@ -430,8 +522,10 @@ private class FakeDayAssignmentRemoteDataSource(
         rows.remove(dayOfWeek)
     }
 
-    override suspend fun fetchAll(userId: String): List<DayAssignmentRow> =
-        rows.values.filter { it.userId == userId }
+    override suspend fun fetchAll(userId: String): List<DayAssignmentRow> {
+        if (shouldThrowOnFetch) throw RuntimeException("Fetch failed")
+        return rows.values.filter { it.userId == userId }
+    }
 }
 
 private class FakeAssignmentApi(

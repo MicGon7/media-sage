@@ -82,17 +82,7 @@ class AppViewModel(
                 .filter { it !is AuthUiState.Loading }
                 .map { state -> (state as? AuthUiState.Authenticated)?.session?.userId?.takeIf { it.isNotBlank() } }
                 .distinctUntilChanged()
-                .collect { userId ->
-                    try {
-                        if (userId != null) {
-                            dayAssignmentRepository.syncWithRemote(userId)
-                        } else {
-                            dayAssignmentRepository.seedDefaultsIfEmpty()
-                        }
-                    } catch (e: Exception) {
-                        // Failure is non-fatal — retried on next launch/sign-in
-                    }
-                }
+                .collect { userId -> dayAssignmentRepository.resolve(userId) }
         }
     }
 }
