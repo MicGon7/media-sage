@@ -121,6 +121,8 @@ private class FakeDailyReflectionDao(private val store: List<DailyReflectionEnti
     override suspend fun get(figureId: Long, epochDay: Long, tone: String, theme: String): DailyReflectionEntity? =
         store.find { it.figureId == figureId && it.epochDay == epochDay && it.tone == tone && it.theme == theme }
 
+    override suspend fun getRawById(id: String): DailyReflectionEntity? = store.find { it.id == id }
+
     override suspend fun getAllForDay(figureId: Long, epochDay: Long): List<DailyReflectionEntity> =
         store.filter { it.figureId == figureId && it.epochDay == epochDay }
 
@@ -142,5 +144,13 @@ private class FakeDailyReflectionDao(private val store: List<DailyReflectionEnti
     override suspend fun getFigureIdForDay(epochDay: Long): Long? =
         store.firstOrNull { it.epochDay == epochDay }?.figureId
 
+    override suspend fun getPendingSync(): List<DailyReflectionEntity> = store.filterNot { it.synced }
+
+    override suspend fun markSynced(id: String) {}
+
+    override suspend fun clearAll() {}
+
     override suspend fun upsert(entity: DailyReflectionEntity) {}
+
+    override suspend fun insertIfAbsent(entity: DailyReflectionEntity) {}
 }

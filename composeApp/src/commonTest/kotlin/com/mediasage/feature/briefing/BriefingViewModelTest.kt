@@ -145,7 +145,8 @@ class BriefingViewModelTest {
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         advanceUntilIdle()
 
-        assertIs<BriefingContract.UiState.Loading>(viewModel.state.value)
+        val loadingState = viewModel.state.value as BriefingContract.UiState.Success
+        assertIs<BriefingContract.CardState.Loading>(loadingState.card)
 
         isResolved.value = true
         advanceUntilIdle()
@@ -153,6 +154,74 @@ class BriefingViewModelTest {
         val state = viewModel.state.value as BriefingContract.UiState.Success
         val card = state.card as BriefingContract.CardState.Ready
         assertEquals(2L, card.figureId)
+    }
+
+    @Test
+    fun loadCard_waitsForDailyReflectionResolutionBeforeResolvingReporter() = runTest(testDispatcher) {
+        // Regression test for MS-664: on a cold start, reflection sync can still be in flight
+        // when BriefingViewModel first collects. It must wait for that completion signal too,
+        // or a second device could read an empty local table and generate its own, different
+        // reflection for a day another device already briefed.
+        val isResolved = MutableStateFlow(false)
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(
+                assignmentsFlow = MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 2L, lens = null))),
+                resolveReporterResult = null,
+            ),
+            dailyReflectionRepository = FakeDailyReflectionRepository(isResolved = isResolved),
+            figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
+            headlineRepository = FakeHeadlineRepository(),
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        advanceUntilIdle()
+
+        val loadingState = viewModel.state.value as BriefingContract.UiState.Success
+        assertIs<BriefingContract.CardState.Loading>(loadingState.card)
+
+        isResolved.value = true
+        advanceUntilIdle()
+
+        val state = viewModel.state.value as BriefingContract.UiState.Success
+        val card = state.card as BriefingContract.CardState.Ready
+        assertEquals(2L, card.figureId)
+    }
+
+    @Test
+    fun loadCard_showsLoadingAgainInsteadOfStaleDataWhenResolutionRestartsMidSession() = runTest(testDispatcher) {
+        // Regression test: on a fresh install, resolve(null) can seed fallback defaults and flip
+        // isResolved true before the real signed-in resolve(userId) corrects that data moments
+        // later. isResolved must be a live signal, not a one-time gate — otherwise the fallback
+        // figure flashes visibly before silently being swapped for the real one.
+        val assignmentsFlow = MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = null)))
+        val isResolved = MutableStateFlow(true)
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(
+                assignmentsFlow = assignmentsFlow,
+                resolveReporterResult = null,
+                isResolved = isResolved,
+            ),
+            dailyReflectionRepository = FakeDailyReflectionRepository(),
+            figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
+            headlineRepository = FakeHeadlineRepository(),
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        advanceUntilIdle()
+
+        val fallbackState = viewModel.state.value as BriefingContract.UiState.Success
+        assertEquals(1L, (fallbackState.card as BriefingContract.CardState.Ready).figureId)
+
+        // The real sign-in's resolve() begins correcting the seeded fallback data.
+        isResolved.value = false
+        advanceUntilIdle()
+        val midResync = viewModel.state.value as BriefingContract.UiState.Success
+        assertIs<BriefingContract.CardState.Loading>(midResync.card)
+
+        assignmentsFlow.value = mapOf(todayOrdinal to DayAssignment(figureId = 2L, lens = null))
+        isResolved.value = true
+        advanceUntilIdle()
+
+        val resolvedState = viewModel.state.value as BriefingContract.UiState.Success
+        assertEquals(2L, (resolvedState.card as BriefingContract.CardState.Ready).figureId)
     }
 
     private fun TestScope.briefingViewModel(
@@ -198,7 +267,10 @@ private class FakeDayAssignmentRepository(
     override suspend fun resolve(userId: String?) = Unit
 }
 
-private class FakeDailyReflectionRepository(private val fetchDelayMs: Long = 0) : DailyReflectionRepository {
+private class FakeDailyReflectionRepository(
+    private val fetchDelayMs: Long = 0,
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true),
+) : DailyReflectionRepository {
     override suspend fun getOrFetch(
         figureId: Long,
         figureName: String,
@@ -223,6 +295,7 @@ private class FakeDailyReflectionRepository(private val fetchDelayMs: Long = 0) 
     override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? = null
     override suspend fun getEarliestBriefingEpochDay(): Long? = null
     override suspend fun getLockedFigureId(epochDay: Long): Long? = null
+    override suspend fun resolve(userId: String?) = Unit
 }
 
 private class FakeHeadlineRepository : HeadlineRepository {

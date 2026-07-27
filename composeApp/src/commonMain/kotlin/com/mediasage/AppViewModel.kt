@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mediasage.data.ThemePreferencesRepository
 import com.mediasage.domain.model.UserSession
 import com.mediasage.domain.repository.AuthRepository
+import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.theme.AppTheme
@@ -27,6 +28,7 @@ sealed interface AuthUiState {
 class AppViewModel(
     private val figureRepository: FigureRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
+    private val dailyReflectionRepository: DailyReflectionRepository,
     themePreferencesRepository: ThemePreferencesRepository,
     authRepository: AuthRepository,
 ) : ViewModel() {
@@ -82,7 +84,10 @@ class AppViewModel(
                 .filter { it !is AuthUiState.Loading }
                 .map { state -> (state as? AuthUiState.Authenticated)?.session?.userId?.takeIf { it.isNotBlank() } }
                 .distinctUntilChanged()
-                .collect { userId -> dayAssignmentRepository.resolve(userId) }
+                .collect { userId ->
+                    dayAssignmentRepository.resolve(userId)
+                    dailyReflectionRepository.resolve(userId)
+                }
         }
     }
 }

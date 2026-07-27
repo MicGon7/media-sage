@@ -73,6 +73,16 @@ val MIGRATION_25_26 = object : Migration(25, 26) {
     }
 }
 
+val MIGRATION_26_27 = object : Migration(26, 27) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE daily_reflection ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
+        // figureId used to be baked into the primary key, but it isn't portable across devices —
+        // only epochDay/tone/theme need to be, since exactly one figure is ever locked per epochDay.
+        connection.execSQL("UPDATE daily_reflection SET id = epochDay || '_' || tone || '_' || theme")
+        connection.execSQL("ALTER TABLE sync_meta ADD COLUMN lastDailyReflectionSyncUserId TEXT")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

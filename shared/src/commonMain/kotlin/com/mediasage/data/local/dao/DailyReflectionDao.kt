@@ -12,6 +12,9 @@ interface DailyReflectionDao {
     @Query("SELECT * FROM daily_reflection WHERE figureId = :figureId AND epochDay = :epochDay AND tone = :tone AND theme = :theme")
     suspend fun get(figureId: Long, epochDay: Long, tone: String, theme: String): DailyReflectionEntity?
 
+    @Query("SELECT * FROM daily_reflection WHERE id = :id")
+    suspend fun getRawById(id: String): DailyReflectionEntity?
+
     @Query("SELECT * FROM daily_reflection WHERE figureId = :figureId AND epochDay = :epochDay")
     suspend fun getAllForDay(figureId: Long, epochDay: Long): List<DailyReflectionEntity>
 
@@ -33,6 +36,18 @@ interface DailyReflectionDao {
     @Query("SELECT figureId FROM daily_reflection WHERE epochDay = :epochDay LIMIT 1")
     suspend fun getFigureIdForDay(epochDay: Long): Long?
 
+    @Query("SELECT * FROM daily_reflection WHERE synced = 0")
+    suspend fun getPendingSync(): List<DailyReflectionEntity>
+
+    @Query("UPDATE daily_reflection SET synced = 1 WHERE id = :id")
+    suspend fun markSynced(id: String)
+
+    @Query("DELETE FROM daily_reflection")
+    suspend fun clearAll()
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: DailyReflectionEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIfAbsent(entity: DailyReflectionEntity)
 }

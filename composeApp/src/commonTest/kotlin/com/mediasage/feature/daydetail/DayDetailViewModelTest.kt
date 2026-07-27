@@ -9,6 +9,7 @@ import com.mediasage.domain.usecase.GetDayDetailUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -174,4 +175,7 @@ private class FakeDailyReflectionRepository(
     override suspend fun getEarliestBriefingEpochDay(): Long? = null
 
     override suspend fun getLockedFigureId(epochDay: Long): Long? = null
+
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
+    override suspend fun resolve(userId: String?) = Unit
 }

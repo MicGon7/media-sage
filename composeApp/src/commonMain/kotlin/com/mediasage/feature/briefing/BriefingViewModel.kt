@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.model.DayAssignment
+import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
@@ -51,28 +52,44 @@ class BriefingViewModel(
 
     private fun loadCard() {
         viewModelScope.launch {
-            // Waits once for day-assignment resolution to settle before resolving today's
-            // reporter — otherwise a cold start can read the table mid-resolution, resolve
-            // nothing, fall back to the first figure in the list, and lock that in permanently.
-            dayAssignmentRepository.isResolved.first { it }
+            // isResolved is a *live* input here, not a one-time gate — a cold start on a fresh
+            // install can flip it true once for a signed-out fallback-defaults seed, then false
+            // again moments later while the real signed-in schedule/reflections are pulled down
+            // and correct that seeded data. Folding it into the combine (rather than awaiting it
+            // once before subscribing) means that correction shows a loading state again instead
+            // of silently swapping the fallback figure for the real one after the fact.
             combine(
+                dayAssignmentRepository.isResolved,
+                dailyReflectionRepository.isResolved,
                 dayAssignmentRepository.observeAssignments(),
                 figureRepository.observeAllFigures(),
-            ) { assignments, figures -> Pair(assignments, figures) }
+            ) { dayResolved, reflectionResolved, assignments, figures ->
+                LoadInputs(dayResolved && reflectionResolved, assignments, figures)
+            }
                 .distinctUntilChanged()
-                .collectLatest { (assignments, figures) ->
+                .collectLatest { inputs ->
+                    if (!inputs.isResolved) {
+                        updateCard(BriefingContract.CardState.Loading)
+                        return@collectLatest
+                    }
                     val todayOrdinal = todayDayOfWeekOrdinal()
                     val figureId = dayAssignmentRepository.resolveReporter(todayEpochDay(), todayOrdinal)
-                        ?: figures.firstOrNull()?.id
+                        ?: inputs.figures.firstOrNull()?.id
                     if (figureId == null) {
                         updateCard(BriefingContract.CardState.Hidden)
                         emitLoadingSuccess()
                         return@collectLatest
                     }
-                    fetchAndUpdateCard(figureId, resolveLens(figureId, todayOrdinal, assignments))
+                    fetchAndUpdateCard(figureId, resolveLens(figureId, todayOrdinal, inputs.assignments))
                 }
         }
     }
+
+    private data class LoadInputs(
+        val isResolved: Boolean,
+        val assignments: Map<Int, DayAssignment>,
+        val figures: List<Figure>,
+    )
 
     /**
      * Once today is locked to a figure, a newer weekday reassignment may no longer describe that
