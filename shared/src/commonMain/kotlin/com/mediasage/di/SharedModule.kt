@@ -15,7 +15,9 @@ import com.mediasage.data.repository.HeadlineRepositoryImpl
 import com.mediasage.data.repository.MatchRepositoryImpl
 import com.mediasage.data.repository.PostgrestDailyReflectionRemoteDataSource
 import com.mediasage.data.repository.PostgrestDayAssignmentRemoteDataSource
+import com.mediasage.data.repository.PostgrestSavedInsightRemoteDataSource
 import com.mediasage.data.repository.QuoteRepositoryImpl
+import com.mediasage.data.repository.SavedInsightRemoteDataSource
 import com.mediasage.data.repository.WikipediaRepositoryImpl
 import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.DailyReflectionRepository
@@ -49,6 +51,7 @@ fun sharedModule(
         }
         single<DayAssignmentRemoteDataSource> { PostgrestDayAssignmentRemoteDataSource(get()) }
         single<DailyReflectionRemoteDataSource> { PostgrestDailyReflectionRemoteDataSource(get()) }
+        single<SavedInsightRemoteDataSource> { PostgrestSavedInsightRemoteDataSource(get()) }
     }
 
     // HTTP client for communicating with the Media Sage server
@@ -72,7 +75,9 @@ fun sharedModule(
     single<QuoteRepository> { QuoteRepositoryImpl(get()) }
     single<HeadlineRepository> { HeadlineRepositoryImpl(get(), get()) }
     single<MatchRepository> { MatchRepositoryImpl(get()) }
-    single<EncouragementRepository> { EncouragementRepositoryImpl(get(), get(), get()) }
+    single<EncouragementRepository> {
+        EncouragementRepositoryImpl(get(), get(), get(), getOrNull(), get(), get())
+    }
     single<WikipediaRepository> { WikipediaRepositoryImpl(get()) }
     single<DailyReflectionRepository> {
         DailyReflectionRepositoryImpl(get(), get(), get(), getOrNull(), get(), get())

@@ -13,6 +13,7 @@ import com.mediasage.domain.repository.QuoteRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -258,6 +259,8 @@ private class FakeEncouragementRepository(private val encouragement: Encourageme
     override fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
     override fun observeActiveEpochDays(): Flow<Set<Long>> = MutableStateFlow(emptySet())
     override suspend fun toggleBookmark(articleUrl: String) = Unit
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
+    override suspend fun resolve(userId: String?) = Unit
 }
 
 private class FakeFigureRepository(private val figure: Figure?) : FigureRepository {

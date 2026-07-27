@@ -33,6 +33,7 @@ val appModule = module {
             get<FigureRepository>(),
             get<DayAssignmentRepository>(),
             get<DailyReflectionRepository>(),
+            get<EncouragementRepository>(),
             get<ThemePreferencesRepository>(),
             get<AuthRepository>(),
         )

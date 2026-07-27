@@ -83,6 +83,16 @@ val MIGRATION_26_27 = object : Migration(26, 27) {
     }
 }
 
+val MIGRATION_27_28 = object : Migration(27, 28) {
+    override fun migrate(connection: SQLiteConnection) {
+        // Defaults to 1 (synced) — a non-bookmarked cache row has nothing to push, and must
+        // never look like a pending sync write the way a fresh MS-51/MS-664 row does.
+        connection.execSQL("ALTER TABLE encouragements ADD COLUMN synced INTEGER NOT NULL DEFAULT 1")
+        connection.execSQL("ALTER TABLE encouragements ADD COLUMN pendingDelete INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("ALTER TABLE sync_meta ADD COLUMN lastSavedInsightSyncUserId TEXT")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

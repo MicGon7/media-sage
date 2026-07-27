@@ -7,6 +7,7 @@ import com.mediasage.domain.repository.EncouragementRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -157,4 +158,7 @@ private class FakeEncouragementRepository(
         articleUrl: String?,
         articleSnippet: String?
     ): Encouragement = _flow.value.first()
+
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
+    override suspend fun resolve(userId: String?) = Unit
 }

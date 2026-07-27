@@ -2,8 +2,13 @@ package com.mediasage.domain.repository
 
 import com.mediasage.domain.model.Encouragement
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 interface EncouragementRepository {
+
+    val isResolved: StateFlow<Boolean>
+
+    suspend fun resolve(userId: String?)
     suspend fun getEncouragement(
         headlineTitle: String,
         headlineSource: String = "",
