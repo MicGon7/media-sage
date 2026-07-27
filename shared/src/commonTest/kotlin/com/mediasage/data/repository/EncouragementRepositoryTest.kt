@@ -56,8 +56,8 @@ class EncouragementRepositoryTest {
         figureDao: FakeFigureDao = FakeFigureDao(),
         api: FakeMediaSageApi = FakeMediaSageApi(result = sampleResult),
         remote: FakeSavedInsightRemoteDataSource? = FakeSavedInsightRemoteDataSource(),
-        syncMetaDao: FakeSyncMetaDao = FakeSyncMetaDao(),
-        authRepository: FakeAuthRepository = FakeAuthRepository(USER_ID),
+        syncMetaDao: FakeSyncMetaDaoForSavedInsightSync = FakeSyncMetaDaoForSavedInsightSync(),
+        authRepository: FakeAuthRepositoryForSavedInsightSync = FakeAuthRepositoryForSavedInsightSync(USER_ID),
     ) = EncouragementRepositoryImpl(api, dao, figureDao, remote, syncMetaDao, authRepository)
 
     @Test
@@ -417,7 +417,7 @@ class EncouragementRepositoryTest {
             bookmarked = false,
         )
         val dao = FakeEncouragementDao(preloaded = listOf(bookmarked, cached))
-        val syncMetaDao = FakeSyncMetaDao(SyncMetaEntity(lastSavedInsightSyncUserId = "previous-user"))
+        val syncMetaDao = FakeSyncMetaDaoForSavedInsightSync(SyncMetaEntity(lastSavedInsightSyncUserId = "previous-user"))
 
         repo(dao = dao, syncMetaDao = syncMetaDao).resolve(USER_ID)
 
@@ -569,12 +569,12 @@ private class FakeFigureDao(figures: List<FigureEntity> = emptyList()) : FigureD
     override suspend fun deleteAll() { store.clear() }
 }
 
-private class FakeSyncMetaDao(private var meta: SyncMetaEntity? = null) : SyncMetaDao {
+private class FakeSyncMetaDaoForSavedInsightSync(private var meta: SyncMetaEntity? = null) : SyncMetaDao {
     override suspend fun get(): SyncMetaEntity? = meta
     override suspend fun upsert(meta: SyncMetaEntity) { this.meta = meta }
 }
 
-private class FakeAuthRepository(private val userId: String?) : AuthRepository {
+private class FakeAuthRepositoryForSavedInsightSync(private val userId: String?) : AuthRepository {
     override fun observeAuthState(): Flow<UserSession?> =
         MutableStateFlow(userId?.let { UserSession(it, null) })
 
