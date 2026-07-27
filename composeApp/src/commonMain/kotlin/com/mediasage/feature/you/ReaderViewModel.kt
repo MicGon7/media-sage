@@ -7,6 +7,8 @@ import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.Quote
 import com.mediasage.domain.model.ReaderCalendarData
+import com.mediasage.domain.model.UserSession
+import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.usecase.GetReaderCalendarUseCase
 import kotlinx.coroutines.flow.Flow
@@ -39,6 +41,7 @@ import kotlin.time.Instant
 class ReaderViewModel(
     private val getReaderCalendar: GetReaderCalendarUseCase,
     private val dayAssignmentRepository: DayAssignmentRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val today = Instant.fromEpochMilliseconds(epochMillis())
@@ -55,7 +58,9 @@ class ReaderViewModel(
     private val calendarData: Flow<ReaderCalendarData> = getReaderCalendar(startOfWeekEpochDay, endOfWeekEpochDay)
 
     val state: StateFlow<ReaderContract.UiState> =
-        combine(input, calendarData) { screenInput, data -> buildReady(screenInput, data) }.stateIn(
+        combine(input, calendarData, authRepository.observeAuthState()) { screenInput, data, session ->
+            buildReady(screenInput, data, session)
+        }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
             initialValue = ReaderContract.UiState.Ready(),
@@ -139,6 +144,7 @@ class ReaderViewModel(
     private fun buildReady(
         screenInput: ScreenInput,
         data: ReaderCalendarData,
+        session: UserSession?,
     ): ReaderContract.UiState.Ready {
         val figuresById = data.figures.associateBy { it.id }
         val quoteFigure = data.latestQuote?.let { figuresById[it.figureId] }
@@ -148,6 +154,7 @@ class ReaderViewModel(
             quoteCard = buildQuoteCard(data.latestQuote, quoteFigure),
             activeSheet = screenInput.activeSheet,
             pendingReassignment = screenInput.pendingReassignment,
+            userDisplayName = session?.displayName,
         )
     }
 

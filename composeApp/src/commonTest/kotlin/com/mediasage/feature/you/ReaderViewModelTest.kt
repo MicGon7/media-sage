@@ -10,6 +10,8 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.model.Quote
+import com.mediasage.domain.model.UserSession
+import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
@@ -151,6 +153,22 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun userDisplayNameIsPopulatedFromTheSignedInSession() = runTest(testDispatcher) {
+        val (viewModel, _) = readerViewModelWithRepo(figure = testFigure, session = UserSession("u1", "a@b.com", "Jordan"))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertEquals("Jordan", state.userDisplayName)
+    }
+
+    @Test
+    fun userDisplayNameIsNullWhenSessionHasNoDisplayNameSet() = runTest(testDispatcher) {
+        val (viewModel, _) = readerViewModelWithRepo(figure = testFigure, session = UserSession("u1", "a@b.com", null))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+        assertNull(state.userDisplayName)
+    }
+
+    @Test
     fun cancelReassignment_leavesAssignmentUnchanged() = runTest(testDispatcher) {
         val otherFigure = Figure(id = 2L, name = "C.S. Lewis", category = FigureCategory.THEOLOGIAN, century = "20th", role = "Author")
         val briefing = BriefingDay(epochDay = todayEpochDay, figureId = 1L, scriptureReference = "John 3:16", scriptureText = "…")
@@ -186,14 +204,17 @@ class ReaderViewModelTest {
         assignments: Map<Int, DayAssignment> = emptyMap(),
         briefings: List<BriefingDay> = emptyList(),
         latestQuote: Quote? = null,
+        session: UserSession? = null,
     ): Pair<ReaderViewModel, FakeDayAssignmentRepository> {
         val figureRepo = FakeFigureRepository(listOf(figure) + extraFigures)
         val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(assignments))
         val quoteRepo = FakeQuoteRepository(latestQuote)
         val reflectionRepo = FakeDailyReflectionRepository(briefings)
+        val authRepo = FakeAuthRepository(session)
         val viewModel = ReaderViewModel(
             getReaderCalendar = GetReaderCalendarUseCase(figureRepo, dayAssignmentRepo, quoteRepo, reflectionRepo),
             dayAssignmentRepository = dayAssignmentRepo,
+            authRepository = authRepo,
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         return viewModel to dayAssignmentRepo
@@ -248,6 +269,13 @@ private class FakeDailyReflectionRepository(
     override suspend fun getEarliestBriefingEpochDay(): Long? = briefings.minOfOrNull { it.epochDay }
     override suspend fun getLockedFigureId(epochDay: Long): Long? =
         briefings.firstOrNull { it.epochDay == epochDay }?.figureId
+}
+
+private class FakeAuthRepository(private val session: UserSession?) : AuthRepository {
+    override fun observeAuthState(): Flow<UserSession?> = MutableStateFlow(session)
+    override fun currentSession(): UserSession? = session
+    override suspend fun signInWithEmail(email: String, password: String) = Unit
+    override suspend fun signOut() = Unit
 }
 
 private class FakeQuoteRepository(private val latestQuote: Quote?) : QuoteRepository {
