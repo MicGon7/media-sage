@@ -29,23 +29,28 @@ per-user field anywhere in the row). None of the four appear in the inventory be
 - **Sync status**: Live. Reference implementation for everything below.
 - **Fit**: N/A — this *is* the pattern.
 
-### 2. Bookmarked encouragements — local-only, mixed-concern row
+### 2. Saved insights (bookmarked encouragements) — local-only, revised understanding
 
 - **Storage**: Room, `EncouragementEntity.bookmarked` (`shared/.../entity/EncouragementEntity.kt:28`).
 - **Sync status**: Local-only. No sync of any kind today.
-- **Shape of the data**: this is the case MS-51's own notes flagged as worth calling out. The row as
-  a whole (`summary`, `quoteText`, `scriptureText`, etc.) is *cacheable content* keyed by
-  `articleUrl` — every user who matches the same headline gets the same explanation text, so most of
-  the row is shared, not user-scoped. Only the single `bookmarked: Boolean` column is per-account.
-- **Fit**: **Doesn't fit directly.** MS-51's shape assumes the whole row is user-owned and safe to
-  push/pull/tombstone wholesale. Here, syncing the full row would be wrong (two users bookmarking the
-  same article shouldn't overwrite each other's cache content) and wasteful (re-pushing match
-  explanation text that's identical for everyone). The right shape is a **separate join table** —
-  e.g. `bookmarked_encouragements(user_id, article_url)` — that syncs only the `(user, articleUrl)`
-  pair, with the encouragement content itself staying local-cache-only exactly as it is today.
-  Tombstone deletes and the account-switch guard both still apply to that join table; the "translate
-  through a stable server ID" step from MS-51 doesn't apply since `articleUrl` is already a stable,
-  portable natural key.
+- **Revised framing (corrected after product clarification during MS-664 planning)**: this was
+  originally analyzed as a pure `(user_id, articleUrl)` join-table case, on the assumption that only
+  the `bookmarked: Boolean` flag was user-scoped and the row's content was safe to leave as
+  local-cache-only. That's wrong for the actual use case: a user wants to durably save a full
+  encouragement match (figure, quote, scripture, explanation, summary) to revisit later — and
+  explicitly expects it to survive a device wipe/new phone, not just a flag pointing at content that
+  may no longer exist locally. A pure join table can't deliver that, since the pulled `articleUrl`
+  wouldn't resolve to anything on a device that never generated that particular match.
+- **Fit**: **Fits MS-51's whole-row shape, not the join-table shape** — but with delete support MS-664
+  didn't need. Bookmarking must push a full content snapshot (not just a flag); unbookmarking must
+  tombstone-delete it, since a user removing something from their saved list expects that removal to
+  propagate to other devices too (unlike daily_reflection, which is pure append-only with no delete
+  path). `articleUrl` is already a stable, portable natural key — no id-portability problem like
+  MS-664 had — but `figureId` still needs the same server-ID translation as MS-51/MS-664 if a saved
+  insight should be able to tap through to that figure's detail page. Whether this reuses
+  `EncouragementEntity` directly (adding `synced`/sync bookkeeping columns, with push/pull scoped to
+  `bookmarked = true` rows only) or a separate dedicated entity is an implementation decision for that
+  ticket, not this audit.
 
 ### 3. Past briefings / daily reflections — local-only, portable key already
 
@@ -116,17 +121,15 @@ per-user field anywhere in the row). None of the four appear in the inventory be
 
 ## Recommendation
 
-**Do not build a shared/generic sync abstraction now.** MS-51 is exactly one implementation; this
-audit surfaces two more candidates that fit the pattern well enough to reuse it directly
-(reflections) or with a small structural change (bookmarks via a join table) — but "well enough to
-reuse the same push/pull/tombstone/account-guard *shape*" is different from "identical enough to
-extract a shared base class or generic repository today." Extracting now, before a second concrete
-case exists in code, risks guessing the wrong seams (e.g. over-generalizing the join-table case from
-bookmarks into something reflections don't need, or vice versa).
+**Do not build a shared/generic sync abstraction now.** MS-51 is exactly one implementation; MS-664
+(daily reflections, item 3) is the second, validating that the whole-row/append-only shape
+generalizes. Saved insights (item 2) is a third, different shape — whole-row like MS-51, but scoped to
+a subset of rows (only `bookmarked = true`) with real delete support. Three concrete shapes is a
+reasonable point to look for what's actually common and extract it — but not before this one ships.
 
-**Next concrete sync ticket: past briefings / daily reflections (item 3).** It's the closest fit to
-MS-51's existing shape (same figure-ID translation problem, same account-switch guard, straightforward
-natural key), making it the cheapest way to validate the pattern generalizes — and only once *that*
-ticket is done does it make sense to look for what's actually common between the two and extract it.
-Bookmarked encouragements (item 2) is next after that, once the join-table shape has a first
-implementation to be modeled on.
+**Shipped: past briefings / daily reflections (item 3), MS-664.**
+
+**Next concrete sync ticket: saved insights (item 2)**, now that the join-table framing has been
+corrected to whole-row sync with delete support. `articleUrl` gives it a portable natural key
+(cheaper than MS-664's figureId-in-the-PK problem), but the account-switch guard, figure-ID
+translation, and tombstone-delete reconciliation all carry over from MS-51 largely as-is.
