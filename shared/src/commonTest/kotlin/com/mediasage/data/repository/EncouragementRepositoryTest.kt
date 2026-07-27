@@ -522,7 +522,11 @@ private class FakeEncouragementDao(preloaded: List<EncouragementEntity> = emptyL
     }
 
     override suspend fun resetBookmarkStateForAccountSwitch() {
-        store.replaceAll { _, v -> if (v.bookmarked) v.copy(bookmarked = false, synced = true, pendingDelete = false) else v }
+        store.keys.toList().forEach { key ->
+            store[key]?.let { v ->
+                if (v.bookmarked) store[key] = v.copy(bookmarked = false, synced = true, pendingDelete = false)
+            }
+        }
     }
 
     override suspend fun getSyncedBookmarkedArticleUrls(): List<String> =

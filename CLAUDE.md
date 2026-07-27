@@ -230,6 +230,17 @@ Do not use the `Impl` suffix — Kotlin docs treat it as illustrative only, not 
   (e.g. `FakeSyncMetaDaoForReflectionSync`) rather than reusing the bare name. This has caused two
   consecutive CI failures (MS-664, MS-666) from copy-pasting a `Fake{Dao/Repository}` from a prior
   `*RepositoryTest.kt` in the same package without renaming it.
+- **No JDK-only `java.util.Map` extensions in `commonMain`/`commonTest`.** `replaceAll`, `putIfAbsent`,
+  `merge`, `compute`, `computeIfAbsent`, `computeIfPresent`, `getOrDefault` on `MutableMap` exist only on
+  the JVM target — they compile fine locally (Android) and pass Detekt, but fail
+  `compileTestKotlinIosArm64`/`IosSimulatorArm64` with an unresolved-reference error, so they only surface
+  in CI. Use portable equivalents instead: `map.getOrPut(key) { default }` (this one IS common-Kotlin),
+  or `map.keys.toList().forEach { k -> map[k]?.let { v -> map[k] = transform(v) } }` for a
+  `replaceAll`-style update. **This matters more than usual here:** `./scripts/run-affected-tests.sh`
+  skips entirely in the worker's Linux container (no Android/iOS SDK), so a Fake's `commonTest` code is
+  never actually compiled before push in assisted/autonomous mode — CI's macOS runner is the *first*
+  compiler this code sees for any platform. Read new/edited Fake code back with this rule in mind before
+  committing, since there is no local compile step to catch it.
 
 #### UI test principles
 - No Espresso — that is for View-based UI, not Compose
