@@ -110,6 +110,7 @@ import mediasage.composeapp.generated.resources.you_picker_title
 import mediasage.composeapp.generated.resources.you_quote_card_header
 import mediasage.composeapp.generated.resources.you_saved_section_title
 import mediasage.composeapp.generated.resources.you_saved_see_all
+import mediasage.composeapp.generated.resources.you_screen_greeting
 import mediasage.composeapp.generated.resources.you_screen_title
 import mediasage.composeapp.generated.resources.you_settings_icon_description
 import com.mediasage.domain.model.LensFilter
@@ -184,6 +185,15 @@ fun ReaderScreen(
                             listState = listState,
                             showDivider = false,
                             expandedTitleSize = 24f,
+                            subtitle = ready?.userDisplayName?.let { name ->
+                                {
+                                    Text(
+                                        text = stringResource(Res.string.you_screen_greeting, name),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(horizontal = 16.dp),

@@ -30,6 +30,7 @@ class ReaderScreenRenderTest {
                     state = ReaderContract.UiState.Ready(
                         weekSlots = sampleWeekSlots(),
                         quoteCard = sampleQuoteCard(),
+                        userDisplayName = "Jordan",
                     ),
                     onIntent = {},
                 )

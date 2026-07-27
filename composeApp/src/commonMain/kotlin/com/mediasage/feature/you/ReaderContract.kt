@@ -44,6 +44,7 @@ object ReaderContract {
             val pickerFigures: List<Figure> = emptyList(),
             val activeSheet: ActiveSheet? = null,
             val pendingReassignment: PendingReassignment? = null,
+            val userDisplayName: String? = null,
         ) : UiState
     }
 
