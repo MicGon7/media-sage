@@ -59,7 +59,7 @@ class AppViewModel(
     }
 
     init {
-        viewModelScope.launch {
+        val figuresSynced = viewModelScope.launch {
             try {
                 figureRepository.syncFigures()
             } catch (e: Exception) {
@@ -71,7 +71,13 @@ class AppViewModel(
         // authenticated remote sync concurrently, or the seed can race ahead, fill the
         // table with defaults, and get mistaken for a pending local edit that should
         // win over the real pulled schedule.
+        //
+        // Also waits on figuresSynced first: pullAndReconcile resolves each remote row's
+        // figure by serverId, so on a fresh install where the figures table is still empty,
+        // running ahead of figure sync makes every row fail to resolve and get silently
+        // dropped, leaving day_assignment empty until the next distinct signed-in session.
         viewModelScope.launch {
+            figuresSynced.join()
             authState
                 .filter { it !is AuthUiState.Loading }
                 .map { state -> (state as? AuthUiState.Authenticated)?.session?.userId?.takeIf { it.isNotBlank() } }
