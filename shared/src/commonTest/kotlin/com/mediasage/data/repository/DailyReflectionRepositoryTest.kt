@@ -46,16 +46,17 @@ class DailyReflectionRepositoryTest {
         api: FakeReflectionApi = FakeReflectionApi(),
         figureDao: FakeFigureDaoForReflectionSync = FakeFigureDaoForReflectionSync(allFigures),
         remote: FakeDailyReflectionRemoteDataSource? = FakeDailyReflectionRemoteDataSource(),
-        syncMetaDao: FakeSyncMetaDao = FakeSyncMetaDao(),
-        authRepository: FakeAuthRepository = FakeAuthRepository(USER_ID),
+        syncMetaDao: FakeSyncMetaDaoForReflectionSync = FakeSyncMetaDaoForReflectionSync(),
+        authRepository: FakeAuthRepositoryForReflectionSync = FakeAuthRepositoryForReflectionSync(USER_ID),
     ) = DailyReflectionRepositoryImpl(dao, api, figureDao, remote, syncMetaDao, authRepository)
 
     @Test
     fun getOrFetch_returnsCachedReflectionWithoutCallingApiOrPushing() = runTest {
+        val todayEpochDay = localEpochDay(epochMillis())
         val dao = FakeDailyReflectionDao()
         val remote = FakeDailyReflectionRemoteDataSource()
         dao.upsert(
-            reflection(figureId = augustine.id, epochDay = 100L, tone = "morning", synced = true)
+            reflection(figureId = augustine.id, epochDay = todayEpochDay, tone = "morning", synced = true)
         )
         val api = FakeReflectionApi()
 
@@ -234,7 +235,7 @@ class DailyReflectionRepositoryTest {
     fun resolve_wipesLocalDataWhenADifferentAccountSignsIn() = runTest {
         val dao = FakeDailyReflectionDao()
         dao.upsert(reflection(figureId = augustine.id, epochDay = 500L, tone = "morning", synced = true))
-        val syncMetaDao = FakeSyncMetaDao(SyncMetaEntity(lastDailyReflectionSyncUserId = "previous-user"))
+        val syncMetaDao = FakeSyncMetaDaoForReflectionSync(SyncMetaEntity(lastDailyReflectionSyncUserId = "previous-user"))
         val remote = FakeDailyReflectionRemoteDataSource()
 
         repo(dao = dao, remote = remote, syncMetaDao = syncMetaDao).resolve(USER_ID)
@@ -367,12 +368,12 @@ private class FakeFigureDaoForReflectionSync(figures: List<FigureEntity> = empty
     override suspend fun deleteAll() { store.clear() }
 }
 
-private class FakeSyncMetaDao(private var meta: SyncMetaEntity? = null) : SyncMetaDao {
+private class FakeSyncMetaDaoForReflectionSync(private var meta: SyncMetaEntity? = null) : SyncMetaDao {
     override suspend fun get(): SyncMetaEntity? = meta
     override suspend fun upsert(meta: SyncMetaEntity) { this.meta = meta }
 }
 
-private class FakeAuthRepository(private val userId: String?) : AuthRepository {
+private class FakeAuthRepositoryForReflectionSync(private val userId: String?) : AuthRepository {
     override fun observeAuthState(): Flow<UserSession?> =
         MutableStateFlow(userId?.let { UserSession(it, null) })
 
