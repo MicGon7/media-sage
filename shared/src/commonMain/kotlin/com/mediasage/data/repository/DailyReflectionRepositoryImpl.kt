@@ -26,7 +26,9 @@ class DailyReflectionRepositoryImpl(
         theme: String?
     ): DailyReflection {
         val resolvedTheme = theme?.uppercase() ?: "NEWS"
-        val epochDay = currentTimeMillis() / 86400000L
+        val millis = currentTimeMillis()
+        val today = Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val epochDay = localEpochDay(millis)
         val cached = dao.get(figureId, epochDay, tone, resolvedTheme)
         if (cached != null) return cached.toDomain()
 
@@ -36,9 +38,7 @@ class DailyReflectionRepositoryImpl(
             dao.getAllScripturesForDay(epochDay) +
             dao.getRecentScripturesForFigure(figureId, fromDay = epochDay - 7, today = epochDay)
         ).distinct()
-        val dayOfWeek = Instant.fromEpochMilliseconds(currentTimeMillis())
-            .toLocalDateTime(TimeZone.currentSystemDefault())
-            .date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
+        val dayOfWeek = today.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
 
         val response = api.getDailyReflection(
             DailyReflectionRequestDto(

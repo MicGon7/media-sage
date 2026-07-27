@@ -15,11 +15,14 @@ import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -29,6 +32,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.time.Instant
 
 class BriefingViewModelTest {
@@ -91,6 +95,35 @@ class BriefingViewModelTest {
         assertEquals(1L, card.figureId)
     }
 
+    @Test
+    fun loadCard_rapidAssignmentChangesDuringSyncNeverSurfaceCancellationAsError() = runTest(testDispatcher) {
+        // Regression test: on a fresh install, day-assignment sync can upsert several rows in
+        // quick succession, re-triggering collectLatest and cancelling the in-flight getOrFetch
+        // call each time. That cancellation must never be surfaced as a ShowError side effect,
+        // and the final, settled emission must still complete and render a Ready card.
+        val assignmentsFlow = MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = null)))
+        val reflectionRepo = FakeDailyReflectionRepository(fetchDelayMs = 50)
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(assignmentsFlow, resolveReporterResult = null),
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
+            headlineRepository = FakeHeadlineRepository(),
+        )
+        val sideEffects = mutableListOf<BriefingContract.SideEffect>()
+        backgroundScope.launch(testDispatcher) { viewModel.sideEffects.collect { sideEffects.add(it) } }
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+
+        repeat(5) {
+            advanceTimeBy(1)
+            assignmentsFlow.value = mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = null))
+        }
+        advanceUntilIdle()
+
+        assertEquals(emptyList(), sideEffects.filterIsInstance<BriefingContract.SideEffect.ShowError>())
+        val state = viewModel.state.value as BriefingContract.UiState.Success
+        assertIs<BriefingContract.CardState.Ready>(state.card)
+    }
+
     private fun TestScope.briefingViewModel(
         figures: List<Figure>,
         assignments: Map<Int, DayAssignment>,
@@ -134,23 +167,26 @@ private class FakeDayAssignmentRepository(
     override suspend fun syncWithRemote(userId: String) = Unit
 }
 
-private class FakeDailyReflectionRepository : DailyReflectionRepository {
+private class FakeDailyReflectionRepository(private val fetchDelayMs: Long = 0) : DailyReflectionRepository {
     override suspend fun getOrFetch(
         figureId: Long,
         figureName: String,
         headlines: List<String>,
         tone: String,
         theme: String?,
-    ): DailyReflection = DailyReflection(
-        scriptureReference = "John 3:16",
-        scriptureText = "For God so loved the world",
-        insight = "insight",
-        implication = "implication",
-        inspiration = "inspiration",
-        sources = emptyList(),
-        tone = tone,
-        theme = theme,
-    )
+    ): DailyReflection {
+        if (fetchDelayMs > 0) delay(fetchDelayMs)
+        return DailyReflection(
+            scriptureReference = "John 3:16",
+            scriptureText = "For God so loved the world",
+            insight = "insight",
+            implication = "implication",
+            inspiration = "inspiration",
+            sources = emptyList(),
+            tone = tone,
+            theme = theme,
+        )
+    }
     override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
         MutableStateFlow(emptyList())
     override suspend fun getForDay(epochDay: Long, tone: String): DailyReflection? = null
