@@ -9,6 +9,7 @@ import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -126,6 +127,7 @@ class BriefingViewModel(
                 )
             )
         }.onFailure { e ->
+            if (e is CancellationException) throw e
             updateCard(BriefingContract.CardState.Hidden)
             _sideEffects.send(BriefingContract.SideEffect.ShowError(e.message ?: "Failed to load briefing"))
         }
