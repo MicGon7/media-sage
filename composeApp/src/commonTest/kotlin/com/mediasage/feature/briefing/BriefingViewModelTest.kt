@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -124,6 +125,36 @@ class BriefingViewModelTest {
         assertIs<BriefingContract.CardState.Ready>(state.card)
     }
 
+    @Test
+    fun loadCard_waitsForDayAssignmentResolutionBeforeResolvingReporter() = runTest(testDispatcher) {
+        // Regression test for MS-663: on a cold start, day-assignment resolution can still be
+        // in flight when BriefingViewModel first collects. It must wait for the completion
+        // signal rather than resolving against an empty/mid-flight table and locking in the
+        // first-in-list figure as a fallback.
+        val isResolved = MutableStateFlow(false)
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(
+                assignmentsFlow = MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 2L, lens = null))),
+                resolveReporterResult = null,
+                isResolved = isResolved,
+            ),
+            dailyReflectionRepository = FakeDailyReflectionRepository(),
+            figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
+            headlineRepository = FakeHeadlineRepository(),
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        advanceUntilIdle()
+
+        assertIs<BriefingContract.UiState.Loading>(viewModel.state.value)
+
+        isResolved.value = true
+        advanceUntilIdle()
+
+        val state = viewModel.state.value as BriefingContract.UiState.Success
+        val card = state.card as BriefingContract.CardState.Ready
+        assertEquals(2L, card.figureId)
+    }
+
     private fun TestScope.briefingViewModel(
         figures: List<Figure>,
         assignments: Map<Int, DayAssignment>,
@@ -157,14 +188,14 @@ private class FakeFigureRepository(private val figures: List<Figure>) : FigureRe
 private class FakeDayAssignmentRepository(
     private val assignmentsFlow: MutableStateFlow<Map<Int, DayAssignment>>,
     private val resolveReporterResult: Long?,
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true),
 ) : DayAssignmentRepository {
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = assignmentsFlow
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
-    override suspend fun seedDefaultsIfEmpty() = Unit
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? =
         resolveReporterResult ?: assignmentsFlow.value[dayOfWeek]?.figureId
-    override suspend fun syncWithRemote(userId: String) = Unit
+    override suspend fun resolve(userId: String?) = Unit
 }
 
 private class FakeDailyReflectionRepository(private val fetchDelayMs: Long = 0) : DailyReflectionRepository {

@@ -11,7 +11,11 @@ import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -25,6 +29,9 @@ class DayAssignmentRepositoryImpl(
     private val authRepository: AuthRepository,
 ) : DayAssignmentRepository {
 
+    private val _isResolved = MutableStateFlow(false)
+    override val isResolved: StateFlow<Boolean> = _isResolved.asStateFlow()
+
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> =
         dao.observeAll().map { entities ->
             entities.associate { entity ->
@@ -37,7 +44,7 @@ class DayAssignmentRepositoryImpl(
 
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) {
         dao.upsert(DayAssignmentEntity(dayOfWeek = dayOfWeek, figureId = figureId, lens = lens?.name, synced = false))
-        pushRow(dayOfWeek, figureId, lens?.name)
+        pushRow(dayOfWeek)
     }
 
     override suspend fun clear(dayOfWeek: Int) {
@@ -48,7 +55,25 @@ class DayAssignmentRepositoryImpl(
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? =
         dailyReflectionRepository.getLockedFigureId(epochDay) ?: dao.getByDayOfWeek(dayOfWeek)?.figureId
 
-    override suspend fun seedDefaultsIfEmpty() {
+    override suspend fun resolve(userId: String?) {
+        try {
+            // A signed-out resolve() has no account to push these rows to — mark them
+            // already-synced so they're pure local placeholder content, never a "pending
+            // edit" pushPending() could later mistake for something to push (and overwrite a
+            // real remote schedule with) once a genuine sign-in follows moments later, which
+            // is exactly what happens on a fresh install: authState passes through
+            // Unauthenticated before the user signs back in.
+            if (userId != null) syncWithRemote(userId) else seedDefaultsIfEmpty(markAsSynced = true)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Failure is non-fatal — retried on next launch/sign-in
+        } finally {
+            _isResolved.value = true
+        }
+    }
+
+    private suspend fun seedDefaultsIfEmpty(markAsSynced: Boolean = false) {
         if (dao.countAll() > 0) return
 
         val defaults = withTimeoutOrNull(5_000) {
@@ -61,11 +86,11 @@ class DayAssignmentRepositoryImpl(
 
         for ((dayOrdinal, figureName) in defaults) {
             val figure = figureDao.getByNameIgnoreCase(figureName) ?: continue
-            dao.upsert(DayAssignmentEntity(dayOfWeek = dayOrdinal, figureId = figure.id, synced = false))
+            dao.upsert(DayAssignmentEntity(dayOfWeek = dayOrdinal, figureId = figure.id, synced = markAsSynced))
         }
     }
 
-    override suspend fun syncWithRemote(userId: String) {
+    private suspend fun syncWithRemote(userId: String) {
         if (remote == null) return
         resetIfAccountChanged(userId)
         pushPending()
@@ -75,12 +100,17 @@ class DayAssignmentRepositoryImpl(
     private suspend fun currentUserId(): String? =
         authRepository.currentSession()?.userId?.takeIf { it.isNotBlank() }
 
-    private suspend fun pushRow(dayOfWeek: Int, figureId: Long, lens: String?) {
+    private suspend fun pushRow(dayOfWeek: Int) {
         val remote = remote ?: return
         val userId = currentUserId() ?: return
-        val serverId = figureDao.getById(figureId)?.serverId ?: return
+        // Re-reads Room right before pushing rather than trusting a caller-supplied
+        // figureId/lens — pushPending()'s snapshot can otherwise go stale if a concurrent
+        // assign() lands between the snapshot read and this push, re-pushing an old value
+        // with a fresh timestamp and clobbering the newer one on the server.
+        val row = dao.getRawByDayOfWeek(dayOfWeek)?.takeUnless { it.synced || it.pendingDelete } ?: return
+        val serverId = figureDao.getById(row.figureId)?.serverId ?: return
         try {
-            remote.push(userId, dayOfWeek, serverId, lens)
+            remote.push(userId, dayOfWeek, serverId, row.lens)
             dao.markSynced(dayOfWeek)
         } catch (e: Exception) {
             // stays unsynced — retried by the next syncWithRemote pass
@@ -100,7 +130,7 @@ class DayAssignmentRepositoryImpl(
 
     private suspend fun pushPending() {
         for (row in dao.getPendingSync()) {
-            if (row.pendingDelete) pushDelete(row.dayOfWeek) else pushRow(row.dayOfWeek, row.figureId, row.lens)
+            if (row.pendingDelete) pushDelete(row.dayOfWeek) else pushRow(row.dayOfWeek)
         }
     }
 

@@ -51,6 +51,10 @@ class BriefingViewModel(
 
     private fun loadCard() {
         viewModelScope.launch {
+            // Waits once for day-assignment resolution to settle before resolving today's
+            // reporter — otherwise a cold start can read the table mid-resolution, resolve
+            // nothing, fall back to the first figure in the list, and lock that in permanently.
+            dayAssignmentRepository.isResolved.first { it }
             combine(
                 dayAssignmentRepository.observeAssignments(),
                 figureRepository.observeAllFigures(),

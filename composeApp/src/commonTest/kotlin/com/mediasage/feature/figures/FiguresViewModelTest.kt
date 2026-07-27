@@ -13,6 +13,7 @@ import com.mediasage.domain.repository.FigureRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -240,9 +241,9 @@ private class FakeDayAssignmentRepository(
     override fun observeAssignments(): Flow<Map<Int, DayAssignment>> = flowOf(assignments)
     override suspend fun assign(dayOfWeek: Int, figureId: Long, lens: LensFilter?) = Unit
     override suspend fun clear(dayOfWeek: Int) = Unit
-    override suspend fun seedDefaultsIfEmpty() = Unit
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = null
-    override suspend fun syncWithRemote(userId: String) = Unit
+    override suspend fun resolve(userId: String?) = Unit
 }
 
 private class FakeFigureRepository(
