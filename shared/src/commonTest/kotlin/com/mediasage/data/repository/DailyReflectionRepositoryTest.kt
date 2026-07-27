@@ -331,7 +331,7 @@ private class FakeDailyReflectionDao : DailyReflectionDao {
     }
 
     override suspend fun insertIfAbsent(entity: DailyReflectionEntity) {
-        store.putIfAbsent(entity.id, entity)
+        if (!store.containsKey(entity.id)) store[entity.id] = entity
     }
 }
 
