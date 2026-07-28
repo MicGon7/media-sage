@@ -94,7 +94,7 @@ private fun LoginScreenContent(
     state: LoginContract.UiState,
     onIntent: (LoginContract.Intent) -> Unit,
     backgroundColors: List<Color> = listOf(NavyLight, Navy),
-    backgroundImage: DrawableResource? = null,
+    backgroundImage: DrawableResource? = Res.drawable.login_background_comic,
 ) {
     // Login screen is intentionally always dark - the masthead is a brand moment
     MediaSageTheme(darkTheme = true) {
@@ -106,6 +106,12 @@ private fun LoginScreenContent(
 
         val isLoading = state.isLoading
         val serverError = state.error ?: ""
+
+        // OnGradientMuted (a mid-tone tan-gray) has too little contrast against the photo
+        // background, which is itself entirely warm sepia — a competing muted hue reads as
+        // camouflaged rather than muted. Deriving muted text from OnGradient's own alpha keeps
+        // it legible against every region of the image instead.
+        val mutedTextColor = if (backgroundImage != null) OnGradient.copy(alpha = 0.72f) else OnGradientMuted
 
         Box(
             modifier = Modifier
@@ -147,7 +153,7 @@ private fun LoginScreenContent(
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontStyle = FontStyle.Italic,
                         letterSpacing = 3.sp,
-                        color = OnGradientMuted
+                        color = mutedTextColor
                     ),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -181,7 +187,7 @@ private fun LoginScreenContent(
                     text = stringResource(Res.string.login_subtitle),
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontStyle = FontStyle.Italic,
-                        color = OnGradientMuted
+                        color = mutedTextColor
                     ),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -199,9 +205,9 @@ private fun LoginScreenContent(
                     focusedTextColor = OnGradient,
                     unfocusedTextColor = OnGradient,
                     focusedBorderColor = OnGradient,
-                    unfocusedBorderColor = if (backgroundImage != null) OnGradientMuted else FieldBorder,
+                    unfocusedBorderColor = if (backgroundImage != null) mutedTextColor else FieldBorder,
                     focusedLabelColor = OnGradient,
-                    unfocusedLabelColor = OnGradientMuted,
+                    unfocusedLabelColor = mutedTextColor,
                     cursorColor = OnGradient,
                     errorBorderColor = MaterialTheme.colorScheme.error,
                     errorLabelColor = MaterialTheme.colorScheme.error,
@@ -237,7 +243,7 @@ private fun LoginScreenContent(
                                 contentDescription = stringResource(
                                     if (passwordVisible) Res.string.login_hide_password else Res.string.login_show_password
                                 ),
-                                tint = OnGradientMuted
+                                tint = mutedTextColor
                             )
                         }
                     },
@@ -273,7 +279,7 @@ private fun LoginScreenContent(
                 ) {
                     Text(
                         text = stringResource(Res.string.login_remember_email),
-                        style = MaterialTheme.typography.bodySmall.copy(color = OnGradientMuted)
+                        style = MaterialTheme.typography.bodySmall.copy(color = mutedTextColor)
                     )
                     Switch(
                         checked = state.rememberEmail,
@@ -281,10 +287,10 @@ private fun LoginScreenContent(
                         enabled = !isLoading,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Navy,
-                            checkedTrackColor = OnGradientMuted,
-                            uncheckedThumbColor = OnGradientMuted,
+                            checkedTrackColor = mutedTextColor,
+                            uncheckedThumbColor = mutedTextColor,
                             uncheckedTrackColor = Color.Transparent,
-                            uncheckedBorderColor = if (backgroundImage != null) OnGradientMuted else FieldBorder,
+                            uncheckedBorderColor = if (backgroundImage != null) mutedTextColor else FieldBorder,
                         )
                     )
                 }
@@ -298,12 +304,19 @@ private fun LoginScreenContent(
                     enabled = !isLoading,
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = OnGradient,
-                        disabledContentColor = OnGradientMuted
+                        disabledContentColor = mutedTextColor
                     ),
-                    border = BorderStroke(1.dp, if (isLoading) FieldBorder else OnGradient)
+                    border = BorderStroke(
+                        1.dp,
+                        if (isLoading) {
+                            if (backgroundImage != null) mutedTextColor else FieldBorder
+                        } else {
+                            OnGradient
+                        },
+                    )
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(strokeWidth = 2.dp, color = OnGradientMuted)
+                        CircularProgressIndicator(strokeWidth = 2.dp, color = mutedTextColor)
                     } else {
                         Text(
                             text = stringResource(Res.string.login_sign_in_button),
@@ -323,7 +336,7 @@ private fun LoginScreenContent(
                         text = stringResource(Res.string.login_bypass),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontStyle = FontStyle.Italic,
-                            color = OnGradientMuted
+                            color = mutedTextColor
                         )
                     )
                 }
@@ -332,7 +345,7 @@ private fun LoginScreenContent(
             if (appVersion.isNotEmpty()) {
                 Text(
                     text = appVersion,
-                    style = MaterialTheme.typography.labelSmall.copy(color = OnGradientMuted),
+                    style = MaterialTheme.typography.labelSmall.copy(color = mutedTextColor),
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
