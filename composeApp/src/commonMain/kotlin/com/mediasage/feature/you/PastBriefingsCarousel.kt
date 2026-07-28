@@ -37,6 +37,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.mediasage.theme.ComicBrown
+import com.mediasage.theme.ComicCream
+import com.mediasage.theme.ComicInk
+import com.mediasage.theme.ComicTan
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.you_recent_briefing_yesterday
 import mediasage.composeapp.generated.resources.you_recent_briefings_more
@@ -46,13 +50,6 @@ import org.jetbrains.compose.resources.stringResource
 private val CardWidth = 260.dp
 private val CardHeight = 132.dp
 private val PortraitWidth = 100.dp
-
-// Placeholder sepia/newsprint palette standing in for the upcoming brand theme — replace with
-// real theme tokens once that palette lands; kept local and easy to swap out in one place.
-private val SepiaCream = Color(0xFFFBF3E1)
-private val SepiaTan = Color(0xFFF0DFB8)
-private val SepiaBrown = Color(0xFF9C6B3E)
-private val SepiaInk = Color(0xFF4A2E1A)
 
 @Composable
 fun PastBriefingsCarousel(
@@ -101,20 +98,20 @@ private fun PastBriefingCard(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(colors = listOf(SepiaCream, SepiaTan))),
+                    .background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan))),
             ) {
                 PastBriefingPortrait(card, modifier = Modifier.width(PortraitWidth).fillMaxHeight())
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         text = card.dayLabel.resolve(),
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = SepiaBrown,
+                        color = ComicBrown,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         text = card.inspiration,
                         style = MaterialTheme.typography.bodySmall,
-                        color = SepiaInk,
+                        color = ComicInk,
                         maxLines = 5,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 6.dp),

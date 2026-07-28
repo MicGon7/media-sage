@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.StickyNote2
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +48,7 @@ import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBriefingCard
+import com.mediasage.ui.MediaSageComicButton
 import com.mediasage.ui.MediaSageDateDivider
 import com.mediasage.ui.MediaSageErrorState
 import com.mediasage.ui.SepiaColorFilter
@@ -51,6 +56,8 @@ import com.mediasage.ui.ThemeChip
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.briefing_card_loading
 import mediasage.composeapp.generated.resources.app_name
+import mediasage.composeapp.generated.resources.briefing_card_reflect_action
+import mediasage.composeapp.generated.resources.day_detail_share_action
 import mediasage.composeapp.generated.resources.home_error_generic
 import mediasage.composeapp.generated.resources.home_error_network
 import mediasage.composeapp.generated.resources.home_retry
@@ -156,7 +163,27 @@ private fun BriefingCard(
         onFigureTap = { onFigureTap(card.figureId) },
         theme = card.theme,
         sources = card.sources,
+        trailingContent = { BriefingCardActions() },
     )
+}
+
+@Composable
+private fun BriefingCardActions() {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        MediaSageComicButton(
+            icon = Icons.AutoMirrored.Outlined.StickyNote2,
+            label = stringResource(Res.string.briefing_card_reflect_action),
+            onClick = {},
+        )
+        MediaSageComicButton(
+            icon = Icons.Outlined.Share,
+            label = stringResource(Res.string.day_detail_share_action),
+            onClick = {},
+        )
+    }
 }
 
 @Composable

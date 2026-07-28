@@ -59,6 +59,15 @@ val WarmDarkSurface = Color(0xFF241A0E)    // warm sepia card surface
 val WarmDarkMuted = Color(0xFF9A8A72)      // warm tan — muted secondary text
 val WarmDarkBorder = Color(0xFF3D2E1E)     // subtle warm brown border
 
+// Comic / vintage-newspaper palette — sepia tones matching the app icon's hand-off-newspaper
+// illustration. Referenced directly by comic-styled reusable components (MediaSageComicButton,
+// MediaSageEntryCard) regardless of the active AppTheme/dark-mode selection, same precedent as
+// the Lens filter colors below.
+val ComicCream = Color(0xFFFBF3E1)
+val ComicTan = Color(0xFFF0DFB8)
+val ComicBrown = Color(0xFF9C6B3E)
+val ComicInk = Color(0xFF4A2E1A)
+
 // Lens filter theme colors
 val LensLove = Color(0xFFD4687A)
 val LensGrace = Color(0xFF9B7DC8)

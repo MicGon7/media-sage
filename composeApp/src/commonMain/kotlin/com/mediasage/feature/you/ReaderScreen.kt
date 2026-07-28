@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Settings
@@ -80,6 +79,7 @@ import com.mediasage.theme.LensPerseverance
 import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
+import com.mediasage.ui.MediaSageEntryCard
 import com.mediasage.ui.ReassignConfirmationDialog
 import com.mediasage.ui.ScreenHeader
 import kotlinx.datetime.DayOfWeek
@@ -248,7 +248,7 @@ fun ReaderScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        EntryCard(
+                        MediaSageEntryCard(
                             title = stringResource(Res.string.you_nav_saved),
                             subtitle = stringResource(Res.string.you_saved_entry_subtitle),
                             onClick = onNavigateToBookmarks,
@@ -257,42 +257,6 @@ fun ReaderScreen(
                 }
             }
 
-        }
-    }
-}
-
-@Composable
-private fun EntryCard(title: String, subtitle: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 0.dp,
-        shadowElevation = 2.dp,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
