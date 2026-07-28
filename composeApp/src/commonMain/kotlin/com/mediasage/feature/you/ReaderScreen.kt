@@ -56,7 +56,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -70,8 +69,10 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
+import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
+import com.mediasage.theme.ComicTan
 import com.mediasage.theme.LensFaith
 import com.mediasage.theme.LensGrace
 import com.mediasage.theme.LensGrief
@@ -455,34 +456,32 @@ private fun SavedQuoteCard(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = ComicTan,
             ),
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         ) {
-            val surface = MaterialTheme.colorScheme.surface
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
                         Brush.verticalGradient(
-                            0f to surface,
-                            0.5f to surface,
+                            0f to ComicTan,
+                            0.5f to ComicTan,
                             1f to ComicInk,
                         ),
                     ),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    val isDark = surface.luminance() < 0.5f
                     Text(
                         text = stringResource(Res.string.you_quote_card_header),
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
-                        color = if (isDark) BrandAmber else MaterialTheme.colorScheme.primary,
+                        color = ComicBrown,
                     )
                     Text(
                         text = "“${quote.quoteText}”",
                         style = MaterialTheme.typography.bodyLarge,
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = ComicInk,
                         modifier = Modifier.padding(top = 12.dp),
                     )
                 }
