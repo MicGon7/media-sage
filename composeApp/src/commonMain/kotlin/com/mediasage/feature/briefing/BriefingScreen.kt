@@ -51,7 +51,7 @@ import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBriefingCard
-import com.mediasage.ui.MediaSageComicButton
+import com.mediasage.ui.MediaSageComicChip
 import com.mediasage.ui.MediaSageDateDivider
 import com.mediasage.ui.MediaSageErrorState
 import com.mediasage.ui.SepiaColorFilter
@@ -175,21 +175,21 @@ private fun BriefingCard(
 @Composable
 private fun BriefingCardActions() {
     FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        MediaSageComicButton(
+        MediaSageComicChip(
             icon = Icons.AutoMirrored.Outlined.StickyNote2,
             label = stringResource(Res.string.briefing_card_reflect_action),
             onClick = {},
         )
-        MediaSageComicButton(
+        MediaSageComicChip(
             icon = Icons.Outlined.MenuBook,
             label = stringResource(Res.string.briefing_card_study_action),
             onClick = {},
         )
-        MediaSageComicButton(
+        MediaSageComicChip(
             icon = Icons.Outlined.Share,
             label = stringResource(Res.string.day_detail_share_action),
             onClick = {},
