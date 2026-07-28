@@ -24,6 +24,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +38,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
@@ -89,8 +89,12 @@ private fun PastBriefingCard(
     modifier: Modifier = Modifier,
 ) {
     val isDark = MediaSageTheme.isDark
-    val gradientColors = if (isDark) listOf(ComicBrown, ComicInk) else listOf(ComicCream, ComicTan)
     val contentColor = if (isDark) ComicTan else ComicInk
+    val backgroundModifier = if (isDark) {
+        Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+    } else {
+        Modifier.background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan)))
+    }
     ElevatedCard(
         onClick = onClick,
         modifier = modifier.width(CardWidth).height(CardHeight),
@@ -102,7 +106,7 @@ private fun PastBriefingCard(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(colors = gradientColors)),
+                    .then(backgroundModifier),
             ) {
                 PastBriefingPortrait(card, modifier = Modifier.width(PortraitWidth).fillMaxHeight())
                 Column(modifier = Modifier.padding(12.dp)) {

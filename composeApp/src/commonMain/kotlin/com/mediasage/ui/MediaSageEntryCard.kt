@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,7 +21,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
@@ -42,8 +42,12 @@ fun MediaSageEntryCard(
     modifier: Modifier = Modifier,
 ) {
     val isDark = MediaSageTheme.isDark
-    val gradientColors = if (isDark) listOf(ComicBrown, ComicInk) else listOf(ComicCream, ComicTan)
     val contentColor = if (isDark) ComicTan else ComicInk
+    val backgroundModifier = if (isDark) {
+        Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+    } else {
+        Modifier.background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan)))
+    }
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.large,
@@ -53,8 +57,7 @@ fun MediaSageEntryCard(
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier
-                .background(Brush.verticalGradient(colors = gradientColors))
+            modifier = backgroundModifier
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
