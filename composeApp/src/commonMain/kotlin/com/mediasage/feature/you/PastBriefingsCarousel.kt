@@ -2,6 +2,7 @@ package com.mediasage.feature.you
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
@@ -86,6 +88,9 @@ private fun PastBriefingCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = isSystemInDarkTheme()
+    val gradientColors = if (isDark) listOf(ComicBrown, ComicInk) else listOf(ComicCream, ComicTan)
+    val contentColor = if (isDark) ComicTan else ComicInk
     ElevatedCard(
         onClick = onClick,
         modifier = modifier.width(CardWidth).height(CardHeight),
@@ -97,20 +102,20 @@ private fun PastBriefingCard(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan))),
+                    .background(Brush.verticalGradient(colors = gradientColors)),
             ) {
                 PastBriefingPortrait(card, modifier = Modifier.width(PortraitWidth).fillMaxHeight())
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         text = card.dayLabel.resolve(),
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = ComicInk,
+                        color = contentColor,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = card.inspiration,
                         style = MaterialTheme.typography.bodySmall,
-                        color = ComicInk,
+                        color = contentColor,
                         maxLines = 5,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 6.dp),

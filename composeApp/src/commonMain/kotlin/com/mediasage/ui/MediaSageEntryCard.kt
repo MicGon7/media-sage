@@ -1,6 +1,7 @@
 package com.mediasage.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
@@ -28,8 +30,10 @@ import com.mediasage.theme.MediaSageTheme
 /**
  * A navigation-entry row styled after the app's comic / vintage-newspaper illustration (sepia
  * gradient, ink text) — a title, a subtitle, and a tap target that navigates elsewhere. Colors
- * come from the fixed comic palette rather than [MaterialTheme.colorScheme], the same precedent
- * as [MediaSageComicButton].
+ * come from the fixed comic palette rather than [MaterialTheme.colorScheme] — but unlike
+ * [ThemeChip], the palette itself flips to a darker sepia treatment in dark mode so it doesn't
+ * read as a bright disconnect against the rest of a dark screen, the same precedent as
+ * [MediaSageComicChip].
  */
 @Composable
 fun MediaSageEntryCard(
@@ -38,6 +42,9 @@ fun MediaSageEntryCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = isSystemInDarkTheme()
+    val gradientColors = if (isDark) listOf(ComicBrown, ComicInk) else listOf(ComicCream, ComicTan)
+    val contentColor = if (isDark) ComicTan else ComicInk
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.large,
@@ -48,7 +55,7 @@ fun MediaSageEntryCard(
     ) {
         Row(
             modifier = Modifier
-                .background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan)))
+                .background(Brush.verticalGradient(colors = gradientColors))
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -58,19 +65,19 @@ fun MediaSageEntryCard(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = ComicInk,
+                    color = contentColor,
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = ComicInk,
+                    color = contentColor,
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                tint = ComicInk,
+                tint = contentColor,
             )
         }
     }

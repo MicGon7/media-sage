@@ -3,6 +3,7 @@ package com.mediasage.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.mediasage.theme.ComicBrown
+import com.mediasage.theme.ComicCaramel
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
@@ -34,7 +36,9 @@ import com.mediasage.theme.MediaSageTheme
  * sepia gradient, ink text, and brown border as [MediaSageEntryCard], sized to sit as a small,
  * secondary affordance attached to a block of content (e.g. beneath a briefing's reflection
  * text) rather than a standalone call to action. Colors come from the fixed comic palette
- * rather than [MaterialTheme.colorScheme], the same precedent as [ThemeChip].
+ * rather than [MaterialTheme.colorScheme] — but unlike [ThemeChip], the palette itself flips to
+ * a darker sepia treatment in dark mode so it doesn't read as a bright disconnect against the
+ * rest of a dark screen.
  */
 @Composable
 fun MediaSageComicChip(
@@ -43,21 +47,25 @@ fun MediaSageComicChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = isSystemInDarkTheme()
+    val gradientColors = if (isDark) listOf(ComicBrown, ComicInk) else listOf(ComicCream, ComicTan)
+    val borderColor = if (isDark) ComicCaramel else ComicBrown
+    val contentColor = if (isDark) ComicTan else ComicInk
     Surface(
         modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(50),
-        border = BorderStroke(1.dp, ComicBrown),
+        border = BorderStroke(1.dp, borderColor),
         color = Color.Transparent,
     ) {
         Row(
             modifier = Modifier
-                .background(Brush.horizontalGradient(colors = listOf(ComicCream, ComicTan)))
+                .background(Brush.horizontalGradient(colors = gradientColors))
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = ComicInk, modifier = Modifier.size(16.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text = label, style = MaterialTheme.typography.labelMedium, color = ComicInk)
+            Text(text = label, style = MaterialTheme.typography.labelMedium, color = contentColor)
         }
     }
 }
