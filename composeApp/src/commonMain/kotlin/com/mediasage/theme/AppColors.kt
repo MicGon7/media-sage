@@ -11,6 +11,7 @@ data class AppColors(
     val accent: Color,
     val ruleLine: Color,
     val cardBorder: Color,
+    val isDark: Boolean,
     val backgroundBrush: Brush? = null,
 )
 
@@ -19,6 +20,7 @@ val LocalAppColors = staticCompositionLocalOf {
         accent = Color.Unspecified,
         ruleLine = Color.Unspecified,
         cardBorder = Color.Unspecified,
+        isDark = false,
     )
 }
 

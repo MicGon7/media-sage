@@ -57,7 +57,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -452,7 +451,7 @@ private fun SavedQuoteCard(
             text = stringResource(Res.string.you_saved_section_title),
             modifier = Modifier.padding(bottom = 12.dp),
         )
-        val isDarkSurface = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+        val isDarkSurface = MediaSageTheme.colors.isDark
         val cardSurface = if (isDarkSurface) {
             MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
         } else {
