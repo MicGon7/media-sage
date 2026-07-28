@@ -27,12 +27,14 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -186,6 +188,97 @@ class ReaderViewModelTest {
         assertNull(state.pendingReassignment)
     }
 
+    @Test
+    fun pastBriefingsShowsMostRecentReflectionsFirstAndExcludesToday() = runTest(testDispatcher) {
+        val todaysBriefing = BriefingDay(epochDay = todayEpochDay, figureId = 1L, inspiration = "Today's word")
+        val yesterday = BriefingDay(epochDay = todayEpochDay - 1, figureId = 1L, inspiration = "Yesterday's word")
+        val twoDaysAgo = BriefingDay(epochDay = todayEpochDay - 2, figureId = 1L, inspiration = "Older word")
+        val (viewModel, _) = readerViewModelWithRepo(
+            figure = testFigure,
+            briefings = listOf(todaysBriefing, yesterday, twoDaysAgo),
+        )
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+
+        assertEquals(2, state.pastBriefings.size)
+        assertEquals(todayEpochDay - 1, state.pastBriefings.first().epochDay)
+        assertEquals("Yesterday's word", state.pastBriefings.first().inspiration)
+    }
+
+    @Test
+    fun pastBriefingsLabelsOneDayAgoAsYesterday() = runTest(testDispatcher) {
+        val yesterday = BriefingDay(epochDay = todayEpochDay - 1, figureId = 1L, inspiration = "Yesterday's word")
+        val (viewModel, _) = readerViewModelWithRepo(figure = testFigure, briefings = listOf(yesterday))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+
+        assertEquals(ReaderContract.DayLabel.Yesterday, state.pastBriefings.first().dayLabel)
+    }
+
+    @Test
+    fun pastBriefingsLabelsTwoToSixDaysAgoWithTheWeekdayName() = runTest(testDispatcher) {
+        val threeDaysAgo = BriefingDay(epochDay = todayEpochDay - 3, figureId = 1L, inspiration = "Word")
+        val (viewModel, _) = readerViewModelWithRepo(figure = testFigure, briefings = listOf(threeDaysAgo))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+
+        val expectedWeekday = LocalDate.fromEpochDays((todayEpochDay - 3).toInt()).dayOfWeek.name
+            .lowercase().replaceFirstChar { it.uppercase() }
+        assertEquals(ReaderContract.DayLabel.Text(expectedWeekday), state.pastBriefings.first().dayLabel)
+    }
+
+    @Test
+    fun pastBriefingsLabelsSevenOrMoreDaysAgoWithAFullDate() = runTest(testDispatcher) {
+        val epochDay = todayEpochDay - 8
+        val eightDaysAgo = BriefingDay(epochDay = epochDay, figureId = 1L, inspiration = "Word")
+        val (viewModel, _) = readerViewModelWithRepo(figure = testFigure, briefings = listOf(eightDaysAgo))
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+
+        val date = LocalDate.fromEpochDays(epochDay.toInt())
+        val monthName = date.month.name.lowercase().replaceFirstChar { it.uppercase() }
+        val expected = "$monthName ${date.dayOfMonth}, ${date.year}"
+        assertEquals(ReaderContract.DayLabel.Text(expected), state.pastBriefings.first().dayLabel)
+    }
+
+    @Test
+    fun pastBriefingsCapAtSevenMostRecentDays() = runTest(testDispatcher) {
+        val briefings = (1..10).map { daysAgo ->
+            BriefingDay(epochDay = todayEpochDay - daysAgo, figureId = 1L, inspiration = "Word $daysAgo")
+        }
+        val (viewModel, _) = readerViewModelWithRepo(figure = testFigure, briefings = briefings)
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+
+        assertEquals(7, state.pastBriefings.size)
+        assertEquals(todayEpochDay - 1, state.pastBriefings.first().epochDay)
+        assertEquals(todayEpochDay - 7, state.pastBriefings.last().epochDay)
+        assertTrue(state.hasMorePastBriefings)
+    }
+
+    @Test
+    fun pastBriefingsIsEmptyWhenNoPastReflectionsExist() = runTest(testDispatcher) {
+        val (viewModel, _) = readerViewModelWithRepo(figure = testFigure, briefings = emptyList())
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+
+        assertTrue(state.pastBriefings.isEmpty())
+        assertFalse(state.hasMorePastBriefings)
+    }
+
+    @Test
+    fun hasMorePastBriefingsIsFalseWhenCountIsAtOrBelowTheCap() = runTest(testDispatcher) {
+        val briefings = (1..7).map { daysAgo ->
+            BriefingDay(epochDay = todayEpochDay - daysAgo, figureId = 1L, inspiration = "Word $daysAgo")
+        }
+        val (viewModel, _) = readerViewModelWithRepo(figure = testFigure, briefings = briefings)
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+
+        assertEquals(7, state.pastBriefings.size)
+        assertFalse(state.hasMorePastBriefings)
+    }
+
     /**
      * Builds the ViewModel and starts collecting its state. `stateIn(WhileSubscribed)` is cold
      * until a subscriber is present, so an active collector in [backgroundScope] is required for
@@ -215,6 +308,7 @@ class ReaderViewModelTest {
             getReaderCalendar = GetReaderCalendarUseCase(figureRepo, dayAssignmentRepo, quoteRepo, reflectionRepo),
             dayAssignmentRepository = dayAssignmentRepo,
             authRepository = authRepo,
+            reflectionRepository = reflectionRepo,
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         return viewModel to dayAssignmentRepo

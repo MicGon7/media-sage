@@ -99,7 +99,7 @@ private fun DayDetailHeader(epochDay: Long) {
     val dateText = remember(epochDay) { formatEpochDay(epochDay) }
     Text(
         text = dateText,
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.SemiBold
     )
 }

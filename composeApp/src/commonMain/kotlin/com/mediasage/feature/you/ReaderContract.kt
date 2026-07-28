@@ -23,6 +23,19 @@ object ReaderContract {
         val figureId: Long,
     )
 
+    sealed interface DayLabel {
+        data object Yesterday : DayLabel
+        data class Text(val value: String) : DayLabel
+    }
+
+    data class PastBriefingCard(
+        val epochDay: Long,
+        val figureName: String,
+        val figureImageUrl: String?,
+        val inspiration: String,
+        val dayLabel: DayLabel,
+    )
+
     sealed interface ActiveSheet {
         data class WeekSlotPicker(val dayOfWeek: Int) : ActiveSheet
     }
@@ -41,6 +54,8 @@ object ReaderContract {
         data class Ready(
             val weekSlots: List<DaySlot> = emptyList(),
             val quoteCard: QuoteCard? = null,
+            val pastBriefings: List<PastBriefingCard> = emptyList(),
+            val hasMorePastBriefings: Boolean = false,
             val pickerFigures: List<Figure> = emptyList(),
             val activeSheet: ActiveSheet? = null,
             val pendingReassignment: PendingReassignment? = null,

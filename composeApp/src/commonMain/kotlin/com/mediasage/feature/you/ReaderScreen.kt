@@ -85,7 +85,6 @@ import com.mediasage.ui.ScreenHeader
 import kotlinx.datetime.DayOfWeek
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
-import mediasage.composeapp.generated.resources.you_history_entry_subtitle
 import mediasage.composeapp.generated.resources.you_lens_faith
 import mediasage.composeapp.generated.resources.you_lens_grace
 import mediasage.composeapp.generated.resources.you_lens_grief
@@ -95,7 +94,6 @@ import mediasage.composeapp.generated.resources.you_lens_love
 import mediasage.composeapp.generated.resources.you_lens_perseverance
 import mediasage.composeapp.generated.resources.you_lens_repentance
 import mediasage.composeapp.generated.resources.you_lens_today
-import mediasage.composeapp.generated.resources.you_nav_history
 import mediasage.composeapp.generated.resources.you_nav_saved
 import mediasage.composeapp.generated.resources.you_picker_back_description
 import mediasage.composeapp.generated.resources.you_picker_choose_theme
@@ -121,6 +119,7 @@ fun ReaderScreen(
     onNavigateToFigureDetail: (figureId: Long) -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
     onNavigateToBookmarks: () -> Unit = {},
+    onNavigateToDayDetail: (epochDay: Long, figureName: String?, figureImageUrl: String?) -> Unit = { _, _, _ -> },
 ) {
     val ready = state as? ReaderContract.UiState.Ready
     val activeSheet = ready?.activeSheet as? ReaderContract.ActiveSheet.WeekSlotPicker
@@ -215,33 +214,44 @@ fun ReaderScreen(
                     )
                 }
 
+                ready.quoteCard?.let { quote ->
+                    item {
+                        SavedQuoteCard(
+                            quote = quote,
+                            onViewMore = { if (it > 0) onNavigateToFigureDetail(it) },
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                }
+
+                if (ready.pastBriefings.isNotEmpty()) {
+                    item {
+                        PastBriefingsCarousel(
+                            cards = ready.pastBriefings,
+                            onCardClick = { epochDay ->
+                                val card = ready.pastBriefings.firstOrNull { it.epochDay == epochDay }
+                                onNavigateToDayDetail(epochDay, card?.figureName, card?.figureImageUrl)
+                            },
+                            showSeeMore = ready.hasMorePastBriefings,
+                            onSeeMore = onNavigateToHistory,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                }
+
+                item {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                }
+
                 item {
                     Column(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         EntryCard(
-                            title = stringResource(Res.string.you_nav_history),
-                            subtitle = stringResource(Res.string.you_history_entry_subtitle),
-                            onClick = onNavigateToHistory,
-                        )
-                        EntryCard(
                             title = stringResource(Res.string.you_nav_saved),
                             subtitle = stringResource(Res.string.you_saved_entry_subtitle),
                             onClick = onNavigateToBookmarks,
-                        )
-                    }
-                }
-
-                ready.quoteCard?.let { quote ->
-                    item {
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-                    item {
-                        SavedQuoteCard(
-                            quote = quote,
-                            onViewMore = { if (it > 0) onNavigateToFigureDetail(it) },
-                            modifier = Modifier.padding(16.dp),
                         )
                     }
                 }

@@ -129,6 +129,7 @@ class DailyReflectionRepositoryImpl(
                     figureId = entity.figureId,
                     scriptureReference = entity.scriptureReference,
                     scriptureText = entity.scriptureText,
+                    inspiration = entity.inspiration,
                 )
             }
         }
