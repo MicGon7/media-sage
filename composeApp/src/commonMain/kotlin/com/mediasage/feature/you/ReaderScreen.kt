@@ -70,6 +70,7 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
+import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
 import com.mediasage.theme.LensFaith
@@ -487,14 +488,14 @@ private fun SavedQuoteCard(
                         .height(16.dp)
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(cardSurface, ComicTan),
+                                colors = listOf(cardSurface, ComicCream),
                             ),
                         ),
                 )
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(ComicTan)
+                        .background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan)))
                         .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
                 ) {
                     Row(
