@@ -41,6 +41,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -450,7 +451,7 @@ private fun SavedQuoteCard(
             text = stringResource(Res.string.you_saved_section_title),
             modifier = Modifier.padding(bottom = 12.dp),
         )
-        val cardSurface = MaterialTheme.colorScheme.surfaceContainerLow
+        val cardSurface = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
