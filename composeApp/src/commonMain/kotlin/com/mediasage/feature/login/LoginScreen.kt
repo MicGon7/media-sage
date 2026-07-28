@@ -1,5 +1,6 @@
 package com.mediasage.feature.login
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import com.mediasage.LocalAppVersion
 import androidx.compose.ui.text.font.FontStyle
@@ -59,6 +61,7 @@ import com.mediasage.theme.MediaSageTheme
 import com.mediasage.theme.Navy
 import com.mediasage.theme.NavyLight
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.login_background_comic
 import mediasage.composeapp.generated.resources.login_bypass
 import mediasage.composeapp.generated.resources.login_email_label
 import mediasage.composeapp.generated.resources.login_hide_password
@@ -70,6 +73,8 @@ import mediasage.composeapp.generated.resources.login_remember_email
 import mediasage.composeapp.generated.resources.login_show_password
 import mediasage.composeapp.generated.resources.login_sign_in_button
 import mediasage.composeapp.generated.resources.login_subtitle
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 private val OnGradient = InkLight
@@ -88,7 +93,8 @@ fun LoginScreen(
 private fun LoginScreenContent(
     state: LoginContract.UiState,
     onIntent: (LoginContract.Intent) -> Unit,
-    backgroundColors: List<Color> = listOf(NavyLight, Navy)
+    backgroundColors: List<Color> = listOf(NavyLight, Navy),
+    backgroundImage: DrawableResource? = null,
 ) {
     // Login screen is intentionally always dark - the masthead is a brand moment
     MediaSageTheme(darkTheme = true) {
@@ -104,8 +110,27 @@ private fun LoginScreenContent(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(backgroundColors))
+                .then(
+                    if (backgroundImage != null) {
+                        Modifier
+                    } else {
+                        Modifier.background(Brush.verticalGradient(backgroundColors))
+                    }
+                )
         ) {
+            if (backgroundImage != null) {
+                Image(
+                    painter = painterResource(backgroundImage),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.45f)),
+                )
+            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -400,5 +425,15 @@ private fun LoginThemeDPreview() {
         state = LoginContract.UiState(),
         onIntent = {},
         backgroundColors = listOf(Navy, Navy)
+    )
+}
+
+@Preview(showBackground = true, name = "Theme E - Comic city photo")
+@Composable
+private fun LoginThemeEPreview() {
+    LoginScreenContent(
+        state = LoginContract.UiState(),
+        onIntent = {},
+        backgroundImage = Res.drawable.login_background_comic,
     )
 }
