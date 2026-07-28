@@ -40,6 +40,15 @@ internal class FigureDetailStateProvider : PreviewParameterProvider<FigureDetail
                 )
             )
         ),
+        FigureDetailContract.UiState.Success(
+            figureName = "Julian of Norwich",
+            figureRole = "Mystic & Anchoress",
+            figureImageUrl = null,
+            bio = "Julian of Norwich (c. 1343 – c. 1416) was an English anchoress and Christian mystic, " +
+                "best known for Revelations of Divine Love, the earliest surviving book in English written " +
+                "by a woman.",
+            quotes = emptyList()
+        ),
         FigureDetailContract.UiState.Error("Something went wrong. Please try again.")
     )
 }

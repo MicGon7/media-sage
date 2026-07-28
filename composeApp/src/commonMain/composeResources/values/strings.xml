@@ -124,16 +124,16 @@
 
     <!-- Figure detail screen -->
     <string name="figure_detail_biography">Biography</string>
+    <string name="figure_detail_tab_quotes">Quotes</string>
+    <string name="figure_detail_tab_writings">Writings</string>
     <string name="figure_detail_quotes_sheet_title">Collected Quotes</string>
+    <string name="figure_detail_no_biography">No biography available yet.</string>
+    <string name="figure_detail_no_quotes">No quotes yet.</string>
+    <string name="figure_detail_writings_placeholder">Coming soon</string>
 
     <plurals name="headlines_story_count">
         <item quantity="one">%1$d story</item>
         <item quantity="other">%1$d stories</item>
-    </plurals>
-
-    <plurals name="figure_detail_quotes_button">
-        <item quantity="one">%1$d Quote</item>
-        <item quantity="other">%1$d Quotes</item>
     </plurals>
 
     <string name="figure_detail_pin_to_home">Pin to Home</string>
