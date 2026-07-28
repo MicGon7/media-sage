@@ -69,6 +69,7 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
+import com.mediasage.theme.ComicCaramel
 import com.mediasage.theme.LensFaith
 import com.mediasage.theme.LensGrace
 import com.mediasage.theme.LensGrief
@@ -457,13 +458,13 @@ private fun SavedQuoteCard(
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         ) {
             Row {
-                // Amber bookmark ribbon — same language as pinned reporters
+                // Comic-palette accent ribbon — ties this card into the Past Briefings/Saved look
                 Box(
                     modifier = Modifier
                         .width(4.dp)
                         .fillMaxHeight()
                         .background(
-                            color = BrandAmber,
+                            color = ComicCaramel,
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(
                                 topStart = MaterialTheme.shapes.large.topStart,
                                 bottomStart = MaterialTheme.shapes.large.bottomStart,
