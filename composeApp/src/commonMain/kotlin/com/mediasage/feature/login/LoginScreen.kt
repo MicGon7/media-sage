@@ -39,6 +39,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -55,11 +57,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mediasage.theme.CardBorder
 import com.mediasage.theme.DarkBackground
+import com.mediasage.theme.Ink
 import com.mediasage.theme.InkLight
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.theme.Navy
 import com.mediasage.theme.NavyLight
+import com.mediasage.theme.Slate
+import com.mediasage.theme.White
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.login_background_comic
 import mediasage.composeapp.generated.resources.login_bypass
@@ -95,6 +101,7 @@ private fun LoginScreenContent(
     onIntent: (LoginContract.Intent) -> Unit,
     backgroundColors: List<Color> = listOf(NavyLight, Navy),
     backgroundImage: DrawableResource? = Res.drawable.login_background_comic,
+    formOnPaper: Boolean = true,
 ) {
     // Login screen is intentionally always dark - the masthead is a brand moment
     MediaSageTheme(darkTheme = true) {
@@ -112,6 +119,20 @@ private fun LoginScreenContent(
         // camouflaged rather than muted. Deriving muted text from OnGradient's own alpha keeps
         // it legible against every region of the image instead.
         val mutedTextColor = if (backgroundImage != null) OnGradient.copy(alpha = 0.72f) else OnGradientMuted
+
+        // formOnPaper renders the sign-in form on a white "newspaper page" panel over the photo
+        // background instead of light-on-dark text directly on the image — dark ink on white
+        // needs its own color set, unrelated to the cream/muted-cream pairing used everywhere else.
+        val formTextColor = if (formOnPaper) Ink else OnGradient
+        val formMutedColor = if (formOnPaper) Slate else mutedTextColor
+        val formAccentColor = if (formOnPaper) Navy else OnGradient
+        val formBorderColor = if (formOnPaper) {
+            CardBorder
+        } else if (backgroundImage != null) {
+            mutedTextColor
+        } else {
+            FieldBorder
+        }
 
         Box(
             modifier = Modifier
@@ -134,7 +155,7 @@ private fun LoginScreenContent(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.22f)),
+                        .background(Color.Black.copy(alpha = 0.5f)),
                 )
             }
             Column(
@@ -198,20 +219,28 @@ private fun LoginScreenContent(
                 Spacer(modifier = Modifier.height(36.dp))
 
                 // Form
-                // FieldBorder (blue-gray) is tuned for the navy gradient variants; the photo
-                // background has no navy backdrop to relate to, so its resting border uses the
-                // same muted cream as the rest of this screen's secondary text instead.
                 val fieldColors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = OnGradient,
-                    unfocusedTextColor = OnGradient,
-                    focusedBorderColor = OnGradient,
-                    unfocusedBorderColor = if (backgroundImage != null) mutedTextColor else FieldBorder,
-                    focusedLabelColor = OnGradient,
-                    unfocusedLabelColor = mutedTextColor,
-                    cursorColor = OnGradient,
+                    focusedTextColor = formTextColor,
+                    unfocusedTextColor = formTextColor,
+                    focusedBorderColor = formAccentColor,
+                    unfocusedBorderColor = formBorderColor,
+                    focusedLabelColor = formAccentColor,
+                    unfocusedLabelColor = formMutedColor,
+                    cursorColor = formAccentColor,
                     errorBorderColor = MaterialTheme.colorScheme.error,
                     errorLabelColor = MaterialTheme.colorScheme.error,
                 )
+                val paperModifier = if (formOnPaper) {
+                    Modifier
+                        .fillMaxWidth()
+                        .shadow(elevation = 8.dp, shape = MaterialTheme.shapes.medium)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(White)
+                        .padding(20.dp)
+                } else {
+                    Modifier.fillMaxWidth()
+                }
+                Column(modifier = paperModifier) {
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it; localError = "" },
@@ -243,7 +272,7 @@ private fun LoginScreenContent(
                                 contentDescription = stringResource(
                                     if (passwordVisible) Res.string.login_hide_password else Res.string.login_show_password
                                 ),
-                                tint = mutedTextColor
+                                tint = formMutedColor
                             )
                         }
                     },
@@ -279,7 +308,7 @@ private fun LoginScreenContent(
                 ) {
                     Text(
                         text = stringResource(Res.string.login_remember_email),
-                        style = MaterialTheme.typography.bodySmall.copy(color = mutedTextColor)
+                        style = MaterialTheme.typography.bodySmall.copy(color = formMutedColor)
                     )
                     Switch(
                         checked = state.rememberEmail,
@@ -287,10 +316,10 @@ private fun LoginScreenContent(
                         enabled = !isLoading,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Navy,
-                            checkedTrackColor = mutedTextColor,
-                            uncheckedThumbColor = mutedTextColor,
+                            checkedTrackColor = formMutedColor,
+                            uncheckedThumbColor = formMutedColor,
                             uncheckedTrackColor = Color.Transparent,
-                            uncheckedBorderColor = if (backgroundImage != null) mutedTextColor else FieldBorder,
+                            uncheckedBorderColor = formBorderColor,
                         )
                     )
                 }
@@ -303,20 +332,13 @@ private fun LoginScreenContent(
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     enabled = !isLoading,
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = OnGradient,
-                        disabledContentColor = mutedTextColor
+                        contentColor = formAccentColor,
+                        disabledContentColor = formMutedColor
                     ),
-                    border = BorderStroke(
-                        1.dp,
-                        if (isLoading) {
-                            if (backgroundImage != null) mutedTextColor else FieldBorder
-                        } else {
-                            OnGradient
-                        },
-                    )
+                    border = BorderStroke(1.dp, if (isLoading) formBorderColor else formAccentColor)
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(strokeWidth = 2.dp, color = mutedTextColor)
+                        CircularProgressIndicator(strokeWidth = 2.dp, color = formMutedColor)
                     } else {
                         Text(
                             text = stringResource(Res.string.login_sign_in_button),
@@ -326,6 +348,7 @@ private fun LoginScreenContent(
                             )
                         )
                     }
+                }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(
