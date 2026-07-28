@@ -56,7 +56,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -461,11 +460,11 @@ private fun SavedQuoteCard(
         ) {
             Column {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                     Text(
                         text = stringResource(Res.string.you_quote_card_header),
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
-                        color = if (isDark) BrandAmber else MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = "“${quote.quoteText}”",
