@@ -192,11 +192,14 @@ private fun LoginScreenContent(
                 Spacer(modifier = Modifier.height(36.dp))
 
                 // Form
+                // FieldBorder (blue-gray) is tuned for the navy gradient variants; the photo
+                // background has no navy backdrop to relate to, so its resting border uses the
+                // same muted cream as the rest of this screen's secondary text instead.
                 val fieldColors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = OnGradient,
                     unfocusedTextColor = OnGradient,
                     focusedBorderColor = OnGradient,
-                    unfocusedBorderColor = FieldBorder,
+                    unfocusedBorderColor = if (backgroundImage != null) OnGradientMuted else FieldBorder,
                     focusedLabelColor = OnGradient,
                     unfocusedLabelColor = OnGradientMuted,
                     cursorColor = OnGradient,
