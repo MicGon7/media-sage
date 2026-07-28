@@ -89,7 +89,7 @@ private fun PastBriefingCard(
     modifier: Modifier = Modifier,
 ) {
     val isDark = MediaSageTheme.isDark
-    val contentColor = if (isDark) ComicTan else ComicInk
+    val contentColor = if (isDark) MaterialTheme.colorScheme.onSurface else ComicInk
     val backgroundModifier = if (isDark) {
         Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
     } else {

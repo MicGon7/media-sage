@@ -28,11 +28,11 @@ import com.mediasage.theme.MediaSageTheme
 
 /**
  * A navigation-entry row styled after the app's comic / vintage-newspaper illustration (sepia
- * gradient, ink text) — a title, a subtitle, and a tap target that navigates elsewhere. Colors
- * come from the fixed comic palette rather than [MaterialTheme.colorScheme] — but unlike
- * [ThemeChip], the palette itself flips to a darker sepia treatment in dark mode so it doesn't
- * read as a bright disconnect against the rest of a dark screen, the same precedent as
- * [MediaSageComicChip].
+ * gradient, ink text) — a title, a subtitle, and a tap target that navigates elsewhere. In light
+ * mode the background and text come from the fixed comic palette; in dark mode the background
+ * becomes a neutral elevated surface, so the text switches to [MaterialTheme.colorScheme.onSurface]
+ * rather than the comic palette's warm tan — a fixed warm tone would clash with that neutral
+ * surface the way it doesn't against [MediaSageComicChip]'s warm gradient background in dark mode.
  */
 @Composable
 fun MediaSageEntryCard(
@@ -42,7 +42,7 @@ fun MediaSageEntryCard(
     modifier: Modifier = Modifier,
 ) {
     val isDark = MediaSageTheme.isDark
-    val contentColor = if (isDark) ComicTan else ComicInk
+    val contentColor = if (isDark) MaterialTheme.colorScheme.onSurface else ComicInk
     val backgroundModifier = if (isDark) {
         Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
     } else {
