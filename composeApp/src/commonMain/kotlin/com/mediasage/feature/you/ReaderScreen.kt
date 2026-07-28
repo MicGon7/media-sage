@@ -70,6 +70,7 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
+import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
@@ -479,10 +480,10 @@ private fun SavedQuoteCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
+                        .height(88.dp)
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(MaterialTheme.colorScheme.surface, ComicTan, ComicInk),
+                                colors = listOf(MaterialTheme.colorScheme.surface, ComicTan, ComicBrown, ComicInk),
                             ),
                         ),
                 )
