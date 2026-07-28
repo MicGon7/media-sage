@@ -162,7 +162,10 @@ private fun LoginScreenContent(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 32.dp)
+                    .padding(
+                        horizontal = if (formOnPaper) 48.dp else 32.dp,
+                        vertical = if (formOnPaper) 40.dp else 0.dp,
+                    )
                     .imePadding(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
