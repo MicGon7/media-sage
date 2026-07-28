@@ -55,6 +55,7 @@ object ReaderContract {
             val weekSlots: List<DaySlot> = emptyList(),
             val quoteCard: QuoteCard? = null,
             val pastBriefings: List<PastBriefingCard> = emptyList(),
+            val hasMorePastBriefings: Boolean = false,
             val pickerFigures: List<Figure> = emptyList(),
             val activeSheet: ActiveSheet? = null,
             val pendingReassignment: PendingReassignment? = null,

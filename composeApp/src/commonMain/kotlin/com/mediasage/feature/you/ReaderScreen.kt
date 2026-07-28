@@ -119,6 +119,7 @@ fun ReaderScreen(
     onNavigateToFigureDetail: (figureId: Long) -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
     onNavigateToBookmarks: () -> Unit = {},
+    onNavigateToDayDetail: (epochDay: Long, figureName: String?, figureImageUrl: String?) -> Unit = { _, _, _ -> },
 ) {
     val ready = state as? ReaderContract.UiState.Ready
     val activeSheet = ready?.activeSheet as? ReaderContract.ActiveSheet.WeekSlotPicker
@@ -227,6 +228,11 @@ fun ReaderScreen(
                     item {
                         PastBriefingsCarousel(
                             cards = ready.pastBriefings,
+                            onCardClick = { epochDay ->
+                                val card = ready.pastBriefings.firstOrNull { it.epochDay == epochDay }
+                                onNavigateToDayDetail(epochDay, card?.figureName, card?.figureImageUrl)
+                            },
+                            showSeeMore = ready.hasMorePastBriefings,
                             onSeeMore = onNavigateToHistory,
                             modifier = Modifier.padding(top = 8.dp),
                         )

@@ -187,6 +187,9 @@ fun MediaSageScaffold(
                         onNavigateToFigureDetail = { id -> appState.navigateToFigureDetail(id) },
                         onNavigateToHistory = { appState.navigateToReaderHistory() },
                         onNavigateToBookmarks = { appState.navigateToBookmarks() },
+                        onNavigateToDayDetail = { epochDay, figureName, figureImageUrl ->
+                            appState.navigateToDayDetail(epochDay, figureName, figureImageUrl)
+                        },
                     )
                 }
                 is Route.ReaderHistory -> NavEntry(route) {

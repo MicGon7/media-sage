@@ -34,6 +34,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -252,6 +253,7 @@ class ReaderViewModelTest {
         assertEquals(7, state.pastBriefings.size)
         assertEquals(todayEpochDay - 1, state.pastBriefings.first().epochDay)
         assertEquals(todayEpochDay - 7, state.pastBriefings.last().epochDay)
+        assertTrue(state.hasMorePastBriefings)
     }
 
     @Test
@@ -261,6 +263,20 @@ class ReaderViewModelTest {
         val state = viewModel.state.value as ReaderContract.UiState.Ready
 
         assertTrue(state.pastBriefings.isEmpty())
+        assertFalse(state.hasMorePastBriefings)
+    }
+
+    @Test
+    fun hasMorePastBriefingsIsFalseWhenCountIsAtOrBelowTheCap() = runTest(testDispatcher) {
+        val briefings = (1..7).map { daysAgo ->
+            BriefingDay(epochDay = todayEpochDay - daysAgo, figureId = 1L, inspiration = "Word $daysAgo")
+        }
+        val (viewModel, _) = readerViewModelWithRepo(figure = testFigure, briefings = briefings)
+
+        val state = viewModel.state.value as ReaderContract.UiState.Ready
+
+        assertEquals(7, state.pastBriefings.size)
+        assertFalse(state.hasMorePastBriefings)
     }
 
     /**

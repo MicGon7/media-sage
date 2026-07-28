@@ -171,11 +171,13 @@ class ReaderViewModel(
     ): ReaderContract.UiState.Ready {
         val figuresById = data.figures.associateBy { it.id }
         val quoteFigure = data.latestQuote?.let { figuresById[it.figureId] }
+        val allPastBriefings = buildPastBriefings(recentBriefings, figuresById)
         return ReaderContract.UiState.Ready(
             weekSlots = buildWeekSlots(figuresById, data.assignmentsByDayOfWeek),
             pickerFigures = data.figures,
             quoteCard = buildQuoteCard(data.latestQuote, quoteFigure),
-            pastBriefings = buildPastBriefings(recentBriefings, figuresById),
+            pastBriefings = allPastBriefings.take(MAX_PAST_BRIEFINGS),
+            hasMorePastBriefings = allPastBriefings.size > MAX_PAST_BRIEFINGS,
             activeSheet = screenInput.activeSheet,
             pendingReassignment = screenInput.pendingReassignment,
             userDisplayName = session?.displayName,
@@ -217,7 +219,6 @@ class ReaderViewModel(
     ): List<ReaderContract.PastBriefingCard> =
         recentBriefings
             .sortedByDescending { it.epochDay }
-            .take(MAX_PAST_BRIEFINGS)
             .mapNotNull { briefing ->
                 val figure = figuresById[briefing.figureId] ?: return@mapNotNull null
                 ReaderContract.PastBriefingCard(
