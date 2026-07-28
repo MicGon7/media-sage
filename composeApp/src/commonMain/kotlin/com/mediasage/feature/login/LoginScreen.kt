@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Brush
@@ -65,7 +66,6 @@ import com.mediasage.theme.MediaSageTheme
 import com.mediasage.theme.Navy
 import com.mediasage.theme.NavyLight
 import com.mediasage.theme.Slate
-import com.mediasage.theme.White
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.login_background_comic
 import mediasage.composeapp.generated.resources.login_bypass
@@ -74,6 +74,7 @@ import mediasage.composeapp.generated.resources.login_hide_password
 import mediasage.composeapp.generated.resources.login_masthead_line1
 import mediasage.composeapp.generated.resources.login_masthead_line2
 import mediasage.composeapp.generated.resources.login_member_edition
+import mediasage.composeapp.generated.resources.login_paper_white
 import mediasage.composeapp.generated.resources.login_password_label
 import mediasage.composeapp.generated.resources.login_remember_email
 import mediasage.composeapp.generated.resources.login_show_password
@@ -175,7 +176,10 @@ private fun LoginScreenContent(
                         .fillMaxWidth()
                         .shadow(elevation = 8.dp, shape = MaterialTheme.shapes.medium)
                         .clip(MaterialTheme.shapes.medium)
-                        .background(White)
+                        .paint(
+                            painter = painterResource(Res.drawable.login_paper_white),
+                            contentScale = ContentScale.FillBounds,
+                        )
                         .padding(20.dp)
                 } else {
                     Modifier.fillMaxWidth()
