@@ -480,7 +480,7 @@ private fun SavedQuoteCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(88.dp)
+                        .height(40.dp)
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(MaterialTheme.colorScheme.surface, ComicTan, ComicBrown, ComicInk),
