@@ -461,9 +461,22 @@ private fun SavedQuoteCard(
             ),
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         ) {
-            Column {
+            val surface = MaterialTheme.colorScheme.surface
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to surface,
+                            0.5f to surface,
+                            0.68f to ComicTan,
+                            0.84f to ComicBrown,
+                            1f to ComicInk,
+                        ),
+                    ),
+            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                    val isDark = surface.luminance() < 0.5f
                     Text(
                         text = stringResource(Res.string.you_quote_card_header),
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
@@ -477,20 +490,9 @@ private fun SavedQuoteCard(
                         modifier = Modifier.padding(top = 12.dp),
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(MaterialTheme.colorScheme.surface, ComicTan, ComicBrown, ComicInk),
-                            ),
-                        ),
-                )
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(ComicInk)
                         .padding(16.dp),
                 ) {
                     Row(
