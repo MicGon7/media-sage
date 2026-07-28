@@ -133,6 +133,7 @@ private fun LoginScreenContent(
         } else {
             FieldBorder
         }
+        val appVersion = LocalAppVersion.current
 
         Box(
             modifier = Modifier
@@ -166,28 +167,42 @@ private fun LoginScreenContent(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // formOnPaper wraps the whole masthead-to-version block as one "newspaper page"
+                // panel, rather than just the input fields — the masthead and version text need
+                // the same ink-on-white treatment as the form once they're printed on the page.
+                val paperModifier = if (formOnPaper) {
+                    Modifier
+                        .fillMaxWidth()
+                        .shadow(elevation = 8.dp, shape = MaterialTheme.shapes.medium)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(White)
+                        .padding(20.dp)
+                } else {
+                    Modifier.fillMaxWidth()
+                }
+                Column(modifier = paperModifier, horizontalAlignment = Alignment.CenterHorizontally) {
                 // Masthead
-                HorizontalDivider(color = OnGradientMuted, thickness = 0.5.dp)
+                HorizontalDivider(color = formMutedColor, thickness = 0.5.dp)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = stringResource(Res.string.login_member_edition),
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontStyle = FontStyle.Italic,
                         letterSpacing = 3.sp,
-                        color = mutedTextColor
+                        color = formMutedColor
                     ),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(color = OnGradient, thickness = 2.dp)
+                HorizontalDivider(color = formAccentColor, thickness = 2.dp)
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = stringResource(Res.string.login_masthead_line1),
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 5.sp,
-                        color = OnGradient
+                        color = formTextColor
                     ),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -196,25 +211,25 @@ private fun LoginScreenContent(
                     text = stringResource(Res.string.login_masthead_line2),
                     style = MaterialTheme.typography.displayMedium.copy(
                         letterSpacing = 12.sp,
-                        color = OnGradient
+                        color = formTextColor
                     ),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = OnGradient, thickness = 2.dp)
+                HorizontalDivider(color = formAccentColor, thickness = 2.dp)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = stringResource(Res.string.login_subtitle),
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontStyle = FontStyle.Italic,
-                        color = mutedTextColor
+                        color = formMutedColor
                     ),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(color = OnGradientMuted, thickness = 0.5.dp)
+                HorizontalDivider(color = formMutedColor, thickness = 0.5.dp)
 
                 Spacer(modifier = Modifier.height(36.dp))
 
@@ -230,17 +245,6 @@ private fun LoginScreenContent(
                     errorBorderColor = MaterialTheme.colorScheme.error,
                     errorLabelColor = MaterialTheme.colorScheme.error,
                 )
-                val paperModifier = if (formOnPaper) {
-                    Modifier
-                        .fillMaxWidth()
-                        .shadow(elevation = 8.dp, shape = MaterialTheme.shapes.medium)
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(White)
-                        .padding(20.dp)
-                } else {
-                    Modifier.fillMaxWidth()
-                }
-                Column(modifier = paperModifier) {
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it; localError = "" },
@@ -349,7 +353,6 @@ private fun LoginScreenContent(
                         )
                     }
                 }
-                }
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(
                     onClick = { onIntent(LoginContract.Intent.BypassAuth) },
@@ -359,13 +362,24 @@ private fun LoginScreenContent(
                         text = stringResource(Res.string.login_bypass),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontStyle = FontStyle.Italic,
-                            color = mutedTextColor
+                            color = formMutedColor
                         )
                     )
                 }
+                // On paper, the version reads like a colophon line printed at the bottom of the
+                // page rather than a separate overlay pinned to the screen edge.
+                if (formOnPaper && appVersion.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = appVersion,
+                        style = MaterialTheme.typography.labelSmall.copy(color = formMutedColor),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                }
             }
-            val appVersion = LocalAppVersion.current
-            if (appVersion.isNotEmpty()) {
+            if (!formOnPaper && appVersion.isNotEmpty()) {
                 Text(
                     text = appVersion,
                     style = MaterialTheme.typography.labelSmall.copy(color = mutedTextColor),
@@ -375,7 +389,6 @@ private fun LoginScreenContent(
                         .padding(bottom = 16.dp)
                         .navigationBarsPadding()
                         .fillMaxWidth(),
-
                 )
             }
         }
