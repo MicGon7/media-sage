@@ -2,13 +2,11 @@ package com.mediasage.data.mapper
 
 import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.HeadlineEntity
-import com.mediasage.data.local.entity.MatchEntity
 import com.mediasage.data.local.entity.QuoteEntity
 import com.mediasage.data.remote.FigureDto
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.Headline
-import com.mediasage.domain.model.Match
 import com.mediasage.domain.model.Quote
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -133,17 +131,6 @@ class EntityMappersTest {
         val domain = entity.toDomain()
         val backToEntity = domain.toEntity()
         assertEquals(entity, backToEntity)
-    }
-
-    @Test
-    fun matchEntityToDomainSplitsConnectionThemes() {
-        val entity = MatchEntity(
-            id = 1, headlineId = 1, quoteId = 1,
-            explanation = "Test", confidence = 0.9f,
-            connectionThemes = "suffering,hope", createdAt = 1000L
-        )
-        val domain = entity.toDomain()
-        assertEquals(listOf("suffering", "hope"), domain.connectionThemes)
     }
 
     @Test

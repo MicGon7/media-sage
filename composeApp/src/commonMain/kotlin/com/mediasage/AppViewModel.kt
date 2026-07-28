@@ -9,6 +9,7 @@ import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
+import com.mediasage.domain.repository.QuoteRepository
 import com.mediasage.theme.AppTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,6 +32,7 @@ class AppViewModel(
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val dailyReflectionRepository: DailyReflectionRepository,
     private val encouragementRepository: EncouragementRepository,
+    private val quoteRepository: QuoteRepository,
     themePreferencesRepository: ThemePreferencesRepository,
     authRepository: AuthRepository,
 ) : ViewModel() {
@@ -90,6 +92,7 @@ class AppViewModel(
                     dayAssignmentRepository.resolve(userId)
                     dailyReflectionRepository.resolve(userId)
                     encouragementRepository.resolve(userId)
+                    quoteRepository.resolve(userId)
                 }
         }
     }

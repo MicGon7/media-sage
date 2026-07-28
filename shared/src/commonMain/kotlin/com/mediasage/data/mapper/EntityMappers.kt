@@ -3,7 +3,6 @@ package com.mediasage.data.mapper
 import com.mediasage.data.local.entity.EncouragementEntity
 import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.HeadlineEntity
-import com.mediasage.data.local.entity.MatchEntity
 import com.mediasage.data.local.entity.QuoteEntity
 import com.mediasage.data.remote.EncourageResultDto
 import com.mediasage.data.remote.FigureDto
@@ -12,7 +11,6 @@ import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.Headline
-import com.mediasage.domain.model.Match
 import com.mediasage.domain.model.Quote
 
 // Figure
@@ -62,7 +60,8 @@ fun QuoteEntity.toDomain() = Quote(
     text = text,
     source = source,
     themes = if (themes.isEmpty()) emptyList() else themes.split(",").map { it.trim() },
-    verified = verified
+    verified = verified,
+    memorized = memorized
 )
 
 fun Quote.toEntity() = QuoteEntity(
@@ -71,7 +70,8 @@ fun Quote.toEntity() = QuoteEntity(
     text = text,
     source = source,
     themes = themes.joinToString(","),
-    verified = verified
+    verified = verified,
+    memorized = memorized
 )
 
 // DTO → Entity (API response → local storage)
@@ -106,28 +106,6 @@ fun Headline.toEntity() = HeadlineEntity(
     publishedAt = publishedAt,
     fetchedAt = fetchedAt,
     snippet = snippet
-)
-
-// Match
-fun MatchEntity.toDomain() = Match(
-    id = id,
-    headlineId = headlineId,
-    quoteId = quoteId,
-    explanation = explanation,
-    confidence = confidence,
-    connectionThemes = if (connectionThemes.isEmpty()) emptyList()
-        else connectionThemes.split(",").map { it.trim() },
-    createdAt = createdAt
-)
-
-fun Match.toEntity() = MatchEntity(
-    id = id,
-    headlineId = headlineId,
-    quoteId = quoteId,
-    explanation = explanation,
-    confidence = confidence,
-    connectionThemes = connectionThemes.joinToString(","),
-    createdAt = createdAt
 )
 
 // Encourage DTO → Domain

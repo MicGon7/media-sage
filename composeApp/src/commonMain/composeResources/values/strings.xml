@@ -134,6 +134,8 @@
 
     <string name="figure_detail_pin_to_home">Pin to Home</string>
     <string name="figure_detail_pinned_to_home">Pinned to Home</string>
+    <string name="figure_detail_memorize_quote">Memorize this quote</string>
+    <string name="figure_detail_memorized_quote">Memorized</string>
 
     <!-- Reassignment confirmation dialog (Reader carousel + Reporter Detail pin) -->
     <string name="reassign_dialog_title">Today’s briefing already exists</string>

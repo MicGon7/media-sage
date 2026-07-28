@@ -12,9 +12,10 @@ import com.mediasage.data.repository.DayAssignmentRepositoryImpl
 import com.mediasage.data.repository.EncouragementRepositoryImpl
 import com.mediasage.data.repository.FigureRepositoryImpl
 import com.mediasage.data.repository.HeadlineRepositoryImpl
-import com.mediasage.data.repository.MatchRepositoryImpl
+import com.mediasage.data.repository.MemorizedQuoteRemoteDataSource
 import com.mediasage.data.repository.PostgrestDailyReflectionRemoteDataSource
 import com.mediasage.data.repository.PostgrestDayAssignmentRemoteDataSource
+import com.mediasage.data.repository.PostgrestMemorizedQuoteRemoteDataSource
 import com.mediasage.data.repository.PostgrestSavedInsightRemoteDataSource
 import com.mediasage.data.repository.QuoteRepositoryImpl
 import com.mediasage.data.repository.SavedInsightRemoteDataSource
@@ -25,7 +26,6 @@ import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
-import com.mediasage.domain.repository.MatchRepository
 import com.mediasage.domain.repository.QuoteRepository
 import com.mediasage.domain.repository.WikipediaRepository
 import com.mediasage.domain.usecase.GetDayDetailUseCase
@@ -52,6 +52,7 @@ fun sharedModule(
         single<DayAssignmentRemoteDataSource> { PostgrestDayAssignmentRemoteDataSource(get()) }
         single<DailyReflectionRemoteDataSource> { PostgrestDailyReflectionRemoteDataSource(get()) }
         single<SavedInsightRemoteDataSource> { PostgrestSavedInsightRemoteDataSource(get()) }
+        single<MemorizedQuoteRemoteDataSource> { PostgrestMemorizedQuoteRemoteDataSource(get()) }
     }
 
     // HTTP client for communicating with the Media Sage server
@@ -64,7 +65,6 @@ fun sharedModule(
     single { get<MediaSageDatabase>().figureDao() }
     single { get<MediaSageDatabase>().quoteDao() }
     single { get<MediaSageDatabase>().headlineDao() }
-    single { get<MediaSageDatabase>().matchDao() }
     single { get<MediaSageDatabase>().encouragementDao() }
     single { get<MediaSageDatabase>().syncMetaDao() }
     single { get<MediaSageDatabase>().dailyReflectionDao() }
@@ -72,9 +72,8 @@ fun sharedModule(
 
     // Repositories — interface bound to implementation
     single<FigureRepository> { FigureRepositoryImpl(get(), get(), get()) }
-    single<QuoteRepository> { QuoteRepositoryImpl(get()) }
+    single<QuoteRepository> { QuoteRepositoryImpl(get(), get(), getOrNull(), get(), get()) }
     single<HeadlineRepository> { HeadlineRepositoryImpl(get(), get()) }
-    single<MatchRepository> { MatchRepositoryImpl(get()) }
     single<EncouragementRepository> {
         EncouragementRepositoryImpl(get(), get(), get(), getOrNull(), get(), get())
     }

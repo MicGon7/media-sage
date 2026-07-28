@@ -50,6 +50,8 @@ import com.mediasage.ui.MediaSageBottomSheet
 import com.mediasage.ui.ReassignConfirmationDialog
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.figure_detail_biography
+import mediasage.composeapp.generated.resources.figure_detail_memorize_quote
+import mediasage.composeapp.generated.resources.figure_detail_memorized_quote
 import mediasage.composeapp.generated.resources.figure_detail_pin_to_home
 import mediasage.composeapp.generated.resources.figure_detail_pinned_to_home
 import mediasage.composeapp.generated.resources.figure_detail_quotes_button
@@ -106,7 +108,10 @@ fun FigureDetailScreen(
                         MediaSageBottomSheet(
                             onDismissRequest = { showQuotesSheet = false }
                         ) {
-                            QuotesSheetContent(quotes = state.quotes)
+                            QuotesSheetContent(
+                                quotes = state.quotes,
+                                onPinQuote = { onIntent(FigureDetailContract.Intent.PinQuote(it)) },
+                            )
                         }
                     }
 
@@ -232,7 +237,7 @@ private fun FigureDetailContent(
 }
 
 @Composable
-private fun QuotesSheetContent(quotes: List<FigureQuoteItem>) {
+private fun QuotesSheetContent(quotes: List<FigureQuoteItem>, onPinQuote: (String) -> Unit) {
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
@@ -248,7 +253,7 @@ private fun QuotesSheetContent(quotes: List<FigureQuoteItem>) {
             HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
         }
         items(quotes) { quote ->
-            QuoteRow(quote = quote)
+            QuoteRow(quote = quote, onPinQuote = onPinQuote)
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant,
                 thickness = 0.5.dp,
@@ -260,20 +265,33 @@ private fun QuotesSheetContent(quotes: List<FigureQuoteItem>) {
 }
 
 @Composable
-private fun QuoteRow(quote: FigureQuoteItem) {
-    Column(modifier = Modifier.padding(vertical = 12.dp)) {
-        Text(
-            text = "“${quote.quoteText}”",
-            style = MaterialTheme.typography.bodyLarge,
-            fontStyle = FontStyle.Italic,
-            lineHeight = 24.sp,
-        )
-        if (quote.headlineTitle.isNotBlank()) {
-            Spacer(modifier = Modifier.height(6.dp))
+private fun QuoteRow(quote: FigureQuoteItem, onPinQuote: (String) -> Unit) {
+    Row(verticalAlignment = Alignment.Top) {
+        Column(modifier = Modifier.weight(1f).padding(vertical = 12.dp)) {
             Text(
-                text = "In response to: ${quote.headlineTitle}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "“${quote.quoteText}”",
+                style = MaterialTheme.typography.bodyLarge,
+                fontStyle = FontStyle.Italic,
+                lineHeight = 24.sp,
+            )
+            if (quote.headlineTitle.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "In response to: ${quote.headlineTitle}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        IconButton(onClick = { onPinQuote(quote.quoteText) }) {
+            Icon(
+                imageVector = if (quote.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                contentDescription = stringResource(
+                    if (quote.isPinned) Res.string.figure_detail_memorized_quote
+                    else Res.string.figure_detail_memorize_quote
+                ),
+                tint = if (quote.isPinned) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
