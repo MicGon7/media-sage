@@ -37,7 +37,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
@@ -105,8 +104,8 @@ private fun PastBriefingCard(
                     Text(
                         text = card.dayLabel.resolve(),
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = ComicBrown,
-                        fontWeight = FontWeight.SemiBold,
+                        color = ComicInk,
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = card.inspiration,

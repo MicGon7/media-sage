@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
@@ -58,8 +57,8 @@ fun MediaSageEntryCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ComicBrown,
+                    fontWeight = FontWeight.Bold,
+                    color = ComicInk,
                 )
                 Text(
                     text = subtitle,
