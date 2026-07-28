@@ -499,18 +499,18 @@ private fun SavedQuoteCard(
                             AsyncImage(
                                 model = quote.figureImageUrl,
                                 contentDescription = quote.figureName,
-                                modifier = Modifier.size(32.dp).clip(CircleShape),
+                                modifier = Modifier.size(40.dp).clip(CircleShape),
                                 contentScale = ContentScale.Crop,
                                 alignment = Alignment.TopCenter,
                                 error = rememberVectorPainter(Icons.Filled.Person),
                                 fallback = rememberVectorPainter(Icons.Filled.Person),
                             )
                         } else {
-                            com.mediasage.ui.FigurePlaceholder(name = quote.figureName, size = 32.dp)
+                            com.mediasage.ui.FigurePlaceholder(name = quote.figureName, size = 40.dp)
                         }
                         Text(
                             text = "— ${quote.figureName}, ${quote.figureRole}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = ComicInk,
                         )
                     }
