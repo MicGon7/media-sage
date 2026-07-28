@@ -134,7 +134,7 @@ private fun LoginScreenContent(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.45f)),
+                        .background(Color.Black.copy(alpha = 0.22f)),
                 )
             }
             Column(
