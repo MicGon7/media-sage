@@ -26,5 +26,9 @@ data class QuoteEntity(
     val text: String,
     val source: String,
     val themes: String,
-    val verified: Boolean = false
+    val verified: Boolean = false,
+    val memorized: Boolean = false,
+    // Defaults true: most rows are shared quote-catalog content nobody ever memorized, so they
+    // must never look like a pending sync push. Only memorizing flips this to false.
+    val synced: Boolean = true,
 )

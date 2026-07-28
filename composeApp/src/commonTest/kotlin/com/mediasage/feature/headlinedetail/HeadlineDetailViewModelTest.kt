@@ -232,6 +232,11 @@ private class FakeQuoteRepository(private val throwOnSave: Boolean = false) : Qu
         if (throwOnSave) error("simulated save failure")
         savedQuotes.add(SavedQuote(text, source, themes, figureId))
     }
+
+    override fun observeMemorizedQuote(): Flow<com.mediasage.domain.model.Quote?> = flowOf(null)
+    override suspend fun memorizeQuote(figureId: Long, text: String) = Unit
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
+    override suspend fun resolve(userId: String?) = Unit
 }
 
 private class FakeHeadlineRepository(private val headline: Headline?) : HeadlineRepository {

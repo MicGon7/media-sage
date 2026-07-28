@@ -10,7 +10,6 @@ import com.mediasage.data.local.dao.DayAssignmentDao
 import com.mediasage.data.local.dao.EncouragementDao
 import com.mediasage.data.local.dao.FigureDao
 import com.mediasage.data.local.dao.HeadlineDao
-import com.mediasage.data.local.dao.MatchDao
 import com.mediasage.data.local.dao.QuoteDao
 import com.mediasage.data.local.dao.SyncMetaDao
 import com.mediasage.data.local.entity.DailyReflectionEntity
@@ -18,7 +17,6 @@ import com.mediasage.data.local.entity.DayAssignmentEntity
 import com.mediasage.data.local.entity.EncouragementEntity
 import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.HeadlineEntity
-import com.mediasage.data.local.entity.MatchEntity
 import com.mediasage.data.local.entity.QuoteEntity
 import com.mediasage.data.local.entity.SyncMetaEntity
 
@@ -27,13 +25,12 @@ import com.mediasage.data.local.entity.SyncMetaEntity
         FigureEntity::class,
         QuoteEntity::class,
         HeadlineEntity::class,
-        MatchEntity::class,
         EncouragementEntity::class,
         SyncMetaEntity::class,
         DailyReflectionEntity::class,
         DayAssignmentEntity::class,
     ],
-    version = 28,
+    version = 29,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -42,7 +39,6 @@ abstract class MediaSageDatabase : RoomDatabase() {
     abstract fun figureDao(): FigureDao
     abstract fun quoteDao(): QuoteDao
     abstract fun headlineDao(): HeadlineDao
-    abstract fun matchDao(): MatchDao
     abstract fun encouragementDao(): EncouragementDao
     abstract fun syncMetaDao(): SyncMetaDao
     abstract fun dailyReflectionDao(): DailyReflectionDao

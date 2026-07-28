@@ -28,10 +28,12 @@ object FigureDetailContract {
         data object PinToHome : Intent
         data object ConfirmReassignment : Intent
         data object CancelReassignment : Intent
+        data class PinQuote(val quoteText: String) : Intent
     }
 }
 
 data class FigureQuoteItem(
     val quoteText: String,
-    val headlineTitle: String
+    val headlineTitle: String,
+    val isPinned: Boolean = false,
 )

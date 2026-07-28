@@ -7,6 +7,7 @@ import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
+import com.mediasage.domain.repository.QuoteRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,7 @@ class FigureDetailViewModel(
     private val encouragementRepository: EncouragementRepository,
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val dailyReflectionRepository: DailyReflectionRepository,
+    private val quoteRepository: QuoteRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<FigureDetailContract.UiState>(FigureDetailContract.UiState.Loading)
@@ -40,7 +42,12 @@ class FigureDetailViewModel(
             is FigureDetailContract.Intent.PinToHome -> handlePinToggle()
             is FigureDetailContract.Intent.ConfirmReassignment -> handleConfirmReassignment()
             is FigureDetailContract.Intent.CancelReassignment -> input.value = null
+            is FigureDetailContract.Intent.PinQuote -> handlePinQuote(intent.quoteText)
         }
+    }
+
+    private fun handlePinQuote(quoteText: String) {
+        viewModelScope.launch { quoteRepository.memorizeQuote(figureId, quoteText) }
     }
 
     private fun handlePinToggle() {
@@ -81,14 +88,21 @@ class FigureDetailViewModel(
                 encouragementRepository.observeByFigureId(figure.id),
                 dayAssignmentRepository.observeAssignments(),
                 input,
-            ) { encouragements, assignments, pendingReassignment ->
+                quoteRepository.observeMemorizedQuote(),
+            ) { encouragements, assignments, pendingReassignment, memorizedQuote ->
                 val todayOrdinal = todayDayOfWeekOrdinal()
                 FigureDetailContract.UiState.Success(
                     figureName = figure.name,
                     figureRole = figure.role,
                     figureImageUrl = figure.portraitUrl,
                     bio = figure.bio,
-                    quotes = encouragements.map { FigureQuoteItem(it.quoteText, it.headlineTitle) },
+                    quotes = encouragements.map {
+                        FigureQuoteItem(
+                            quoteText = it.quoteText,
+                            headlineTitle = it.headlineTitle,
+                            isPinned = memorizedQuote?.figureId == figure.id && memorizedQuote.text == it.quoteText,
+                        )
+                    },
                     isPinned = assignments[todayOrdinal]?.figureId == figureId,
                     pendingReassignment = pendingReassignment,
                 )
