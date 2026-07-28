@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -69,8 +70,8 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
+import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
-import com.mediasage.theme.ComicTan
 import com.mediasage.theme.LensFaith
 import com.mediasage.theme.LensGrace
 import com.mediasage.theme.LensGrief
@@ -474,6 +475,14 @@ private fun SavedQuoteCard(
                         modifier = Modifier.padding(top = 12.dp),
                     )
                 }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(20.dp)
+                        .background(
+                            Brush.verticalGradient(colors = listOf(MaterialTheme.colorScheme.surface, ComicInk)),
+                        ),
+                )
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -500,13 +509,13 @@ private fun SavedQuoteCard(
                         Text(
                             text = "— ${quote.figureName}, ${quote.figureRole}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = ComicTan,
+                            color = ComicCream,
                         )
                     }
                     Text(
                         text = stringResource(Res.string.you_saved_see_all),
                         style = MaterialTheme.typography.labelSmall,
-                        color = ComicTan,
+                        color = ComicCream,
                         modifier = Modifier
                             .padding(top = 12.dp)
                             .clickable { onViewMore(quote.figureId) },
