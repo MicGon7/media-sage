@@ -284,7 +284,7 @@ private fun LoginScreenContent(
                             checkedTrackColor = OnGradientMuted,
                             uncheckedThumbColor = OnGradientMuted,
                             uncheckedTrackColor = Color.Transparent,
-                            uncheckedBorderColor = FieldBorder,
+                            uncheckedBorderColor = if (backgroundImage != null) OnGradientMuted else FieldBorder,
                         )
                     )
                 }
