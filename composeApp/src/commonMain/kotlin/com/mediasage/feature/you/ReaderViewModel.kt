@@ -3,12 +3,14 @@ package com.mediasage.feature.you
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.BriefingDay
 import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.Quote
 import com.mediasage.domain.model.ReaderCalendarData
 import com.mediasage.domain.model.UserSession
 import com.mediasage.domain.repository.AuthRepository
+import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.usecase.GetReaderCalendarUseCase
 import kotlinx.coroutines.flow.Flow
@@ -16,12 +18,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
@@ -42,6 +47,7 @@ class ReaderViewModel(
     private val getReaderCalendar: GetReaderCalendarUseCase,
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val authRepository: AuthRepository,
+    private val reflectionRepository: DailyReflectionRepository,
 ) : ViewModel() {
 
     private val today = Instant.fromEpochMilliseconds(epochMillis())
@@ -57,9 +63,25 @@ class ReaderViewModel(
 
     private val calendarData: Flow<ReaderCalendarData> = getReaderCalendar(startOfWeekEpochDay, endOfWeekEpochDay)
 
+    /**
+     * The most recent past days that actually have a completed reflection, oldest bound resolved
+     * from [DailyReflectionRepository.getEarliestBriefingEpochDay] rather than a fixed lookback
+     * window — a day with no reflection is simply absent, never a placeholder (see
+     * [ReaderHistoryViewModel] for the same earliest-day resolution pattern).
+     */
+    private val recentBriefings: Flow<List<BriefingDay>> = flow {
+        val earliest = reflectionRepository.getEarliestBriefingEpochDay() ?: todayEpochDay
+        val end = todayEpochDay - 1
+        if (earliest > end) {
+            emit(emptyList())
+        } else {
+            emitAll(reflectionRepository.observeByEpochDayRange(earliest, end))
+        }
+    }
+
     val state: StateFlow<ReaderContract.UiState> =
-        combine(input, calendarData, authRepository.observeAuthState()) { screenInput, data, session ->
-            buildReady(screenInput, data, session)
+        combine(input, calendarData, authRepository.observeAuthState(), recentBriefings) { screenInput, data, session, recent ->
+            buildReady(screenInput, data, session, recent)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -145,6 +167,7 @@ class ReaderViewModel(
         screenInput: ScreenInput,
         data: ReaderCalendarData,
         session: UserSession?,
+        recentBriefings: List<BriefingDay>,
     ): ReaderContract.UiState.Ready {
         val figuresById = data.figures.associateBy { it.id }
         val quoteFigure = data.latestQuote?.let { figuresById[it.figureId] }
@@ -152,6 +175,7 @@ class ReaderViewModel(
             weekSlots = buildWeekSlots(figuresById, data.assignmentsByDayOfWeek),
             pickerFigures = data.figures,
             quoteCard = buildQuoteCard(data.latestQuote, quoteFigure),
+            pastBriefings = buildPastBriefings(recentBriefings, figuresById),
             activeSheet = screenInput.activeSheet,
             pendingReassignment = screenInput.pendingReassignment,
             userDisplayName = session?.displayName,
@@ -187,6 +211,41 @@ class ReaderViewModel(
         )
     }
 
+    private fun buildPastBriefings(
+        recentBriefings: List<BriefingDay>,
+        figuresById: Map<Long, Figure>,
+    ): List<ReaderContract.PastBriefingCard> =
+        recentBriefings
+            .sortedByDescending { it.epochDay }
+            .take(MAX_PAST_BRIEFINGS)
+            .mapNotNull { briefing ->
+                val figure = figuresById[briefing.figureId] ?: return@mapNotNull null
+                ReaderContract.PastBriefingCard(
+                    epochDay = briefing.epochDay,
+                    figureName = figure.name,
+                    figureImageUrl = figure.portraitUrl,
+                    inspiration = briefing.inspiration,
+                    dayLabel = dayLabelFor(briefing.epochDay),
+                )
+            }
+
+    private fun dayLabelFor(epochDay: Long): ReaderContract.DayLabel {
+        val daysAgo = todayEpochDay - epochDay
+        return when {
+            daysAgo == 1L -> ReaderContract.DayLabel.Yesterday
+            daysAgo in 2..6 -> ReaderContract.DayLabel.Text(
+                weekdayLabel(LocalDate.fromEpochDays(epochDay.toInt()).dayOfWeek.ordinal)
+            )
+            else -> ReaderContract.DayLabel.Text(formatDate(epochDay))
+        }
+    }
+
+    private fun formatDate(epochDay: Long): String {
+        val date = LocalDate.fromEpochDays(epochDay.toInt())
+        val monthName = date.month.name.lowercase().replaceFirstChar { it.uppercase() }
+        return "$monthName ${date.dayOfMonth}, ${date.year}"
+    }
+
     private data class ScreenInput(
         val activeSheet: ReaderContract.ActiveSheet? = null,
         val pendingReassignment: ReaderContract.PendingReassignment? = null,
@@ -194,5 +253,6 @@ class ReaderViewModel(
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
+        const val MAX_PAST_BRIEFINGS = 7
     }
 }

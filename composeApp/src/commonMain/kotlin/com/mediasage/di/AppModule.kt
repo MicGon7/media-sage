@@ -53,7 +53,14 @@ val appModule = module {
     }
     viewModel { LoginViewModel(get<AuthRepository>(), get<AuthPreferencesRepository>()) }
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
-    viewModel { ReaderViewModel(get<GetReaderCalendarUseCase>(), get<DayAssignmentRepository>(), get<AuthRepository>()) }
+    viewModel {
+        ReaderViewModel(
+            get<GetReaderCalendarUseCase>(),
+            get<DayAssignmentRepository>(),
+            get<AuthRepository>(),
+            get<DailyReflectionRepository>(),
+        )
+    }
     viewModel { ReaderHistoryViewModel(get<GetReaderCalendarUseCase>(), get<DailyReflectionRepository>()) }
     viewModel { (epochDay: Long, figureName: String?, figureImageUrl: String?) ->
         DayDetailViewModel(epochDay, figureName, figureImageUrl, get<GetDayDetailUseCase>())

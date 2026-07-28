@@ -5,4 +5,5 @@ data class BriefingDay(
     val figureId: Long,
     val scriptureReference: String = "",
     val scriptureText: String = "",
+    val inspiration: String = "",
 )
