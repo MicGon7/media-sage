@@ -59,12 +59,12 @@ fun MediaSageEntryCard(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = ComicInk,
+                    color = ComicBrown,
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = ComicBrown,
+                    color = ComicInk,
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
