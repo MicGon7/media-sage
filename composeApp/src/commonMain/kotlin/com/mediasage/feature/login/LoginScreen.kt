@@ -39,7 +39,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusDirection
@@ -172,10 +171,12 @@ private fun LoginScreenContent(
                 // panel, rather than just the input fields — the masthead and version text need
                 // the same ink-on-white treatment as the form once they're printed on the page.
                 val paperModifier = if (formOnPaper) {
+                    // The image's own alpha channel defines the deckled paper silhouette now,
+                    // so no clip shape here — a rounded-rect clip would slice its natural
+                    // irregular edges into a hard rounded corner.
                     Modifier
                         .fillMaxWidth()
-                        .shadow(elevation = 8.dp, shape = MaterialTheme.shapes.medium)
-                        .clip(MaterialTheme.shapes.medium)
+                        .shadow(elevation = 8.dp, shape = MaterialTheme.shapes.medium, clip = false)
                         .paint(
                             painter = painterResource(Res.drawable.login_paper_white),
                             contentScale = ContentScale.FillBounds,
