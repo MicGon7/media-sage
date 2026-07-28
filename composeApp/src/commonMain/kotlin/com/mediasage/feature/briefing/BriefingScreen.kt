@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import coil3.compose.AsyncImage
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
@@ -267,16 +268,16 @@ private fun BriefingCardSkeleton() {
     }
 }
 
+// region Previews
+
 @Preview(showBackground = true)
 @Composable
-private fun BriefingScreenPreview() {
+private fun BriefingScreenPreview(
+    @PreviewParameter(BriefingUiStateProvider::class) state: BriefingContract.UiState
+) {
     MediaSageTheme {
-        BriefingScreen(
-            state = BriefingContract.UiState.Success(
-                todayLabel = "Friday, June 5, 2026",
-                card = BriefingContract.CardState.Hidden
-            ),
-            onIntent = {}
-        )
+        BriefingScreen(state = state, onIntent = {})
     }
 }
+
+// endregion
