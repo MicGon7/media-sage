@@ -70,10 +70,8 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
-import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
-import com.mediasage.theme.ComicTan
 import com.mediasage.theme.LensFaith
 import com.mediasage.theme.LensGrace
 import com.mediasage.theme.LensGrief
@@ -469,8 +467,6 @@ private fun SavedQuoteCard(
                         Brush.verticalGradient(
                             0f to surface,
                             0.5f to surface,
-                            0.68f to ComicTan,
-                            0.84f to ComicBrown,
                             1f to ComicInk,
                         ),
                     ),
