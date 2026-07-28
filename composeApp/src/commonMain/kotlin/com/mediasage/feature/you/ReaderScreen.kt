@@ -70,7 +70,6 @@ import com.mediasage.domain.model.LensFilter
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
 import com.mediasage.theme.ComicBrown
-import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
 import com.mediasage.theme.LensFaith
@@ -456,21 +455,11 @@ private fun SavedQuoteCard(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.elevatedCardColors(
-                containerColor = ComicTan,
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            0f to ComicTan,
-                            0.5f to ComicTan,
-                            1f to ComicInk,
-                        ),
-                    ),
-            ) {
+            Column {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = stringResource(Res.string.you_quote_card_header),
@@ -485,9 +474,20 @@ private fun SavedQuoteCard(
                         modifier = Modifier.padding(top = 12.dp),
                     )
                 }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(24.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(MaterialTheme.colorScheme.surface, ComicTan),
+                            ),
+                        ),
+                )
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .background(ComicTan)
                         .padding(16.dp),
                 ) {
                     Row(
@@ -510,13 +510,13 @@ private fun SavedQuoteCard(
                         Text(
                             text = "— ${quote.figureName}, ${quote.figureRole}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = ComicCream,
+                            color = ComicInk,
                         )
                     }
                     Text(
                         text = stringResource(Res.string.you_saved_see_all),
                         style = MaterialTheme.typography.labelSmall,
-                        color = ComicCream,
+                        color = ComicInk,
                         modifier = Modifier
                             .padding(top = 12.dp)
                             .clickable { onViewMore(quote.figureId) },
