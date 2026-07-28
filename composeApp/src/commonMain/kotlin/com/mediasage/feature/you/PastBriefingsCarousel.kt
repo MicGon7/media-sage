@@ -24,6 +24,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.mediasage.theme.ComicCream
+import com.mediasage.theme.ComicInk
+import com.mediasage.theme.ComicTan
+import com.mediasage.theme.MediaSageTheme
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.you_recent_briefing_yesterday
 import mediasage.composeapp.generated.resources.you_recent_briefings_more
@@ -46,13 +51,6 @@ import org.jetbrains.compose.resources.stringResource
 private val CardWidth = 260.dp
 private val CardHeight = 132.dp
 private val PortraitWidth = 100.dp
-
-// Placeholder sepia/newsprint palette standing in for the upcoming brand theme — replace with
-// real theme tokens once that palette lands; kept local and easy to swap out in one place.
-private val SepiaCream = Color(0xFFFBF3E1)
-private val SepiaTan = Color(0xFFF0DFB8)
-private val SepiaBrown = Color(0xFF9C6B3E)
-private val SepiaInk = Color(0xFF4A2E1A)
 
 @Composable
 fun PastBriefingsCarousel(
@@ -90,6 +88,13 @@ private fun PastBriefingCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = MediaSageTheme.isDark
+    val contentColor = if (isDark) ComicTan else ComicInk
+    val backgroundModifier = if (isDark) {
+        Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
+    } else {
+        Modifier.background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan)))
+    }
     ElevatedCard(
         onClick = onClick,
         modifier = modifier.width(CardWidth).height(CardHeight),
@@ -101,20 +106,20 @@ private fun PastBriefingCard(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(colors = listOf(SepiaCream, SepiaTan))),
+                    .then(backgroundModifier),
             ) {
                 PastBriefingPortrait(card, modifier = Modifier.width(PortraitWidth).fillMaxHeight())
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         text = card.dayLabel.resolve(),
                         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = SepiaBrown,
-                        fontWeight = FontWeight.SemiBold,
+                        color = contentColor,
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = card.inspiration,
                         style = MaterialTheme.typography.bodySmall,
-                        color = SepiaInk,
+                        color = contentColor,
                         maxLines = 5,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 6.dp),

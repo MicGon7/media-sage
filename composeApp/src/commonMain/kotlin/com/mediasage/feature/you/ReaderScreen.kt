@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Settings
@@ -42,6 +41,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,10 +53,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +70,9 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
+import com.mediasage.theme.ComicCream
+import com.mediasage.theme.ComicInk
+import com.mediasage.theme.ComicTan
 import com.mediasage.theme.LensFaith
 import com.mediasage.theme.LensGrace
 import com.mediasage.theme.LensGrief
@@ -80,6 +83,7 @@ import com.mediasage.theme.LensPerseverance
 import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
+import com.mediasage.ui.MediaSageEntryCard
 import com.mediasage.ui.ReassignConfirmationDialog
 import com.mediasage.ui.ScreenHeader
 import kotlinx.datetime.DayOfWeek
@@ -248,7 +252,7 @@ fun ReaderScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        EntryCard(
+                        MediaSageEntryCard(
                             title = stringResource(Res.string.you_nav_saved),
                             subtitle = stringResource(Res.string.you_saved_entry_subtitle),
                             onClick = onNavigateToBookmarks,
@@ -257,42 +261,6 @@ fun ReaderScreen(
                 }
             }
 
-        }
-    }
-}
-
-@Composable
-private fun EntryCard(title: String, subtitle: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 0.dp,
-        shadowElevation = 2.dp,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -484,77 +452,84 @@ private fun SavedQuoteCard(
             text = stringResource(Res.string.you_saved_section_title),
             modifier = Modifier.padding(bottom = 12.dp),
         )
+        val isDarkSurface = MediaSageTheme.isDark
+        val cardSurface = if (isDarkSurface) {
+            MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
+        } else {
+            MaterialTheme.colorScheme.surface
+        }
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = cardSurface,
             ),
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         ) {
-            Row {
-                // Amber bookmark ribbon — same language as pinned reporters
-                Box(
-                    modifier = Modifier
-                        .width(4.dp)
-                        .fillMaxHeight()
-                        .background(
-                            color = BrandAmber,
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                                topStart = MaterialTheme.shapes.large.topStart,
-                                bottomStart = MaterialTheme.shapes.large.bottomStart,
-                                topEnd = androidx.compose.foundation.shape.CornerSize(0.dp),
-                                bottomEnd = androidx.compose.foundation.shape.CornerSize(0.dp),
-                            )
-                        )
-                )
-                Column(modifier = Modifier.padding(16.dp)) {
-                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                Text(
-                    text = stringResource(Res.string.you_quote_card_header),
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
-                    color = if (isDark) BrandAmber else MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = "“${quote.quoteText}”",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = 12.dp),
-                )
-                Row(
-                    modifier = Modifier.padding(top = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    if (quote.figureImageUrl != null) {
-                        AsyncImage(
-                            model = quote.figureImageUrl,
-                            contentDescription = quote.figureName,
-                            modifier = Modifier.size(32.dp).clip(CircleShape),
-                            contentScale = ContentScale.Crop,
-                            alignment = Alignment.TopCenter,
-                            error = rememberVectorPainter(Icons.Filled.Person),
-                            fallback = rememberVectorPainter(Icons.Filled.Person),
-                        )
-                    } else {
-                        com.mediasage.ui.FigurePlaceholder(name = quote.figureName, size = 32.dp)
-                    }
+            Column {
+                Column(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)) {
                     Text(
-                        text = "— ${quote.figureName}, ${quote.figureRole}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = stringResource(Res.string.you_quote_card_header),
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "“${quote.quoteText}”",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 12.dp),
                     )
                 }
-                Text(
-                    text = stringResource(Res.string.you_saved_see_all),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
+                Box(
                     modifier = Modifier
-                        .padding(top = 12.dp)
-                        .clickable { onViewMore(quote.figureId) },
+                        .fillMaxWidth()
+                        .height(16.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(cardSurface, ComicCream),
+                            ),
+                        ),
                 )
-            }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan)))
+                        .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        if (quote.figureImageUrl != null) {
+                            AsyncImage(
+                                model = quote.figureImageUrl,
+                                contentDescription = quote.figureName,
+                                modifier = Modifier.size(40.dp).clip(CircleShape),
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                error = rememberVectorPainter(Icons.Filled.Person),
+                                fallback = rememberVectorPainter(Icons.Filled.Person),
+                            )
+                        } else {
+                            com.mediasage.ui.FigurePlaceholder(name = quote.figureName, size = 40.dp)
+                        }
+                        Text(
+                            text = "— ${quote.figureName}, ${quote.figureRole}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = ComicInk,
+                        )
+                    }
+                    Text(
+                        text = stringResource(Res.string.you_saved_see_all),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = ComicInk,
+                        modifier = Modifier
+                            .padding(top = 12.dp)
+                            .clickable { onViewMore(quote.figureId) },
+                    )
+                }
             }
         }
     }

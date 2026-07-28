@@ -206,7 +206,7 @@ fun MediaSageTheme(
         AppTheme.MODERN -> if (darkTheme) modernDarkAppColors() else modernLightAppColors()
         AppTheme.WARM -> if (darkTheme) warmDarkAppColors() else warmLightAppColors()
     }
-    CompositionLocalProvider(LocalAppColors provides appColors) {
+    CompositionLocalProvider(LocalAppColors provides appColors, LocalIsDarkMode provides darkTheme) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = mediaSageTypography(),
