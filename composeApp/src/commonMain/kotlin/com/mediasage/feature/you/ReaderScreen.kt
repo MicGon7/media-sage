@@ -450,11 +450,12 @@ private fun SavedQuoteCard(
             text = stringResource(Res.string.you_saved_section_title),
             modifier = Modifier.padding(bottom = 12.dp),
         )
+        val cardSurface = MaterialTheme.colorScheme.surfaceContainerLow
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = cardSurface,
             ),
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         ) {
@@ -480,7 +481,7 @@ private fun SavedQuoteCard(
                         .height(16.dp)
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(MaterialTheme.colorScheme.surface, ComicTan),
+                                colors = listOf(cardSurface, ComicTan),
                             ),
                         ),
                 )
