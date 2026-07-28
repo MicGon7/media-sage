@@ -451,7 +451,7 @@ private fun SavedQuoteCard(
             text = stringResource(Res.string.you_saved_section_title),
             modifier = Modifier.padding(bottom = 12.dp),
         )
-        val isDarkSurface = MediaSageTheme.colors.isDark
+        val isDarkSurface = MediaSageTheme.isDark
         val cardSurface = if (isDarkSurface) {
             MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
         } else {

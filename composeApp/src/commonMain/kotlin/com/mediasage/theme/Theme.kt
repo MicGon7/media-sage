@@ -60,14 +60,12 @@ internal fun classicLightAppColors() = AppColors(
     accent = NavyLight,
     ruleLine = RuleLine,
     cardBorder = CardBorder,
-    isDark = false,
 )
 
 internal fun classicDarkAppColors() = AppColors(
     accent = ReaderAmber,
     ruleLine = RuleLineDark,
     cardBorder = DarkSurface,
-    isDark = true,
 )
 
 // ── Modern (mockup — near-black dark with amber accent, warm cream light) ────
@@ -122,14 +120,12 @@ internal fun modernLightAppColors() = AppColors(
     accent = ModernAmber,
     ruleLine = ModernLightBorder,
     cardBorder = ModernLightBorder,
-    isDark = false,
 )
 
 internal fun modernDarkAppColors() = AppColors(
     accent = ModernAmber,
     ruleLine = ModernDarkBorder,
     cardBorder = ModernDarkCard,
-    isDark = true,
 )
 
 // ── Warm (Kindle e-reader — warm sepia light, warm dark night mode) ──────────
@@ -184,14 +180,12 @@ internal fun warmLightAppColors() = AppColors(
     accent = ReaderPrimary,
     ruleLine = ReaderSurface,
     cardBorder = ReaderSurface,
-    isDark = false,
 )
 
 internal fun warmDarkAppColors() = AppColors(
     accent = ReaderAmber,
     ruleLine = WarmDarkBorder,
     cardBorder = WarmDarkSurface,
-    isDark = true,
 )
 
 // ── Composable ────────────────────────────────────────────────────────────────
@@ -212,7 +206,7 @@ fun MediaSageTheme(
         AppTheme.MODERN -> if (darkTheme) modernDarkAppColors() else modernLightAppColors()
         AppTheme.WARM -> if (darkTheme) warmDarkAppColors() else warmLightAppColors()
     }
-    CompositionLocalProvider(LocalAppColors provides appColors) {
+    CompositionLocalProvider(LocalAppColors provides appColors, LocalIsDarkMode provides darkTheme) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = mediaSageTypography(),

@@ -88,7 +88,7 @@ private fun PastBriefingCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isDark = MediaSageTheme.colors.isDark
+    val isDark = MediaSageTheme.isDark
     val gradientColors = if (isDark) listOf(ComicBrown, ComicInk) else listOf(ComicCream, ComicTan)
     val contentColor = if (isDark) ComicTan else ComicInk
     ElevatedCard(

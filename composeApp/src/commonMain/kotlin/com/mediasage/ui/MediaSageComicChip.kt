@@ -46,7 +46,7 @@ fun MediaSageComicChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isDark = MediaSageTheme.colors.isDark
+    val isDark = MediaSageTheme.isDark
     val gradientColors = if (isDark) listOf(ComicBrown, ComicInk) else listOf(ComicCream, ComicTan)
     val borderColor = if (isDark) ComicCaramel else ComicBrown
     val contentColor = if (isDark) ComicTan else ComicInk
