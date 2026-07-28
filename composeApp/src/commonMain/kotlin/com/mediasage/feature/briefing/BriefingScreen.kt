@@ -16,6 +16,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.StickyNote2
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -57,6 +60,7 @@ import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.briefing_card_loading
 import mediasage.composeapp.generated.resources.app_name
 import mediasage.composeapp.generated.resources.briefing_card_reflect_action
+import mediasage.composeapp.generated.resources.briefing_card_study_action
 import mediasage.composeapp.generated.resources.day_detail_share_action
 import mediasage.composeapp.generated.resources.home_error_generic
 import mediasage.composeapp.generated.resources.home_error_network
@@ -167,15 +171,22 @@ private fun BriefingCard(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BriefingCardActions() {
-    Row(
+    FlowRow(
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         MediaSageComicButton(
             icon = Icons.AutoMirrored.Outlined.StickyNote2,
             label = stringResource(Res.string.briefing_card_reflect_action),
+            onClick = {},
+        )
+        MediaSageComicButton(
+            icon = Icons.Outlined.MenuBook,
+            label = stringResource(Res.string.briefing_card_study_action),
             onClick = {},
         )
         MediaSageComicButton(

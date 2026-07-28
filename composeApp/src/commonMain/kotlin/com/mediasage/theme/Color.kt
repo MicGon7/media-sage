@@ -66,7 +66,8 @@ val WarmDarkBorder = Color(0xFF3D2E1E)     // subtle warm brown border
 val ComicCream = Color(0xFFFBF3E1)
 val ComicTan = Color(0xFFF0DFB8)
 val ComicBrown = Color(0xFF9C6B3E)
-val ComicInk = Color(0xFF4A2E1A)
+val ComicInk = Color(0xFF2B1A0E)
+val ComicCaramel = Color(0xFFB8763A)
 
 // Lens filter theme colors
 val LensLove = Color(0xFFD4687A)
