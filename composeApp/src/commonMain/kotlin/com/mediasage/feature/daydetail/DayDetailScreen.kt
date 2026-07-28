@@ -10,18 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.StickyNote2
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mediasage.ui.MediaSageBackRow
@@ -41,8 +36,6 @@ import kotlinx.datetime.LocalDate
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.briefing_card_evening
 import mediasage.composeapp.generated.resources.briefing_card_morning
-import mediasage.composeapp.generated.resources.day_detail_notes_action
-import mediasage.composeapp.generated.resources.day_detail_share_action
 import mediasage.composeapp.generated.resources.history_empty_day_for
 import mediasage.composeapp.generated.resources.history_empty_day_subtitle
 import org.jetbrains.compose.resources.StringResource
@@ -121,7 +114,6 @@ private fun SingleBriefingContent(
             inspiration = briefing.inspiration,
             theme = briefing.theme,
             sources = briefing.sources,
-            trailingContent = { BriefingActions() },
         )
     }
 }
@@ -191,40 +183,9 @@ private fun ExpandableBriefingSection(
                 implication = briefing.implication,
                 inspiration = briefing.inspiration,
                 sources = briefing.sources,
-                trailingContent = { BriefingActions() },
             )
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-    }
-}
-
-@Composable
-private fun BriefingActions() {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-        horizontalArrangement = Arrangement.End
-    ) {
-        BriefingActionButton(
-            icon = Icons.AutoMirrored.Outlined.StickyNote2,
-            contentDescription = stringResource(Res.string.day_detail_notes_action),
-        )
-        Spacer(modifier = Modifier.width(24.dp))
-        BriefingActionButton(
-            icon = Icons.Outlined.Share,
-            contentDescription = stringResource(Res.string.day_detail_share_action),
-        )
-    }
-}
-
-@Composable
-private fun BriefingActionButton(icon: ImageVector, contentDescription: String) {
-    IconButton(onClick = {}) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp),
-        )
     }
 }
 
