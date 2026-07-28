@@ -72,6 +72,7 @@ import com.mediasage.theme.AppTheme
 import com.mediasage.theme.BrandAmber
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
+import com.mediasage.theme.ComicTan
 import com.mediasage.theme.LensFaith
 import com.mediasage.theme.LensGrace
 import com.mediasage.theme.LensGrief
@@ -478,9 +479,11 @@ private fun SavedQuoteCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(20.dp)
+                        .height(56.dp)
                         .background(
-                            Brush.verticalGradient(colors = listOf(MaterialTheme.colorScheme.surface, ComicInk)),
+                            Brush.verticalGradient(
+                                colors = listOf(MaterialTheme.colorScheme.surface, ComicTan, ComicInk),
+                            ),
                         ),
                 )
                 Column(
