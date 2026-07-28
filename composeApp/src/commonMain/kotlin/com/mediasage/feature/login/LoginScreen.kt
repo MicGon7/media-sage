@@ -163,7 +163,7 @@ private fun LoginScreenContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(
-                        horizontal = if (formOnPaper) 48.dp else 32.dp,
+                        horizontal = if (formOnPaper) 40.dp else 32.dp,
                         vertical = if (formOnPaper) 40.dp else 0.dp,
                     )
                     .imePadding(),
