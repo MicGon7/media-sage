@@ -10,10 +10,12 @@ import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.LensFilter
+import com.mediasage.domain.model.Quote
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
+import com.mediasage.domain.repository.QuoteRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -131,6 +133,39 @@ class FigureDetailViewModelTest {
         assertNull(state.pendingReassignment)
     }
 
+    @Test
+    fun pinQuote_memorizesTheQuoteForThisFigure() = runTest(testDispatcher) {
+        val quoteRepo = DetailFakeQuoteRepository()
+        val (viewModel, _) = figureDetailViewModel(
+            figureId = 2L,
+            figures = listOf(augustine, lewis),
+            quoteRepo = quoteRepo,
+        )
+
+        viewModel.onIntent(FigureDetailContract.Intent.PinQuote("You are never too old to dream."))
+
+        assertEquals(listOf(2L to "You are never too old to dream."), quoteRepo.memorizeCalls)
+    }
+
+    @Test
+    fun quotes_reflectWhicheverQuoteIsCurrentlyMemorized() = runTest(testDispatcher) {
+        val encouragement = Encouragement(
+            summary = null, quoteText = "You are never too old to dream.", figureName = "C.S. Lewis",
+            figureRole = "Author", scriptureReference = "", scriptureText = "", explanation = "",
+            connectionThemes = emptyList(), matchTheme = "", tone = "", headlineTitle = "Some headline",
+        )
+        val memorized = Quote(id = 1L, figureId = 2L, text = "You are never too old to dream.", source = "", themes = emptyList())
+        val (viewModel, _) = figureDetailViewModel(
+            figureId = 2L,
+            figures = listOf(augustine, lewis),
+            encouragements = listOf(encouragement),
+            quoteRepo = DetailFakeQuoteRepository(memorized),
+        )
+
+        val state = viewModel.state.value as FigureDetailContract.UiState.Success
+        assertTrue(state.quotes.single().isPinned)
+    }
+
     /**
      * Builds the ViewModel and starts collecting its state. `_state` is a plain `MutableStateFlow`
      * fed by a `viewModelScope.launch` in `init { load() }`, which `UnconfinedTestDispatcher` runs
@@ -141,12 +176,14 @@ class FigureDetailViewModelTest {
         figures: List<Figure>,
         assignments: Map<Int, DayAssignment> = emptyMap(),
         lockedFigureIdsByEpochDay: Map<Long, Long> = emptyMap(),
+        encouragements: List<Encouragement> = emptyList(),
+        quoteRepo: DetailFakeQuoteRepository = DetailFakeQuoteRepository(),
     ): Pair<FigureDetailViewModel, DetailFakeDayAssignmentRepository> {
         val figureRepo = DetailFakeFigureRepository(figures)
-        val encouragementRepo = DetailFakeEncouragementRepository()
+        val encouragementRepo = DetailFakeEncouragementRepository(encouragements)
         val dayAssignmentRepo = DetailFakeDayAssignmentRepository(MutableStateFlow(assignments))
         val reflectionRepo = FakeDailyReflectionRepository(lockedFigureIdsByEpochDay)
-        val viewModel = FigureDetailViewModel(figureId, figureRepo, encouragementRepo, dayAssignmentRepo, reflectionRepo)
+        val viewModel = FigureDetailViewModel(figureId, figureRepo, encouragementRepo, dayAssignmentRepo, reflectionRepo, quoteRepo)
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         return viewModel to dayAssignmentRepo
     }
@@ -167,7 +204,9 @@ private class DetailFakeFigureRepository(private val figures: List<Figure>) : Fi
     override suspend fun syncFigures() = Unit
 }
 
-private class DetailFakeEncouragementRepository : EncouragementRepository {
+private class DetailFakeEncouragementRepository(
+    private val encouragements: List<Encouragement> = emptyList(),
+) : EncouragementRepository {
     override suspend fun getEncouragement(
         headlineTitle: String,
         headlineSource: String,
@@ -178,7 +217,7 @@ private class DetailFakeEncouragementRepository : EncouragementRepository {
     override fun observeAll(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
     override fun observeBookmarked(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
     override fun observeCountByFigureName(): Flow<Map<String, Int>> = MutableStateFlow(emptyMap())
-    override fun observeByFigureId(figureId: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
+    override fun observeByFigureId(figureId: Long): Flow<List<Encouragement>> = MutableStateFlow(encouragements)
     override fun observeIsBookmarked(articleUrl: String): Flow<Boolean> = MutableStateFlow(false)
     override suspend fun toggleBookmark(articleUrl: String) = Unit
     override fun observeByEpochDay(epochDay: Long): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
@@ -201,6 +240,21 @@ private class DetailFakeDayAssignmentRepository(
     }
     override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
     override suspend fun resolveReporter(epochDay: Long, dayOfWeek: Int): Long? = null
+    override suspend fun resolve(userId: String?) = Unit
+}
+
+private class DetailFakeQuoteRepository(private val memorizedQuote: Quote? = null) : QuoteRepository {
+    val memorizeCalls = mutableListOf<Pair<Long, String>>()
+    override fun observeAllQuotes(): Flow<List<Quote>> = MutableStateFlow(listOfNotNull(memorizedQuote))
+    override fun observeQuotesByFigure(figureId: Long): Flow<List<Quote>> = MutableStateFlow(listOfNotNull(memorizedQuote))
+    override suspend fun getQuoteById(id: Long): Quote? = memorizedQuote?.takeIf { it.id == id }
+    override suspend fun getLatestQuoteForFigure(figureId: Long): Quote? = memorizedQuote
+    override suspend fun saveQuote(text: String, source: String, themes: List<String>, figureId: Long) = Unit
+    override fun observeMemorizedQuote(): Flow<Quote?> = MutableStateFlow(memorizedQuote)
+    override suspend fun memorizeQuote(figureId: Long, text: String) {
+        memorizeCalls.add(figureId to text)
+    }
+    override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
     override suspend fun resolve(userId: String?) = Unit
 }
 

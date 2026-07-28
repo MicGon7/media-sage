@@ -93,6 +93,19 @@ val MIGRATION_27_28 = object : Migration(27, 28) {
     }
 }
 
+val MIGRATION_28_29 = object : Migration(28, 29) {
+    override fun migrate(connection: SQLiteConnection) {
+        // Defaults to 1 (synced) — a non-memorized quote-catalog row has nothing to push, and must
+        // never look like a pending sync write the way a fresh memorize does.
+        connection.execSQL("ALTER TABLE quotes ADD COLUMN memorized INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("ALTER TABLE quotes ADD COLUMN synced INTEGER NOT NULL DEFAULT 1")
+        connection.execSQL("ALTER TABLE sync_meta ADD COLUMN lastMemorizedQuoteSyncUserId TEXT")
+        // MS-669: the Match/MatchDao/MatchRepository system was confirmed unused (zero call sites
+        // outside its own DI wiring) and quotes.id was its only foreign-key reference.
+        connection.execSQL("DROP TABLE IF EXISTS matches")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

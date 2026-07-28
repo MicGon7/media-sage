@@ -30,13 +30,13 @@ class GetReaderCalendarUseCase(
         combine(
             figureRepository.observeAllFigures(),
             dayAssignmentRepository.observeAssignments(),
-            quoteRepository.observeAllQuotes(),
+            quoteRepository.observeMemorizedQuote(),
             reflectionRepository.observeByEpochDayRange(monthStartEpochDay, monthEndEpochDay),
-        ) { figures, assignments, quotes, briefingDays ->
+        ) { figures, assignments, memorizedQuote, briefingDays ->
             ReaderCalendarData(
                 figures = figures,
                 assignmentsByDayOfWeek = assignments,
-                latestQuote = quotes.maxByOrNull { it.id },
+                memorizedQuote = memorizedQuote,
                 briefingByDay = briefingDays.associateBy { it.epochDay },
             )
         }

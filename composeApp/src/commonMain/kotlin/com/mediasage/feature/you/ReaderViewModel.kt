@@ -170,12 +170,12 @@ class ReaderViewModel(
         recentBriefings: List<BriefingDay>,
     ): ReaderContract.UiState.Ready {
         val figuresById = data.figures.associateBy { it.id }
-        val quoteFigure = data.latestQuote?.let { figuresById[it.figureId] }
+        val quoteFigure = data.memorizedQuote?.let { figuresById[it.figureId] }
         val allPastBriefings = buildPastBriefings(recentBriefings, figuresById)
         return ReaderContract.UiState.Ready(
             weekSlots = buildWeekSlots(figuresById, data.assignmentsByDayOfWeek),
             pickerFigures = data.figures,
-            quoteCard = buildQuoteCard(data.latestQuote, quoteFigure),
+            quoteCard = buildQuoteCard(data.memorizedQuote, quoteFigure),
             pastBriefings = allPastBriefings.take(MAX_PAST_BRIEFINGS),
             hasMorePastBriefings = allPastBriefings.size > MAX_PAST_BRIEFINGS,
             activeSheet = screenInput.activeSheet,
@@ -202,10 +202,10 @@ class ReaderViewModel(
         )
     }
 
-    private fun buildQuoteCard(latestQuote: Quote?, quoteFigure: Figure?): ReaderContract.QuoteCard? {
-        if (latestQuote == null || quoteFigure == null) return null
+    private fun buildQuoteCard(memorizedQuote: Quote?, quoteFigure: Figure?): ReaderContract.QuoteCard? {
+        if (memorizedQuote == null || quoteFigure == null) return null
         return ReaderContract.QuoteCard(
-            quoteText = latestQuote.text,
+            quoteText = memorizedQuote.text,
             figureName = quoteFigure.name,
             figureRole = quoteFigure.role,
             figureImageUrl = quoteFigure.portraitUrl,

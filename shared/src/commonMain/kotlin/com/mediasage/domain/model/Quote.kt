@@ -6,5 +6,6 @@ data class Quote(
     val text: String,
     val source: String,
     val themes: List<String>,
-    val verified: Boolean = false
+    val verified: Boolean = false,
+    val memorized: Boolean = false
 )

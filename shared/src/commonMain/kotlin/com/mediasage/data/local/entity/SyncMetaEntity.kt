@@ -10,4 +10,5 @@ data class SyncMetaEntity(
     val lastDayAssignmentSyncUserId: String? = null,
     val lastDailyReflectionSyncUserId: String? = null,
     val lastSavedInsightSyncUserId: String? = null,
+    val lastMemorizedQuoteSyncUserId: String? = null,
 )
