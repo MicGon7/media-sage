@@ -1,23 +1,11 @@
 package com.mediasage.feature.daydetail
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,10 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mediasage.ui.MediaSageBackRow
-import com.mediasage.ui.MediaSageBriefingBody
 import com.mediasage.ui.MediaSageBriefingCard
-import com.mediasage.ui.MediaSageBriefingHeader
-import com.mediasage.ui.ThemeChip
+import com.mediasage.ui.MediaSageTabRow
 import kotlinx.datetime.LocalDate
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.briefing_card_evening
@@ -55,23 +41,30 @@ fun DayDetailScreen(
             MediaSageBackRow(onNavigateBack = onNavigateBack) {
                 DayDetailHeader(epochDay = ready.epochDay)
             }
-            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 when {
                     ready.briefings.isEmpty() -> BriefingsEmptyState(ready.epochDay)
-                    ready.briefings.size == 1 -> SingleBriefingContent(
-                        briefing = ready.briefings.first(),
+                    else -> SingleBriefingContent(
+                        briefing = ready.briefings.firstOrNull { it.tone == ready.selectedTone }
+                            ?: ready.briefings.first(),
                         figureName = ready.figureName,
                         figureImageUrl = ready.figureImageUrl,
-                    )
-
-                    else -> MultipleBriefingsContent(
-                        briefings = ready.briefings,
-                        expandedTone = ready.expandedTone,
-                        figureName = ready.figureName,
-                        figureImageUrl = ready.figureImageUrl,
-                        onIntent = onIntent,
                     )
                 }
+            }
+            if (ready.briefings.size > 1) {
+                MediaSageTabRow(
+                    selectedIndex = ready.briefings.indexOfFirst { it.tone == ready.selectedTone }.coerceAtLeast(0),
+                    tabLabels = ready.briefings.map { stringResource(toneLabelRes(it.tone)) },
+                    onTabSelected = { index ->
+                        onIntent(DayDetailContract.Intent.BriefingToneSelected(ready.briefings[index].tone))
+                    },
+                )
             }
         }
     }
@@ -115,77 +108,6 @@ private fun SingleBriefingContent(
             theme = briefing.theme,
             sources = briefing.sources,
         )
-    }
-}
-
-/**
- * The figure's portrait and name never change between a day's morning and evening briefing, so
- * [MediaSageBriefingHeader] renders once above both. The two briefings form an accordion — at most
- * one is expanded at a time, so opening one collapses the other — and only [MediaSageBriefingBody]
- * (theme, sources, scripture, and the reflection text) toggles per section.
- */
-@Composable
-private fun MultipleBriefingsContent(
-    briefings: List<DayDetailContract.BriefingSummary>,
-    expandedTone: String?,
-    figureName: String?,
-    figureImageUrl: String?,
-    onIntent: (DayDetailContract.Intent) -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-        MediaSageBriefingHeader(figureName = figureName, figureImageUrl = figureImageUrl)
-        Spacer(modifier = Modifier.height(8.dp))
-        briefings.forEach { briefing ->
-            ExpandableBriefingSection(
-                briefing = briefing,
-                expanded = briefing.tone == expandedTone,
-                onToggle = { onIntent(DayDetailContract.Intent.BriefingToggled(briefing.tone)) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExpandableBriefingSection(
-    briefing: DayDetailContract.BriefingSummary,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle)
-                .padding(vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(toneLabelRes(briefing.tone)),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                if (briefing.theme != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    ThemeChip(theme = briefing.theme)
-                }
-            }
-            Icon(
-                imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        AnimatedVisibility(visible = expanded) {
-            MediaSageBriefingBody(
-                scriptureReference = briefing.scriptureReference,
-                scriptureText = briefing.scriptureText,
-                insight = briefing.insight,
-                implication = briefing.implication,
-                inspiration = briefing.inspiration,
-                sources = briefing.sources,
-            )
-        }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
     }
 }
 

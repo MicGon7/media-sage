@@ -95,42 +95,32 @@ class DayDetailViewModelTest {
     }
 
     @Test
-    fun morningStartsExpandedEveningStartsCollapsed() = runTest(testDispatcher) {
+    fun morningIsSelectedByDefault() = runTest(testDispatcher) {
         val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = briefing("evening"))
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals("morning", state.expandedTone)
+        assertEquals("morning", state.selectedTone)
     }
 
     @Test
-    fun expandingEveningCollapsesMorning() = runTest(testDispatcher) {
+    fun selectingEveningSwitchesTone() = runTest(testDispatcher) {
         val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = briefing("evening"))
 
-        viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("evening"))
+        viewModel.onIntent(DayDetailContract.Intent.BriefingToneSelected("evening"))
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals("evening", state.expandedTone)
+        assertEquals("evening", state.selectedTone)
     }
 
     @Test
-    fun toggledTwiceReturnsToDefault() = runTest(testDispatcher) {
+    fun reselectingMorningStaysOnMorning() = runTest(testDispatcher) {
         val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = briefing("evening"))
 
-        viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("morning"))
-        viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("morning"))
+        viewModel.onIntent(DayDetailContract.Intent.BriefingToneSelected("morning"))
+        viewModel.onIntent(DayDetailContract.Intent.BriefingToneSelected("morning"))
 
         val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals("morning", state.expandedTone)
-    }
-
-    @Test
-    fun toggledOnceCollapsesMorning() = runTest(testDispatcher) {
-        val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = briefing("evening"))
-
-        viewModel.onIntent(DayDetailContract.Intent.BriefingToggled("morning"))
-
-        val state = viewModel.state.value as DayDetailContract.UiState.Ready
-        assertEquals(null, state.expandedTone)
+        assertEquals("morning", state.selectedTone)
     }
 
     /**
