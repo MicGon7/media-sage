@@ -36,8 +36,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +63,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mediasage.LocalIsDebugBuild
 import com.mediasage.theme.CardBorder
 import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicTan
@@ -99,10 +102,17 @@ import mediasage.composeapp.generated.resources.nav_back
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeSource
 
 private val OnGradient = InkLight
 private val OnGradientMuted = Color(0xFFB0A898)
 private val FieldBorder = Color(0xFF6B7A8D)
+
+// Debug-only bypass gesture: three taps on the bypass button within this window trigger it,
+// so a stray single or double tap during normal use can't skip sign-in by accident.
+private const val BYPASS_TAP_TARGET_COUNT = 3
+private val BYPASS_TAP_WINDOW = 600.milliseconds
 
 /** Bundles the paper-form's derived colors so field composables take one parameter, not five. */
 private data class FormPalette(
@@ -326,18 +336,23 @@ private fun LoginScreenContent(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(
-                    onClick = { onIntent(LoginContract.Intent.BypassAuth) },
-                    enabled = !isLoading
-                ) {
-                    Text(
-                        text = stringResource(Res.string.login_bypass),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontStyle = FontStyle.Italic,
-                            color = formMutedColor
+                if (LocalIsDebugBuild.current) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val onBypassTap = rememberTripleTapAction {
+                        onIntent(LoginContract.Intent.BypassAuth)
+                    }
+                    TextButton(
+                        onClick = onBypassTap,
+                        enabled = !isLoading,
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.login_bypass),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontStyle = FontStyle.Italic,
+                                color = formMutedColor
+                            )
                         )
-                    )
+                    }
                 }
                 // On paper, the version reads like a colophon line printed at the bottom of the
                 // page rather than a separate overlay pinned to the screen edge.
@@ -364,6 +379,17 @@ private fun LoginScreenContent(
                         .fillMaxWidth(),
                 )
             }
+        }
+    }
+}
+
+/** Returns a click handler that only invokes [onTripleTap] on the third tap within [BYPASS_TAP_WINDOW]. */
+@Composable
+private fun rememberTripleTapAction(onTripleTap: () -> Unit): () -> Unit {
+    val detector = remember { TripleTapDetector(window = BYPASS_TAP_WINDOW, targetCount = BYPASS_TAP_TARGET_COUNT) }
+    return {
+        if (detector.registerTap(TimeSource.Monotonic.markNow())) {
+            onTripleTap()
         }
     }
 }
@@ -704,6 +730,14 @@ private fun submitOtp(
 @Composable
 private fun LoginScreenPreview() {
     LoginScreenContent(state = LoginContract.UiState(), onIntent = {})
+}
+
+@Preview(showBackground = true, name = "Debug Bypass Visible")
+@Composable
+private fun LoginScreenDebugBypassPreview() {
+    CompositionLocalProvider(LocalIsDebugBuild provides true) {
+        LoginScreenContent(state = LoginContract.UiState(), onIntent = {})
+    }
 }
 
 @Preview(showBackground = true, name = "Remember Email On")
