@@ -60,6 +60,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mediasage.theme.CardBorder
+import com.mediasage.theme.ComicBrown
+import com.mediasage.theme.ComicTan
 import com.mediasage.theme.DarkBackground
 import com.mediasage.theme.Ink
 import com.mediasage.theme.InkLight
@@ -166,7 +168,7 @@ private fun LoginScreenContent(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(
-                        horizontal = if (formOnPaper) 40.dp else 32.dp,
+                        horizontal = if (formOnPaper) 24.dp else 32.dp,
                         vertical = if (formOnPaper) 40.dp else 0.dp,
                     )
                     .imePadding(),
@@ -186,8 +188,9 @@ private fun LoginScreenContent(
                         .paint(
                             painter = painterResource(Res.drawable.login_paper_white),
                             contentScale = ContentScale.FillBounds,
+                            alpha = 0.88f,
                         )
-                        .padding(20.dp)
+                        .padding(14.dp)
                 } else {
                     Modifier.fillMaxWidth()
                 }
@@ -330,8 +333,9 @@ private fun LoginScreenContent(
                         onCheckedChange = { onIntent(LoginContract.Intent.ToggleRememberEmail(it)) },
                         enabled = !isLoading,
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Navy,
-                            checkedTrackColor = formMutedColor,
+                            checkedThumbColor = ComicBrown,
+                            checkedTrackColor = ComicTan,
+                            checkedBorderColor = ComicBrown,
                             uncheckedThumbColor = formMutedColor,
                             uncheckedTrackColor = Color.Transparent,
                             uncheckedBorderColor = formBorderColor,

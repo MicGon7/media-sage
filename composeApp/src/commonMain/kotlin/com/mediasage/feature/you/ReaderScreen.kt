@@ -1,5 +1,6 @@
 package com.mediasage.feature.you
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -83,11 +84,12 @@ import com.mediasage.theme.LensPerseverance
 import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
-import com.mediasage.ui.MediaSageEntryCard
+import com.mediasage.ui.MediaSageSurface
 import com.mediasage.ui.ReassignConfirmationDialog
 import com.mediasage.ui.ScreenHeader
 import kotlinx.datetime.DayOfWeek
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.saved_insights_banner
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
 import mediasage.composeapp.generated.resources.you_lens_faith
 import mediasage.composeapp.generated.resources.you_lens_grace
@@ -108,10 +110,12 @@ import mediasage.composeapp.generated.resources.you_picker_search_hint
 import mediasage.composeapp.generated.resources.you_picker_title
 import mediasage.composeapp.generated.resources.you_quote_card_header
 import mediasage.composeapp.generated.resources.you_saved_entry_subtitle
+import mediasage.composeapp.generated.resources.you_saved_news_section_title
 import mediasage.composeapp.generated.resources.you_saved_section_title
 import mediasage.composeapp.generated.resources.you_saved_see_all
 import mediasage.composeapp.generated.resources.you_screen_title
 import mediasage.composeapp.generated.resources.you_settings_icon_description
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -252,7 +256,8 @@ fun ReaderScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        MediaSageEntryCard(
+                        SectionLabel(text = stringResource(Res.string.you_saved_news_section_title))
+                        SavedEntryCard(
                             title = stringResource(Res.string.you_nav_saved),
                             subtitle = stringResource(Res.string.you_saved_entry_subtitle),
                             onClick = onNavigateToBookmarks,
@@ -273,6 +278,45 @@ internal fun SectionLabel(text: String, modifier: Modifier = Modifier) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier,
     )
+}
+
+/** The Saved nav entry, built directly on [MediaSageSurface] rather than [MediaSageEntryCard] so
+ * only this entry carries the decorative banner image, not every entry card in the app. */
+@Composable
+private fun SavedEntryCard(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    MediaSageSurface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shadowElevation = 2.dp,
+    ) { contentColor ->
+        Column {
+            Image(
+                painter = painterResource(Res.drawable.saved_insights_banner),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().height(96.dp),
+            )
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        }
+    }
 }
 
 @Composable
