@@ -369,6 +369,49 @@ private fun LoginScreenContent(
 }
 
 @Composable
+private fun FormErrorText(message: String) {
+    if (message.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+}
+
+@Composable
+private fun FormSubmitButton(
+    text: String,
+    isLoading: Boolean,
+    palette: FormPalette,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        enabled = !isLoading,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = palette.accent,
+            disabledContentColor = palette.muted
+        ),
+        border = BorderStroke(1.dp, if (isLoading) palette.border else palette.accent)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(strokeWidth = 2.dp, color = palette.muted)
+        } else {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            )
+        }
+    }
+}
+
+@Composable
 private fun SignInFields(
     state: LoginContract.UiState,
     onIntent: (LoginContract.Intent) -> Unit,
@@ -432,14 +475,7 @@ private fun SignInFields(
         enabled = !isLoading,
         colors = palette.fieldColors
     )
-    if (displayError.isNotEmpty()) {
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = displayError,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error
-        )
-    }
+    FormErrorText(displayError)
     Spacer(modifier = Modifier.height(12.dp))
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -465,31 +501,15 @@ private fun SignInFields(
         )
     }
     Spacer(modifier = Modifier.height(16.dp))
-    OutlinedButton(
+    FormSubmitButton(
+        text = stringResource(Res.string.login_sign_in_button),
+        isLoading = isLoading,
+        palette = palette,
         onClick = {
             focusManager.clearFocus()
             submitSignIn(email, password, onIntent) { localError = it }
         },
-        modifier = Modifier.fillMaxWidth().height(48.dp),
-        enabled = !isLoading,
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = palette.accent,
-            disabledContentColor = palette.muted
-        ),
-        border = BorderStroke(1.dp, if (isLoading) palette.border else palette.accent)
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(strokeWidth = 2.dp, color = palette.muted)
-        } else {
-            Text(
-                text = stringResource(Res.string.login_sign_in_button),
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-            )
-        }
-    }
+    )
 }
 
 @Composable
@@ -566,42 +586,19 @@ private fun SignUpFields(
         enabled = !isLoading,
         colors = palette.fieldColors
     )
-    if (displayError.isNotEmpty()) {
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = displayError,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error
-        )
-    }
+    FormErrorText(displayError)
     Spacer(modifier = Modifier.height(16.dp))
-    OutlinedButton(
+    FormSubmitButton(
+        text = stringResource(Res.string.login_sign_up_button),
+        isLoading = isLoading,
+        palette = palette,
         onClick = {
             focusManager.clearFocus()
             submitSignUp(email, password, displayName, emptyFieldsMessage, shortPasswordMessage, onIntent) {
                 localError = it
             }
         },
-        modifier = Modifier.fillMaxWidth().height(48.dp),
-        enabled = !isLoading,
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = palette.accent,
-            disabledContentColor = palette.muted
-        ),
-        border = BorderStroke(1.dp, if (isLoading) palette.border else palette.accent)
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(strokeWidth = 2.dp, color = palette.muted)
-        } else {
-            Text(
-                text = stringResource(Res.string.login_sign_up_button),
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-            )
-        }
-    }
+    )
 }
 
 @Composable
@@ -641,40 +638,17 @@ private fun OtpFields(
         enabled = !isLoading,
         colors = palette.fieldColors
     )
-    if (displayError.isNotEmpty()) {
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = displayError,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error
-        )
-    }
+    FormErrorText(displayError)
     Spacer(modifier = Modifier.height(16.dp))
-    OutlinedButton(
+    FormSubmitButton(
+        text = stringResource(Res.string.login_verify_button),
+        isLoading = isLoading,
+        palette = palette,
         onClick = {
             focusManager.clearFocus()
             submitOtp(code, emptyCodeMessage, onIntent) { localError = it }
         },
-        modifier = Modifier.fillMaxWidth().height(48.dp),
-        enabled = !isLoading,
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = palette.accent,
-            disabledContentColor = palette.muted
-        ),
-        border = BorderStroke(1.dp, if (isLoading) palette.border else palette.accent)
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(strokeWidth = 2.dp, color = palette.muted)
-        } else {
-            Text(
-                text = stringResource(Res.string.login_verify_button),
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-            )
-        }
-    }
+    )
 }
 
 private fun submitSignIn(
