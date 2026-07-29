@@ -28,8 +28,13 @@ class SettingsViewModel(
             combine(
                 themePreferencesRepository.appTheme,
                 themePreferencesRepository.darkMode,
-            ) { theme, dark ->
-                SettingsContract.UiState.Ready(appTheme = theme, darkMode = dark)
+                authRepository.observeAuthState(),
+            ) { theme, dark, session ->
+                SettingsContract.UiState.Ready(
+                    appTheme = theme,
+                    darkMode = dark,
+                    displayName = session?.displayName.orEmpty(),
+                )
             }.collect { _state.value = it }
         }
     }

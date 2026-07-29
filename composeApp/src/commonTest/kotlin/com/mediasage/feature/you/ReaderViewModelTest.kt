@@ -371,6 +371,8 @@ private class FakeAuthRepository(private val session: UserSession?) : AuthReposi
     override fun observeAuthState(): Flow<UserSession?> = MutableStateFlow(session)
     override fun currentSession(): UserSession? = session
     override suspend fun signInWithEmail(email: String, password: String) = Unit
+    override suspend fun signUp(email: String, password: String, displayName: String) = Unit
+    override suspend fun verifySignUpOtp(email: String, token: String) = Unit
     override suspend fun signOut() = Unit
 }
 

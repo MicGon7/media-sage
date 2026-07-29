@@ -3,6 +3,7 @@ package com.mediasage.data.repository
 import com.mediasage.domain.model.UserSession
 import com.mediasage.domain.repository.AuthRepository
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
@@ -10,8 +11,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 class AuthRepositoryImpl(
     private val supabaseClient: SupabaseClient?
@@ -50,6 +53,20 @@ class AuthRepositoryImpl(
             this.email = email
             this.password = password
         }
+    }
+
+    override suspend fun signUp(email: String, password: String, displayName: String) {
+        val client = supabaseClient ?: error("Supabase not configured")
+        client.auth.signUpWith(Email) {
+            this.email = email
+            this.password = password
+            this.data = buildJsonObject { put("full_name", displayName) }
+        }
+    }
+
+    override suspend fun verifySignUpOtp(email: String, token: String) {
+        val client = supabaseClient ?: error("Supabase not configured")
+        client.auth.verifyEmailOtp(type = OtpType.Email.SIGNUP, email = email, token = token)
     }
 
     override suspend fun signOut() {

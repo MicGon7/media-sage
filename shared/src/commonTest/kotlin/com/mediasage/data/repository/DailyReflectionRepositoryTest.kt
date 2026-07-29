@@ -379,6 +379,8 @@ private class FakeAuthRepositoryForReflectionSync(private val userId: String?) :
 
     override fun currentSession(): UserSession? = userId?.let { UserSession(it, null) }
     override suspend fun signInWithEmail(email: String, password: String) = Unit
+    override suspend fun signUp(email: String, password: String, displayName: String) = Unit
+    override suspend fun verifySignUpOtp(email: String, token: String) = Unit
     override suspend fun signOut() = Unit
 }
 

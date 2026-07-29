@@ -16,7 +16,10 @@ import com.mediasage.data.repository.MemorizedQuoteRemoteDataSource
 import com.mediasage.data.repository.PostgrestDailyReflectionRemoteDataSource
 import com.mediasage.data.repository.PostgrestDayAssignmentRemoteDataSource
 import com.mediasage.data.repository.PostgrestMemorizedQuoteRemoteDataSource
+import com.mediasage.data.repository.PostgrestProfileRemoteDataSource
 import com.mediasage.data.repository.PostgrestSavedInsightRemoteDataSource
+import com.mediasage.data.repository.ProfileRemoteDataSource
+import com.mediasage.data.repository.ProfileRepositoryImpl
 import com.mediasage.data.repository.QuoteRepositoryImpl
 import com.mediasage.data.repository.SavedInsightRemoteDataSource
 import com.mediasage.data.repository.WikipediaRepositoryImpl
@@ -26,6 +29,7 @@ import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
+import com.mediasage.domain.repository.ProfileRepository
 import com.mediasage.domain.repository.QuoteRepository
 import com.mediasage.domain.repository.WikipediaRepository
 import com.mediasage.domain.usecase.GetDayDetailUseCase
@@ -53,6 +57,7 @@ fun sharedModule(
         single<DailyReflectionRemoteDataSource> { PostgrestDailyReflectionRemoteDataSource(get()) }
         single<SavedInsightRemoteDataSource> { PostgrestSavedInsightRemoteDataSource(get()) }
         single<MemorizedQuoteRemoteDataSource> { PostgrestMemorizedQuoteRemoteDataSource(get()) }
+        single<ProfileRemoteDataSource> { PostgrestProfileRemoteDataSource(get()) }
     }
 
     // HTTP client for communicating with the Media Sage server
@@ -82,6 +87,7 @@ fun sharedModule(
         DailyReflectionRepositoryImpl(get(), get(), get(), getOrNull(), get(), get())
     }
     single<AuthRepository> { AuthRepositoryImpl(getOrNull<SupabaseClient>()) }
+    single<ProfileRepository> { ProfileRepositoryImpl(getOrNull()) }
     single<DayAssignmentRepository> {
         DayAssignmentRepositoryImpl(get(), get(), get(), get(), getOrNull(), get(), get())
     }
