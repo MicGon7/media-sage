@@ -167,7 +167,7 @@
     <string name="login_bypass">Continue without signing in</string>
     <string name="login_display_name_label">Display Name</string>
     <string name="login_sign_up_button">Sign Up</string>
-    <string name="login_switch_to_sign_up">Don\'t have an account? Sign up</string>
+    <string name="login_switch_to_sign_up">Don't have an account? Sign up</string>
     <string name="login_switch_to_sign_in">Already have an account? Sign in</string>
     <string name="login_error_empty_sign_up_fields">Please enter your email, password, and display name</string>
     <string name="login_error_password_too_short">Password must be at least 8 characters</string>

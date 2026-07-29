@@ -35,6 +35,8 @@ fun App(isDebugBuild: Boolean = false, appVersion: String = "") {
                     LaunchedEffect(loginVm) {
                         loginVm.sideEffects.collect { effect ->
                             when (effect) {
+                                // Only the debug bypass button emits this — real sign-in flips
+                                // authState through the Supabase session emission instead.
                                 is LoginContract.SideEffect.NavigateToHome -> appViewModel.bypassAuth()
                                 is LoginContract.SideEffect.ShowError -> Unit
                             }

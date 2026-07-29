@@ -66,8 +66,12 @@ class LoginViewModel(
                     } else {
                         userPreferencesRepository.clearRememberedEmail()
                     }
+                    // No NavigateToHome here: the Supabase session emission flips authState to
+                    // Authenticated on its own. Sending a navigation event too races the session
+                    // emission — when the session wins, the login screen (and its collector) leaves
+                    // composition and the buffered event replays on the next visit after sign-out,
+                    // bouncing the user straight back into the app.
                     _state.update { it.copy(isLoading = false, error = null) }
-                    _sideEffects.send(LoginContract.SideEffect.NavigateToHome)
                 }
                 .onFailure { e ->
                     _state.update { it.copy(isLoading = false, error = e.message ?: "Sign in failed") }
@@ -102,6 +106,8 @@ class LoginViewModel(
                     createProfileBestEffort(displayName)
                     // The ViewModel outlives sign-out (it is scoped to the Activity, not the login
                     // screen), so leaving the OTP step in state would resurface it on the next visit.
+                    // No NavigateToHome either — the verified session drives authState reactively,
+                    // same as signIn above.
                     _state.update {
                         it.copy(
                             mode = LoginContract.Mode.SIGN_IN,
@@ -111,7 +117,6 @@ class LoginViewModel(
                             pendingDisplayName = null,
                         )
                     }
-                    _sideEffects.send(LoginContract.SideEffect.NavigateToHome)
                 }
                 .onFailure { e ->
                     _state.update { it.copy(isLoading = false, error = e.message ?: "Invalid code") }

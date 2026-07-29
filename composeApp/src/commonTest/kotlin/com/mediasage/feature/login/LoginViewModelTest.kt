@@ -12,6 +12,7 @@ import com.mediasage.domain.repository.ProfileRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -67,6 +68,47 @@ class LoginViewModelTest {
         assertNull(state.pendingDisplayName)
         assertEquals(LoginContract.Mode.SIGN_IN, state.mode)
         assertNull(state.error)
+    }
+
+    // Real auth success must NOT emit NavigateToHome: the session emission already flips authState,
+    // and a buffered navigation event left undrained replays on the next login-screen visit after
+    // sign-out, bouncing the user back into the app (the "sign out takes two clicks" bug).
+    @Test
+    fun successfulSignInEmitsNoSideEffect() = runTest(testDispatcher) {
+        val viewModel = loginViewModel()
+        val effects = mutableListOf<LoginContract.SideEffect>()
+        val collectJob = launch { viewModel.sideEffects.collect { effects.add(it) } }
+
+        viewModel.onIntent(LoginContract.Intent.SignInWithEmail("ada@example.com", "password123"))
+
+        assertEquals(emptyList(), effects)
+        collectJob.cancel()
+    }
+
+    @Test
+    fun successfulOtpVerificationEmitsNoSideEffect() = runTest(testDispatcher) {
+        val viewModel = loginViewModel()
+        val effects = mutableListOf<LoginContract.SideEffect>()
+        val collectJob = launch { viewModel.sideEffects.collect { effects.add(it) } }
+
+        viewModel.onIntent(LoginContract.Intent.SwitchToSignUp)
+        viewModel.onIntent(LoginContract.Intent.SignUpWithEmail("ada@example.com", "password123", "Ada"))
+        viewModel.onIntent(LoginContract.Intent.VerifyOtp("123456"))
+
+        assertEquals(emptyList(), effects)
+        collectJob.cancel()
+    }
+
+    @Test
+    fun bypassAuthEmitsNavigateToHome() = runTest(testDispatcher) {
+        val viewModel = loginViewModel()
+        val effects = mutableListOf<LoginContract.SideEffect>()
+        val collectJob = launch { viewModel.sideEffects.collect { effects.add(it) } }
+
+        viewModel.onIntent(LoginContract.Intent.BypassAuth)
+
+        assertEquals(listOf<LoginContract.SideEffect>(LoginContract.SideEffect.NavigateToHome), effects)
+        collectJob.cancel()
     }
 
     @Test
