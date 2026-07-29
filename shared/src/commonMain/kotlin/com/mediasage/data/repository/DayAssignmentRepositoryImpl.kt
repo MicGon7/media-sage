@@ -97,9 +97,9 @@ class DayAssignmentRepositoryImpl(
 
     private suspend fun syncWithRemote(userId: String) {
         if (remote == null) return
-        resetIfAccountChanged(userId)
+        val isFirstSyncEver = resetIfAccountChanged(userId)
         pushPending()
-        pullAndReconcile(userId)
+        pullAndReconcile(userId, isFirstSyncEver)
     }
 
     private suspend fun currentUserId(): String? =
@@ -139,22 +139,33 @@ class DayAssignmentRepositoryImpl(
         }
     }
 
-    private suspend fun resetIfAccountChanged(userId: String) {
+    private suspend fun resetIfAccountChanged(userId: String): Boolean {
         val meta = syncMetaDao.get()
         val previousUserId = meta?.lastDayAssignmentSyncUserId
-        if (previousUserId == userId) return
+        if (previousUserId == userId) return false
         // Only wipe when a *different* account previously synced on this device — a null
         // previousUserId means this is the first sync ever, so any local pre-sync edits stay.
         if (previousUserId != null) dao.clearAll()
         syncMetaDao.upsert((meta ?: SyncMetaEntity()).copy(lastDayAssignmentSyncUserId = userId))
+        return previousUserId == null
     }
 
-    private suspend fun pullAndReconcile(userId: String) {
+    private suspend fun pullAndReconcile(userId: String, isFirstSyncEver: Boolean) {
         val remote = remote ?: return
         val remoteRows = remote.fetchAll(userId)
 
-        if (remoteRows.isEmpty() && dao.countAll() == 0) {
+        // `synced = true` on a local row means two different things depending on how it got
+        // there: seedDefaultsIfEmpty(markAsSynced = true) sets it while signed-out purely to
+        // keep pushPending() from treating a placeholder as a pending edit, while
+        // applyRemoteRow/markSynced set it because the row is genuinely confirmed on the
+        // remote. purgeMissingFromRemote below trusts `synced` to mean the latter — so on this
+        // account's genuine first-ever sync, an empty remote fetch (nothing has ever been
+        // pushed yet) must never be read as "these synced-while-signed-out placeholders were
+        // deleted upstream." Treat it as a brand-new account instead: adopt whatever's local
+        // (existing placeholders or freshly-seeded defaults) as the real baseline and push it.
+        if (remoteRows.isEmpty() && (dao.countAll() == 0 || isFirstSyncEver)) {
             seedDefaultsIfEmpty()
+            dao.markAllUnsynced()
             pushPending()
             return
         }

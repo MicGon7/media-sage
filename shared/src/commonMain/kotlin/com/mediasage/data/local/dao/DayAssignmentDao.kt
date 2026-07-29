@@ -39,4 +39,7 @@ interface DayAssignmentDao {
 
     @Query("UPDATE day_assignment SET synced = 1 WHERE dayOfWeek = :dayOfWeek")
     suspend fun markSynced(dayOfWeek: Int)
+
+    @Query("UPDATE day_assignment SET synced = 0 WHERE pendingDelete = 0")
+    suspend fun markAllUnsynced()
 }
