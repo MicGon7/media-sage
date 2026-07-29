@@ -99,9 +99,7 @@ class LoginViewModel(
             _state.update { it.copy(isLoading = true, error = null) }
             runCatching { authRepository.verifySignUpOtp(email, code) }
                 .onSuccess {
-                    authRepository.currentSession()?.userId
-                        ?.takeIf { it.isNotBlank() }
-                        ?.let { userId -> profileRepository.createProfile(userId, displayName) }
+                    createProfileBestEffort(displayName)
                     _state.update { it.copy(isLoading = false, error = null) }
                     _sideEffects.send(LoginContract.SideEffect.NavigateToHome)
                 }
@@ -110,5 +108,12 @@ class LoginViewModel(
                     _sideEffects.send(LoginContract.SideEffect.ShowError(e.message ?: "Invalid code"))
                 }
         }
+    }
+
+    // Best-effort: the account is already verified at this point, so a profile-row failure
+    // (e.g. the profiles table migration hasn't been run yet) must not block sign-up completion.
+    private suspend fun createProfileBestEffort(displayName: String) {
+        val userId = authRepository.currentSession()?.userId?.takeIf { it.isNotBlank() } ?: return
+        runCatching { profileRepository.createProfile(userId, displayName) }
     }
 }
