@@ -42,15 +42,15 @@
 
     <!-- You screen -->
     <string name="you_screen_title">Reader</string>
-    <string name="you_nav_saved">Headline Insights</string>
+    <string name="you_nav_saved">Headlines</string>
     <string name="you_nav_history">Past Briefings</string>
     <string name="you_settings_icon_description">Settings</string>
     <string name="you_carousel_title">WEEKLY SCHEDULE</string>
     <string name="you_reporters_section_heading">REPORTERS</string>
     <string name="you_reporters_this_week">REPORTERS OF THE WEEK</string>
-    <string name="you_history_entry_subtitle">See past reporters and reflections</string>
-    <string name="you_saved_entry_subtitle">See what reporters had to say about headlines you\'re interested in</string>
-    <string name="you_saved_news_section_title">SAVED NEWS INSIGHTS</string>
+    <string name="you_history_entry_subtitle">View past reporters and reflections</string>
+    <string name="you_saved_entry_subtitle">View saved headlines with insights</string>
+    <string name="you_saved_news_section_title">SAVED HEADLINES</string>
     <string name="you_saved_section_title">FROM THE REPORTERS</string>
     <string name="you_quote_card_header">MEMORY QUOTE</string>
     <string name="you_saved_see_all">Select a quote to memorize →</string>
@@ -90,7 +90,7 @@
     <string name="settings_send_feedback">Send Feedback</string>
 
     <!-- Bookmarks screen -->
-    <string name="title_bookmarks">Saved</string>
+    <string name="title_bookmarks">Saved Headlines</string>
     <string name="bookmarks_coming_soon">Bookmarks coming soon</string>
     <string name="bookmarks_empty_title">No saved articles yet</string>
     <string name="bookmarks_empty_subtitle">Tap the bookmark icon on any article to save it</string>
