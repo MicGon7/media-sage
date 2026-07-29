@@ -100,7 +100,17 @@ class LoginViewModel(
             runCatching { authRepository.verifySignUpOtp(email, code) }
                 .onSuccess {
                     createProfileBestEffort(displayName)
-                    _state.update { it.copy(isLoading = false, error = null) }
+                    // The ViewModel outlives sign-out (it is scoped to the Activity, not the login
+                    // screen), so leaving the OTP step in state would resurface it on the next visit.
+                    _state.update {
+                        it.copy(
+                            mode = LoginContract.Mode.SIGN_IN,
+                            isLoading = false,
+                            error = null,
+                            pendingOtpEmail = null,
+                            pendingDisplayName = null,
+                        )
+                    }
                     _sideEffects.send(LoginContract.SideEffect.NavigateToHome)
                 }
                 .onFailure { e ->
