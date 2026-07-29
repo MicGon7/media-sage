@@ -95,6 +95,7 @@ import mediasage.composeapp.generated.resources.login_subtitle
 import mediasage.composeapp.generated.resources.login_switch_to_sign_in
 import mediasage.composeapp.generated.resources.login_switch_to_sign_up
 import mediasage.composeapp.generated.resources.login_verify_button
+import mediasage.composeapp.generated.resources.nav_back
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -287,8 +288,18 @@ private fun LoginScreenContent(
                     else -> SignInFields(state, onIntent, palette, focusManager)
                 }
 
-                if (state.pendingOtpEmail == null) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                if (state.pendingOtpEmail != null) {
+                    TextButton(
+                        onClick = { onIntent(LoginContract.Intent.SwitchToSignUp) },
+                        enabled = !isLoading
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.nav_back),
+                            style = MaterialTheme.typography.bodySmall.copy(color = formMutedColor)
+                        )
+                    }
+                } else {
                     val isSignUpMode = state.mode == LoginContract.Mode.SIGN_UP
                     TextButton(
                         onClick = {

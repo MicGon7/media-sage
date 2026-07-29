@@ -41,7 +41,7 @@ class LoginViewModel(
             is LoginContract.Intent.SignUpWithEmail -> signUp(intent.email, intent.password, intent.displayName)
             is LoginContract.Intent.VerifyOtp -> verifyOtp(intent.code)
             is LoginContract.Intent.SwitchToSignUp -> _state.update {
-                it.copy(mode = LoginContract.Mode.SIGN_UP, error = null)
+                it.copy(mode = LoginContract.Mode.SIGN_UP, error = null, pendingOtpEmail = null, pendingDisplayName = null)
             }
             is LoginContract.Intent.SwitchToSignIn -> _state.update {
                 it.copy(mode = LoginContract.Mode.SIGN_IN, error = null, pendingOtpEmail = null, pendingDisplayName = null)
