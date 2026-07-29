@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.AuthPreferencesRepository
 import com.mediasage.domain.repository.AuthRepository
+import com.mediasage.domain.repository.ProfileRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +16,8 @@ import kotlinx.coroutines.launch
 
 class LoginViewModel(
     private val authRepository: AuthRepository,
-    private val userPreferencesRepository: AuthPreferencesRepository
+    private val userPreferencesRepository: AuthPreferencesRepository,
+    private val profileRepository: ProfileRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginContract.UiState())
@@ -36,6 +38,14 @@ class LoginViewModel(
     fun onIntent(intent: LoginContract.Intent) {
         when (intent) {
             is LoginContract.Intent.SignInWithEmail -> signIn(intent.email, intent.password)
+            is LoginContract.Intent.SignUpWithEmail -> signUp(intent.email, intent.password, intent.displayName)
+            is LoginContract.Intent.VerifyOtp -> verifyOtp(intent.code)
+            is LoginContract.Intent.SwitchToSignUp -> _state.update {
+                it.copy(mode = LoginContract.Mode.SIGN_UP, error = null)
+            }
+            is LoginContract.Intent.SwitchToSignIn -> _state.update {
+                it.copy(mode = LoginContract.Mode.SIGN_IN, error = null, pendingOtpEmail = null, pendingDisplayName = null)
+            }
             is LoginContract.Intent.ToggleRememberEmail -> _state.update {
                 it.copy(rememberEmail = intent.enabled)
             }
@@ -62,6 +72,42 @@ class LoginViewModel(
                 .onFailure { e ->
                     _state.update { it.copy(isLoading = false, error = e.message ?: "Sign in failed") }
                     _sideEffects.send(LoginContract.SideEffect.ShowError(e.message ?: "Sign in failed"))
+                }
+        }
+    }
+
+    private fun signUp(email: String, password: String, displayName: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            runCatching { authRepository.signUp(email, password, displayName) }
+                .onSuccess {
+                    _state.update {
+                        it.copy(isLoading = false, pendingOtpEmail = email, pendingDisplayName = displayName)
+                    }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(isLoading = false, error = e.message ?: "Sign up failed") }
+                    _sideEffects.send(LoginContract.SideEffect.ShowError(e.message ?: "Sign up failed"))
+                }
+        }
+    }
+
+    private fun verifyOtp(code: String) {
+        val email = _state.value.pendingOtpEmail ?: return
+        val displayName = _state.value.pendingDisplayName.orEmpty()
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            runCatching { authRepository.verifySignUpOtp(email, code) }
+                .onSuccess {
+                    authRepository.currentSession()?.userId
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { userId -> profileRepository.createProfile(userId, displayName) }
+                    _state.update { it.copy(isLoading = false, error = null) }
+                    _sideEffects.send(LoginContract.SideEffect.NavigateToHome)
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(isLoading = false, error = e.message ?: "Invalid code") }
+                    _sideEffects.send(LoginContract.SideEffect.ShowError(e.message ?: "Invalid code"))
                 }
         }
     }

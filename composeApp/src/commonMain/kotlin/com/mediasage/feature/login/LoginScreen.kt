@@ -34,6 +34,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -72,17 +74,27 @@ import com.mediasage.theme.Slate
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.login_background_comic
 import mediasage.composeapp.generated.resources.login_bypass
+import mediasage.composeapp.generated.resources.login_display_name_label
 import mediasage.composeapp.generated.resources.login_email_label
+import mediasage.composeapp.generated.resources.login_error_empty_otp
+import mediasage.composeapp.generated.resources.login_error_empty_sign_up_fields
+import mediasage.composeapp.generated.resources.login_error_password_too_short
 import mediasage.composeapp.generated.resources.login_hide_password
 import mediasage.composeapp.generated.resources.login_masthead_line1
 import mediasage.composeapp.generated.resources.login_masthead_line2
 import mediasage.composeapp.generated.resources.login_member_edition
+import mediasage.composeapp.generated.resources.login_otp_code_label
+import mediasage.composeapp.generated.resources.login_otp_subtitle
 import mediasage.composeapp.generated.resources.login_paper_white
 import mediasage.composeapp.generated.resources.login_password_label
 import mediasage.composeapp.generated.resources.login_remember_email
 import mediasage.composeapp.generated.resources.login_show_password
 import mediasage.composeapp.generated.resources.login_sign_in_button
+import mediasage.composeapp.generated.resources.login_sign_up_button
 import mediasage.composeapp.generated.resources.login_subtitle
+import mediasage.composeapp.generated.resources.login_switch_to_sign_in
+import mediasage.composeapp.generated.resources.login_switch_to_sign_up
+import mediasage.composeapp.generated.resources.login_verify_button
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -90,6 +102,14 @@ import org.jetbrains.compose.resources.stringResource
 private val OnGradient = InkLight
 private val OnGradientMuted = Color(0xFFB0A898)
 private val FieldBorder = Color(0xFF6B7A8D)
+
+/** Bundles the paper-form's derived colors so field composables take one parameter, not five. */
+private data class FormPalette(
+    val fieldColors: TextFieldColors,
+    val accent: Color,
+    val muted: Color,
+    val border: Color,
+)
 
 @Composable
 fun LoginScreen(
@@ -110,13 +130,7 @@ private fun LoginScreenContent(
     // Login screen is intentionally always dark - the masthead is a brand moment
     MediaSageTheme(darkTheme = true) {
         val focusManager = LocalFocusManager.current
-        var email by rememberSaveable(state.rememberedEmail) { mutableStateOf(state.rememberedEmail) }
-        var password by rememberSaveable { mutableStateOf("") }
-        var passwordVisible by rememberSaveable { mutableStateOf(false) }
-        var localError by rememberSaveable { mutableStateOf("") }
-
         val isLoading = state.isLoading
-        val serverError = state.error ?: ""
 
         // OnGradientMuted (a mid-tone tan-gray) has too little contrast against the photo
         // background, which is itself entirely warm sepia — a competing muted hue reads as
@@ -248,126 +262,57 @@ private fun LoginScreenContent(
                 Spacer(modifier = Modifier.height(36.dp))
 
                 // Form
-                val fieldColors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = formTextColor,
-                    unfocusedTextColor = formTextColor,
-                    focusedBorderColor = formAccentColor,
-                    unfocusedBorderColor = formBorderColor,
-                    focusedLabelColor = formAccentColor,
-                    unfocusedLabelColor = formMutedColor,
-                    cursorColor = formAccentColor,
-                    errorBorderColor = MaterialTheme.colorScheme.error,
-                    errorLabelColor = MaterialTheme.colorScheme.error,
+                val palette = FormPalette(
+                    fieldColors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = formTextColor,
+                        unfocusedTextColor = formTextColor,
+                        focusedBorderColor = formAccentColor,
+                        unfocusedBorderColor = formBorderColor,
+                        focusedLabelColor = formAccentColor,
+                        unfocusedLabelColor = formMutedColor,
+                        cursorColor = formAccentColor,
+                        errorBorderColor = MaterialTheme.colorScheme.error,
+                        errorLabelColor = MaterialTheme.colorScheme.error,
+                    ),
+                    accent = formAccentColor,
+                    muted = formMutedColor,
+                    border = formBorderColor,
                 )
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it; localError = "" },
-                    label = { Text(stringResource(Res.string.login_email_label)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
-                        imeAction = ImeAction.Next
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                    ),
-                    isError = localError.isNotEmpty() || serverError.isNotEmpty(),
-                    enabled = !isLoading,
-                    colors = fieldColors
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it; localError = "" },
-                    label = { Text(stringResource(Res.string.login_password_label)) },
-                    singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                contentDescription = stringResource(
-                                    if (passwordVisible) Res.string.login_hide_password else Res.string.login_show_password
-                                ),
-                                tint = formMutedColor
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            focusManager.clearFocus()
-                            submitSignIn(email, password, onIntent) { localError = it }
-                        }
-                    ),
-                    isError = localError.isNotEmpty() || serverError.isNotEmpty(),
-                    enabled = !isLoading,
-                    colors = fieldColors
-                )
-                val displayError = localError.ifEmpty { serverError }
-                if (displayError.isNotEmpty()) {
+
+                when {
+                    state.pendingOtpEmail != null -> OtpFields(state, onIntent, palette, focusManager)
+                    state.mode == LoginContract.Mode.SIGN_UP -> SignUpFields(state, onIntent, palette, focusManager)
+                    else -> SignInFields(state, onIntent, palette, focusManager)
+                }
+
+                if (state.pendingOtpEmail == null) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = displayError,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = stringResource(Res.string.login_remember_email),
-                        style = MaterialTheme.typography.bodySmall.copy(color = formMutedColor)
-                    )
-                    Switch(
-                        checked = state.rememberEmail,
-                        onCheckedChange = { onIntent(LoginContract.Intent.ToggleRememberEmail(it)) },
-                        enabled = !isLoading,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = ComicBrown,
-                            checkedTrackColor = ComicTan,
-                            checkedBorderColor = ComicBrown,
-                            uncheckedThumbColor = formMutedColor,
-                            uncheckedTrackColor = Color.Transparent,
-                            uncheckedBorderColor = formBorderColor,
-                        )
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = {
-                        focusManager.clearFocus()
-                        submitSignIn(email, password, onIntent) { localError = it }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    enabled = !isLoading,
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = formAccentColor,
-                        disabledContentColor = formMutedColor
-                    ),
-                    border = BorderStroke(1.dp, if (isLoading) formBorderColor else formAccentColor)
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(strokeWidth = 2.dp, color = formMutedColor)
-                    } else {
-                        Text(
-                            text = stringResource(Res.string.login_sign_in_button),
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
+                    val isSignUpMode = state.mode == LoginContract.Mode.SIGN_UP
+                    TextButton(
+                        onClick = {
+                            onIntent(
+                                if (isSignUpMode) {
+                                    LoginContract.Intent.SwitchToSignIn
+                                } else {
+                                    LoginContract.Intent.SwitchToSignUp
+                                }
                             )
+                        },
+                        enabled = !isLoading
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (isSignUpMode) {
+                                    Res.string.login_switch_to_sign_in
+                                } else {
+                                    Res.string.login_switch_to_sign_up
+                                }
+                            ),
+                            style = MaterialTheme.typography.bodySmall.copy(color = formMutedColor)
                         )
                     }
                 }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(
                     onClick = { onIntent(LoginContract.Intent.BypassAuth) },
@@ -410,6 +355,315 @@ private fun LoginScreenContent(
     }
 }
 
+@Composable
+private fun SignInFields(
+    state: LoginContract.UiState,
+    onIntent: (LoginContract.Intent) -> Unit,
+    palette: FormPalette,
+    focusManager: FocusManager,
+) {
+    var email by rememberSaveable(state.rememberedEmail) { mutableStateOf(state.rememberedEmail) }
+    var password by rememberSaveable { mutableStateOf("") }
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var localError by rememberSaveable { mutableStateOf("") }
+    val isLoading = state.isLoading
+    val displayError = localError.ifEmpty { state.error ?: "" }
+
+    OutlinedTextField(
+        value = email,
+        onValueChange = { email = it; localError = "" },
+        label = { Text(stringResource(Res.string.login_email_label)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Email,
+            imeAction = ImeAction.Next
+        ),
+        keyboardActions = KeyboardActions(
+            onNext = { focusManager.moveFocus(FocusDirection.Down) }
+        ),
+        isError = displayError.isNotEmpty(),
+        enabled = !isLoading,
+        colors = palette.fieldColors
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+    OutlinedTextField(
+        value = password,
+        onValueChange = { password = it; localError = "" },
+        label = { Text(stringResource(Res.string.login_password_label)) },
+        singleLine = true,
+        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                Icon(
+                    imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                    contentDescription = stringResource(
+                        if (passwordVisible) Res.string.login_hide_password else Res.string.login_show_password
+                    ),
+                    tint = palette.muted
+                )
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Password,
+            imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                focusManager.clearFocus()
+                submitSignIn(email, password, onIntent) { localError = it }
+            }
+        ),
+        isError = displayError.isNotEmpty(),
+        enabled = !isLoading,
+        colors = palette.fieldColors
+    )
+    if (displayError.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = displayError,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = stringResource(Res.string.login_remember_email),
+            style = MaterialTheme.typography.bodySmall.copy(color = palette.muted)
+        )
+        Switch(
+            checked = state.rememberEmail,
+            onCheckedChange = { onIntent(LoginContract.Intent.ToggleRememberEmail(it)) },
+            enabled = !isLoading,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = ComicBrown,
+                checkedTrackColor = ComicTan,
+                checkedBorderColor = ComicBrown,
+                uncheckedThumbColor = palette.muted,
+                uncheckedTrackColor = Color.Transparent,
+                uncheckedBorderColor = palette.border,
+            )
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    OutlinedButton(
+        onClick = {
+            focusManager.clearFocus()
+            submitSignIn(email, password, onIntent) { localError = it }
+        },
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        enabled = !isLoading,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = palette.accent,
+            disabledContentColor = palette.muted
+        ),
+        border = BorderStroke(1.dp, if (isLoading) palette.border else palette.accent)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(strokeWidth = 2.dp, color = palette.muted)
+        } else {
+            Text(
+                text = stringResource(Res.string.login_sign_in_button),
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun SignUpFields(
+    state: LoginContract.UiState,
+    onIntent: (LoginContract.Intent) -> Unit,
+    palette: FormPalette,
+    focusManager: FocusManager,
+) {
+    var displayName by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var localError by rememberSaveable { mutableStateOf("") }
+    val isLoading = state.isLoading
+    val displayError = localError.ifEmpty { state.error ?: "" }
+    val emptyFieldsMessage = stringResource(Res.string.login_error_empty_sign_up_fields)
+    val shortPasswordMessage = stringResource(Res.string.login_error_password_too_short)
+
+    OutlinedTextField(
+        value = displayName,
+        onValueChange = { displayName = it; localError = "" },
+        label = { Text(stringResource(Res.string.login_display_name_label)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+        isError = displayError.isNotEmpty(),
+        enabled = !isLoading,
+        colors = palette.fieldColors
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+    OutlinedTextField(
+        value = email,
+        onValueChange = { email = it; localError = "" },
+        label = { Text(stringResource(Res.string.login_email_label)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+        isError = displayError.isNotEmpty(),
+        enabled = !isLoading,
+        colors = palette.fieldColors
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+    OutlinedTextField(
+        value = password,
+        onValueChange = { password = it; localError = "" },
+        label = { Text(stringResource(Res.string.login_password_label)) },
+        singleLine = true,
+        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                Icon(
+                    imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                    contentDescription = stringResource(
+                        if (passwordVisible) Res.string.login_hide_password else Res.string.login_show_password
+                    ),
+                    tint = palette.muted
+                )
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                focusManager.clearFocus()
+                submitSignUp(email, password, displayName, emptyFieldsMessage, shortPasswordMessage, onIntent) {
+                    localError = it
+                }
+            }
+        ),
+        isError = displayError.isNotEmpty(),
+        enabled = !isLoading,
+        colors = palette.fieldColors
+    )
+    if (displayError.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = displayError,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    OutlinedButton(
+        onClick = {
+            focusManager.clearFocus()
+            submitSignUp(email, password, displayName, emptyFieldsMessage, shortPasswordMessage, onIntent) {
+                localError = it
+            }
+        },
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        enabled = !isLoading,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = palette.accent,
+            disabledContentColor = palette.muted
+        ),
+        border = BorderStroke(1.dp, if (isLoading) palette.border else palette.accent)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(strokeWidth = 2.dp, color = palette.muted)
+        } else {
+            Text(
+                text = stringResource(Res.string.login_sign_up_button),
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun OtpFields(
+    state: LoginContract.UiState,
+    onIntent: (LoginContract.Intent) -> Unit,
+    palette: FormPalette,
+    focusManager: FocusManager,
+) {
+    var code by rememberSaveable(state.pendingOtpEmail) { mutableStateOf("") }
+    var localError by rememberSaveable { mutableStateOf("") }
+    val isLoading = state.isLoading
+    val displayError = localError.ifEmpty { state.error ?: "" }
+    val emptyCodeMessage = stringResource(Res.string.login_error_empty_otp)
+
+    Text(
+        text = stringResource(Res.string.login_otp_subtitle),
+        style = MaterialTheme.typography.bodySmall.copy(color = palette.muted),
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+    OutlinedTextField(
+        value = code,
+        onValueChange = { code = it; localError = "" },
+        label = { Text(stringResource(Res.string.login_otp_code_label)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                focusManager.clearFocus()
+                submitOtp(code, emptyCodeMessage, onIntent) { localError = it }
+            }
+        ),
+        isError = displayError.isNotEmpty(),
+        enabled = !isLoading,
+        colors = palette.fieldColors
+    )
+    if (displayError.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = displayError,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    OutlinedButton(
+        onClick = {
+            focusManager.clearFocus()
+            submitOtp(code, emptyCodeMessage, onIntent) { localError = it }
+        },
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        enabled = !isLoading,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = palette.accent,
+            disabledContentColor = palette.muted
+        ),
+        border = BorderStroke(1.dp, if (isLoading) palette.border else palette.accent)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(strokeWidth = 2.dp, color = palette.muted)
+        } else {
+            Text(
+                text = stringResource(Res.string.login_verify_button),
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            )
+        }
+    }
+}
+
 private fun submitSignIn(
     email: String,
     password: String,
@@ -422,6 +676,41 @@ private fun submitSignIn(
     }
     onIntent(LoginContract.Intent.SignInWithEmail(email, password))
 }
+
+private fun submitSignUp(
+    email: String,
+    password: String,
+    displayName: String,
+    emptyFieldsMessage: String,
+    shortPasswordMessage: String,
+    onIntent: (LoginContract.Intent) -> Unit,
+    onLocalError: (String) -> Unit
+) {
+    if (email.isBlank() || password.isBlank() || displayName.isBlank()) {
+        onLocalError(emptyFieldsMessage)
+        return
+    }
+    if (password.length < 8) {
+        onLocalError(shortPasswordMessage)
+        return
+    }
+    onIntent(LoginContract.Intent.SignUpWithEmail(email, password, displayName))
+}
+
+private fun submitOtp(
+    code: String,
+    emptyCodeMessage: String,
+    onIntent: (LoginContract.Intent) -> Unit,
+    onLocalError: (String) -> Unit
+) {
+    if (code.isBlank()) {
+        onLocalError(emptyCodeMessage)
+        return
+    }
+    onIntent(LoginContract.Intent.VerifyOtp(code))
+}
+
+// region Previews
 
 // State previews
 @Preview(showBackground = true, name = "Idle")
@@ -450,6 +739,24 @@ private fun LoginScreenLoadingPreview() {
 private fun LoginScreenErrorPreview() {
     LoginScreenContent(
         state = LoginContract.UiState(error = "Invalid email or password"),
+        onIntent = {}
+    )
+}
+
+@Preview(showBackground = true, name = "Sign Up")
+@Composable
+private fun LoginScreenSignUpPreview() {
+    LoginScreenContent(
+        state = LoginContract.UiState(mode = LoginContract.Mode.SIGN_UP),
+        onIntent = {}
+    )
+}
+
+@Preview(showBackground = true, name = "OTP Verification")
+@Composable
+private fun LoginScreenOtpPreview() {
+    LoginScreenContent(
+        state = LoginContract.UiState(pendingOtpEmail = "user@example.com", pendingDisplayName = "Ada"),
         onIntent = {}
     )
 }
@@ -504,3 +811,5 @@ private fun LoginThemeEPreview() {
         backgroundImage = Res.drawable.login_background_comic,
     )
 }
+
+// endregion

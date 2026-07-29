@@ -9,6 +9,7 @@ object SettingsContract {
             val appTheme: AppTheme = AppTheme.CLASSIC,
             val darkMode: Boolean = false,
             val appVersion: String = "1.0",
+            val displayName: String = "",
         ) : UiState
     }
 

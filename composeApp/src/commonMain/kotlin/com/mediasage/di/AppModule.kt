@@ -10,6 +10,7 @@ import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
+import com.mediasage.domain.repository.ProfileRepository
 import com.mediasage.domain.repository.QuoteRepository
 import com.mediasage.domain.usecase.GetDayDetailUseCase
 import com.mediasage.domain.usecase.GetReaderCalendarUseCase
@@ -54,7 +55,7 @@ val appModule = module {
             get<QuoteRepository>(),
         )
     }
-    viewModel { LoginViewModel(get<AuthRepository>(), get<AuthPreferencesRepository>()) }
+    viewModel { LoginViewModel(get<AuthRepository>(), get<AuthPreferencesRepository>(), get<ProfileRepository>()) }
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
     viewModel {
         ReaderViewModel(
