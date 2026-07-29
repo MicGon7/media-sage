@@ -1,6 +1,5 @@
 package com.mediasage.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,29 +9,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.mediasage.theme.ComicCream
-import com.mediasage.theme.ComicInk
-import com.mediasage.theme.ComicTan
 import com.mediasage.theme.MediaSageTheme
 
 /**
  * A navigation-entry row styled after the app's comic / vintage-newspaper illustration (sepia
- * gradient, ink text) — a title, a subtitle, and a tap target that navigates elsewhere. In light
- * mode the background and text come from the fixed comic palette; in dark mode the background
- * becomes a neutral elevated surface, so the text switches to [MaterialTheme.colorScheme.onSurface]
- * rather than the comic palette's warm tan — a fixed warm tone would clash with that neutral
- * surface the way it doesn't against [MediaSageComicChip]'s warm gradient background in dark mode.
+ * gradient, ink text) — a title, a subtitle, and a tap target that navigates elsewhere. Rendered
+ * via [MediaSageSurface], shared with [MediaSageComicChip] and `PastBriefingCard`.
  */
 @Composable
 fun MediaSageEntryCard(
@@ -41,24 +30,13 @@ fun MediaSageEntryCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isDark = MediaSageTheme.isDark
-    val contentColor = if (isDark) MaterialTheme.colorScheme.onSurface else ComicInk
-    val backgroundModifier = if (isDark) {
-        Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
-    } else {
-        Modifier.background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan)))
-    }
-    Surface(
+    MediaSageSurface(
         onClick = onClick,
-        shape = MaterialTheme.shapes.large,
-        color = Color.Transparent,
-        tonalElevation = 0.dp,
-        shadowElevation = 2.dp,
         modifier = modifier.fillMaxWidth(),
-    ) {
+        shadowElevation = 2.dp,
+    ) { contentColor ->
         Row(
-            modifier = backgroundModifier
-                .padding(16.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {

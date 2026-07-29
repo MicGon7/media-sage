@@ -19,12 +19,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,10 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.mediasage.theme.ComicCream
-import com.mediasage.theme.ComicInk
-import com.mediasage.theme.ComicTan
-import com.mediasage.theme.MediaSageTheme
+import com.mediasage.ui.MediaSageSurface
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.you_recent_briefing_yesterday
 import mediasage.composeapp.generated.resources.you_recent_briefings_more
@@ -88,43 +82,28 @@ private fun PastBriefingCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isDark = MediaSageTheme.isDark
-    val contentColor = if (isDark) MaterialTheme.colorScheme.onSurface else ComicInk
-    val backgroundModifier = if (isDark) {
-        Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp))
-    } else {
-        Modifier.background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan)))
-    }
-    ElevatedCard(
+    MediaSageSurface(
         onClick = onClick,
         modifier = modifier.width(CardWidth).height(CardHeight),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(backgroundModifier),
-            ) {
-                PastBriefingPortrait(card, modifier = Modifier.width(PortraitWidth).fillMaxHeight())
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = card.dayLabel.resolve(),
-                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                        color = contentColor,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = card.inspiration,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = contentColor,
-                        maxLines = 5,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
+        shadowElevation = 4.dp,
+    ) { contentColor ->
+        Row(modifier = Modifier.fillMaxSize()) {
+            PastBriefingPortrait(card, modifier = Modifier.width(PortraitWidth).fillMaxHeight())
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = card.dayLabel.resolve(),
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
+                    color = contentColor,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = card.inspiration,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor,
+                    maxLines = 5,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
             }
         }
     }
