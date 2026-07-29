@@ -10,8 +10,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Renders the pushed day-detail screen with both a morning and evening briefing (morning expanded),
- * so a reviewer can confirm the collapsible Morning/Evening sections and the briefing-card layout.
+ * Renders the pushed day-detail screen with both a morning and evening briefing (morning selected),
+ * so a reviewer can confirm the Morning/Evening tab row and the briefing-card layout.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -35,7 +35,7 @@ private fun sampleState(): DayDetailContract.UiState.Ready = DayDetailContract.U
     epochDay = 20289L,
     figureName = "Augustine of Hippo",
     figureImageUrl = null,
-    expandedTone = "morning",
+    selectedTone = "morning",
     briefings = listOf(
         DayDetailContract.BriefingSummary(
             scriptureReference = "John 3:16",
