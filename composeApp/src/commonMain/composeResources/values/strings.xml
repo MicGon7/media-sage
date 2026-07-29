@@ -90,6 +90,7 @@
 
     <!-- Bookmarks screen -->
     <string name="title_bookmarks">Saved</string>
+    <string name="bookmarks_section_title">SAVED NEWS INSIGHTS</string>
     <string name="bookmarks_coming_soon">Bookmarks coming soon</string>
     <string name="bookmarks_empty_title">No saved articles yet</string>
     <string name="bookmarks_empty_subtitle">Tap the bookmark icon on any article to save it</string>

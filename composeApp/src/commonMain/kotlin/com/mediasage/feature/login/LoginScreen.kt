@@ -166,7 +166,7 @@ private fun LoginScreenContent(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(
-                        horizontal = if (formOnPaper) 40.dp else 32.dp,
+                        horizontal = if (formOnPaper) 24.dp else 32.dp,
                         vertical = if (formOnPaper) 40.dp else 0.dp,
                     )
                     .imePadding(),
@@ -186,8 +186,9 @@ private fun LoginScreenContent(
                         .paint(
                             painter = painterResource(Res.drawable.login_paper_white),
                             contentScale = ContentScale.FillBounds,
+                            alpha = 0.88f,
                         )
-                        .padding(20.dp)
+                        .padding(14.dp)
                 } else {
                     Modifier.fillMaxWidth()
                 }
