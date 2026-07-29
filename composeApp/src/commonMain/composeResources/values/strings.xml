@@ -54,6 +54,10 @@
     <string name="you_saved_section_title">FROM THE REPORTERS</string>
     <string name="you_quote_card_header">MEMORY QUOTE</string>
     <string name="you_saved_see_all">Select a quote to memorize →</string>
+    <string name="reader_quote_empty_title">No memory quote yet</string>
+    <string name="reader_quote_empty_subtitle">Save a quote from any reporter to keep it here.</string>
+    <string name="reader_briefings_empty_title">No past briefings yet</string>
+    <string name="reader_briefings_empty_subtitle">Your daily briefings will appear here as you read.</string>
     <string name="you_recent_briefings_section_title">PAST BRIEFINGS</string>
     <string name="you_recent_briefing_yesterday">Yesterday</string>
     <string name="you_recent_briefings_more">More</string>

@@ -84,11 +84,16 @@ import com.mediasage.theme.LensPerseverance
 import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
+import com.mediasage.ui.MediaSageEmptyState
 import com.mediasage.ui.MediaSageSurface
 import com.mediasage.ui.ReassignConfirmationDialog
 import com.mediasage.ui.ScreenHeader
 import kotlinx.datetime.DayOfWeek
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.reader_briefings_empty_subtitle
+import mediasage.composeapp.generated.resources.reader_briefings_empty_title
+import mediasage.composeapp.generated.resources.reader_quote_empty_subtitle
+import mediasage.composeapp.generated.resources.reader_quote_empty_title
 import mediasage.composeapp.generated.resources.saved_insights_banner
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
 import mediasage.composeapp.generated.resources.you_lens_faith
@@ -222,18 +227,23 @@ fun ReaderScreen(
                     )
                 }
 
-                ready.quoteCard?.let { quote ->
-                    item {
+                item {
+                    if (ready.quoteCard != null) {
                         SavedQuoteCard(
-                            quote = quote,
+                            quote = ready.quoteCard,
                             onViewMore = { if (it > 0) onNavigateToFigureDetail(it) },
                             modifier = Modifier.padding(16.dp),
+                        )
+                    } else {
+                        MediaSageEmptyState(
+                            title = stringResource(Res.string.reader_quote_empty_title),
+                            subtitle = stringResource(Res.string.reader_quote_empty_subtitle),
                         )
                     }
                 }
 
-                if (ready.pastBriefings.isNotEmpty()) {
-                    item {
+                item {
+                    if (ready.pastBriefings.isNotEmpty()) {
                         PastBriefingsCarousel(
                             cards = ready.pastBriefings,
                             onCardClick = { epochDay ->
@@ -242,6 +252,12 @@ fun ReaderScreen(
                             },
                             showSeeMore = ready.hasMorePastBriefings,
                             onSeeMore = onNavigateToHistory,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    } else {
+                        MediaSageEmptyState(
+                            title = stringResource(Res.string.reader_briefings_empty_title),
+                            subtitle = stringResource(Res.string.reader_briefings_empty_subtitle),
                             modifier = Modifier.padding(top = 8.dp),
                         )
                     }
