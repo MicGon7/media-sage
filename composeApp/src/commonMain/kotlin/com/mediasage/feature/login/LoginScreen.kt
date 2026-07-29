@@ -271,6 +271,8 @@ private fun LoginScreenContent(
                         focusedLabelColor = formAccentColor,
                         unfocusedLabelColor = formMutedColor,
                         cursorColor = formAccentColor,
+                        errorTextColor = formTextColor,
+                        errorCursorColor = formAccentColor,
                         errorBorderColor = MaterialTheme.colorScheme.error,
                         errorLabelColor = MaterialTheme.colorScheme.error,
                     ),
