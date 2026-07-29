@@ -50,6 +50,7 @@
     <string name="you_reporters_this_week">REPORTERS OF THE WEEK</string>
     <string name="you_history_entry_subtitle">See past reporters and reflections</string>
     <string name="you_saved_entry_subtitle">Articles you've bookmarked</string>
+    <string name="you_saved_news_section_title">SAVED NEWS INSIGHTS</string>
     <string name="you_saved_section_title">FROM THE REPORTERS</string>
     <string name="you_quote_card_header">MEMORY QUOTE</string>
     <string name="you_saved_see_all">Select a quote to memorize →</string>
@@ -90,7 +91,6 @@
 
     <!-- Bookmarks screen -->
     <string name="title_bookmarks">Saved</string>
-    <string name="bookmarks_section_title">SAVED NEWS INSIGHTS</string>
     <string name="bookmarks_coming_soon">Bookmarks coming soon</string>
     <string name="bookmarks_empty_title">No saved articles yet</string>
     <string name="bookmarks_empty_subtitle">Tap the bookmark icon on any article to save it</string>
