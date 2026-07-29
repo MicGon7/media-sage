@@ -249,6 +249,50 @@ class DayAssignmentRepositoryTest {
     }
 
     @Test
+    fun resolve_keepsSeededDefaultsOnFirstRealSignInWhenRemoteIsGenuinelyEmpty() = runTest {
+        // Regression test for a first-real-sign-in bug: a brand-new account's first real sync
+        // finds a genuinely empty remote (nothing has ever been pushed for this account). The defaults seeded
+        // moments earlier while signed out (synced = true, purely so pushPending() wouldn't
+        // mistake them for a pending edit) must not be read by purgeMissingFromRemote as rows
+        // that existed remotely and were deleted -- they're this account's brand-new baseline,
+        // so they must survive and get pushed up as the account's starting schedule.
+        val dao = FakeDayAssignmentDao(initialCount = 0)
+        val figureDao = FakeFigureDaoForSeeding(allFigures)
+        val api = FakeAssignmentApi(
+            defaults = listOf(
+                AssignmentDefaultDto(0, "Augustine of Hippo"),
+                AssignmentDefaultDto(1, "Julian of Norwich"),
+            )
+        )
+        val remote = FakeDayAssignmentRemoteDataSource()
+        val repository = repo(dao = dao, figureDao = figureDao, api = api, remote = remote)
+
+        repository.resolve(null) // briefly signed-out at cold start on a fresh install
+        repository.resolve(USER_ID) // the real, first-ever sign-in for this account
+
+        assertEquals(augustine.id, dao.getByDayOfWeek(0)?.figureId)
+        assertEquals(julian.id, dao.getByDayOfWeek(1)?.figureId)
+        assertEquals(2, remote.pushedRows.size)
+    }
+
+    @Test
+    fun resolve_purgesAllLocalRowsWhenRemoteGoesEmptyForAnAlreadySyncedAccount() = runTest {
+        // Guards the fix above from overcorrecting: skipping the purge is only correct on a
+        // genuine first-ever sync. An account that has already synced with this device before
+        // and now finds an empty remote (e.g. every assignment was deleted from another
+        // device) must still have its local rows purged -- that's purgeMissingFromRemote's
+        // actual job.
+        val dao = FakeDayAssignmentDao(initialCount = 0)
+        dao.upsert(DayAssignmentEntity(dayOfWeek = 2, figureId = luther.id, synced = true))
+        val syncMetaDao = FakeSyncMetaDao(SyncMetaEntity(lastDayAssignmentSyncUserId = USER_ID))
+        val remote = FakeDayAssignmentRemoteDataSource()
+
+        repo(dao = dao, remote = remote, syncMetaDao = syncMetaDao).resolve(USER_ID)
+
+        assertNull(dao.getByDayOfWeek(2))
+    }
+
+    @Test
     fun resolve_bootstrapsBrandNewUserFromDefaultsAndPushesThemUp() = runTest {
         val dao = FakeDayAssignmentDao(initialCount = 0)
         val remote = FakeDayAssignmentRemoteDataSource()
@@ -453,6 +497,12 @@ private class FakeDayAssignmentDao(
 
     override suspend fun markSynced(dayOfWeek: Int) {
         store[dayOfWeek]?.let { store[dayOfWeek] = it.copy(synced = true) }
+    }
+
+    override suspend fun markAllUnsynced() {
+        store.keys.toList().forEach { day ->
+            store[day]?.let { if (!it.pendingDelete) store[day] = it.copy(synced = false) }
+        }
     }
 }
 
