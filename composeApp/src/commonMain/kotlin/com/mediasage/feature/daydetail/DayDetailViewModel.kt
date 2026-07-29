@@ -14,11 +14,11 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Read-only detail for a single day's briefings, pushed from
- * [com.mediasage.feature.you.ReaderHistoryScreen]. Which briefing is expanded is local-only state
+ * [com.mediasage.feature.you.ReaderHistoryScreen]. Which briefing tab is selected is local-only state
  * combined with the live [GetDayDetailUseCase] stream — the reactive state-holder pattern, since the
- * briefing list can change while this screen is open. Accordion behavior: at most one of
- * morning/evening is expanded at a time, starting with morning; a single briefing has no toggle and
- * is always shown expanded (see `DayDetailScreen`).
+ * briefing list can change while this screen is open. Morning | Evening tabs: exactly one tone is
+ * selected at a time, starting with morning; a single briefing has no tab row and is always shown
+ * directly (see `DayDetailScreen`).
  */
 class DayDetailViewModel(
     private val epochDay: Long,
@@ -27,10 +27,10 @@ class DayDetailViewModel(
     getDayDetail: GetDayDetailUseCase,
 ) : ViewModel() {
 
-    private val expandedTone = MutableStateFlow<String?>(TONE_MORNING)
+    private val selectedTone = MutableStateFlow(TONE_MORNING)
 
     val state: StateFlow<DayDetailContract.UiState> =
-        combine(expandedTone, getDayDetail(epochDay)) { expanded, data -> buildReady(expanded, data) }
+        combine(selectedTone, getDayDetail(epochDay)) { selected, data -> buildReady(selected, data) }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -43,20 +43,18 @@ class DayDetailViewModel(
 
     fun onIntent(intent: DayDetailContract.Intent) {
         when (intent) {
-            is DayDetailContract.Intent.BriefingToggled -> expandedTone.update { current ->
-                if (current == intent.tone) null else intent.tone
-            }
+            is DayDetailContract.Intent.BriefingToneSelected -> selectedTone.update { intent.tone }
         }
     }
 
     private fun buildReady(
-        expandedTone: String?,
+        selectedTone: String,
         data: DayDetailData,
     ): DayDetailContract.UiState.Ready = DayDetailContract.UiState.Ready(
         epochDay = epochDay,
         figureName = figureName,
         figureImageUrl = figureImageUrl,
-        expandedTone = expandedTone,
+        selectedTone = selectedTone,
         briefings = listOfNotNull(data.morningReflection, data.eveningReflection).map { it.toBriefingSummary() },
     )
 

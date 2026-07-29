@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,14 +22,11 @@ import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -41,7 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -51,13 +46,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mediasage.theme.ComicBrown
-import com.mediasage.theme.ComicCaramel
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
+import com.mediasage.ui.MediaSageTabRow
 import com.mediasage.ui.ReassignConfirmationDialog
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.figure_detail_biography
@@ -143,7 +138,6 @@ private enum class FigureDetailTab(val labelRes: StringResource) {
     WRITINGS(Res.string.figure_detail_tab_writings),
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FigureDetailContent(
     state: FigureDetailContract.UiState.Success,
@@ -165,56 +159,12 @@ private fun FigureDetailContent(
             }
         }
 
-        FigureDetailTabRow(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
+        MediaSageTabRow(
+            selectedIndex = selectedTab.ordinal,
+            tabLabels = FigureDetailTab.entries.map { stringResource(it.labelRes) },
+            onTabSelected = { index -> selectedTab = FigureDetailTab.entries[index] },
+        )
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FigureDetailTabRow(selectedTab: FigureDetailTab, onTabSelected: (FigureDetailTab) -> Unit) {
-    val isDark = MediaSageTheme.isDark
-    val gradientColors = if (isDark) listOf(ComicBrown, ComicInk) else listOf(ComicCream, ComicTan)
-    val contentColor = if (isDark) ComicTan else ComicInk
-    val indicatorColor = if (isDark) ComicCaramel else ComicBrown
-
-    PrimaryTabRow(
-        selectedTabIndex = selectedTab.ordinal,
-        modifier = Modifier.background(Brush.horizontalGradient(gradientColors)),
-        containerColor = Color.Transparent,
-        contentColor = contentColor,
-        indicator = {
-            Box(
-                modifier = Modifier
-                    .tabIndicatorOffset(selectedTab.ordinal, matchContentSize = true)
-                    .fillMaxHeight()
-            ) {
-                TabIndicatorBar(color = indicatorColor, modifier = Modifier.align(Alignment.TopStart))
-                TabIndicatorBar(color = indicatorColor, modifier = Modifier.align(Alignment.BottomStart))
-            }
-        },
-    ) {
-        FigureDetailTab.entries.forEach { tab ->
-            Tab(
-                selected = selectedTab == tab,
-                onClick = { onTabSelected(tab) },
-                text = { Text(stringResource(tab.labelRes)) },
-                selectedContentColor = contentColor,
-                unselectedContentColor = contentColor.copy(alpha = 0.6f),
-            )
-        }
-    }
-}
-
-private val TabIndicatorThickness = 3.dp
-
-@Composable
-private fun TabIndicatorBar(color: Color, modifier: Modifier = Modifier) {
-    Spacer(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(TabIndicatorThickness)
-            .background(color)
-    )
 }
 
 @Composable

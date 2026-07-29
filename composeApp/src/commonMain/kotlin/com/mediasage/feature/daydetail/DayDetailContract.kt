@@ -18,12 +18,12 @@ object DayDetailContract {
             val epochDay: Long,
             val figureName: String? = null,
             val figureImageUrl: String? = null,
-            val expandedTone: String? = null,
+            val selectedTone: String? = null,
             val briefings: List<BriefingSummary> = emptyList(),
         ) : UiState
     }
 
     sealed interface Intent {
-        data class BriefingToggled(val tone: String) : Intent
+        data class BriefingToneSelected(val tone: String) : Intent
     }
 }
