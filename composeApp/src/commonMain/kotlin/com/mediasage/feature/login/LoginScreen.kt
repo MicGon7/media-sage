@@ -188,7 +188,7 @@ private fun LoginScreenContent(
                         .paint(
                             painter = painterResource(Res.drawable.login_paper_white),
                             contentScale = ContentScale.FillBounds,
-                            alpha = 0.88f,
+                            alpha = 0.95f,
                         )
                         .padding(14.dp)
                 } else {
