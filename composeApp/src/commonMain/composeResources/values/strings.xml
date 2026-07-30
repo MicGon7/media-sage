@@ -54,10 +54,10 @@
     <string name="you_saved_section_title">FROM THE REPORTERS</string>
     <string name="you_quote_card_header">MEMORY QUOTE</string>
     <string name="you_saved_see_all">Select a quote to memorize →</string>
-    <string name="reader_quote_empty_title">Nothing clipped yet</string>
-    <string name="reader_quote_empty_subtitle">Save a quote from any reporter to start your clippings.</string>
-    <string name="reader_briefings_empty_title">No back issues yet</string>
-    <string name="reader_briefings_empty_subtitle">Each day\'s briefing joins the archive as the days go by.</string>
+    <string name="reader_quote_empty_title">Nothing clipped</string>
+    <string name="reader_quote_empty_subtitle">Quotes you discover reading the day's headlines can be clipped here.</string>
+    <string name="reader_briefings_empty_title">No back editions</string>
+    <string name="reader_briefings_empty_subtitle">Each day's briefing joins the archive as the days go by.</string>
     <string name="you_recent_briefings_section_title">PAST BRIEFINGS</string>
     <string name="you_recent_briefing_yesterday">Yesterday</string>
     <string name="you_recent_briefings_more">More</string>
@@ -96,7 +96,7 @@
     <!-- Bookmarks screen -->
     <string name="title_bookmarks">Saved Headlines</string>
     <string name="bookmarks_coming_soon">Bookmarks coming soon</string>
-    <string name="bookmarks_empty_title">No saved articles yet</string>
+    <string name="bookmarks_empty_title">No saved articles</string>
     <string name="bookmarks_empty_subtitle">Tap the bookmark icon on any article to save it</string>
     <string name="bookmark_add">Save article</string>
     <string name="bookmark_remove">Remove saved article</string>
@@ -112,7 +112,7 @@
     <string name="history_reflection_section">DAILY BRIEFING</string>
     <string name="history_empty_day_for">No entry for %1$s</string>
     <string name="history_empty_day_subtitle">Readings from this day will appear here</string>
-    <string name="reader_history_list_empty_title">No briefings yet</string>
+    <string name="reader_history_list_empty_title">No briefings</string>
     <string name="reader_history_list_empty_subtitle">Briefings you receive will appear here</string>
     <string name="reader_history_intro">Browse the past to find encouragement for the present.</string>
     <string name="reader_history_view_calendar">Calendar</string>
@@ -132,7 +132,7 @@
     <string name="figure_detail_tab_quotes">Quotes</string>
     <string name="figure_detail_tab_writings">Writings</string>
     <string name="figure_detail_quotes_sheet_title">Collected Quotes</string>
-    <string name="figure_detail_no_biography">No biography available yet.</string>
+    <string name="figure_detail_no_biography">No biography available.</string>
     <string name="figure_detail_no_quotes">No quotes yet.</string>
     <string name="figure_detail_writings_placeholder">Coming soon</string>
 
