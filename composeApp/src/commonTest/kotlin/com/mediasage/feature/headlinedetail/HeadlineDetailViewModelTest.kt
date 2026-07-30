@@ -51,6 +51,20 @@ class HeadlineDetailViewModelTest {
     }
 
     @Test
+    fun marksHeadlineAsReadWhenDetailIsOpened() = runTest(testDispatcher) {
+        val headlineRepo = FakeHeadlineRepository(buildHeadline())
+        HeadlineDetailViewModel(
+            articleUrl = "https://example.com/article",
+            headlineRepository = headlineRepo,
+            encouragementRepository = FakeEncouragementRepository(buildEncouragement()),
+            figureRepository = FakeFigureRepository(null),
+            quoteRepository = FakeQuoteRepository(),
+        )
+
+        assertEquals(listOf("https://example.com/article"), headlineRepo.markReadCalls)
+    }
+
+    @Test
     fun savesQuoteWithCorrectParametersWhenFigureIsFound() = runTest(testDispatcher) {
         val figure = buildFigure(id = 42L, name = "Augustine")
         val encouragement = buildEncouragement(
@@ -240,11 +254,16 @@ private class FakeQuoteRepository(private val throwOnSave: Boolean = false) : Qu
 }
 
 private class FakeHeadlineRepository(private val headline: Headline?) : HeadlineRepository {
+    val markReadCalls = mutableListOf<String>()
+
     override fun observeHeadlines(): Flow<List<Headline>> = flowOf(listOfNotNull(headline))
     override suspend fun getHeadlineById(id: Long): Headline? = headline?.takeIf { it.id == id }
     override suspend fun getHeadlineByUrl(url: String): Headline? = headline?.takeIf { it.url == url }
     override suspend fun refreshHeadlines() = Unit
     override suspend fun clearOldHeadlines(olderThanMillis: Long) = Unit
+    override suspend fun markAsRead(url: String) {
+        markReadCalls.add(url)
+    }
 }
 
 private class FakeEncouragementRepository(private val encouragement: Encouragement?) : EncouragementRepository {

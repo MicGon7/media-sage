@@ -44,6 +44,7 @@ class BookmarksViewModel(
                             figureRole = encouragement.figureRole,
                             quotePreview = encouragement.quoteText.take(QUOTE_PREVIEW_LENGTH),
                             headlineImageUrl = encouragement.headlineImageUrl,
+                            figureImageUrl = encouragement.figureImageUrl,
                             source = encouragement.headlineSource,
                             category = encouragement.headlineCategory,
                             publishedAtLabel = formatHeadlineDate(encouragement.headlinePublishedAt)

@@ -13,5 +13,6 @@ data class HeadlineEntity(
     val publishedAt: Long,
     val fetchedAt: Long,
     val snippet: String? = null,
-    val category: String = ""
+    val category: String = "",
+    val isRead: Boolean = false
 )

@@ -13,6 +13,7 @@ import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.ProfileRepository
 import com.mediasage.domain.repository.QuoteRepository
 import com.mediasage.domain.usecase.GetDayDetailUseCase
+import com.mediasage.domain.usecase.GetHeadlinesFeedUseCase
 import com.mediasage.domain.usecase.GetReaderCalendarUseCase
 import com.mediasage.feature.bookmarks.BookmarksViewModel
 import com.mediasage.feature.login.LoginViewModel
@@ -42,7 +43,13 @@ val appModule = module {
         )
     }
     viewModel { BriefingViewModel(get<DayAssignmentRepository>(), get<DailyReflectionRepository>(), get<FigureRepository>(), get<HeadlineRepository>()) }
-    viewModel { HeadlinesViewModel(get<HeadlineRepository>()) }
+    viewModel {
+        HeadlinesViewModel(
+            get<HeadlineRepository>(),
+            get<EncouragementRepository>(),
+            get<GetHeadlinesFeedUseCase>(),
+        )
+    }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get(), get(), get()) }
     viewModel { FiguresViewModel(get<FigureRepository>(), get<EncouragementRepository>(), get<DayAssignmentRepository>()) }
     viewModel { (figureId: Long) ->

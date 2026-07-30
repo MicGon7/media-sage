@@ -114,6 +114,12 @@ val MIGRATION_29_30 = object : Migration(29, 30) {
     }
 }
 
+val MIGRATION_30_31 = object : Migration(30, 31) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE headlines ADD COLUMN isRead INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

@@ -40,6 +40,21 @@ class HeadlinesScreenRenderTest {
                                 snippet = "Global indices rise sharply following better-than-expected jobs report.",
                                 imageUrl = null,
                                 publishedAtLabel = "Jun 5, 2026"
+                            ),
+                            HeadlineItem(
+                                id = 3L,
+                                articleUrl = "https://example.com/3",
+                                title = "Local Parish Marks Fiftieth Anniversary",
+                                source = "The New Life Times",
+                                category = "Community",
+                                snippet = "Congregants celebrated decades of ministry with a special service.",
+                                imageUrl = null,
+                                publishedAtLabel = "Jun 4, 2026",
+                                isRead = true,
+                                figureName = "Augustine",
+                                figureRole = "Bishop of Hippo",
+                                quotePreview = "Our heart is restless until it rests in Thee.",
+                                isBookmarked = true
                             )
                         ),
                         todayLabel = "Friday, June 5, 2026"

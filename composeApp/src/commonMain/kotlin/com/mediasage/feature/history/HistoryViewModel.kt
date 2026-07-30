@@ -43,6 +43,7 @@ class HistoryViewModel(
                             figureRole = encouragement.figureRole,
                             quotePreview = encouragement.quoteText.take(QUOTE_PREVIEW_LENGTH),
                             headlineImageUrl = encouragement.headlineImageUrl,
+                            figureImageUrl = encouragement.figureImageUrl,
                             isBookmarked = encouragement.bookmarked
                         )
                     }
