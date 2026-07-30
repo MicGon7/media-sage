@@ -31,6 +31,7 @@ class HeadlineDetailViewModel(
     init {
         loadMatch()
         observeBookmark()
+        markAsRead()
     }
 
     fun onIntent(intent: HeadlineDetailContract.Intent) {
@@ -69,6 +70,10 @@ class HeadlineDetailViewModel(
                 )
             )
         }
+    }
+
+    private fun markAsRead() {
+        viewModelScope.launch { headlineRepository.markAsRead(articleUrl) }
     }
 
     private fun observeBookmark() {

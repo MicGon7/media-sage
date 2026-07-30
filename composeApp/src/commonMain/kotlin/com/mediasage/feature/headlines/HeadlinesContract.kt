@@ -18,6 +18,7 @@ object HeadlinesContract {
         data object Load : Intent
         data object Refresh : Intent
         data class HeadlineClicked(val articleUrl: String) : Intent
+        data class ToggleBookmark(val articleUrl: String) : Intent
     }
 
     sealed interface SideEffect {
@@ -34,5 +35,10 @@ data class HeadlineItem(
     val category: String = "",
     val snippet: String = "",
     val imageUrl: String?,
-    val publishedAtLabel: String = ""
+    val publishedAtLabel: String = "",
+    val isRead: Boolean = false,
+    val figureName: String? = null,
+    val figureRole: String? = null,
+    val quotePreview: String? = null,
+    val isBookmarked: Boolean = false
 )

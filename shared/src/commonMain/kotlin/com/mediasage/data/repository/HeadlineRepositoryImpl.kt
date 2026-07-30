@@ -26,13 +26,18 @@ class HeadlineRepositoryImpl(
     override suspend fun refreshHeadlines() {
         val dtos = api.getHeadlines()
         val now = currentTimeMillis()
-        val entities = dtos.map { it.toEntity(fetchedAt = now) }
+        val readUrls = headlineDao.getReadUrls().toSet()
+        val entities = dtos.map { it.toEntity(fetchedAt = now).copy(isRead = it.url in readUrls) }
         headlineDao.deleteAll()
         headlineDao.insertAll(entities)
     }
 
     override suspend fun clearOldHeadlines(olderThanMillis: Long) {
         headlineDao.deleteOlderThan(olderThanMillis)
+    }
+
+    override suspend fun markAsRead(url: String) {
+        headlineDao.markRead(url)
     }
 }
 

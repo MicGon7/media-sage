@@ -304,4 +304,5 @@ private class FakeHeadlineRepository : HeadlineRepository {
     override suspend fun getHeadlineByUrl(url: String): Headline? = null
     override suspend fun refreshHeadlines() = Unit
     override suspend fun clearOldHeadlines(olderThanMillis: Long) = Unit
+    override suspend fun markAsRead(url: String) = Unit
 }

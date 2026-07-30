@@ -32,4 +32,10 @@ interface HeadlineDao {
 
     @Query("DELETE FROM headlines")
     suspend fun deleteAll()
+
+    @Query("UPDATE headlines SET isRead = 1 WHERE url = :url")
+    suspend fun markRead(url: String)
+
+    @Query("SELECT url FROM headlines WHERE isRead = 1")
+    suspend fun getReadUrls(): List<String>
 }

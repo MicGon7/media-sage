@@ -56,7 +56,8 @@ fun HeadlinesScreen(
             is HeadlinesContract.UiState.Success -> HeadlinesFeed(
                 state = state,
                 onRefresh = { onIntent(HeadlinesContract.Intent.Refresh) },
-                onHeadlineClick = { onNavigateToDetail(it.articleUrl) }
+                onHeadlineClick = { onNavigateToDetail(it.articleUrl) },
+                onBookmarkClick = { onIntent(HeadlinesContract.Intent.ToggleBookmark(it.articleUrl)) }
             )
         }
     }
@@ -66,7 +67,8 @@ fun HeadlinesScreen(
 private fun HeadlinesFeed(
     state: HeadlinesContract.UiState.Success,
     onRefresh: () -> Unit,
-    onHeadlineClick: (HeadlineItem) -> Unit
+    onHeadlineClick: (HeadlineItem) -> Unit,
+    onBookmarkClick: (HeadlineItem) -> Unit
 ) {
     val listState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -109,6 +111,11 @@ private fun HeadlinesFeed(
                     category = headline.category,
                     publishedAtLabel = headline.publishedAtLabel,
                     snippet = headline.snippet,
+                    figureName = headline.figureName.takeIf { headline.isRead },
+                    figureRole = headline.figureRole.takeIf { headline.isRead },
+                    quotePreview = headline.quotePreview.takeIf { headline.isRead },
+                    isBookmarked = headline.isBookmarked.takeIf { headline.isRead },
+                    onBookmarkClick = { onBookmarkClick(headline) }.takeIf { headline.isRead },
                 )
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),

@@ -3,7 +3,10 @@ package com.mediasage.feature.headlines
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.HeadlineFeedEntry
+import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.HeadlineRepository
+import com.mediasage.domain.usecase.GetHeadlinesFeedUseCase
 import com.mediasage.ui.formatHeadlineDate
 import com.mediasage.ui.toErrorType
 import kotlinx.coroutines.channels.Channel
@@ -17,7 +20,9 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
 class HeadlinesViewModel(
-    private val headlineRepository: HeadlineRepository
+    private val headlineRepository: HeadlineRepository,
+    private val encouragementRepository: EncouragementRepository,
+    private val getHeadlinesFeed: GetHeadlinesFeedUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<HeadlinesContract.UiState>(
@@ -38,6 +43,9 @@ class HeadlinesViewModel(
             is HeadlinesContract.Intent.Load -> retryLoad()
             is HeadlinesContract.Intent.Refresh -> refreshHeadlines()
             is HeadlinesContract.Intent.HeadlineClicked -> { /* handled via navigation callback */ }
+            is HeadlinesContract.Intent.ToggleBookmark -> {
+                viewModelScope.launch { encouragementRepository.toggleBookmark(intent.articleUrl) }
+            }
         }
     }
 
@@ -48,18 +56,17 @@ class HeadlinesViewModel(
 
     private fun collectHeadlines() {
         viewModelScope.launch {
-            headlineRepository.observeHeadlines()
-                .collect { headlines ->
-                    if (headlines.isNotEmpty()) {
-                        val current = _state.value
-                        val isRefreshing = current is HeadlinesContract.UiState.Success && current.isRefreshing
-                        _state.value = HeadlinesContract.UiState.Success(
-                            headlines = headlines.map { it.toItem() },
-                            todayLabel = todayLabel(),
-                            isRefreshing = isRefreshing
-                        )
-                    }
+            getHeadlinesFeed().collect { entries ->
+                if (entries.isNotEmpty()) {
+                    val current = _state.value
+                    val isRefreshing = current is HeadlinesContract.UiState.Success && current.isRefreshing
+                    _state.value = HeadlinesContract.UiState.Success(
+                        headlines = entries.map { it.toItem() },
+                        todayLabel = todayLabel(),
+                        isRefreshing = isRefreshing
+                    )
                 }
+            }
         }
     }
 
@@ -99,13 +106,18 @@ class HeadlinesViewModel(
     }
 }
 
-private fun com.mediasage.domain.model.Headline.toItem() = HeadlineItem(
-    id = id,
-    articleUrl = url,
-    title = title,
-    source = source,
-    category = category,
-    snippet = snippet.orEmpty(),
-    imageUrl = imageUrl,
-    publishedAtLabel = formatHeadlineDate(publishedAt)
+private fun HeadlineFeedEntry.toItem() = HeadlineItem(
+    id = headline.id,
+    articleUrl = headline.url,
+    title = headline.title,
+    source = headline.source,
+    category = headline.category,
+    snippet = headline.snippet.orEmpty(),
+    imageUrl = headline.imageUrl,
+    publishedAtLabel = formatHeadlineDate(headline.publishedAt),
+    isRead = headline.isRead,
+    figureName = figureName,
+    figureRole = figureRole,
+    quotePreview = quotePreview,
+    isBookmarked = isBookmarked
 )

@@ -97,7 +97,8 @@ fun HeadlineEntity.toDomain() = Headline(
     publishedAt = publishedAt,
     fetchedAt = fetchedAt,
     snippet = snippet,
-    category = category
+    category = category,
+    isRead = isRead
 )
 
 fun Headline.toEntity() = HeadlineEntity(
@@ -109,7 +110,8 @@ fun Headline.toEntity() = HeadlineEntity(
     publishedAt = publishedAt,
     fetchedAt = fetchedAt,
     snippet = snippet,
-    category = category
+    category = category,
+    isRead = isRead
 )
 
 // Encourage DTO → Domain

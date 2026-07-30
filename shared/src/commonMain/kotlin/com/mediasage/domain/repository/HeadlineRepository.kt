@@ -9,4 +9,5 @@ interface HeadlineRepository {
     suspend fun getHeadlineByUrl(url: String): Headline?
     suspend fun refreshHeadlines()
     suspend fun clearOldHeadlines(olderThanMillis: Long)
+    suspend fun markAsRead(url: String)
 }
