@@ -114,7 +114,6 @@ private fun HeadlinesFeed(
                     figureName = headline.figureName.takeIf { headline.isRead },
                     figureRole = headline.figureRole.takeIf { headline.isRead },
                     figureImageUrl = headline.figureImageUrl.takeIf { headline.isRead },
-                    quotePreview = headline.quotePreview.takeIf { headline.isRead },
                     isBookmarked = headline.isBookmarked.takeIf { headline.isRead },
                     onBookmarkClick = { onBookmarkClick(headline) }.takeIf { headline.isRead },
                 )

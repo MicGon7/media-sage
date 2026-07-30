@@ -1,7 +1,6 @@
 package com.mediasage.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,7 +54,6 @@ fun MediaSageHeadlineCard(
     figureName: String? = null,
     figureRole: String? = null,
     figureImageUrl: String? = null,
-    quotePreview: String? = null,
     isBookmarked: Boolean? = null,
     onBookmarkClick: (() -> Unit)? = null,
 ) {
@@ -139,14 +136,6 @@ fun MediaSageHeadlineCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (figureName != null) {
-                    FigureMatchRow(
-                        figureName = figureName,
-                        figureRole = figureRole,
-                        figureImageUrl = figureImageUrl,
-                        quotePreview = quotePreview,
-                    )
-                }
             }
             if (isBookmarked != null && onBookmarkClick != null) {
                 IconButton(onClick = onBookmarkClick) {
@@ -161,6 +150,13 @@ fun MediaSageHeadlineCard(
                 }
             }
         }
+        if (figureName != null) {
+            FigureMatchRow(
+                figureName = figureName,
+                figureRole = figureRole,
+                figureImageUrl = figureImageUrl,
+            )
+        }
     }
 }
 
@@ -169,17 +165,14 @@ private fun FigureMatchRow(
     figureName: String,
     figureRole: String?,
     figureImageUrl: String?,
-    quotePreview: String?,
 ) {
     val comicColors = rememberComicSurfaceColors(orientation = ComicGradientOrientation.Horizontal)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
             .then(comicColors.background)
-            .border(1.dp, comicColors.border, MaterialTheme.shapes.small)
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (figureImageUrl != null) {
@@ -205,16 +198,6 @@ private fun FigureMatchRow(
                     text = figureRole,
                     style = MaterialTheme.typography.labelSmall,
                     color = comicColors.content,
-                )
-            }
-            if (quotePreview != null) {
-                Text(
-                    text = quotePreview,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontStyle = FontStyle.Italic,
-                    color = comicColors.content,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

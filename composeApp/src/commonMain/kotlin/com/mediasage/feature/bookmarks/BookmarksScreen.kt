@@ -111,7 +111,6 @@ private fun BookmarkCard(
         figureName = item.figureName,
         figureRole = item.figureRole,
         figureImageUrl = item.figureImageUrl,
-        quotePreview = item.quotePreview,
         isBookmarked = true,
         grayscaleImage = false,
         onClick = onClick,

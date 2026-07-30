@@ -112,7 +112,6 @@ private fun HistoryCard(
         figureName = item.figureName,
         figureRole = item.figureRole,
         figureImageUrl = item.figureImageUrl,
-        quotePreview = item.quotePreview,
         isBookmarked = item.isBookmarked,
         grayscaleImage = true,
         onClick = onClick,
