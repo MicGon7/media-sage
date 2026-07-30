@@ -12,5 +12,6 @@ data class HeadlineEntity(
     val imageUrl: String? = null,
     val publishedAt: Long,
     val fetchedAt: Long,
-    val snippet: String? = null
+    val snippet: String? = null,
+    val category: String = ""
 )

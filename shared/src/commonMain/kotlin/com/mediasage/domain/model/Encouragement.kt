@@ -16,5 +16,7 @@ data class Encouragement(
     val headlineSource: String = "",
     val headlineImageUrl: String? = null,
     val articleUrl: String? = null,
-    val bookmarked: Boolean = false
+    val bookmarked: Boolean = false,
+    val headlineCategory: String = "",
+    val headlinePublishedAt: Long = 0L
 )

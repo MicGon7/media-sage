@@ -34,19 +34,25 @@ import mediasage.composeapp.generated.resources.bookmark_add
 import mediasage.composeapp.generated.resources.bookmark_remove
 import org.jetbrains.compose.resources.stringResource
 
+@Suppress("LongParameterList")
 @Composable
 fun MediaSageHeadlineCard(
     imageUrl: String?,
     headlineTitle: String,
-    figureName: String,
-    figureRole: String,
-    quotePreview: String,
-    isBookmarked: Boolean,
     grayscaleImage: Boolean,
     onClick: () -> Unit,
-    onBookmarkClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    source: String = "",
+    category: String = "",
+    publishedAtLabel: String = "",
+    snippet: String = "",
+    figureName: String? = null,
+    figureRole: String? = null,
+    quotePreview: String? = null,
+    isBookmarked: Boolean? = null,
+    onBookmarkClick: (() -> Unit)? = null,
 ) {
+    val metadataLine = listOf(source, publishedAtLabel).filter { it.isNotBlank() }.joinToString(" · ")
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -93,6 +99,15 @@ fun MediaSageHeadlineCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                if (category.isNotBlank()) {
+                    Text(
+                        text = category.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing * 1.5f,
+                    )
+                }
                 Text(
                     text = headlineTitle,
                     style = MaterialTheme.typography.titleMedium,
@@ -100,35 +115,59 @@ fun MediaSageHeadlineCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = figureName,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = figureRole,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = quotePreview,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (metadataLine.isNotBlank()) {
+                    Text(
+                        text = metadataLine,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (snippet.isNotBlank()) {
+                    Text(
+                        text = snippet,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (figureName != null) {
+                    Text(
+                        text = figureName,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                if (figureRole != null) {
+                    Text(
+                        text = figureRole,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (quotePreview != null) {
+                    Text(
+                        text = quotePreview,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-            IconButton(onClick = onBookmarkClick) {
-                Icon(
-                    imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                    contentDescription = stringResource(
-                        if (isBookmarked) Res.string.bookmark_remove else Res.string.bookmark_add
-                    ),
-                    tint = if (isBookmarked) MaterialTheme.colorScheme.primary
-                           else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            if (isBookmarked != null && onBookmarkClick != null) {
+                IconButton(onClick = onBookmarkClick) {
+                    Icon(
+                        imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                        contentDescription = stringResource(
+                            if (isBookmarked) Res.string.bookmark_remove else Res.string.bookmark_add
+                        ),
+                        tint = if (isBookmarked) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

@@ -213,6 +213,8 @@ private class DetailFakeEncouragementRepository(
         headlineImageUrl: String?,
         articleUrl: String?,
         articleSnippet: String?,
+        headlineCategory: String,
+        headlinePublishedAt: Long,
     ): Encouragement = throw UnsupportedOperationException()
     override fun observeAll(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())
     override fun observeBookmarked(): Flow<List<Encouragement>> = MutableStateFlow(emptyList())

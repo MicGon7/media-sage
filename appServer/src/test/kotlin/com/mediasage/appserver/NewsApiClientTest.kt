@@ -194,4 +194,22 @@ class NewsApiClientTest {
 
         assertEquals(2, articles.size)
     }
+
+    @Test
+    fun getTopHeadlinesTagsArticlesWithTopicAsCategory() = runTest {
+        val client = NewsApiClient(createMockClient(sampleResponse), "test-api-key")
+
+        val articles = client.getTopHeadlines(topic = "business")
+
+        assertEquals(listOf("business"), articles[0].categories)
+    }
+
+    @Test
+    fun searchNewsLeavesCategoriesEmpty() = runTest {
+        val client = NewsApiClient(createMockClient(sampleResponse), "test-api-key")
+
+        val articles = client.searchNews("earthquake")
+
+        assertEquals(emptyList(), articles[0].categories)
+    }
 }

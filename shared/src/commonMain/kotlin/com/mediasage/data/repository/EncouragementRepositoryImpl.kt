@@ -36,7 +36,9 @@ class EncouragementRepositoryImpl(
         headlineSource: String,
         headlineImageUrl: String?,
         articleUrl: String?,
-        articleSnippet: String?
+        articleSnippet: String?,
+        headlineCategory: String,
+        headlinePublishedAt: Long
     ): Encouragement {
         articleUrl?.let { url ->
             encouragementDao.getByArticleUrl(url)?.let { return it.toDomain() }
@@ -53,7 +55,16 @@ class EncouragementRepositoryImpl(
         articleUrl?.let {
             val figureId = figureDao.getByName(encouragement.figureName)?.id
             encouragementDao.insert(
-                encouragement.toEntity(it, headlineTitle, headlineSource, headlineImageUrl, currentTimeMillis(), figureId)
+                encouragement.toEntity(
+                    articleUrl = it,
+                    headlineTitle = headlineTitle,
+                    headlineSource = headlineSource,
+                    headlineImageUrl = headlineImageUrl,
+                    cachedAt = currentTimeMillis(),
+                    figureId = figureId,
+                    headlineCategory = headlineCategory,
+                    headlinePublishedAt = headlinePublishedAt
+                )
             )
         }
         return encouragement

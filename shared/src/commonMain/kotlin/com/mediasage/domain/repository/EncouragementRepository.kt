@@ -14,7 +14,9 @@ interface EncouragementRepository {
         headlineSource: String = "",
         headlineImageUrl: String? = null,
         articleUrl: String?,
-        articleSnippet: String? = null
+        articleSnippet: String? = null,
+        headlineCategory: String = "",
+        headlinePublishedAt: Long = 0L
     ): Encouragement
 
     fun observeAll(): Flow<List<Encouragement>>

@@ -106,6 +106,14 @@ val MIGRATION_28_29 = object : Migration(28, 29) {
     }
 }
 
+val MIGRATION_29_30 = object : Migration(29, 30) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE headlines ADD COLUMN category TEXT NOT NULL DEFAULT ''")
+        connection.execSQL("ALTER TABLE encouragements ADD COLUMN headlineCategory TEXT NOT NULL DEFAULT ''")
+        connection.execSQL("ALTER TABLE encouragements ADD COLUMN headlinePublishedAt INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

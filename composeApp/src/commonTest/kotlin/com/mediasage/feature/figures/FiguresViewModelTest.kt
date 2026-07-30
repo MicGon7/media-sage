@@ -275,7 +275,9 @@ private class FakeEncouragementRepository(
         headlineSource: String,
         headlineImageUrl: String?,
         articleUrl: String?,
-        articleSnippet: String?
+        articleSnippet: String?,
+        headlineCategory: String,
+        headlinePublishedAt: Long
     ): Encouragement = error("not used in test")
     override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
     override suspend fun resolve(userId: String?) = Unit

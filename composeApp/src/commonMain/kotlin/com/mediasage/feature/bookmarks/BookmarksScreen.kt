@@ -114,7 +114,10 @@ private fun BookmarkCard(
         isBookmarked = true,
         grayscaleImage = false,
         onClick = onClick,
-        onBookmarkClick = onRemoveBookmark
+        onBookmarkClick = onRemoveBookmark,
+        source = item.source,
+        category = item.category,
+        publishedAtLabel = item.publishedAtLabel
     )
 }
 

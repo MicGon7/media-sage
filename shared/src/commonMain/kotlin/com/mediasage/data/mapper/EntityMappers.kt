@@ -12,6 +12,7 @@ import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.FigureCategory
 import com.mediasage.domain.model.Headline
 import com.mediasage.domain.model.Quote
+import kotlin.time.Instant
 
 // Figure
 fun FigureEntity.toDomain() = Figure(
@@ -80,9 +81,10 @@ fun NewsArticleDto.toEntity(fetchedAt: Long = 0L) = HeadlineEntity(
     source = source,
     url = url,
     imageUrl = imageUrl.ifBlank { null },
-    publishedAt = fetchedAt,
+    publishedAt = runCatching { Instant.parse(publishedAt).toEpochMilliseconds() }.getOrDefault(fetchedAt),
     fetchedAt = fetchedAt,
-    snippet = snippet.ifBlank { null }
+    snippet = snippet.ifBlank { null },
+    category = categories.firstOrNull().orEmpty()
 )
 
 // Headline
@@ -94,7 +96,8 @@ fun HeadlineEntity.toDomain() = Headline(
     imageUrl = imageUrl,
     publishedAt = publishedAt,
     fetchedAt = fetchedAt,
-    snippet = snippet
+    snippet = snippet,
+    category = category
 )
 
 fun Headline.toEntity() = HeadlineEntity(
@@ -105,7 +108,8 @@ fun Headline.toEntity() = HeadlineEntity(
     imageUrl = imageUrl,
     publishedAt = publishedAt,
     fetchedAt = fetchedAt,
-    snippet = snippet
+    snippet = snippet,
+    category = category
 )
 
 // Encourage DTO → Domain
@@ -141,7 +145,9 @@ fun EncouragementEntity.toDomain() = Encouragement(
     headlineSource = headlineSource,
     headlineImageUrl = headlineImageUrl,
     articleUrl = articleUrl,
-    bookmarked = bookmarked
+    bookmarked = bookmarked,
+    headlineCategory = headlineCategory,
+    headlinePublishedAt = headlinePublishedAt
 )
 
 fun Encouragement.toEntity(
@@ -150,7 +156,9 @@ fun Encouragement.toEntity(
     headlineSource: String = "",
     headlineImageUrl: String? = null,
     cachedAt: Long = 0L,
-    figureId: Long? = null
+    figureId: Long? = null,
+    headlineCategory: String = "",
+    headlinePublishedAt: Long = 0L
 ) = EncouragementEntity(
     articleUrl = articleUrl,
     summary = summary,
@@ -168,5 +176,7 @@ fun Encouragement.toEntity(
     headlineSource = headlineSource,
     headlineImageUrl = headlineImageUrl,
     cachedAt = cachedAt,
-    figureId = figureId
+    figureId = figureId,
+    headlineCategory = headlineCategory,
+    headlinePublishedAt = headlinePublishedAt
 )

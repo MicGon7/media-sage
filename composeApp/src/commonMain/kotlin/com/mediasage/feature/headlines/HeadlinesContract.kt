@@ -34,5 +34,5 @@ data class HeadlineItem(
     val category: String = "",
     val snippet: String = "",
     val imageUrl: String?,
-    val publishedAt: Long = 0L
+    val publishedAtLabel: String = ""
 )

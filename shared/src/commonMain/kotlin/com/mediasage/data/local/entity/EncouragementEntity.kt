@@ -27,6 +27,8 @@ data class EncouragementEntity(
     val cachedAt: Long = 0L,
     val bookmarked: Boolean = false,
     val figureId: Long? = null,
+    val headlineCategory: String = "",
+    val headlinePublishedAt: Long = 0L,
     // Defaults true: most rows are shared cache content nobody ever bookmarked, so they must
     // never look like a pending sync push. Only bookmarking flips this to false.
     val synced: Boolean = true,
