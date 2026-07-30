@@ -116,6 +116,7 @@ import mediasage.composeapp.generated.resources.you_picker_title
 import mediasage.composeapp.generated.resources.you_quote_card_header
 import mediasage.composeapp.generated.resources.you_saved_entry_subtitle
 import mediasage.composeapp.generated.resources.you_saved_news_section_title
+import mediasage.composeapp.generated.resources.you_recent_briefings_section_title
 import mediasage.composeapp.generated.resources.you_saved_section_title
 import mediasage.composeapp.generated.resources.you_saved_see_all
 import mediasage.composeapp.generated.resources.you_screen_title
@@ -235,10 +236,15 @@ fun ReaderScreen(
                             modifier = Modifier.padding(16.dp),
                         )
                     } else {
-                        MediaSageEmptyState(
-                            title = stringResource(Res.string.reader_quote_empty_title),
-                            subtitle = stringResource(Res.string.reader_quote_empty_subtitle),
-                        )
+                        // Keep the populated card's section eyebrow so the page skeleton
+                        // reads the same whether the section is filled or empty.
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            SectionLabel(text = stringResource(Res.string.you_saved_section_title))
+                            MediaSageEmptyState(
+                                title = stringResource(Res.string.reader_quote_empty_title),
+                                subtitle = stringResource(Res.string.reader_quote_empty_subtitle),
+                            )
+                        }
                     }
                 }
 
@@ -255,11 +261,13 @@ fun ReaderScreen(
                             modifier = Modifier.padding(top = 8.dp),
                         )
                     } else {
-                        MediaSageEmptyState(
-                            title = stringResource(Res.string.reader_briefings_empty_title),
-                            subtitle = stringResource(Res.string.reader_briefings_empty_subtitle),
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
+                        Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) {
+                            SectionLabel(text = stringResource(Res.string.you_recent_briefings_section_title))
+                            MediaSageEmptyState(
+                                title = stringResource(Res.string.reader_briefings_empty_title),
+                                subtitle = stringResource(Res.string.reader_briefings_empty_subtitle),
+                            )
+                        }
                     }
                 }
 
