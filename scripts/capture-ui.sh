@@ -16,18 +16,40 @@
 # toolchain (~3 GB) is never downloaded on the Linux worker. Always --no-daemon to
 # avoid Gradle daemon memory pressure in the 4 GiB Cloud Run container.
 #
+# Scoping (MS-693): recordRoborazziDebug renders every captureRoboImage block in the
+# whole app, not just the screen a ticket touched — with 15+ blocks now accumulated
+# across the codebase, an unscoped render became the dominant cost in the render step
+# and contributed to at least one job hitting its 30-minute timeout. Pass one or more
+# fully-qualified render-test class names to scope the render to only those classes via
+# Gradle's --tests filter. Omitting all class names renders everything (the old,
+# unscoped behaviour) — only intended for a full local sanity check, never for a
+# per-ticket worker run.
+#
 # Usage:
-#   ./scripts/capture-ui.sh
+#   ./scripts/capture-ui.sh [TestClass1] [TestClass2] ...
+#   ./scripts/capture-ui.sh com.mediasage.feature.you.ReaderScreenRenderTest
 #
 # Exit codes:
 #   0 — render succeeded, PNGs staged and Markdown printed
 #   1 — no capture tests produced any PNG (nothing to attach)
 #   2 — the render task itself failed
+#   3 — render skipped (no SDK, or WORKER_SKIP_UI_RENDER set)
 
 set -euo pipefail
 
 RENDER_OUT="composeApp/build/outputs/roborazzi"
 COMMIT_DIR="docs/ui-screenshots"
+
+# Kill switch: the render loop is temporarily disabled worker-side. The ~12-minute
+# Roborazzi build plus a no-tooling (no Pillow/ImageMagick) manual PNG-inspection
+# loop was consuming most of the 30-minute Cloud Run job budget and, on at least one
+# run, killing the job before a PR was opened. Set WORKER_SKIP_UI_RENDER=true on the
+# worker Cloud Run Job to skip loudly and non-fatally until image-inspection tooling
+# is added to the worker image and the render loop is proven to converge.
+if [ "${WORKER_SKIP_UI_RENDER:-}" = "true" ]; then
+    echo "NOTICE: WORKER_SKIP_UI_RENDER=true — skipping UI render (temporarily disabled)." >&2
+    exit 3
+fi
 
 # The render compiles the composeApp Android target, which needs a COMPILE-TIME
 # Android SDK (android.jar + aapt2). Robolectric only swaps android.jar at runtime,
@@ -44,8 +66,33 @@ if [ -z "${ANDROID_HOME:-}" ] && [ -z "${ANDROID_SDK_ROOT:-}" ] && \
     exit 3
 fi
 
-echo "Rendering composeApp UI captures (headless, Android target only)..."
-if ! ./gradlew :composeApp:recordRoborazziDebug -Pmediasage.worker=true --no-daemon; then
+# Clear any PNGs left over from a prior render before running. In the worker this is
+# a no-op (fresh clone, empty build dir every run), but scoping via --tests only
+# renders the classes passed in — without this, a stale PNG from an earlier, broader
+# render would still be picked up by the glob below and misreported as part of this run.
+rm -f "$RENDER_OUT"/*.png
+
+# --rerun-tasks (MS-693): the project enables org.gradle.caching=true, and this task's
+# up-to-date/build-cache state does not appear to account for the --tests filter —
+# both UP-TO-DATE and FROM-CACHE were observed locally restoring a previous, broader
+# render's full output set (every screen) even when scoped to a single test class,
+# which would silently misreport unrelated/stale screens as part of this run.
+# --no-build-cache alone did not fix this (it only disables the build-cache backend,
+# not the separate up-to-date check); --rerun-tasks forces genuine execution every
+# time. This does not sacrifice the intended speed-up: MS-583/589's warm-render
+# numbers came from the pre-baked ~/.gradle and ~/.m2 DEPENDENCY caches, which
+# --rerun-tasks does not touch — only this task's own up-to-date/output-cache state.
+GRADLE_ARGS=(":composeApp:recordRoborazziDebug" "-Pmediasage.worker=true" "--no-daemon" "--rerun-tasks")
+for cls in "$@"; do
+    GRADLE_ARGS+=("--tests" "$cls")
+done
+
+if [ $# -gt 0 ]; then
+    echo "Rendering composeApp UI captures (headless, Android target only), scoped to: $*"
+else
+    echo "Rendering composeApp UI captures (headless, Android target only), unscoped — renders every screen with a render test."
+fi
+if ! ./gradlew "${GRADLE_ARGS[@]}"; then
     echo "ERROR: render task failed." >&2
     exit 2
 fi

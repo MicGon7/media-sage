@@ -90,6 +90,16 @@ jobs:
       # specific run to `high` via the override above for unusually complex or ambiguous
       # work where deeper step-by-step reasoning is worth the cost.
       #
+      # WORKER_SKIP_UI_RENDER is intentionally NOT declared here — false/unset (render
+      # enabled) is the default. It was set to `true` as a temporary stop-gap (MS-693)
+      # after an unscoped render (every captureRoboImage block in the app, not just the
+      # touched screen) plus a hand-rolled PNG-crop loop blew the 30-minute Cloud Run job
+      # timeout on two real tickets. The fix — scoping the render to only the affected
+      # screen(s), banning the custom parser in favour of Read + ImageMagick, and capping
+      # the fix-and-re-render cycle at one — is in scripts/capture-ui.sh,
+      # .claude/commands/ticket-work.md, and Dockerfile.worker. Only add this var back
+      # (set to `true`) as an emergency override if the render step regresses again.
+      #
       # Per-target values (swap these + the matching secrets to stand up a new
       # client target): GITHUB_OWNER, GITHUB_REPO, SUPABASE_REST_URL, and the
       # SUPABASE_SERVICE_ROLE_KEY / JIRA_* secret bindings. Everything else is
