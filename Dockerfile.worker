@@ -2,8 +2,12 @@ FROM eclipse-temurin:21-jdk-jammy
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# imagemagick (MS-693): defensive fallback so the worker can crop a region of a
+# rendered screenshot (`convert -crop`) instead of hand-rolling a PNG parser when it
+# needs a closer look. Cheap — a few MB, added once at image-build time, zero runtime
+# cost unless invoked.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl git python3 && \
+    apt-get install -y --no-install-recommends curl git python3 imagemagick && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
