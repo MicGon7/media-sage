@@ -36,6 +36,10 @@ Key conventions:
 ## Conventions
 
 - String resources in `composeResources/values/strings.xml` — no hardcoded strings in UI
+- **Never escape apostrophes in string resources** — write `day's`, not `day\'s`. These are Compose
+  Multiplatform resources, not Android platform resources: the Compose resources compiler does not
+  process Android's `\'` escape, so the backslash renders literally in the UI. (Android's escaping
+  habit is the trap — this file looks like an Android `strings.xml` but isn't one.)
 - Before implementing any Compose effect or Android platform API, verify the approach against NowInAndroid or the official Compose docs. If you find yourself adding a null guard inside a `SideEffect`, you've chosen the wrong effect type.
 - Solve problems at the right layer — network timeouts belong in the HTTP client, not the ViewModel. Data validation belongs at the repository boundary, not the UI.
 - **`@OptIn` propagates through public signatures**: If a wrapper composable exposes an experimental type anywhere in its parameter list (e.g. `sheetState: SheetState`), every call site must also carry `@OptIn(ExperimentalMaterial3Api::class)` — even when only using the default value. The annotation on the wrapper definition does not cover callers. When adding a new composable that wraps an experimental API, add `@OptIn` to the wrapper *and* document in its KDoc that callers need it too, or hide the experimental type behind a non-experimental default so callers are not exposed.

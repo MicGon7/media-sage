@@ -84,11 +84,16 @@ import com.mediasage.theme.LensPerseverance
 import com.mediasage.theme.LensRepentance
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
+import com.mediasage.ui.MediaSageEmptyState
 import com.mediasage.ui.MediaSageSurface
 import com.mediasage.ui.ReassignConfirmationDialog
 import com.mediasage.ui.ScreenHeader
 import kotlinx.datetime.DayOfWeek
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.reader_briefings_empty_subtitle
+import mediasage.composeapp.generated.resources.reader_briefings_empty_title
+import mediasage.composeapp.generated.resources.reader_quote_empty_subtitle
+import mediasage.composeapp.generated.resources.reader_quote_empty_title
 import mediasage.composeapp.generated.resources.saved_insights_banner
 import mediasage.composeapp.generated.resources.you_carousel_assign_hint
 import mediasage.composeapp.generated.resources.you_lens_faith
@@ -111,6 +116,7 @@ import mediasage.composeapp.generated.resources.you_picker_title
 import mediasage.composeapp.generated.resources.you_quote_card_header
 import mediasage.composeapp.generated.resources.you_saved_entry_subtitle
 import mediasage.composeapp.generated.resources.you_saved_news_section_title
+import mediasage.composeapp.generated.resources.you_recent_briefings_section_title
 import mediasage.composeapp.generated.resources.you_saved_section_title
 import mediasage.composeapp.generated.resources.you_saved_see_all
 import mediasage.composeapp.generated.resources.you_screen_title
@@ -222,18 +228,28 @@ fun ReaderScreen(
                     )
                 }
 
-                ready.quoteCard?.let { quote ->
-                    item {
+                item {
+                    if (ready.quoteCard != null) {
                         SavedQuoteCard(
-                            quote = quote,
+                            quote = ready.quoteCard,
                             onViewMore = { if (it > 0) onNavigateToFigureDetail(it) },
                             modifier = Modifier.padding(16.dp),
                         )
+                    } else {
+                        // Keep the populated card's section eyebrow so the page skeleton
+                        // reads the same whether the section is filled or empty.
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            SectionLabel(text = stringResource(Res.string.you_saved_section_title))
+                            MediaSageEmptyState(
+                                title = stringResource(Res.string.reader_quote_empty_title),
+                                subtitle = stringResource(Res.string.reader_quote_empty_subtitle),
+                            )
+                        }
                     }
                 }
 
-                if (ready.pastBriefings.isNotEmpty()) {
-                    item {
+                item {
+                    if (ready.pastBriefings.isNotEmpty()) {
                         PastBriefingsCarousel(
                             cards = ready.pastBriefings,
                             onCardClick = { epochDay ->
@@ -244,6 +260,14 @@ fun ReaderScreen(
                             onSeeMore = onNavigateToHistory,
                             modifier = Modifier.padding(top = 8.dp),
                         )
+                    } else {
+                        Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) {
+                            SectionLabel(text = stringResource(Res.string.you_recent_briefings_section_title))
+                            MediaSageEmptyState(
+                                title = stringResource(Res.string.reader_briefings_empty_title),
+                                subtitle = stringResource(Res.string.reader_briefings_empty_subtitle),
+                            )
+                        }
                     }
                 }
 

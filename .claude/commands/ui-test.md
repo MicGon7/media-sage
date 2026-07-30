@@ -5,6 +5,22 @@ state and callbacks directly — no ViewModel, no Koin, no navigation stack. UI 
 of the testing pyramid and should cover rendering behaviour and user interactions that unit tests
 cannot exercise.
 
+## Infrastructure gate — read before writing any test
+
+**A feature ticket never introduces test infrastructure as a side effect.** If following this
+skill would require adding a new dependency or version-catalog entry, a manifest (in any source
+set), a new source set, or any Gradle configuration change, **stop — do not add it.** Skip the UI
+test, rely on the render test for coverage, and state in the PR body and Jira comment that UI
+tests were skipped because the required infrastructure does not exist yet. Infrastructure gets
+its own ticket, where the setup is the reviewed deliverable rather than a buried side effect
+(MS-686's PR hid a launcher-manifest bug inside a feature diff exactly this way).
+
+The same applies if this skill's own recipe fails at runtime (e.g. a toolchain gap): report the
+failure — do not engineer around it inside a feature ticket. The first working interaction test
+is authored as its own baseline-pattern ticket (MS-649); until that baseline exists in the
+codebase, this skill's steps below are unvalidated — treat a recipe failure as expected, not as
+a puzzle to solve in-branch.
+
 ## When this skill is called from /ticket-work
 
 The branch is already checked out. Skip straight to step 3 (read the screen under test). After

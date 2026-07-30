@@ -44,6 +44,18 @@ class ReaderHistoryScreenRenderTest {
             }
         }
     }
+
+    @Test
+    fun rendersReaderHistoryScreenCalendarViewEmpty() {
+        captureRoboImage("build/outputs/roborazzi/reader_history_screen_calendar_empty.png") {
+            MediaSageTheme {
+                ReaderHistoryScreen(
+                    state = sampleEmptyCalendarState(),
+                    onIntent = {},
+                )
+            }
+        }
+    }
 }
 
 private val SampleNames = listOf("Augustine of Hippo", "Teresa of Ávila", "C.S. Lewis")
@@ -75,6 +87,33 @@ private fun buildSampleMonth(monthStart: LocalDate): List<ReaderHistoryContract.
             hasData = hasData,
             figurePortraitUrl = null,
             figureName = if (hasData) SampleNames[(d % SampleNames.size).toInt()] else null,
+        )
+    }
+}
+
+private fun sampleEmptyCalendarState(): ReaderHistoryContract.UiState.Ready {
+    val currentMonth = buildEmptyMonth(LocalDate(2026, 7, 1))
+    return ReaderHistoryContract.UiState.Ready(
+        todayEpochDay = SampleTodayEpoch,
+        earliestEpochDay = SampleTodayEpoch,
+        viewMode = ReaderHistoryContract.ViewMode.CALENDAR,
+        calendarMonths = listOf(currentMonth),
+    )
+}
+
+private fun buildEmptyMonth(monthStart: LocalDate): List<ReaderHistoryContract.CalendarDay> {
+    val monthStartEpoch = monthStart.toEpochDays().toLong()
+    val daysInMonth = monthStart.plus(1, DateTimeUnit.MONTH).toEpochDays() - monthStart.toEpochDays()
+    return (0 until daysInMonth).map { d ->
+        val epochDay = monthStartEpoch + d
+        ReaderHistoryContract.CalendarDay(
+            epochDay = epochDay,
+            dateNumber = LocalDate.fromEpochDays(epochDay.toInt()).dayOfMonth,
+            isToday = epochDay == SampleTodayEpoch,
+            isFuture = epochDay > SampleTodayEpoch,
+            hasData = false,
+            figurePortraitUrl = null,
+            figureName = null,
         )
     }
 }

@@ -37,6 +37,21 @@ class ReaderScreenRenderTest {
             }
         }
     }
+
+    @Test
+    fun rendersReaderScreenEmptyState() {
+        captureRoboImage("build/outputs/roborazzi/reader_screen_empty.png") {
+            MediaSageTheme {
+                ReaderScreen(
+                    state = ReaderContract.UiState.Ready(
+                        weekSlots = sampleWeekSlots(),
+                        userDisplayName = "Jordan",
+                    ),
+                    onIntent = {},
+                )
+            }
+        }
+    }
 }
 
 private fun sampleWeekSlots(): List<ReaderContract.DaySlot> {

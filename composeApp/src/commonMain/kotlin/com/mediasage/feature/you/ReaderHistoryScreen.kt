@@ -148,6 +148,13 @@ private fun HistoryCalendarList(
     calendarMonths: List<List<ReaderHistoryContract.CalendarDay>>,
     onNavigateToDayDetail: (epochDay: Long, figureName: String?, figureImageUrl: String?) -> Unit,
 ) {
+    if (calendarMonths.all { month -> month.none { it.hasData } }) {
+        MediaSageEmptyState(
+            title = stringResource(Res.string.reader_history_list_empty_title),
+            subtitle = stringResource(Res.string.reader_history_list_empty_subtitle),
+        )
+        return
+    }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(calendarMonths, key = { it.first().epochDay }) { monthDays ->
             CalendarCard(
