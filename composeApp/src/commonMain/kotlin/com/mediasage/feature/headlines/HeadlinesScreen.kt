@@ -1,15 +1,11 @@
 package com.mediasage.feature.headlines
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -24,15 +20,12 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
-import com.mediasage.ui.HeadlineImage
 import com.mediasage.ui.MediaSageErrorState
+import com.mediasage.ui.MediaSageHeadlineCard
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.home_error_generic
@@ -107,9 +100,15 @@ private fun HeadlinesFeed(
                 )
             }
             itemsIndexed(state.headlines, key = { _, it -> it.id }) { _, headline ->
-                HeadlineRow(
-                    headline = headline,
-                    onClick = { onHeadlineClick(headline) }
+                MediaSageHeadlineCard(
+                    imageUrl = headline.imageUrl,
+                    headlineTitle = headline.title,
+                    grayscaleImage = false,
+                    onClick = { onHeadlineClick(headline) },
+                    source = headline.source,
+                    category = headline.category,
+                    publishedAtLabel = headline.publishedAtLabel,
+                    snippet = headline.snippet,
                 )
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -149,66 +148,6 @@ private fun DateCountRow(todayLabel: String, storyCount: Int) {
     }
 }
 
-@Composable
-private fun HeadlineRow(
-    headline: HeadlineItem,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        HeadlineImage(
-            imageUrl = headline.imageUrl,
-            contentDescription = headline.title,
-            size = 72.dp,
-            modifier = Modifier.clip(MaterialTheme.shapes.small)
-        )
-
-        Column(modifier = Modifier.weight(1f)) {
-            if (headline.category.isNotBlank()) {
-                Text(
-                    text = headline.category.uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing * 1.5f,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-            }
-
-            Text(
-                text = headline.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            if (headline.snippet.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = headline.snippet,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = headline.source,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-    }
-}
-
 @Preview(showBackground = true)
 @Composable
 private fun HeadlinesScreenPreview() {
@@ -223,7 +162,8 @@ private fun HeadlinesScreenPreview() {
                         source = "Reuters",
                         category = "World",
                         snippet = "Delegates from over 190 countries convene to discuss new emissions targets.",
-                        imageUrl = null
+                        imageUrl = null,
+                        publishedAtLabel = "Jun 5, 2026"
                     ),
                     HeadlineItem(
                         id = 2L,
@@ -232,7 +172,8 @@ private fun HeadlinesScreenPreview() {
                         source = "Financial Times",
                         category = "Business",
                         snippet = "Global indices rise sharply following better-than-expected jobs report.",
-                        imageUrl = null
+                        imageUrl = null,
+                        publishedAtLabel = "Jun 5, 2026"
                     )
                 ),
                 todayLabel = "Friday, June 5, 2026"

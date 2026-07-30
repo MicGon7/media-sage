@@ -156,7 +156,9 @@ private class FakeEncouragementRepository(
         headlineSource: String,
         headlineImageUrl: String?,
         articleUrl: String?,
-        articleSnippet: String?
+        articleSnippet: String?,
+        headlineCategory: String,
+        headlinePublishedAt: Long
     ): Encouragement = _flow.value.first()
 
     override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)

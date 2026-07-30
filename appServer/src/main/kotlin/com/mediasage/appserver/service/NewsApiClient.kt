@@ -38,7 +38,7 @@ open class NewsApiClient(
 
         return response.body<GNewsResponse>().articles
             .distinctBy { it.url }
-            .map { it.toNewsArticle() }
+            .map { it.toNewsArticle(category = topic) }
     }
 
     suspend fun searchNews(
@@ -67,7 +67,7 @@ open class NewsApiClient(
             .map { it.toNewsArticle() }
     }
 
-    private fun GNewsArticle.toNewsArticle() = NewsArticle(
+    private fun GNewsArticle.toNewsArticle(category: String = "") = NewsArticle(
         uuid = UUID.nameUUIDFromBytes(url.toByteArray()).toString(),
         title = title,
         description = description,
@@ -75,7 +75,8 @@ open class NewsApiClient(
         url = url,
         imageUrl = image.orEmpty(),
         publishedAt = publishedAt,
-        source = source.name
+        source = source.name,
+        categories = if (category.isBlank()) emptyList() else listOf(category)
     )
 }
 

@@ -92,13 +92,15 @@ class HeadlineDetailViewModel(
                     headlineSource = headline?.source ?: "",
                     headlineImageUrl = headline?.imageUrl,
                     articleUrl = articleUrl,
-                    articleSnippet = headline?.snippet
+                    articleSnippet = headline?.snippet,
+                    headlineCategory = headline?.category ?: "",
+                    headlinePublishedAt = headline?.publishedAt ?: 0L
                 )
 
                 _state.value = HeadlineDetailContract.UiState.Success(
                     headlineTitle = headline?.title ?: encouragement.headlineTitle,
                     headlineSource = headline?.source ?: encouragement.headlineSource,
-                    headlineCategory = "",
+                    headlineCategory = headline?.category ?: encouragement.headlineCategory,
                     headlineImageUrl = headline?.imageUrl ?: encouragement.headlineImageUrl,
                     encouragement = HeadlineDetailContract.EncouragementState.Loaded(
                         summary = encouragement.summary,

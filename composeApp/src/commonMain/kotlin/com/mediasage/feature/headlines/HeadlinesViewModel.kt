@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.repository.HeadlineRepository
+import com.mediasage.ui.formatHeadlineDate
 import com.mediasage.ui.toErrorType
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -103,6 +104,8 @@ private fun com.mediasage.domain.model.Headline.toItem() = HeadlineItem(
     articleUrl = url,
     title = title,
     source = source,
+    category = category,
+    snippet = snippet.orEmpty(),
     imageUrl = imageUrl,
-    publishedAt = publishedAt
+    publishedAtLabel = formatHeadlineDate(publishedAt)
 )

@@ -8,5 +8,6 @@ data class Headline(
     val imageUrl: String?,
     val publishedAt: Long,
     val fetchedAt: Long,
-    val snippet: String? = null
+    val snippet: String? = null,
+    val category: String = ""
 )

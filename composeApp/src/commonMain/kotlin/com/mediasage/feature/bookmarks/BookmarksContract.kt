@@ -21,5 +21,8 @@ data class BookmarkItem(
     val figureName: String,
     val figureRole: String,
     val quotePreview: String,
-    val headlineImageUrl: String?
+    val headlineImageUrl: String?,
+    val source: String = "",
+    val category: String = "",
+    val publishedAtLabel: String = ""
 )

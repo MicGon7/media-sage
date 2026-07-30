@@ -3,6 +3,7 @@ package com.mediasage.feature.bookmarks
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.domain.repository.EncouragementRepository
+import com.mediasage.ui.formatHeadlineDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +43,10 @@ class BookmarksViewModel(
                             figureName = encouragement.figureName,
                             figureRole = encouragement.figureRole,
                             quotePreview = encouragement.quoteText.take(QUOTE_PREVIEW_LENGTH),
-                            headlineImageUrl = encouragement.headlineImageUrl
+                            headlineImageUrl = encouragement.headlineImageUrl,
+                            source = encouragement.headlineSource,
+                            category = encouragement.headlineCategory,
+                            publishedAtLabel = formatHeadlineDate(encouragement.headlinePublishedAt)
                         )
                     }
                     _state.value = BookmarksContract.UiState.Success(items)
