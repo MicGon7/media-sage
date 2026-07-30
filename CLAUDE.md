@@ -212,6 +212,10 @@ Do not use the `Impl` suffix — Kotlin docs treat it as illustrative only, not 
 - composeApp tests in `commonTest` — test platform-independent logic
 - Use `runTest` from `kotlinx-coroutines-test` for suspending test functions
 - Every new feature must include tests — run `./gradlew allTests` before creating a PR
+- **Test infrastructure is never a side effect.** New test dependencies, manifests, source sets, or
+  Gradle test config are introduced only by a ticket whose deliverable *is* that infrastructure —
+  never inside a feature ticket because a test you wanted to write needed them. If a feature's test
+  requires missing infrastructure, skip that test and say so in the PR body.
 - Smoke test external API changes with real APIs before creating a PR
 - **PR body format**: pre-check unit test items with `[x]` (already verified before push); tests that require a live deployed system go in a separate `## Post-deploy verification` section; omit the test plan section entirely for PRs with no live smoke test
 - **Pipeline E2E scenarios** (`:pipelineScenarios`): on-demand health checks run via `./gradlew :pipelineScenarios:e2e*`. Never run in standard CI — they dispatch real Cloud Run Jobs. `e2eDedupCompleted` is the post-deploy canary (Supabase only, no Cloud Run).
@@ -244,24 +248,9 @@ Do not use the `Impl` suffix — Kotlin docs treat it as illustrative only, not 
 
 #### UI test principles
 - No Espresso — that is for View-based UI, not Compose
+- No `@RunWith(AndroidJUnit4::class)` in `commonTest` — use `runComposeUiTest {}` (the Compose Multiplatform API)
 - No ViewModel or Koin in test setup — pass state directly to the composable; screens are stateless
 - No hardcoded strings in assertions — use `getString(Res.string.x)` to resolve string resources
-- **Composable rendering only, no interaction/string assertions** (golden-image snapshots) →
-  `androidUnitTest`, `captureRoboImage` + `@RunWith(AndroidJUnit4::class)`.
-- **Compose UI interaction tests** (assert on displayed text/nodes, resolve string resources,
-  simulate clicks) → also `androidUnitTest`, using `createComposeRule()` +
-  `@RunWith(AndroidJUnit4::class)` + `@Config(sdk = [34], application = Application::class)` —
-  **not** `commonTest` + `runComposeUiTest {}`. `runComposeUiTest` on the Android JVM unit-test
-  target requires Robolectric's shadow environment (for `android.os.Build.*`), which only
-  activates under a JUnit4 `@RunWith`; a `commonTest` class has no runner to carry that
-  annotation, so it fails at runtime with `NullPointerException: ... Build.FINGERPRINT is null`
-  (a known, unresolved gap — robolectric/robolectric#10727 — not fixable from this project's
-  side). `createComposeRule()` needs the `androidx.compose.ui:ui-test-junit4` artifact (declared
-  in `androidUnitTest.dependencies`, not `compose.uiTest`) and a debug-only
-  `androidx.activity.ComponentActivity` entry in `composeApp/src/debug/AndroidManifest.xml` (the
-  host activity `ActivityScenario` launches). See `docs/MS-686-compose-ui-test-robolectric.md`.
-- `commonTest` + `runComposeUiTest {}` remains correct only for non-Android Compose Multiplatform
-  targets (e.g. iOS), not as the sole home for a test that must also run on Android.
 
 ### Quality Gates
 - **Detekt**: Runs in CI before build. `./gradlew detekt` must pass.

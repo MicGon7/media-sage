@@ -1,5 +1,3 @@
-@file:OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.FileInputStream
@@ -90,11 +88,6 @@ kotlin {
             implementation(libs.robolectric)
             implementation(libs.junit)
             implementation(libs.androidx.testExt.junit)
-            // Compose UI interaction tests: runComposeUiTest (commonTest) requires Robolectric's
-            // shadow environment to be active, which only happens under a JUnit4 @RunWith
-            // (RobolectricTestRunner/AndroidJUnit4) — impossible to declare in commonTest. Use
-            // createComposeRule() here instead, matching the *RenderTest Robolectric setup.
-            implementation(libs.androidx.compose.ui.testJunit4)
         }
     }
 }
