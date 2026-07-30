@@ -26,6 +26,7 @@ class GetHeadlinesFeedUseCase(
                     headline = headline,
                     figureName = match?.figureName,
                     figureRole = match?.figureRole,
+                    figureImageUrl = match?.figureImageUrl,
                     quotePreview = match?.quoteText,
                     isBookmarked = match?.bookmarked ?: false
                 )

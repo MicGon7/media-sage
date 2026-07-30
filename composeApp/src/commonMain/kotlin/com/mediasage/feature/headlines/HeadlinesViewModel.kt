@@ -118,6 +118,7 @@ private fun HeadlineFeedEntry.toItem() = HeadlineItem(
     isRead = headline.isRead,
     figureName = figureName,
     figureRole = figureRole,
+    figureImageUrl = figureImageUrl,
     quotePreview = quotePreview,
     isBookmarked = isBookmarked
 )

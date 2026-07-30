@@ -22,5 +22,6 @@ data class HistoryItem(
     val figureRole: String,
     val quotePreview: String,
     val headlineImageUrl: String?,
+    val figureImageUrl: String? = null,
     val isBookmarked: Boolean = false
 )

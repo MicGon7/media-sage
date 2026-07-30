@@ -1,6 +1,7 @@
 package com.mediasage.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Bookmark
@@ -21,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
@@ -29,10 +32,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.mediasage.theme.ComicGradientOrientation
+import com.mediasage.theme.rememberComicSurfaceColors
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.bookmark_add
 import mediasage.composeapp.generated.resources.bookmark_remove
 import org.jetbrains.compose.resources.stringResource
+
+private val FigurePortraitSize = 40.dp
 
 @Suppress("LongParameterList")
 @Composable
@@ -48,6 +55,7 @@ fun MediaSageHeadlineCard(
     snippet: String = "",
     figureName: String? = null,
     figureRole: String? = null,
+    figureImageUrl: String? = null,
     quotePreview: String? = null,
     isBookmarked: Boolean? = null,
     onBookmarkClick: (() -> Unit)? = null,
@@ -132,28 +140,11 @@ fun MediaSageHeadlineCard(
                     )
                 }
                 if (figureName != null) {
-                    Text(
-                        text = figureName,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                if (figureRole != null) {
-                    Text(
-                        text = figureRole,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (quotePreview != null) {
-                    Text(
-                        text = quotePreview,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontStyle = FontStyle.Italic,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
+                    FigureMatchRow(
+                        figureName = figureName,
+                        figureRole = figureRole,
+                        figureImageUrl = figureImageUrl,
+                        quotePreview = quotePreview,
                     )
                 }
             }
@@ -168,6 +159,63 @@ fun MediaSageHeadlineCard(
                                else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FigureMatchRow(
+    figureName: String,
+    figureRole: String?,
+    figureImageUrl: String?,
+    quotePreview: String?,
+) {
+    val comicColors = rememberComicSurfaceColors(orientation = ComicGradientOrientation.Horizontal)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .then(comicColors.background)
+            .border(1.dp, comicColors.border, MaterialTheme.shapes.small)
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (figureImageUrl != null) {
+            AsyncImage(
+                model = figureImageUrl,
+                contentDescription = figureName,
+                modifier = Modifier.size(FigurePortraitSize).clip(CircleShape),
+                contentScale = ContentScale.Crop,
+                colorFilter = SepiaColorFilter,
+            )
+        } else {
+            FigurePlaceholder(name = figureName, size = FigurePortraitSize)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = figureName,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = comicColors.content,
+            )
+            if (figureRole != null) {
+                Text(
+                    text = figureRole,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = comicColors.content,
+                )
+            }
+            if (quotePreview != null) {
+                Text(
+                    text = quotePreview,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontStyle = FontStyle.Italic,
+                    color = comicColors.content,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

@@ -39,6 +39,7 @@ data class HeadlineItem(
     val isRead: Boolean = false,
     val figureName: String? = null,
     val figureRole: String? = null,
+    val figureImageUrl: String? = null,
     val quotePreview: String? = null,
     val isBookmarked: Boolean = false
 )
