@@ -15,24 +15,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -42,9 +34,8 @@ import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
 import com.mediasage.ui.MediaSageEmptyState
+import com.mediasage.ui.QuoteCard
 import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.figure_detail_memorize_quote
-import mediasage.composeapp.generated.resources.figure_detail_memorized_quote
 import mediasage.composeapp.generated.resources.quotes_empty_subtitle
 import mediasage.composeapp.generated.resources.quotes_empty_title
 import mediasage.composeapp.generated.resources.quotes_screen_title
@@ -108,10 +99,11 @@ private fun QuotesList(
                 FigureSectionHeader(section = section)
             }
             items(section.quotes, key = { "${section.figureId}-${it.quoteText}" }) { quote ->
-                QuoteRow(
-                    quote = quote,
-                    onSelect = { onQuoteSelected(section.figureId, quote.quoteText) },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                QuoteCard(
+                    quoteText = quote.quoteText,
+                    isPinned = quote.isMemorized,
+                    onPinQuote = { onQuoteSelected(section.figureId, quote.quoteText) },
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
                 )
             }
         }
@@ -146,50 +138,6 @@ private fun FigureSectionHeader(section: QuotesContract.FigureSection) {
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
-    }
-}
-
-@Composable
-private fun QuoteRow(
-    quote: QuotesContract.QuoteItem,
-    onSelect: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val isDark = MediaSageTheme.isDark
-    val cardSurface = if (isDark) {
-        MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
-
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(containerColor = cardSurface),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-    ) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "“${quote.quoteText}”",
-                style = MaterialTheme.typography.bodyMedium,
-                fontStyle = FontStyle.Italic,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = onSelect) {
-                Icon(
-                    imageVector = if (quote.isMemorized) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                    contentDescription = stringResource(
-                        if (quote.isMemorized) Res.string.figure_detail_memorized_quote
-                        else Res.string.figure_detail_memorize_quote
-                    ),
-                    tint = if (quote.isMemorized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
     }
 }
 

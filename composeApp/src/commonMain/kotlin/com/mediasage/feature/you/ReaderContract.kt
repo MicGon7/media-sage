@@ -20,7 +20,6 @@ object ReaderContract {
         val figureName: String,
         val figureRole: String,
         val figureImageUrl: String?,
-        val figureId: Long,
     )
 
     sealed interface DayLabel {

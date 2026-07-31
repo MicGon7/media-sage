@@ -56,13 +56,16 @@ class QuotesViewModelTest {
 
     @Test
     fun memorizedQuoteIsMarkedWithinItsFigureSection() = runTest(testDispatcher) {
-        val memorized = Quote(id = 1L, figureId = 1L, text = "You are never too old to set another goal.", source = "", themes = emptyList())
-        val other = Quote(id = 2L, figureId = 1L, text = "Hardships often prepare ordinary people.", source = "", themes = emptyList())
-        val viewModel = quotesViewModel(
-            quotes = listOf(memorized, other),
-            figures = listOf(lewis),
-            memorizedQuote = memorized,
+        val memorized = Quote(
+            id = 1L,
+            figureId = 1L,
+            text = "You are never too old to set another goal.",
+            source = "",
+            themes = emptyList(),
+            memorized = true,
         )
+        val other = Quote(id = 2L, figureId = 1L, text = "Hardships often prepare ordinary people.", source = "", themes = emptyList())
+        val viewModel = quotesViewModel(quotes = listOf(memorized, other), figures = listOf(lewis))
 
         val state = viewModel.state.value as QuotesContract.UiState.Success
 
@@ -85,8 +88,7 @@ class QuotesViewModelTest {
     private fun TestScope.quotesViewModel(
         quotes: List<Quote> = emptyList(),
         figures: List<Figure> = emptyList(),
-        memorizedQuote: Quote? = null,
-        quoteRepository: FakeQuoteRepositoryForQuotesScreen = FakeQuoteRepositoryForQuotesScreen(quotes, memorizedQuote),
+        quoteRepository: FakeQuoteRepositoryForQuotesScreen = FakeQuoteRepositoryForQuotesScreen(quotes),
     ): QuotesViewModel {
         val viewModel = QuotesViewModel(
             quoteRepository = quoteRepository,
@@ -107,7 +109,6 @@ private class FakeFigureRepositoryForQuotesScreen(private val figures: List<Figu
 
 private class FakeQuoteRepositoryForQuotesScreen(
     private val quotes: List<Quote> = emptyList(),
-    private val memorizedQuote: Quote? = null,
 ) : QuoteRepository {
     val memorizeCalls = mutableListOf<Pair<Long, String>>()
     override fun observeAllQuotes(): Flow<List<Quote>> = MutableStateFlow(quotes)
@@ -116,7 +117,7 @@ private class FakeQuoteRepositoryForQuotesScreen(
     override suspend fun getQuoteById(id: Long): Quote? = quotes.firstOrNull { it.id == id }
     override suspend fun getLatestQuoteForFigure(figureId: Long): Quote? = quotes.lastOrNull { it.figureId == figureId }
     override suspend fun saveQuote(text: String, source: String, themes: List<String>, figureId: Long) = Unit
-    override fun observeMemorizedQuote(): Flow<Quote?> = MutableStateFlow(memorizedQuote)
+    override fun observeMemorizedQuote(): Flow<Quote?> = MutableStateFlow(null)
     override suspend fun memorizeQuote(figureId: Long, text: String) {
         memorizeCalls.add(figureId to text)
     }

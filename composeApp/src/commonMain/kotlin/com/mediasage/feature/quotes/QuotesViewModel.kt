@@ -25,9 +25,8 @@ class QuotesViewModel(
     val state: StateFlow<QuotesContract.UiState> = combine(
         quoteRepository.observeAllQuotes(),
         figureRepository.observeAllFigures(),
-        quoteRepository.observeMemorizedQuote(),
-    ) { quotes, figures, memorizedQuote ->
-        buildSuccess(quotes, figures, memorizedQuote)
+    ) { quotes, figures ->
+        buildSuccess(quotes, figures)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -42,15 +41,11 @@ class QuotesViewModel(
         }
     }
 
-    private fun buildSuccess(
-        quotes: List<Quote>,
-        figures: List<Figure>,
-        memorizedQuote: Quote?,
-    ): QuotesContract.UiState.Success {
+    private fun buildSuccess(quotes: List<Quote>, figures: List<Figure>): QuotesContract.UiState.Success {
         val figuresById = figures.associateBy { it.id }
         val sections = quotes
             .groupBy { it.figureId }
-            .mapNotNull { (figureId, figureQuotes) -> toSection(figureId, figureQuotes, figuresById, memorizedQuote) }
+            .mapNotNull { (figureId, figureQuotes) -> toSection(figureId, figureQuotes, figuresById) }
             .sortedBy { it.figureName }
         return QuotesContract.UiState.Success(sections)
     }
@@ -59,7 +54,6 @@ class QuotesViewModel(
         figureId: Long,
         figureQuotes: List<Quote>,
         figuresById: Map<Long, Figure>,
-        memorizedQuote: Quote?,
     ): QuotesContract.FigureSection? {
         val figure = figuresById[figureId] ?: return null
         return QuotesContract.FigureSection(
@@ -69,7 +63,7 @@ class QuotesViewModel(
             quotes = figureQuotes.map { quote ->
                 QuotesContract.QuoteItem(
                     quoteText = quote.text,
-                    isMemorized = memorizedQuote?.figureId == figureId && memorizedQuote.text == quote.text,
+                    isMemorized = quote.memorized,
                 )
             },
         )

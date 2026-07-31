@@ -19,16 +19,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,7 +33,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -45,19 +41,14 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.mediasage.theme.ComicBrown
-import com.mediasage.theme.ComicCream
-import com.mediasage.theme.ComicInk
-import com.mediasage.theme.ComicTan
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
 import com.mediasage.ui.MediaSageTabRow
+import com.mediasage.ui.QuoteCard
 import com.mediasage.ui.ReassignConfirmationDialog
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.figure_detail_biography
-import mediasage.composeapp.generated.resources.figure_detail_memorize_quote
-import mediasage.composeapp.generated.resources.figure_detail_memorized_quote
 import mediasage.composeapp.generated.resources.figure_detail_no_biography
 import mediasage.composeapp.generated.resources.figure_detail_no_quotes
 import mediasage.composeapp.generated.resources.figure_detail_pin_to_home
@@ -291,8 +282,10 @@ private fun QuotesTabContent(
             }
             items(state.quotes) { quote ->
                 QuoteCard(
-                    quote = quote,
-                    onPinQuote = onPinQuote,
+                    quoteText = quote.quoteText,
+                    isPinned = quote.isPinned,
+                    onPinQuote = { onPinQuote(quote.quoteText) },
+                    footerText = quote.headlineTitle.takeIf { it.isNotBlank() }?.let { "In response to: $it" },
                     modifier = Modifier.padding(horizontal = 24.dp),
                 )
             }
@@ -322,75 +315,6 @@ private fun WritingsTabContent(state: FigureDetailContract.UiState.Success, onPi
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-        }
-    }
-}
-
-/**
- * Mirrors [com.mediasage.feature.you.SavedQuoteCard]'s shape — quote text on the card surface,
- * a gradient transition into a fixed sepia footer — minus the portrait/attribution row, which is
- * redundant here since the whole tab is already scoped to one figure. The footer will also carry
- * the quote's theme chip once that data lands.
- */
-@Composable
-private fun QuoteCard(quote: FigureQuoteItem, onPinQuote: (String) -> Unit, modifier: Modifier = Modifier) {
-    val isDark = MediaSageTheme.isDark
-    val cardSurface = if (isDark) {
-        MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
-    val footerContentColor = if (quote.isPinned) ComicBrown else ComicInk
-
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(containerColor = cardSurface),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-    ) {
-        Column {
-            Text(
-                text = "“${quote.quoteText}”",
-                style = MaterialTheme.typography.bodyLarge,
-                fontStyle = FontStyle.Italic,
-                color = MaterialTheme.colorScheme.onSurface,
-                lineHeight = 24.sp,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(16.dp)
-                    .background(Brush.verticalGradient(colors = listOf(cardSurface, ComicCream)))
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan)))
-                    .padding(start = 16.dp, top = 8.dp, end = 8.dp, bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (quote.headlineTitle.isNotBlank()) {
-                    Text(
-                        text = "In response to: ${quote.headlineTitle}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = ComicInk,
-                        modifier = Modifier.weight(1f),
-                    )
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-                IconButton(onClick = { onPinQuote(quote.quoteText) }) {
-                    Icon(
-                        imageVector = if (quote.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                        contentDescription = stringResource(
-                            if (quote.isPinned) Res.string.figure_detail_memorized_quote
-                            else Res.string.figure_detail_memorize_quote
-                        ),
-                        tint = footerContentColor,
-                    )
-                }
             }
         }
     }
