@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mediasage.theme.Accent
 import com.mediasage.theme.CardBorder
 import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicTan
@@ -145,6 +146,11 @@ private fun LoginScreenContent(
         val formTextColor = if (formOnPaper) Ink else OnGradient
         val formMutedColor = if (formOnPaper) Slate else mutedTextColor
         val formAccentColor = if (formOnPaper) Navy else OnGradient
+        // Tappable links need to read as interactive against both the white paper panel and
+        // the dark gradient/photo background - the brand accent is warm enough to pop on both,
+        // unlike formAccentColor (Navy / OnGradient) which matches the surrounding non-tappable
+        // masthead rules and would blend links back into the rest of the form.
+        val formLinkColor = Accent
         val formBorderColor = if (formOnPaper) {
             CardBorder
         } else if (backgroundImage != null) {
@@ -296,7 +302,7 @@ private fun LoginScreenContent(
                     ) {
                         Text(
                             text = stringResource(Res.string.nav_back),
-                            style = MaterialTheme.typography.bodySmall.copy(color = formMutedColor)
+                            style = MaterialTheme.typography.bodySmall.copy(color = formLinkColor)
                         )
                     }
                 } else {
@@ -321,7 +327,7 @@ private fun LoginScreenContent(
                                     Res.string.login_switch_to_sign_up
                                 }
                             ),
-                            style = MaterialTheme.typography.bodySmall.copy(color = formMutedColor)
+                            style = MaterialTheme.typography.bodySmall.copy(color = formLinkColor)
                         )
                     }
                 }
@@ -335,7 +341,7 @@ private fun LoginScreenContent(
                         text = stringResource(Res.string.login_bypass),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontStyle = FontStyle.Italic,
-                            color = formMutedColor
+                            color = formLinkColor
                         )
                     )
                 }
@@ -497,6 +503,12 @@ private fun SignInFields(
                 uncheckedThumbColor = palette.muted,
                 uncheckedTrackColor = Color.Transparent,
                 uncheckedBorderColor = palette.border,
+                disabledCheckedThumbColor = ComicBrown,
+                disabledCheckedTrackColor = ComicTan,
+                disabledCheckedBorderColor = ComicBrown,
+                disabledUncheckedThumbColor = palette.muted,
+                disabledUncheckedTrackColor = Color.Transparent,
+                disabledUncheckedBorderColor = palette.border,
             )
         )
     }
