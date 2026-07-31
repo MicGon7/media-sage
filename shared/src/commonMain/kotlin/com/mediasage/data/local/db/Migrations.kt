@@ -120,6 +120,26 @@ val MIGRATION_30_31 = object : Migration(30, 31) {
     }
 }
 
+val MIGRATION_31_32 = object : Migration(31, 32) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS discovered_quotes " +
+                "(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, figureId INTEGER NOT NULL, " +
+                "quoteText TEXT NOT NULL, source TEXT NOT NULL, themes TEXT NOT NULL, " +
+                "synced INTEGER NOT NULL DEFAULT 0, " +
+                "FOREIGN KEY(figureId) REFERENCES figures(id) ON DELETE CASCADE)"
+        )
+        connection.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_discovered_quotes_figureId ON discovered_quotes(figureId)"
+        )
+        connection.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS index_discovered_quotes_figureId_quoteText " +
+                "ON discovered_quotes(figureId, quoteText)"
+        )
+        connection.execSQL("ALTER TABLE sync_meta ADD COLUMN lastDiscoveredQuoteSyncUserId TEXT")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(
