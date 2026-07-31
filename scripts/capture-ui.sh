@@ -72,17 +72,23 @@ fi
 # render would still be picked up by the glob below and misreported as part of this run.
 rm -f "$RENDER_OUT"/*.png
 
-# --rerun-tasks (MS-693): the project enables org.gradle.caching=true, and this task's
-# up-to-date/build-cache state does not appear to account for the --tests filter —
-# both UP-TO-DATE and FROM-CACHE were observed locally restoring a previous, broader
-# render's full output set (every screen) even when scoped to a single test class,
-# which would silently misreport unrelated/stale screens as part of this run.
-# --no-build-cache alone did not fix this (it only disables the build-cache backend,
-# not the separate up-to-date check); --rerun-tasks forces genuine execution every
-# time. This does not sacrifice the intended speed-up: MS-583/589's warm-render
-# numbers came from the pre-baked ~/.gradle and ~/.m2 DEPENDENCY caches, which
-# --rerun-tasks does not touch — only this task's own up-to-date/output-cache state.
-GRADLE_ARGS=(":composeApp:recordRoborazziDebug" "-Pmediasage.worker=true" "--no-daemon" "--rerun-tasks")
+# --no-build-cache (MS-693, corrected): the project enables org.gradle.caching=true, and
+# :composeApp:testDebugUnitTest's build-cache key does not appear to account for the
+# --tests filter — a scoped run can get a FROM-CACHE hit keyed off an earlier, broader
+# run and silently restore its full (stale) PNG set. --no-build-cache disables the cache
+# backend for this task, forcing it to genuinely re-execute and honor the filter.
+# --rerun-tasks (the original MS-693 fix) also worked around this, but by forcing EVERY
+# task in the graph to rerun — including compileDebugKotlinAndroid for both :composeApp
+# and :shared main source, which have nothing to do with the bug. In the worker's cold,
+# --no-daemon container (fresh clone, no warm build/ dir) that turned every render call
+# into a full-module recompile, measured at ~15 minutes each on a real run (MS-690) —
+# two calls (initial + one self-critique re-render) blew the entire 30-minute job budget
+# on compile work that should never have re-run. --no-build-cache leaves compile tasks
+# free to report UP-TO-DATE (satisfied by normal incremental-compile state, not the build
+# cache) while still forcing the actually-buggy test/record tasks to genuinely execute —
+# verified locally against the exact unscoped-then-scoped repro that motivated the
+# original fix, plus a scope-A-to-scope-B switch and an edit-then-re-render pass.
+GRADLE_ARGS=(":composeApp:recordRoborazziDebug" "-Pmediasage.worker=true" "--no-daemon" "--no-build-cache")
 for cls in "$@"; do
     GRADLE_ARGS+=("--tests" "$cls")
 done
