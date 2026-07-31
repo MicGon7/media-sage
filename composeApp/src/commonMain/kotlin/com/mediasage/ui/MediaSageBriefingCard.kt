@@ -45,9 +45,10 @@ import mediasage.composeapp.generated.resources.briefing_card_based_on
 import mediasage.composeapp.generated.resources.briefing_card_reflect_action
 import mediasage.composeapp.generated.resources.briefing_card_study_action
 import mediasage.composeapp.generated.resources.day_detail_share_action
+import mediasage.composeapp.generated.resources.you_lens_today
 import org.jetbrains.compose.resources.stringResource
 
-private val CardImageHeight = 220.dp
+private val CardImageHeight = 300.dp
 private val FigurePlaceholderSize = 80.dp
 
 /**
@@ -262,8 +263,13 @@ fun ThemeChip(theme: String) {
         "PERSEVERANCE" -> LensPerseverance
         else -> MaterialTheme.colorScheme.primary
     }
+    val label = if (theme.uppercase() == "NEWS") {
+        stringResource(Res.string.you_lens_today)
+    } else {
+        theme.lowercase().replaceFirstChar { it.uppercase() }
+    }
     Text(
-        text = theme.lowercase().replaceFirstChar { it.uppercase() },
+        text = label,
         style = MaterialTheme.typography.labelSmall,
         color = color,
         modifier = Modifier

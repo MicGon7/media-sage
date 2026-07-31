@@ -13,7 +13,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,9 +36,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
@@ -50,8 +49,8 @@ import com.mediasage.ui.MediaSageErrorState
 import com.mediasage.ui.SepiaColorFilter
 import com.mediasage.ui.ThemeChip
 import mediasage.composeapp.generated.resources.Res
-import mediasage.composeapp.generated.resources.briefing_card_loading
 import mediasage.composeapp.generated.resources.app_name
+import mediasage.composeapp.generated.resources.briefing_card_loading
 import mediasage.composeapp.generated.resources.home_error_generic
 import mediasage.composeapp.generated.resources.home_error_network
 import mediasage.composeapp.generated.resources.home_retry
@@ -173,7 +172,7 @@ private fun BriefingCardLoadingWithFigure(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(300.dp)
                 .clip(MaterialTheme.shapes.small)
                 .clickable { onFigureTap(card.figureId) }
         ) {
@@ -247,7 +246,7 @@ private fun BriefingCardSkeleton() {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Box(modifier = Modifier.fillMaxWidth().height(220.dp).clip(MaterialTheme.shapes.small).background(shimmer))
+        Box(modifier = Modifier.fillMaxWidth().height(300.dp).clip(MaterialTheme.shapes.small).background(shimmer))
         Spacer(modifier = Modifier.height(8.dp))
         Box(modifier = Modifier.width(160.dp).height(18.dp).clip(MaterialTheme.shapes.small).background(shimmer))
         Spacer(modifier = Modifier.height(6.dp))

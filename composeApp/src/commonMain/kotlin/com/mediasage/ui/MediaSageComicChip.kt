@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
@@ -21,11 +20,10 @@ import com.mediasage.theme.ComicGradientOrientation
 import com.mediasage.theme.MediaSageTheme
 
 /**
- * A compact chip styled after the app's comic / vintage-newspaper illustration — the same
- * sepia gradient, ink text, and brown border as [MediaSageEntryCard], sized to sit as a small,
- * secondary affordance attached to a block of content (e.g. beneath a briefing's reflection
- * text) rather than a standalone call to action. Rendered via [MediaSageSurface] (with its
- * optional border enabled), shared with [MediaSageEntryCard] and `PastBriefingCard`.
+ * A pill styled after the app's comic / vintage-newspaper illustration for a mobile action row
+ * (e.g. Reflect/Study/Share beneath a briefing's reflection text) — a vertical sepia gradient,
+ * ink text, and brown border via [MediaSageSurface], distinguishing it from the plain white card
+ * it sits on.
  */
 @Composable
 fun MediaSageComicChip(
@@ -37,17 +35,17 @@ fun MediaSageComicChip(
     MediaSageSurface(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(50),
-        orientation = ComicGradientOrientation.Horizontal,
+        shape = MaterialTheme.shapes.medium,
+        orientation = ComicGradientOrientation.Vertical,
         bordered = true,
     ) { contentColor ->
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = label, style = MaterialTheme.typography.labelMedium, color = contentColor)
+            Icon(imageVector = icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = label, style = MaterialTheme.typography.labelLarge, color = contentColor)
         }
     }
 }

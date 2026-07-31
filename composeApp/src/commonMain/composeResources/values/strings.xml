@@ -21,7 +21,7 @@
     <string name="home_retry">Retry</string>
     <string name="home_error_network">Unable to reach the server. Check your connection and try again.</string>
     <string name="home_error_generic">Something went wrong. Please try again.</string>
-    <string name="home_tagline">Discover wisdom in today's news</string>
+    <string name="home_tagline">Discover wisdom for today's world</string>
     <string name="home_empty_message">No headlines available right now.</string>
     <string name="home_empty_refresh">Refresh</string>
 
@@ -63,7 +63,7 @@
     <string name="you_recent_briefings_more">More</string>
     <string name="you_carousel_assign_hint">Add</string>
     <string name="you_lens_section_title">TODAY'S LENS</string>
-    <string name="you_lens_today">News</string>
+    <string name="you_lens_today">Headlines</string>
     <string name="you_lens_love">Love</string>
     <string name="you_lens_grace">Grace</string>
     <string name="you_lens_repentance">Repentance</string>
