@@ -146,6 +146,11 @@
     <string name="figure_detail_memorize_quote">Memorize this quote</string>
     <string name="figure_detail_memorized_quote">Memorized</string>
 
+    <!-- Quotes screen -->
+    <string name="quotes_screen_title">Your Quotes</string>
+    <string name="quotes_empty_title">Nothing discovered yet</string>
+    <string name="quotes_empty_subtitle">Quotes you discover reading the day's headlines will appear here.</string>
+
     <!-- Reassignment confirmation dialog (Reader carousel + Reporter Detail pin) -->
     <string name="reassign_dialog_title">Today’s briefing already exists</string>
     <string name="reassign_dialog_message">You already have a briefing from %1$s today. %2$s will start next %3$s.</string>

@@ -30,6 +30,10 @@ sealed interface Route : NavKey {
     @Serializable
     data class FigureDetail(val figureId: Long) : Route
 
+    /** Browse and select from every quote the user has discovered, reached from [You]. */
+    @Serializable
+    data object Quotes : Route
+
     /** You tab — personal content and settings entry point. */
     @Serializable
     data object You : Route
@@ -63,6 +67,7 @@ val navSerializersModule = SerializersModule {
         subclass(Route.HeadlineDetail::class)
         subclass(Route.Figures::class)
         subclass(Route.FigureDetail::class)
+        subclass(Route.Quotes::class)
         subclass(Route.You::class)
         subclass(Route.ReaderHistory::class)
         subclass(Route.DayDetail::class)

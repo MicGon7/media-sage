@@ -23,6 +23,7 @@ import com.mediasage.feature.figures.FiguresViewModel
 import com.mediasage.feature.history.HistoryViewModel
 import com.mediasage.feature.briefing.BriefingViewModel
 import com.mediasage.feature.headlines.HeadlinesViewModel
+import com.mediasage.feature.quotes.QuotesViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
 import com.mediasage.feature.daydetail.DayDetailViewModel
 import com.mediasage.feature.you.ReaderHistoryViewModel
@@ -62,6 +63,7 @@ val appModule = module {
             get<QuoteRepository>(),
         )
     }
+    viewModel { QuotesViewModel(get<QuoteRepository>(), get<FigureRepository>()) }
     viewModel { LoginViewModel(get<AuthRepository>(), get<AuthPreferencesRepository>(), get<ProfileRepository>()) }
     viewModel { SettingsViewModel(get<AuthRepository>(), get<ThemePreferencesRepository>()) }
     viewModel {

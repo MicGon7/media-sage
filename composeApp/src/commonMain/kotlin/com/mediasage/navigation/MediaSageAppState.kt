@@ -35,6 +35,10 @@ class MediaSageAppState(
         backStack.add(Route.FigureDetail(figureId))
     }
 
+    fun navigateToQuotes() {
+        backStack.add(Route.Quotes)
+    }
+
     fun navigateToReaderHistory() {
         backStack.add(Route.ReaderHistory)
     }
