@@ -209,7 +209,6 @@ class ReaderViewModel(
             figureName = quoteFigure.name,
             figureRole = quoteFigure.role,
             figureImageUrl = quoteFigure.portraitUrl,
-            figureId = quoteFigure.id,
         )
     }
 

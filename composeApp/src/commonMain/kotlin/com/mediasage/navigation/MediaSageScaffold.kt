@@ -38,6 +38,8 @@ import com.mediasage.feature.headlines.HeadlinesScreen
 import com.mediasage.feature.headlines.HeadlinesViewModel
 import com.mediasage.feature.headlinedetail.HeadlineDetailScreen
 import com.mediasage.feature.headlinedetail.HeadlineDetailViewModel
+import com.mediasage.feature.quotes.QuotesScreen
+import com.mediasage.feature.quotes.QuotesViewModel
 import com.mediasage.feature.settings.SettingsContract
 import com.mediasage.feature.settings.SettingsScreen
 import com.mediasage.feature.settings.SettingsViewModel
@@ -184,12 +186,21 @@ fun MediaSageScaffold(
                         state = state,
                         onIntent = vm::onIntent,
                         onNavigateToSettings = { appState.navigateToSettings() },
-                        onNavigateToFigureDetail = { id -> appState.navigateToFigureDetail(id) },
+                        onNavigateToQuotes = { appState.navigateToQuotes() },
                         onNavigateToHistory = { appState.navigateToReaderHistory() },
                         onNavigateToBookmarks = { appState.navigateToBookmarks() },
                         onNavigateToDayDetail = { epochDay, figureName, figureImageUrl ->
                             appState.navigateToDayDetail(epochDay, figureName, figureImageUrl)
                         },
+                    )
+                }
+                is Route.Quotes -> NavEntry(route) {
+                    val vm = koinViewModel<QuotesViewModel>()
+                    val state by vm.state.collectAsState()
+                    QuotesScreen(
+                        state = state,
+                        onIntent = vm::onIntent,
+                        onNavigateBack = { appState.navigateBack() },
                     )
                 }
                 is Route.ReaderHistory -> NavEntry(route) {

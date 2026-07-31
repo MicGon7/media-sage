@@ -130,7 +130,7 @@ fun ReaderScreen(
     state: ReaderContract.UiState,
     onIntent: (ReaderContract.Intent) -> Unit,
     onNavigateToSettings: () -> Unit = {},
-    onNavigateToFigureDetail: (figureId: Long) -> Unit = {},
+    onNavigateToQuotes: () -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
     onNavigateToBookmarks: () -> Unit = {},
     onNavigateToDayDetail: (epochDay: Long, figureName: String?, figureImageUrl: String?) -> Unit = { _, _, _ -> },
@@ -232,7 +232,7 @@ fun ReaderScreen(
                     if (ready.quoteCard != null) {
                         SavedQuoteCard(
                             quote = ready.quoteCard,
-                            onViewMore = { if (it > 0) onNavigateToFigureDetail(it) },
+                            onViewMore = onNavigateToQuotes,
                             modifier = Modifier.padding(16.dp),
                         )
                     } else {
@@ -512,7 +512,7 @@ internal fun LensFilter.color(): Color = when (this) {
 @Composable
 private fun SavedQuoteCard(
     quote: ReaderContract.QuoteCard,
-    onViewMore: (figureId: Long) -> Unit,
+    onViewMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -595,7 +595,7 @@ private fun SavedQuoteCard(
                         color = ComicInk,
                         modifier = Modifier
                             .padding(top = 12.dp)
-                            .clickable { onViewMore(quote.figureId) },
+                            .clickable(onClick = onViewMore),
                     )
                 }
             }
@@ -901,7 +901,6 @@ private fun previewQuoteCard() = ReaderContract.QuoteCard(
     figureName = "C.S. Lewis",
     figureRole = "Author & Apologist",
     figureImageUrl = null,
-    figureId = -1L,
 )
 
 // endregion
