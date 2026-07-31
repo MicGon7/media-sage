@@ -45,6 +45,16 @@ Key setup decisions:
 - **Multiple screens are free.** One `captureRoboImage { }` block per screen → one PNG each;
   `recordRoborazziDebug` runs them all. A main + detail ticket just adds a second block. The
   smoke test proves this with light + dark captures.
+- **Reuse the shared device qualifier, don't invent a new one.** Robolectric's default screen
+  (320x470dp) crops any scrollable form taller than a small phone. `RenderTestDevices` (in
+  `composeApp/src/androidUnitTest/kotlin/com/mediasage/rendertest/`) holds the qualifier strings
+  render tests actually need — e.g. `TALL_SCROLLABLE`, used by `LoginScreenRenderTest` via
+  `@Config(qualifiers = RenderTestDevices.TALL_SCROLLABLE)`. Robolectric pays a large one-time
+  cost the first time it sees a given `qualifiers` string (see "Warm caches" below), and the
+  worker image only pre-bakes whichever qualifiers exist in render tests when the image was last
+  built — so a screen needing more height should reach for an existing constant here first, and
+  only add a new one if no existing profile fits. A one-off qualifier string invented mid-job
+  stays cold (~15 min) until the next worker image rebuild.
 
 ## Cost control: gate the iOS targets on the worker
 
