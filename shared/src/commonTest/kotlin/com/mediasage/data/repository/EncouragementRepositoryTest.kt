@@ -1,9 +1,11 @@
 package com.mediasage.data.repository
 
+import com.mediasage.data.local.entity.DiscoveredQuoteEntity
 import com.mediasage.data.local.entity.EncouragementEntity
 import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.SyncMetaEntity
 import com.mediasage.data.local.entity.VoiceFigureProjection
+import com.mediasage.data.local.dao.DiscoveredQuoteDao
 import com.mediasage.data.local.dao.EncouragementDao
 import com.mediasage.data.local.dao.FigureDao
 import com.mediasage.data.local.dao.SyncMetaDao
@@ -58,7 +60,11 @@ class EncouragementRepositoryTest {
         remote: FakeSavedInsightRemoteDataSource? = FakeSavedInsightRemoteDataSource(),
         syncMetaDao: FakeSyncMetaDaoForSavedInsightSync = FakeSyncMetaDaoForSavedInsightSync(),
         authRepository: FakeAuthRepositoryForSavedInsightSync = FakeAuthRepositoryForSavedInsightSync(USER_ID),
-    ) = EncouragementRepositoryImpl(api, dao, figureDao, remote, syncMetaDao, authRepository)
+        discoveredQuoteDao: FakeDiscoveredQuoteDao = FakeDiscoveredQuoteDao(),
+        discoveredQuoteRemote: FakeDiscoveredQuoteRemoteDataSource? = FakeDiscoveredQuoteRemoteDataSource(),
+    ) = EncouragementRepositoryImpl(
+        api, dao, figureDao, remote, syncMetaDao, authRepository, discoveredQuoteDao, discoveredQuoteRemote
+    )
 
     @Test
     fun returnsCachedEncouragementWhenArticleUrlHit() = runTest {
@@ -449,6 +455,105 @@ class EncouragementRepositoryTest {
 
         assertEquals(0, dao.upsertCallCount)
     }
+
+    @Test
+    fun freshMatchPushesDiscoveredQuoteRegardlessOfBookmark() = runTest {
+        val figure = FigureEntity(id = 1, name = "Martin Luther King Jr.", category = "civil_rights", century = "20th", serverId = 55)
+        val figureDao = FakeFigureDao(figures = listOf(figure))
+        val discoveredQuoteRemote = FakeDiscoveredQuoteRemoteDataSource()
+
+        repo(figureDao = figureDao, discoveredQuoteRemote = discoveredQuoteRemote)
+            .getEncouragement("Breaking news", articleUrl = "https://example.com/news")
+
+        assertEquals(1, discoveredQuoteRemote.pushedRows.size)
+        assertEquals("Darkness cannot drive out darkness", discoveredQuoteRemote.pushedRows.first().quoteText)
+        assertEquals(55L, discoveredQuoteRemote.pushedRows.first().figureServerId)
+        assertEquals(listOf("light", "hope"), discoveredQuoteRemote.pushedRows.first().themes)
+    }
+
+    @Test
+    fun cachedMatchDoesNotPushDiscoveredQuoteAgain() = runTest {
+        val figure = FigureEntity(id = 1, name = "Martin Luther King Jr.", category = "civil_rights", century = "20th", serverId = 55)
+        val figureDao = FakeFigureDao(figures = listOf(figure))
+        val api = FakeMediaSageApi(result = sampleResult)
+        val discoveredQuoteRemote = FakeDiscoveredQuoteRemoteDataSource()
+        val repository = repo(figureDao = figureDao, api = api, discoveredQuoteRemote = discoveredQuoteRemote)
+
+        repository.getEncouragement("Breaking news", articleUrl = "https://example.com/news")
+        repository.getEncouragement("Breaking news", articleUrl = "https://example.com/news")
+
+        assertEquals(1, api.encourageCallCount)
+        assertEquals(1, discoveredQuoteRemote.pushedRows.size)
+    }
+
+    @Test
+    fun resolvePullsExistingDiscoveredQuotesIntoLocalDaoForUncachedDevice() = runTest {
+        val figure = FigureEntity(id = 1, name = "Julian of Norwich", category = "mystic", century = "14th", serverId = 202)
+        val figureDao = FakeFigureDao(figures = listOf(figure))
+        val discoveredQuoteDao = FakeDiscoveredQuoteDao()
+        val discoveredQuoteRemote = FakeDiscoveredQuoteRemoteDataSource(
+            initialRows = listOf(
+                DiscoveredQuoteRow(
+                    userId = USER_ID,
+                    figureServerId = 202,
+                    quoteText = "All shall be well",
+                    source = "Romans 8:28",
+                    themes = listOf("hope"),
+                )
+            )
+        )
+
+        repo(figureDao = figureDao, discoveredQuoteDao = discoveredQuoteDao, discoveredQuoteRemote = discoveredQuoteRemote)
+            .resolve(USER_ID)
+
+        val local = discoveredQuoteDao.getByFigureAndText(1L, "All shall be well")
+        assertNotNull(local)
+        assertTrue(local!!.synced)
+        assertEquals("Romans 8:28", local.source)
+    }
+
+    @Test
+    fun resolveMarksPreviousAccountDiscoveredQuotesSyncedWithoutPushingOnAccountSwitch() = runTest {
+        val discoveredQuoteDao = FakeDiscoveredQuoteDao(
+            listOf(DiscoveredQuoteEntity(id = 1, figureId = 1L, quoteText = "Old pin", source = "", themes = "", synced = false))
+        )
+        val syncMetaDao = FakeSyncMetaDaoForSavedInsightSync(SyncMetaEntity(lastDiscoveredQuoteSyncUserId = "previous-user"))
+        val discoveredQuoteRemote = FakeDiscoveredQuoteRemoteDataSource()
+
+        repo(
+            discoveredQuoteDao = discoveredQuoteDao,
+            discoveredQuoteRemote = discoveredQuoteRemote,
+            syncMetaDao = syncMetaDao,
+        ).resolve(USER_ID)
+
+        assertTrue(discoveredQuoteDao.getByFigureAndText(1L, "Old pin")!!.synced)
+        assertEquals(0, discoveredQuoteRemote.pushedRows.size)
+        assertEquals(USER_ID, syncMetaDao.get()?.lastDiscoveredQuoteSyncUserId)
+    }
+
+    @Test
+    fun toggleBookmarkDoesNotAffectDiscoveredQuoteSync() = runTest {
+        val cached = EncouragementEntity(
+            articleUrl = "https://example.com/article",
+            summary = null,
+            quoteText = "Test quote",
+            figureName = "Augustine",
+            figureRole = "Bishop",
+            scriptureReference = "Psalm 23",
+            scriptureText = "The Lord is my shepherd",
+            explanation = "Explanation",
+            connectionThemes = "peace",
+            matchTheme = "trust",
+            tone = "hopeful",
+            bookmarked = false,
+        )
+        val dao = FakeEncouragementDao(preloaded = listOf(cached))
+        val discoveredQuoteRemote = FakeDiscoveredQuoteRemoteDataSource()
+
+        repo(dao = dao, discoveredQuoteRemote = discoveredQuoteRemote).toggleBookmark("https://example.com/article")
+
+        assertEquals(0, discoveredQuoteRemote.pushedRows.size)
+    }
 }
 
 private class FakeEncouragementDao(preloaded: List<EncouragementEntity> = emptyList()) : EncouragementDao {
@@ -642,4 +747,52 @@ private class FakeMediaSageApi(private val result: EncourageResultDto) : MediaSa
         DailyReflectionResponseDto(scriptureReference = "", scriptureText = "", insight = "", implication = "", inspiration = "", sources = emptyList(), tone = "morning")
 
     override suspend fun getAssignmentDefaults(): List<AssignmentDefaultDto> = emptyList()
+}
+
+private class FakeDiscoveredQuoteDao(initial: List<DiscoveredQuoteEntity> = emptyList()) : DiscoveredQuoteDao {
+    private val store = initial.associateBy { it.id }.toMutableMap()
+    private var nextId = (initial.maxOfOrNull { it.id } ?: 0L) + 1
+
+    override suspend fun insertIgnore(quote: DiscoveredQuoteEntity): Long {
+        val existing = store.values.find { it.figureId == quote.figureId && it.quoteText == quote.quoteText }
+        if (existing != null) return -1
+        val id = nextId++
+        store[id] = quote.copy(id = id)
+        return id
+    }
+
+    override suspend fun getByFigureAndText(figureId: Long, quoteText: String): DiscoveredQuoteEntity? =
+        store.values.find { it.figureId == figureId && it.quoteText == quoteText }
+
+    override suspend fun getPendingSync(): List<DiscoveredQuoteEntity> =
+        store.values.filter { !it.synced }
+
+    override suspend fun markSynced(figureId: Long, quoteText: String) {
+        val entity = store.values.find { it.figureId == figureId && it.quoteText == quoteText } ?: return
+        store[entity.id] = entity.copy(synced = true)
+    }
+
+    override suspend fun markAllSyncedForAccountSwitch() {
+        store.keys.toList().forEach { key -> store[key]?.let { store[key] = it.copy(synced = true) } }
+    }
+}
+
+private class FakeDiscoveredQuoteRemoteDataSource(
+    initialRows: List<DiscoveredQuoteRow> = emptyList(),
+    private val shouldThrowOnPush: Boolean = false,
+    private val shouldThrowOnFetch: Boolean = false,
+) : DiscoveredQuoteRemoteDataSource {
+    private val rows = initialRows.associateBy { it.figureServerId to it.quoteText }.toMutableMap()
+    val pushedRows = mutableListOf<DiscoveredQuoteRow>()
+
+    override suspend fun push(row: DiscoveredQuoteRow) {
+        if (shouldThrowOnPush) throw RuntimeException("Push failed")
+        pushedRows.add(row)
+        rows[row.figureServerId to row.quoteText] = row
+    }
+
+    override suspend fun fetchAll(userId: String): List<DiscoveredQuoteRow> {
+        if (shouldThrowOnFetch) throw RuntimeException("Fetch failed")
+        return rows.values.filter { it.userId == userId }
+    }
 }

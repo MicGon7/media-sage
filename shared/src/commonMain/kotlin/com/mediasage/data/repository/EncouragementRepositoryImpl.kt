@@ -1,8 +1,10 @@
 package com.mediasage.data.repository
 
+import com.mediasage.data.local.dao.DiscoveredQuoteDao
 import com.mediasage.data.local.dao.EncouragementDao
 import com.mediasage.data.local.dao.FigureDao
 import com.mediasage.data.local.dao.SyncMetaDao
+import com.mediasage.data.local.entity.DiscoveredQuoteEntity
 import com.mediasage.data.local.entity.EncouragementEntity
 import com.mediasage.data.local.entity.SyncMetaEntity
 import com.mediasage.data.mapper.toDomain
@@ -26,6 +28,8 @@ class EncouragementRepositoryImpl(
     private val remote: SavedInsightRemoteDataSource?,
     private val syncMetaDao: SyncMetaDao,
     private val authRepository: AuthRepository,
+    private val discoveredQuoteDao: DiscoveredQuoteDao,
+    private val discoveredQuoteRemote: DiscoveredQuoteRemoteDataSource?,
 ) : EncouragementRepository {
 
     private val _isResolved = MutableStateFlow(false)
@@ -67,6 +71,7 @@ class EncouragementRepositoryImpl(
                 )
             )
         }
+        recordDiscoveredQuote(encouragement)
         return encouragement
     }
 
@@ -116,10 +121,12 @@ class EncouragementRepositoryImpl(
     }
 
     private suspend fun syncWithRemote(userId: String) {
-        if (remote == null) return
-        resetIfAccountChanged(userId)
-        pushPending()
-        pullAndReconcile(userId)
+        if (remote != null) {
+            resetIfAccountChanged(userId)
+            pushPending()
+            pullAndReconcile(userId)
+        }
+        syncDiscoveredQuotes(userId)
     }
 
     private suspend fun currentUserId(): String? =
@@ -185,6 +192,76 @@ class EncouragementRepositoryImpl(
         if (local != null && (!local.synced || local.pendingDelete)) return
         encouragementDao.upsert(row.toEncouragementEntity(figure.id, cachedAt = local?.cachedAt ?: currentTimeMillis()))
     }
+
+    private suspend fun recordDiscoveredQuote(encouragement: Encouragement) {
+        val figure = figureDao.getByName(encouragement.figureName) ?: return
+        if (discoveredQuoteDao.getByFigureAndText(figure.id, encouragement.quoteText) == null) {
+            discoveredQuoteDao.insertIgnore(
+                DiscoveredQuoteEntity(
+                    figureId = figure.id,
+                    quoteText = encouragement.quoteText,
+                    source = encouragement.scriptureReference,
+                    themes = encouragement.connectionThemes.joinToString(","),
+                )
+            )
+        }
+        pushDiscoveredQuote(figure.id, encouragement.quoteText)
+    }
+
+    private suspend fun pushDiscoveredQuote(figureId: Long, quoteText: String) {
+        val remote = discoveredQuoteRemote ?: return
+        val userId = currentUserId() ?: return
+        val entity = discoveredQuoteDao.getByFigureAndText(figureId, quoteText)?.takeIf { !it.synced } ?: return
+        val serverId = figureDao.getById(figureId)?.serverId ?: return
+        try {
+            remote.push(entity.toDiscoveredQuoteRow(userId, serverId))
+            discoveredQuoteDao.markSynced(figureId, quoteText)
+        } catch (e: Exception) {
+            // stays unsynced — retried by the next syncWithRemote pass
+        }
+    }
+
+    private suspend fun syncDiscoveredQuotes(userId: String) {
+        if (discoveredQuoteRemote == null) return
+        resetDiscoveredQuoteIfAccountChanged(userId)
+        pushPendingDiscoveredQuotes()
+        pullDiscoveredQuotes(userId)
+    }
+
+    private suspend fun pushPendingDiscoveredQuotes() {
+        for (row in discoveredQuoteDao.getPendingSync()) {
+            pushDiscoveredQuote(row.figureId, row.quoteText)
+        }
+    }
+
+    private suspend fun resetDiscoveredQuoteIfAccountChanged(userId: String) {
+        val meta = syncMetaDao.get()
+        val previousUserId = meta?.lastDiscoveredQuoteSyncUserId
+        if (previousUserId == userId) return
+        // Only mark existing rows already-synced when a *different* account previously synced on
+        // this device — a null previousUserId means this is the first sync ever, so any local
+        // pre-sync discoveries stay pending and get pushed to this account.
+        if (previousUserId != null) discoveredQuoteDao.markAllSyncedForAccountSwitch()
+        syncMetaDao.upsert((meta ?: SyncMetaEntity()).copy(lastDiscoveredQuoteSyncUserId = userId))
+    }
+
+    private suspend fun pullDiscoveredQuotes(userId: String) {
+        val remote = discoveredQuoteRemote ?: return
+        for (row in remote.fetchAll(userId)) {
+            val figure = figureDao.getByServerId(row.figureServerId) ?: continue
+            if (discoveredQuoteDao.getByFigureAndText(figure.id, row.quoteText) == null) {
+                discoveredQuoteDao.insertIgnore(
+                    DiscoveredQuoteEntity(
+                        figureId = figure.id,
+                        quoteText = row.quoteText,
+                        source = row.source,
+                        themes = row.themes.joinToString(","),
+                        synced = true,
+                    )
+                )
+            }
+        }
+    }
 }
 
 private fun EncouragementEntity.toSavedInsightRow(userId: String, figureServerId: Long) = SavedInsightRow(
@@ -228,6 +305,14 @@ private fun SavedInsightRow.toEncouragementEntity(figureId: Long, cachedAt: Long
     figureId = figureId,
     synced = true,
     pendingDelete = false,
+)
+
+private fun DiscoveredQuoteEntity.toDiscoveredQuoteRow(userId: String, figureServerId: Long) = DiscoveredQuoteRow(
+    userId = userId,
+    figureServerId = figureServerId,
+    quoteText = quoteText,
+    source = source,
+    themes = if (themes.isBlank()) emptyList() else themes.split(",").map { it.trim() },
 )
 
 private const val MS_PER_DAY = 86_400_000L

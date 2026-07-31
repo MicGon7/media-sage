@@ -9,12 +9,14 @@ import com.mediasage.data.repository.DailyReflectionRemoteDataSource
 import com.mediasage.data.repository.DailyReflectionRepositoryImpl
 import com.mediasage.data.repository.DayAssignmentRemoteDataSource
 import com.mediasage.data.repository.DayAssignmentRepositoryImpl
+import com.mediasage.data.repository.DiscoveredQuoteRemoteDataSource
 import com.mediasage.data.repository.EncouragementRepositoryImpl
 import com.mediasage.data.repository.FigureRepositoryImpl
 import com.mediasage.data.repository.HeadlineRepositoryImpl
 import com.mediasage.data.repository.MemorizedQuoteRemoteDataSource
 import com.mediasage.data.repository.PostgrestDailyReflectionRemoteDataSource
 import com.mediasage.data.repository.PostgrestDayAssignmentRemoteDataSource
+import com.mediasage.data.repository.PostgrestDiscoveredQuoteRemoteDataSource
 import com.mediasage.data.repository.PostgrestMemorizedQuoteRemoteDataSource
 import com.mediasage.data.repository.PostgrestProfileRemoteDataSource
 import com.mediasage.data.repository.PostgrestSavedInsightRemoteDataSource
@@ -58,6 +60,7 @@ fun sharedModule(
         single<DailyReflectionRemoteDataSource> { PostgrestDailyReflectionRemoteDataSource(get()) }
         single<SavedInsightRemoteDataSource> { PostgrestSavedInsightRemoteDataSource(get()) }
         single<MemorizedQuoteRemoteDataSource> { PostgrestMemorizedQuoteRemoteDataSource(get()) }
+        single<DiscoveredQuoteRemoteDataSource> { PostgrestDiscoveredQuoteRemoteDataSource(get()) }
         single<ProfileRemoteDataSource> { PostgrestProfileRemoteDataSource(get()) }
     }
 
@@ -75,13 +78,14 @@ fun sharedModule(
     single { get<MediaSageDatabase>().syncMetaDao() }
     single { get<MediaSageDatabase>().dailyReflectionDao() }
     single { get<MediaSageDatabase>().dayAssignmentDao() }
+    single { get<MediaSageDatabase>().discoveredQuoteDao() }
 
     // Repositories — interface bound to implementation
     single<FigureRepository> { FigureRepositoryImpl(get(), get(), get()) }
     single<QuoteRepository> { QuoteRepositoryImpl(get(), get(), getOrNull(), get(), get()) }
     single<HeadlineRepository> { HeadlineRepositoryImpl(get(), get()) }
     single<EncouragementRepository> {
-        EncouragementRepositoryImpl(get(), get(), get(), getOrNull(), get(), get())
+        EncouragementRepositoryImpl(get(), get(), get(), getOrNull(), get(), get(), get(), getOrNull())
     }
     single<WikipediaRepository> { WikipediaRepositoryImpl(get()) }
     single<DailyReflectionRepository> {
