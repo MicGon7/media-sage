@@ -114,7 +114,7 @@ class BriefingViewModel(
         } else {
             emptyList()
         }
-        val themeLabel = effectiveLens.name.takeIf { effectiveLens != LensFilter.NEWS }
+        val themeLabel = effectiveLens.name
         updateCard(
             BriefingContract.CardState.LoadingWithFigure(
                 figureId = figureId,
