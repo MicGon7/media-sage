@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mediasage.theme.Accent
 import com.mediasage.theme.CardBorder
 import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicTan
@@ -145,6 +146,13 @@ private fun LoginScreenContent(
         val formTextColor = if (formOnPaper) Ink else OnGradient
         val formMutedColor = if (formOnPaper) Slate else mutedTextColor
         val formAccentColor = if (formOnPaper) Navy else OnGradient
+        // Tappable links need to read as interactive against both the white paper panel and
+        // the dark gradient/photo background, unlike formAccentColor (Navy / OnGradient) which
+        // matches the surrounding non-tappable masthead rules and would blend links back into
+        // the rest of the form. A single accent color can't do both: BrandAmber only clears
+        // WCAG AA 4.5:1 against the dark background (~6:1) - against white paper it's ~2.35:1,
+        // so ComicBrown (the same warm hue, darkened) is used there instead (~4.6:1).
+        val formLinkColor = if (formOnPaper) ComicBrown else Accent
         val formBorderColor = if (formOnPaper) {
             CardBorder
         } else if (backgroundImage != null) {
@@ -296,7 +304,10 @@ private fun LoginScreenContent(
                     ) {
                         Text(
                             text = stringResource(Res.string.nav_back),
-                            style = MaterialTheme.typography.bodySmall.copy(color = formMutedColor)
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = formLinkColor
+                            )
                         )
                     }
                 } else {
@@ -321,7 +332,10 @@ private fun LoginScreenContent(
                                     Res.string.login_switch_to_sign_up
                                 }
                             ),
-                            style = MaterialTheme.typography.bodySmall.copy(color = formMutedColor)
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = formLinkColor
+                            )
                         )
                     }
                 }
@@ -335,7 +349,8 @@ private fun LoginScreenContent(
                         text = stringResource(Res.string.login_bypass),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontStyle = FontStyle.Italic,
-                            color = formMutedColor
+                            fontWeight = FontWeight.SemiBold,
+                            color = formLinkColor
                         )
                     )
                 }
@@ -456,7 +471,7 @@ private fun SignInFields(
                     contentDescription = stringResource(
                         if (passwordVisible) Res.string.login_hide_password else Res.string.login_show_password
                     ),
-                    tint = palette.muted
+                    tint = ComicBrown
                 )
             }
         },
@@ -497,6 +512,12 @@ private fun SignInFields(
                 uncheckedThumbColor = palette.muted,
                 uncheckedTrackColor = Color.Transparent,
                 uncheckedBorderColor = palette.border,
+                disabledCheckedThumbColor = ComicBrown,
+                disabledCheckedTrackColor = ComicTan,
+                disabledCheckedBorderColor = ComicBrown,
+                disabledUncheckedThumbColor = palette.muted,
+                disabledUncheckedTrackColor = Color.Transparent,
+                disabledUncheckedBorderColor = palette.border,
             )
         )
     }
@@ -568,7 +589,7 @@ private fun SignUpFields(
                     contentDescription = stringResource(
                         if (passwordVisible) Res.string.login_hide_password else Res.string.login_show_password
                     ),
-                    tint = palette.muted
+                    tint = ComicBrown
                 )
             }
         },
