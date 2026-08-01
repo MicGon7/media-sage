@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mediasage.LocalIsDebugBuild
 import com.mediasage.theme.Accent
 import com.mediasage.theme.CardBorder
 import com.mediasage.theme.ComicBrown
@@ -138,7 +139,8 @@ private fun LoginScreenContent(
         // background, which is itself entirely warm sepia — a competing muted hue reads as
         // camouflaged rather than muted. Deriving muted text from OnGradient's own alpha keeps
         // it legible against every region of the image instead.
-        val mutedTextColor = if (backgroundImage != null) OnGradient.copy(alpha = 0.72f) else OnGradientMuted
+        val mutedTextColor =
+            if (backgroundImage != null) OnGradient.copy(alpha = 0.72f) else OnGradientMuted
 
         // formOnPaper renders the sign-in form on a white "newspaper page" panel over the photo
         // background instead of light-on-dark text directly on the image — dark ink on white
@@ -217,154 +219,170 @@ private fun LoginScreenContent(
                 } else {
                     Modifier.fillMaxWidth()
                 }
-                Column(modifier = paperModifier, horizontalAlignment = Alignment.CenterHorizontally) {
-                // Masthead
-                HorizontalDivider(color = formMutedColor, thickness = 0.5.dp)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(Res.string.login_member_edition),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontStyle = FontStyle.Italic,
-                        letterSpacing = 3.sp,
-                        color = formMutedColor
-                    ),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(color = formAccentColor, thickness = 2.dp)
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = stringResource(Res.string.login_masthead_line1),
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 5.sp,
-                        color = formTextColor
-                    ),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = stringResource(Res.string.login_masthead_line2),
-                    style = MaterialTheme.typography.displayMedium.copy(
-                        letterSpacing = 12.sp,
-                        color = formTextColor
-                    ),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = formAccentColor, thickness = 2.dp)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(Res.string.login_subtitle),
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontStyle = FontStyle.Italic,
-                        color = formMutedColor
-                    ),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(color = formMutedColor, thickness = 0.5.dp)
-
-                Spacer(modifier = Modifier.height(36.dp))
-
-                // Form
-                val palette = FormPalette(
-                    fieldColors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = formTextColor,
-                        unfocusedTextColor = formTextColor,
-                        focusedBorderColor = formAccentColor,
-                        unfocusedBorderColor = formBorderColor,
-                        focusedLabelColor = formAccentColor,
-                        unfocusedLabelColor = formMutedColor,
-                        cursorColor = formAccentColor,
-                        errorTextColor = formTextColor,
-                        errorCursorColor = formAccentColor,
-                        errorBorderColor = MaterialTheme.colorScheme.error,
-                        errorLabelColor = MaterialTheme.colorScheme.error,
-                    ),
-                    accent = formAccentColor,
-                    muted = formMutedColor,
-                    border = formBorderColor,
-                )
-
-                when {
-                    state.pendingOtpEmail != null -> OtpFields(state, onIntent, palette, focusManager)
-                    state.mode == LoginContract.Mode.SIGN_UP -> SignUpFields(state, onIntent, palette, focusManager)
-                    else -> SignInFields(state, onIntent, palette, focusManager)
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                if (state.pendingOtpEmail != null) {
-                    TextButton(
-                        onClick = { onIntent(LoginContract.Intent.SwitchToSignUp) },
-                        enabled = !isLoading
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.nav_back),
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = formLinkColor
-                            )
-                        )
-                    }
-                } else {
-                    val isSignUpMode = state.mode == LoginContract.Mode.SIGN_UP
-                    TextButton(
-                        onClick = {
-                            onIntent(
-                                if (isSignUpMode) {
-                                    LoginContract.Intent.SwitchToSignIn
-                                } else {
-                                    LoginContract.Intent.SwitchToSignUp
-                                }
-                            )
-                        },
-                        enabled = !isLoading
-                    ) {
-                        Text(
-                            text = stringResource(
-                                if (isSignUpMode) {
-                                    Res.string.login_switch_to_sign_in
-                                } else {
-                                    Res.string.login_switch_to_sign_up
-                                }
-                            ),
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = formLinkColor
-                            )
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(
-                    onClick = { onIntent(LoginContract.Intent.BypassAuth) },
-                    enabled = !isLoading
+                Column(
+                    modifier = paperModifier,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = stringResource(Res.string.login_bypass),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontStyle = FontStyle.Italic,
-                            fontWeight = FontWeight.SemiBold,
-                            color = formLinkColor
-                        )
-                    )
-                }
-                // On paper, the version reads like a colophon line printed at the bottom of the
-                // page rather than a separate overlay pinned to the screen edge.
-                if (formOnPaper && appVersion.isNotEmpty()) {
+                    // Masthead
+                    HorizontalDivider(color = formMutedColor, thickness = 0.5.dp)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = appVersion,
-                        style = MaterialTheme.typography.labelSmall.copy(color = formMutedColor),
+                        text = stringResource(Res.string.login_member_edition),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontStyle = FontStyle.Italic,
+                            letterSpacing = 3.sp,
+                            color = formMutedColor
+                        ),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     )
-                }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = formAccentColor, thickness = 2.dp)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(Res.string.login_masthead_line1),
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 5.sp,
+                            color = formTextColor
+                        ),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = stringResource(Res.string.login_masthead_line2),
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            letterSpacing = 12.sp,
+                            color = formTextColor
+                        ),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider(color = formAccentColor, thickness = 2.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(Res.string.login_subtitle),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontStyle = FontStyle.Italic,
+                            color = formMutedColor
+                        ),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = formMutedColor, thickness = 0.5.dp)
+
+                    Spacer(modifier = Modifier.height(36.dp))
+
+                    // Form
+                    val palette = FormPalette(
+                        fieldColors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = formTextColor,
+                            unfocusedTextColor = formTextColor,
+                            focusedBorderColor = formAccentColor,
+                            unfocusedBorderColor = formBorderColor,
+                            focusedLabelColor = formAccentColor,
+                            unfocusedLabelColor = formMutedColor,
+                            cursorColor = formAccentColor,
+                            errorTextColor = formTextColor,
+                            errorCursorColor = formAccentColor,
+                            errorBorderColor = MaterialTheme.colorScheme.error,
+                            errorLabelColor = MaterialTheme.colorScheme.error,
+                        ),
+                        accent = formAccentColor,
+                        muted = formMutedColor,
+                        border = formBorderColor,
+                    )
+
+                    when {
+                        state.pendingOtpEmail != null -> OtpFields(
+                            state,
+                            onIntent,
+                            palette,
+                            focusManager
+                        )
+
+                        state.mode == LoginContract.Mode.SIGN_UP -> SignUpFields(
+                            state,
+                            onIntent,
+                            palette,
+                            focusManager
+                        )
+
+                        else -> SignInFields(state, onIntent, palette, focusManager)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (state.pendingOtpEmail != null) {
+                        TextButton(
+                            onClick = { onIntent(LoginContract.Intent.SwitchToSignUp) },
+                            enabled = !isLoading
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.nav_back),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = formLinkColor
+                                )
+                            )
+                        }
+                    } else {
+                        val isSignUpMode = state.mode == LoginContract.Mode.SIGN_UP
+                        TextButton(
+                            onClick = {
+                                onIntent(
+                                    if (isSignUpMode) {
+                                        LoginContract.Intent.SwitchToSignIn
+                                    } else {
+                                        LoginContract.Intent.SwitchToSignUp
+                                    }
+                                )
+                            },
+                            enabled = !isLoading
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    if (isSignUpMode) {
+                                        Res.string.login_switch_to_sign_in
+                                    } else {
+                                        Res.string.login_switch_to_sign_up
+                                    }
+                                ),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = formLinkColor
+                                )
+                            )
+                        }
+                    }
+                    if (LocalIsDebugBuild.current) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(
+                            onClick = { onIntent(LoginContract.Intent.BypassAuth) },
+                            enabled = !isLoading
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.login_bypass),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontStyle = FontStyle.Italic,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = formLinkColor
+                                )
+                            )
+                        }
+                    }
+                    // On paper, the version reads like a colophon line printed at the bottom of the
+                    // page rather than a separate overlay pinned to the screen edge.
+                    if (formOnPaper && appVersion.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = appVersion,
+                            style = MaterialTheme.typography.labelSmall.copy(color = formMutedColor),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
             if (!formOnPaper && appVersion.isNotEmpty()) {
@@ -493,7 +511,7 @@ private fun SignInFields(
     FormErrorText(displayError)
     Spacer(modifier = Modifier.height(12.dp))
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -569,7 +587,10 @@ private fun SignUpFields(
         label = { Text(stringResource(Res.string.login_email_label)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Email,
+            imeAction = ImeAction.Next
+        ),
         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
         isError = displayError.isNotEmpty(),
         enabled = !isLoading,
@@ -594,11 +615,21 @@ private fun SignUpFields(
             }
         },
         modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Password,
+            imeAction = ImeAction.Done
+        ),
         keyboardActions = KeyboardActions(
             onDone = {
                 focusManager.clearFocus()
-                submitSignUp(email, password, displayName, emptyFieldsMessage, shortPasswordMessage, onIntent) {
+                submitSignUp(
+                    email,
+                    password,
+                    displayName,
+                    emptyFieldsMessage,
+                    shortPasswordMessage,
+                    onIntent
+                ) {
                     localError = it
                 }
             }
@@ -615,7 +646,14 @@ private fun SignUpFields(
         palette = palette,
         onClick = {
             focusManager.clearFocus()
-            submitSignUp(email, password, displayName, emptyFieldsMessage, shortPasswordMessage, onIntent) {
+            submitSignUp(
+                email,
+                password,
+                displayName,
+                emptyFieldsMessage,
+                shortPasswordMessage,
+                onIntent
+            ) {
                 localError = it
             }
         },
@@ -648,7 +686,10 @@ private fun OtpFields(
         label = { Text(stringResource(Res.string.login_otp_code_label)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.NumberPassword,
+            imeAction = ImeAction.Done
+        ),
         keyboardActions = KeyboardActions(
             onDone = {
                 focusManager.clearFocus()
@@ -764,7 +805,10 @@ private fun LoginScreenSignUpPreview() {
 @Composable
 private fun LoginScreenOtpPreview() {
     LoginScreenContent(
-        state = LoginContract.UiState(pendingOtpEmail = "user@example.com", pendingDisplayName = "Ada"),
+        state = LoginContract.UiState(
+            pendingOtpEmail = "user@example.com",
+            pendingDisplayName = "Ada"
+        ),
         onIntent = {}
     )
 }
