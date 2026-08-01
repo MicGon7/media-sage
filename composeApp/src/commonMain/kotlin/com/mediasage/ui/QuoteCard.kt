@@ -158,7 +158,7 @@ private fun PinBadge(isPinned: Boolean, onClick: () -> Unit, modifier: Modifier 
                     if (isPinned) Res.string.figure_detail_memorized_quote
                     else Res.string.figure_detail_memorize_quote
                 ),
-                tint = ComicInk,
+                tint = if (isPinned) ComicInk else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(18.dp),
             )
         }
