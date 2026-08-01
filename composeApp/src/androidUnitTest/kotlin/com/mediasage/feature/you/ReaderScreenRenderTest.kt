@@ -74,5 +74,4 @@ private fun sampleQuoteCard() = ReaderContract.QuoteCard(
     figureName = "C.S. Lewis",
     figureRole = "Author & Apologist",
     figureImageUrl = null,
-    figureId = 1L,
 )
