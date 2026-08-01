@@ -1,5 +1,8 @@
 package com.mediasage.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,9 +24,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -63,6 +72,7 @@ fun QuoteCard(
 
     Box(modifier = modifier.fillMaxWidth()) {
         ElevatedCard(
+            onClick = onPinQuote,
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.elevatedCardColors(containerColor = cardSurface),
@@ -111,11 +121,32 @@ fun QuoteCard(
     }
 }
 
+private val PinBadgeBounceSpring = spring<Float>(
+    dampingRatio = Spring.DampingRatioMediumBouncy,
+    stiffness = Spring.StiffnessMedium,
+)
+
 @Composable
 private fun PinBadge(isPinned: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val scale = remember { Animatable(1f) }
+    var isFirstComposition by remember { mutableStateOf(true) }
+    LaunchedEffect(isPinned) {
+        if (isFirstComposition) {
+            isFirstComposition = false
+            return@LaunchedEffect
+        }
+        scale.snapTo(0.7f)
+        scale.animateTo(1f, animationSpec = PinBadgeBounceSpring)
+    }
+
     Surface(
         onClick = onClick,
-        modifier = modifier.size(PinBadgeSize),
+        modifier = modifier
+            .size(PinBadgeSize)
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            },
         shape = CircleShape,
         color = if (isPinned) ComicTan else MaterialTheme.colorScheme.surface,
         shadowElevation = 3.dp,
