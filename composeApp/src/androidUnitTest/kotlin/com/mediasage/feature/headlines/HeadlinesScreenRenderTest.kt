@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.mediasage.theme.MediaSageTheme
+import com.mediasage.ui.ErrorType
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -59,6 +60,19 @@ class HeadlinesScreenRenderTest {
                         ),
                         todayLabel = "Friday, June 5, 2026"
                     ),
+                    onIntent = {},
+                    onNavigateToDetail = {}
+                )
+            }
+        }
+    }
+
+    @Test
+    fun rendersErrorDialog() {
+        captureRoboImage("build/outputs/roborazzi/headlines_screen_error.png") {
+            MediaSageTheme {
+                HeadlinesScreen(
+                    state = HeadlinesContract.UiState.Error(errorType = ErrorType.NETWORK),
                     onIntent = {},
                     onNavigateToDetail = {}
                 )

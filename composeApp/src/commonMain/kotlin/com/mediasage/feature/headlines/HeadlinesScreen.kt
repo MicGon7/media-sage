@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
-import com.mediasage.ui.MediaSageErrorState
+import com.mediasage.ui.MediaSageErrorDialog
 import com.mediasage.ui.MediaSageHeadlineCard
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
@@ -45,14 +45,17 @@ fun HeadlinesScreen(
     Surface(modifier = Modifier.fillMaxSize()) {
         when (state) {
             is HeadlinesContract.UiState.Loading -> Box(modifier = Modifier.fillMaxSize())
-            is HeadlinesContract.UiState.Error -> MediaSageErrorState(
-                message = when (state.errorType) {
-                    ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
-                    ErrorType.GENERIC -> stringResource(Res.string.home_error_generic)
-                },
-                retryLabel = stringResource(Res.string.home_retry),
-                onRetry = { onIntent(HeadlinesContract.Intent.Load) }
-            )
+            is HeadlinesContract.UiState.Error -> {
+                Box(modifier = Modifier.fillMaxSize())
+                MediaSageErrorDialog(
+                    message = when (state.errorType) {
+                        ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
+                        ErrorType.GENERIC -> stringResource(Res.string.home_error_generic)
+                    },
+                    retryLabel = stringResource(Res.string.home_retry),
+                    onRetry = { onIntent(HeadlinesContract.Intent.Load) }
+                )
+            }
             is HeadlinesContract.UiState.Success -> HeadlinesFeed(
                 state = state,
                 onRefresh = { onIntent(HeadlinesContract.Intent.Refresh) },

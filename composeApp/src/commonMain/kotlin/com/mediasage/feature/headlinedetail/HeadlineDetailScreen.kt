@@ -52,6 +52,7 @@ import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBackRow
 import com.mediasage.ui.MediaSageBottomSheet
+import com.mediasage.ui.MediaSageErrorDialog
 import com.mediasage.ui.SepiaColorFilter
 import io.github.alexzhirkevich.compottie.DotLottie
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
@@ -113,13 +114,17 @@ fun HeadlineDetailScreen(
         }
         when (state) {
             is HeadlineDetailContract.UiState.Loading -> FullLoadingState()
-            is HeadlineDetailContract.UiState.Error -> FullErrorState(
-                message = when (state.errorType) {
-                    ErrorType.NETWORK -> stringResource(Res.string.match_error_network)
-                    ErrorType.GENERIC -> stringResource(Res.string.match_error_generic)
-                },
-                onRetry = { onIntent(HeadlineDetailContract.Intent.RetryMatch) }
-            )
+            is HeadlineDetailContract.UiState.Error -> {
+                Box(modifier = Modifier.fillMaxSize())
+                MediaSageErrorDialog(
+                    message = when (state.errorType) {
+                        ErrorType.NETWORK -> stringResource(Res.string.match_error_network)
+                        ErrorType.GENERIC -> stringResource(Res.string.match_error_generic)
+                    },
+                    retryLabel = stringResource(Res.string.match_retry),
+                    onRetry = { onIntent(HeadlineDetailContract.Intent.RetryMatch) }
+                )
+            }
             is HeadlineDetailContract.UiState.Success -> HeadlineDetailContent(
                 state = state,
                 onRetry = { onIntent(HeadlineDetailContract.Intent.RetryMatch) },
@@ -486,26 +491,3 @@ private fun FullLoadingState() {
     }
 }
 
-@Composable
-private fun FullErrorState(
-    message: String,
-    onRetry: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.error,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedButton(onClick = onRetry) {
-            Text(stringResource(Res.string.match_retry))
-        }
-    }
-}
