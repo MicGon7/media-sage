@@ -115,7 +115,6 @@ fun HeadlineDetailScreen(
         when (state) {
             is HeadlineDetailContract.UiState.Loading -> FullLoadingState()
             is HeadlineDetailContract.UiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize())
                 MediaSageErrorDialog(
                     message = when (state.errorType) {
                         ErrorType.NETWORK -> stringResource(Res.string.match_error_network)

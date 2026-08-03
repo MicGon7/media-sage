@@ -6,6 +6,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import com.mediasage.theme.MediaSageTheme
 
 /**
  * Blocking error state (e.g. first launch with no cached data) — no dismiss button, since
@@ -40,3 +42,19 @@ fun MediaSageErrorDialog(
         },
     )
 }
+
+// region Previews
+
+@Preview(showBackground = true)
+@Composable
+private fun MediaSageErrorDialogPreview() {
+    MediaSageTheme {
+        MediaSageErrorDialog(
+            message = "Something went wrong. Check your connection and try again.",
+            retryLabel = "Retry",
+            onRetry = {},
+        )
+    }
+}
+
+// endregion

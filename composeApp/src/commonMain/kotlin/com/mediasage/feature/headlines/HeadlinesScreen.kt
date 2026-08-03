@@ -46,7 +46,6 @@ fun HeadlinesScreen(
         when (state) {
             is HeadlinesContract.UiState.Loading -> Box(modifier = Modifier.fillMaxSize())
             is HeadlinesContract.UiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize())
                 MediaSageErrorDialog(
                     message = when (state.errorType) {
                         ErrorType.NETWORK -> stringResource(Res.string.home_error_network)

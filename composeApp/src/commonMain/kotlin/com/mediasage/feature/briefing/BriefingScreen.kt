@@ -67,7 +67,6 @@ fun BriefingScreen(
         when (state) {
             is BriefingContract.UiState.Loading -> BriefingLoading(state.todayLabel)
             is BriefingContract.UiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize())
                 MediaSageErrorDialog(
                     message = when (state.errorType) {
                         ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
