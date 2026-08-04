@@ -45,7 +45,7 @@ import com.mediasage.ui.ErrorType
 import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBriefingCard
 import com.mediasage.ui.MediaSageDateDivider
-import com.mediasage.ui.MediaSageErrorState
+import com.mediasage.ui.MediaSageErrorDialog
 import com.mediasage.ui.SepiaColorFilter
 import com.mediasage.ui.ThemeChip
 import mediasage.composeapp.generated.resources.Res
@@ -66,14 +66,16 @@ fun BriefingScreen(
     Surface(modifier = Modifier.fillMaxSize()) {
         when (state) {
             is BriefingContract.UiState.Loading -> BriefingLoading(state.todayLabel)
-            is BriefingContract.UiState.Error -> MediaSageErrorState(
-                message = when (state.errorType) {
-                    ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
-                    ErrorType.GENERIC -> stringResource(Res.string.home_error_generic)
-                },
-                retryLabel = stringResource(Res.string.home_retry),
-                onRetry = { onIntent(BriefingContract.Intent.Retry) }
-            )
+            is BriefingContract.UiState.Error -> {
+                MediaSageErrorDialog(
+                    message = when (state.errorType) {
+                        ErrorType.NETWORK -> stringResource(Res.string.home_error_network)
+                        ErrorType.GENERIC -> stringResource(Res.string.home_error_generic)
+                    },
+                    retryLabel = stringResource(Res.string.home_retry),
+                    onRetry = { onIntent(BriefingContract.Intent.Retry) }
+                )
+            }
             is BriefingContract.UiState.Success -> BriefingContent(
                 todayLabel = state.todayLabel,
                 card = state.card,

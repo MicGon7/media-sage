@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.mediasage.theme.MediaSageTheme
+import com.mediasage.ui.ErrorType
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -44,6 +45,18 @@ class HeadlineDetailScreenRenderTest {
                                 "Christian thought for centuries.",
                         ),
                     ),
+                    onIntent = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun rendersErrorDialog() {
+        captureRoboImage("build/outputs/roborazzi/headline_detail_error.png") {
+            MediaSageTheme {
+                HeadlineDetailScreen(
+                    state = HeadlineDetailContract.UiState.Error(errorType = ErrorType.NETWORK),
                     onIntent = {},
                 )
             }
