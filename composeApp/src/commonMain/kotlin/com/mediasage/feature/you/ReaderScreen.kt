@@ -379,12 +379,14 @@ internal fun DaySlotItem(
                     onSurfaceVariantColor = onSurfaceVariant,
                 )
             }
-            LensBadge(
-                lens = slot.assignedLens ?: LensFilter.NEWS,
-                modifier = Modifier
-                    .size(18.dp)
-                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
-            )
+            if (slot.assignedFigureName != null) {
+                LensBadge(
+                    lens = slot.assignedLens ?: LensFilter.NEWS,
+                    modifier = Modifier
+                        .size(18.dp)
+                        .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                )
+            }
         }
 
         Text(
