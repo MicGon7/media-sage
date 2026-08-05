@@ -379,9 +379,9 @@ internal fun DaySlotItem(
                     onSurfaceVariantColor = onSurfaceVariant,
                 )
             }
-            if (slot.assignedLens != null) {
+            if (slot.assignedFigureName != null) {
                 LensBadge(
-                    lens = slot.assignedLens,
+                    lens = slot.assignedLens ?: LensFilter.NEWS,
                     modifier = Modifier
                         .size(18.dp)
                         .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
