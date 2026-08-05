@@ -28,8 +28,10 @@ class RealBriefingToneScheduler : BriefingToneScheduler {
 
 internal const val TONE_BOUNDARY_HOUR = 17
 
-internal fun millisUntilNextToneBoundary(nowMillis: Long = epochMillis()): Long {
-    val zone = TimeZone.currentSystemDefault()
+internal fun millisUntilNextToneBoundary(
+    nowMillis: Long = epochMillis(),
+    zone: TimeZone = TimeZone.currentSystemDefault(),
+): Long {
     val now = Instant.fromEpochMilliseconds(nowMillis).toLocalDateTime(zone)
     val boundary = if (now.hour < TONE_BOUNDARY_HOUR) {
         LocalDateTime(now.date, LocalTime(TONE_BOUNDARY_HOUR, 0))
