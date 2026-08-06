@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">The Courage Post</string>
+    <string name="notification_channel_briefing_name">Briefing updates</string>
 </resources>
