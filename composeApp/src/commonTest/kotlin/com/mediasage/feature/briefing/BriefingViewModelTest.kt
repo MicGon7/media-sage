@@ -15,6 +15,7 @@ import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,6 +110,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = reflectionRepo,
             figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
             headlineRepository = FakeHeadlineRepository(),
+            toneScheduler = FakeBriefingToneScheduler(),
         )
         val sideEffects = mutableListOf<BriefingContract.SideEffect>()
         backgroundScope.launch(testDispatcher) { viewModel.sideEffects.collect { sideEffects.add(it) } }
@@ -141,6 +143,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = FakeDailyReflectionRepository(),
             figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
             headlineRepository = FakeHeadlineRepository(),
+            toneScheduler = FakeBriefingToneScheduler(),
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         advanceUntilIdle()
@@ -171,6 +174,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = FakeDailyReflectionRepository(isResolved = isResolved),
             figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
             headlineRepository = FakeHeadlineRepository(),
+            toneScheduler = FakeBriefingToneScheduler(),
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         advanceUntilIdle()
@@ -203,6 +207,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = FakeDailyReflectionRepository(),
             figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
             headlineRepository = FakeHeadlineRepository(),
+            toneScheduler = FakeBriefingToneScheduler(),
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         advanceUntilIdle()
@@ -224,6 +229,35 @@ class BriefingViewModelTest {
         assertEquals(2L, (resolvedState.card as BriefingContract.CardState.Ready).figureId)
     }
 
+    @Test
+    fun loadCard_reloadsWhenToneBoundaryScheduleFires() = runTest(testDispatcher) {
+        // A screen left open across the 5pm/midnight tone boundary must refresh on its own.
+        // BriefingToneScheduler is the injected wake-up signal for that transition instant —
+        // firing it should trigger exactly one more reflection fetch, with no navigation or retry.
+        val toneScheduler = FakeBriefingToneScheduler()
+        val reflectionRepo = FakeDailyReflectionRepository()
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(
+                MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = null))),
+                resolveReporterResult = null,
+            ),
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
+            headlineRepository = FakeHeadlineRepository(),
+            toneScheduler = toneScheduler,
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        advanceUntilIdle()
+        assertEquals(1, reflectionRepo.fetchCount)
+
+        toneScheduler.crossBoundary()
+        advanceUntilIdle()
+
+        assertEquals(2, reflectionRepo.fetchCount)
+        val state = viewModel.state.value as BriefingContract.UiState.Success
+        assertIs<BriefingContract.CardState.Ready>(state.card)
+    }
+
     private fun TestScope.briefingViewModel(
         figures: List<Figure>,
         assignments: Map<Int, DayAssignment>,
@@ -234,6 +268,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = FakeDailyReflectionRepository(),
             figureRepository = FakeFigureRepository(figures),
             headlineRepository = FakeHeadlineRepository(),
+            toneScheduler = FakeBriefingToneScheduler(),
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         return viewModel
@@ -271,6 +306,9 @@ private class FakeDailyReflectionRepository(
     private val fetchDelayMs: Long = 0,
     override val isResolved: StateFlow<Boolean> = MutableStateFlow(true),
 ) : DailyReflectionRepository {
+    var fetchCount = 0
+        private set
+
     override suspend fun getOrFetch(
         figureId: Long,
         figureName: String,
@@ -278,6 +316,7 @@ private class FakeDailyReflectionRepository(
         tone: String,
         theme: String?,
     ): DailyReflection {
+        fetchCount++
         if (fetchDelayMs > 0) delay(fetchDelayMs)
         return DailyReflection(
             scriptureReference = "John 3:16",
@@ -305,4 +344,13 @@ private class FakeHeadlineRepository : HeadlineRepository {
     override suspend fun refreshHeadlines() = Unit
     override suspend fun clearOldHeadlines(olderThanMillis: Long) = Unit
     override suspend fun markAsRead(url: String) = Unit
+}
+
+/** Never fires unless [crossBoundary] is called — avoids a real multi-hour delay in tests. */
+private class FakeBriefingToneScheduler : BriefingToneScheduler {
+    private val boundaryCrossed = Channel<Unit>(Channel.BUFFERED)
+    override suspend fun awaitNextToneBoundary() {
+        boundaryCrossed.receive()
+    }
+    suspend fun crossBoundary() = boundaryCrossed.send(Unit)
 }

@@ -11,6 +11,7 @@ import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,7 @@ class BriefingViewModel(
     private val dailyReflectionRepository: DailyReflectionRepository,
     private val figureRepository: FigureRepository,
     private val headlineRepository: HeadlineRepository,
+    private val toneScheduler: BriefingToneScheduler = RealBriefingToneScheduler(),
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<BriefingContract.UiState>(
@@ -40,8 +42,11 @@ class BriefingViewModel(
     private val _sideEffects = Channel<BriefingContract.SideEffect>(Channel.BUFFERED)
     val sideEffects = _sideEffects.receiveAsFlow()
 
+    private var loadJob: Job? = null
+
     init {
         loadCard()
+        awaitToneBoundaryThenReload()
     }
 
     fun onIntent(intent: BriefingContract.Intent) {
@@ -50,8 +55,22 @@ class BriefingViewModel(
         }
     }
 
-    private fun loadCard() {
+    /**
+     * Reloads once at each tone boundary so a screen left open across the 5pm/midnight transition
+     * updates on its own — the boundary crossing is the only wake-up, never a fixed-interval poll.
+     */
+    private fun awaitToneBoundaryThenReload() {
         viewModelScope.launch {
+            while (true) {
+                toneScheduler.awaitNextToneBoundary()
+                loadCard()
+            }
+        }
+    }
+
+    private fun loadCard() {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             // isResolved is a *live* input here, not a one-time gate — a cold start on a fresh
             // install can flip it true once for a signed-out fallback-defaults seed, then false
             // again moments later while the real signed-in schedule/reflections are pulled down
@@ -174,7 +193,7 @@ class BriefingViewModel(
     private fun currentTone(): String {
         val hour = Instant.fromEpochMilliseconds(epochMillis())
             .toLocalDateTime(TimeZone.currentSystemDefault()).hour
-        return if (hour < 17) "morning" else "evening"
+        return if (hour < TONE_BOUNDARY_HOUR) "morning" else "evening"
     }
 
     private fun todayLabel(): String {

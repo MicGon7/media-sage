@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.mediasage.theme.MediaSageTheme
@@ -104,7 +105,7 @@ fun MediaSageScaffold(
             when (route) {
                 is Route.Briefing -> NavEntry(route) {
                     val vm = koinViewModel<BriefingViewModel>()
-                    val state by vm.state.collectAsState()
+                    val state by vm.state.collectAsStateWithLifecycle()
                     LaunchedEffect(vm) {
                         vm.sideEffects.collect { effect ->
                             when (effect) {
