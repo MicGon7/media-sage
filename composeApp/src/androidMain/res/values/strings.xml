@@ -1,6 +1,4 @@
 <resources>
     <string name="app_name">The Courage Post</string>
     <string name="notification_channel_briefing_name">Briefing updates</string>
-    <string name="notification_evening_tone_title">Your evening reflection is ready</string>
-    <string name="notification_evening_tone_text">Tonight\'s Briefing has a new reflection waiting for you.</string>
 </resources>

@@ -13,8 +13,17 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mediasage.MainActivity
 import com.mediasage.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.notification_evening_tone_text
+import mediasage.composeapp.generated.resources.notification_evening_tone_title
+import org.jetbrains.compose.resources.getString
 
 private const val CHANNEL_ID = "briefing_tone"
+private val receiverScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 /**
  * Fires when the [AndroidBriefingNotificationScheduler]-armed 5pm alarm goes off. Runs
@@ -31,6 +40,17 @@ class BriefingToneNotificationReceiver : BroadcastReceiver() {
             return
         }
 
+        val pendingResult = goAsync()
+        receiverScope.launch {
+            try {
+                showNotification(context)
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    private suspend fun showNotification(context: Context) {
         val manager = NotificationManagerCompat.from(context)
         manager.createNotificationChannel(
             NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
@@ -46,9 +66,9 @@ class BriefingToneNotificationReceiver : BroadcastReceiver() {
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(context.getString(R.string.notification_evening_tone_title))
-            .setContentText(context.getString(R.string.notification_evening_tone_text))
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(getString(Res.string.notification_evening_tone_title))
+            .setContentText(getString(Res.string.notification_evening_tone_text))
             .setAutoCancel(true)
             .setContentIntent(contentIntent)
             .build()

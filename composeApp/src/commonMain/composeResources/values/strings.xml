@@ -187,4 +187,8 @@
 
     <string name="settings_sign_out">Sign Out</string>
     <string name="settings_developer_credit">M.A. Gonzalez</string>
+
+    <!-- Briefing evening-tone notification -->
+    <string name="notification_evening_tone_title">Your evening reflection is ready</string>
+    <string name="notification_evening_tone_text">Tonight's Briefing has a new reflection waiting for you.</string>
 </resources>

@@ -43,9 +43,12 @@ the permission after the alarm was armed (AC5).
 
 Unlike Android, iOS's `UNCalendarNotificationTrigger.triggerWithDateMatchingComponents` natively
 supports "next occurrence of this wall-clock time" when given only `hour`/`minute` date components
-with `repeats = true` — no manual next-instant math needed. `onBriefingVisible()` removes both
-pending and delivered requests for a fixed identifier so a same-day dismissal-then-reopen doesn't
-leave a stale notification queued.
+— no manual next-instant math needed. `repeats = false` mirrors Android's one-shot-per-visit
+semantic: each `onBriefingHidden()` arms exactly one trigger for the next 5pm, and leaving the
+Briefing screen again re-arms it, rather than a daily-repeating trigger that would keep firing
+indefinitely after a single visit. `onBriefingVisible()` removes both pending and delivered requests
+for a fixed identifier so a same-day dismissal-then-reopen doesn't leave a stale notification
+queued.
 
 ## Why this needed a learning doc
 
