@@ -40,3 +40,23 @@ internal fun millisUntilNextToneBoundary(
     }
     return boundary.toInstant(zone).toEpochMilliseconds() - nowMillis
 }
+
+/**
+ * Millis until the next local 5pm instant only — never midnight. Used by
+ * [AndroidBriefingNotificationScheduler][com.mediasage.feature.briefing] to arm an `AlarmManager`
+ * alarm: unlike iOS's `UNCalendarNotificationTrigger`, AlarmManager has no "next occurrence of this
+ * wall-clock time" primitive, so the target instant has to be computed by hand.
+ */
+internal fun millisUntilNext5pm(
+    nowMillis: Long = epochMillis(),
+    zone: TimeZone = TimeZone.currentSystemDefault(),
+): Long {
+    val now = Instant.fromEpochMilliseconds(nowMillis).toLocalDateTime(zone)
+    val todayBoundary = LocalDateTime(now.date, LocalTime(TONE_BOUNDARY_HOUR, 0))
+    val boundary = if (now < todayBoundary) {
+        todayBoundary
+    } else {
+        LocalDateTime(now.date.plus(1, DateTimeUnit.DAY), LocalTime(TONE_BOUNDARY_HOUR, 0))
+    }
+    return boundary.toInstant(zone).toEpochMilliseconds() - nowMillis
+}

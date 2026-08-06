@@ -18,13 +18,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.feature.briefing.BriefingContract
+import com.mediasage.feature.briefing.BriefingNotificationScheduler
 import com.mediasage.feature.briefing.BriefingScreen
 import com.mediasage.feature.briefing.BriefingViewModel
+import com.mediasage.feature.briefing.RequestNotificationPermissionEffect
 import com.mediasage.feature.figures.FiguresContract
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
@@ -51,6 +54,7 @@ import com.mediasage.feature.you.ReaderHistoryViewModel
 import com.mediasage.feature.you.ReaderScreen
 import com.mediasage.feature.you.ReaderViewModel
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -106,6 +110,14 @@ fun MediaSageScaffold(
                 is Route.Briefing -> NavEntry(route) {
                     val vm = koinViewModel<BriefingViewModel>()
                     val state by vm.state.collectAsStateWithLifecycle()
+                    val notificationScheduler = koinInject<BriefingNotificationScheduler>()
+                    RequestNotificationPermissionEffect()
+                    LifecycleResumeEffect(Unit) {
+                        notificationScheduler.onBriefingVisible()
+                        onPauseOrDispose {
+                            notificationScheduler.onBriefingHidden()
+                        }
+                    }
                     LaunchedEffect(vm) {
                         vm.sideEffects.collect { effect ->
                             when (effect) {
