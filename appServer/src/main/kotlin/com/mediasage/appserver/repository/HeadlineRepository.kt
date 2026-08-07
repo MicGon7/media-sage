@@ -8,6 +8,7 @@ import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -37,16 +38,46 @@ class HeadlineRepository {
     suspend fun getStored(category: String? = null, limit: Int = 10): List<NewsArticle> =
         withContext(Dispatchers.IO) {
             transaction {
-                val query = if (category != null) {
-                    HeadlineTable.selectAll().where { HeadlineTable.category eq category }
+                if (category != null) {
+                    articlesForCategory(category, limit)
                 } else {
-                    HeadlineTable.selectAll()
+                    interleaveCategories(limit)
                 }
-                query.orderBy(HeadlineTable.fetchedAt, SortOrder.DESC)
-                    .limit(limit)
-                    .map { it.toNewsArticle() }
             }
         }
+
+    private fun articlesForCategory(category: String, limit: Int): List<NewsArticle> =
+        HeadlineTable.selectAll()
+            .where { HeadlineTable.category eq category }
+            .orderBy(HeadlineTable.fetchedAt to SortOrder.DESC, HeadlineTable.id to SortOrder.DESC)
+            .limit(limit)
+            .map { it.toNewsArticle() }
+
+    // A single fetchAndStoreAll() run writes every category's rows with the same fetchedAt, so a
+    // flat ORDER BY has no tiebreak power once the table holds more than `limit` rows — the whole
+    // result would come from whichever category the DB happens to return first for the tie. Round-
+    // robin across categories instead so the Home feed (the only caller that omits `category`)
+    // gets a diverse cross-category set rather than an unspecified DB-dependent one.
+    private fun interleaveCategories(limit: Int): List<NewsArticle> {
+        val categories = HeadlineTable
+            .select(HeadlineTable.category)
+            .withDistinct()
+            .map { it[HeadlineTable.category] }
+            .sorted()
+
+        val byCategory = categories.map { articlesForCategory(it, limit) }
+        val result = mutableListOf<NewsArticle>()
+        var index = 0
+        while (result.size < limit && byCategory.any { index < it.size }) {
+            byCategory.forEach { articles ->
+                if (result.size < limit && index < articles.size) {
+                    result += articles[index]
+                }
+            }
+            index++
+        }
+        return result
+    }
 
     private fun ResultRow.toNewsArticle() = NewsArticle(
         uuid = this[HeadlineTable.uuid],

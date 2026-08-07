@@ -98,4 +98,38 @@ class NewsRoutesTest {
         assertEquals(1, articles.size)
         assertEquals(listOf("business"), articles[0].categories)
     }
+
+    private fun seedTiedCategory(category: String, count: Int) = transaction {
+        repeat(count) { i ->
+            HeadlineTable.insert {
+                it[uuid] = "$category-$i"
+                it[HeadlineTable.category] = category
+                it[title] = "${category.replaceFirstChar(Char::uppercase)} headline $i"
+                it[url] = "https://example.com/$category-$i"
+                it[fetchedAt] = 1000L
+            }
+        }
+    }
+
+    // A single fetchAndStoreAll() run writes every category's rows with the same fetchedAt, so
+    // once a category holds more rows than `limit` a flat ORDER BY has no tiebreak power and can
+    // return every slot from one category. Seed two categories well past `limit` here to prove
+    // the no-category read still spreads across categories instead of collapsing to one.
+    @Test
+    fun headlinesEndpoint_withoutCategory_interleavesAcrossTiedCategories() = testApplication {
+        seedTiedCategory("nation", count = 5)
+        seedTiedCategory("technology", count = 5)
+
+        install(io.ktor.server.plugins.contentnegotiation.ContentNegotiation) { json() }
+        install(Koin) { modules(testKoinModule()) }
+        routing { newsRoutes() }
+
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val response = client.get("/api/news/headlines?limit=4")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val articles = response.body<List<NewsArticle>>()
+        assertEquals(4, articles.size)
+        assertEquals(4, articles.map { it.categories.single() }.toSet().size)
+    }
 }
