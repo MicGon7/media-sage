@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -40,7 +41,9 @@ import androidx.compose.ui.unit.sp
 import com.mediasage.theme.ComicCream
 import com.mediasage.theme.ComicInk
 import com.mediasage.theme.ComicTan
+import com.mediasage.theme.ComicTanDark
 import com.mediasage.theme.MediaSageTheme
+import com.mediasage.theme.rememberComicSurfaceColors
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.figure_detail_memorize_quote
 import mediasage.composeapp.generated.resources.figure_detail_memorized_quote
@@ -51,9 +54,9 @@ private val PinBadgeSize = 36.dp
 /**
  * The quote-and-pin card shared by [com.mediasage.feature.figures.FigureDetailScreen]'s Quotes tab
  * and [com.mediasage.feature.quotes.QuotesScreen]'s memorized-quote list: quote text on the card
- * surface, a gradient transition into a fixed sepia footer carrying an optional attribution/context
- * line, and a pin badge straddling the card's top-right corner — half resting on the card, half
- * floating off it.
+ * surface, a gradient transition into a dark/light-adaptive comic footer carrying an optional
+ * attribution/context line, and a pin badge straddling the card's top-right corner — half resting
+ * on the card, half floating off it.
  */
 @Composable
 fun QuoteCard(
@@ -69,6 +72,7 @@ fun QuoteCard(
     } else {
         MaterialTheme.colorScheme.surface
     }
+    val footerColors = rememberComicSurfaceColors()
 
     Box(modifier = modifier.fillMaxWidth()) {
         ElevatedCard(
@@ -87,16 +91,23 @@ fun QuoteCard(
                     lineHeight = 24.sp,
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
                 )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(16.dp)
-                        .background(Brush.verticalGradient(colors = listOf(cardSurface, ComicCream)))
-                )
+                if (isDark) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(16.dp)
+                            .background(Brush.verticalGradient(colors = listOf(cardSurface, ComicCream)))
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Brush.verticalGradient(colors = listOf(ComicCream, ComicTan)))
+                        .then(footerColors.background)
                         .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -104,7 +115,7 @@ fun QuoteCard(
                         Text(
                             text = footerText,
                             style = MaterialTheme.typography.labelSmall,
-                            color = ComicInk,
+                            color = footerColors.content,
                         )
                     }
                 }
@@ -113,6 +124,7 @@ fun QuoteCard(
 
         PinBadge(
             isPinned = isPinned,
+            isDark = isDark,
             onClick = onPinQuote,
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -127,7 +139,7 @@ private val PinBadgeBounceSpring = spring<Float>(
 )
 
 @Composable
-private fun PinBadge(isPinned: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun PinBadge(isPinned: Boolean, isDark: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val scale = remember { Animatable(1f) }
     var isFirstComposition by remember { mutableStateOf(true) }
     LaunchedEffect(isPinned) {
@@ -148,7 +160,11 @@ private fun PinBadge(isPinned: Boolean, onClick: () -> Unit, modifier: Modifier 
                 scaleY = scale.value
             },
         shape = CircleShape,
-        color = if (isPinned) ComicTan else MaterialTheme.colorScheme.surface,
+        color = when {
+            isPinned && isDark -> ComicTanDark
+            isPinned -> ComicTan
+            else -> MaterialTheme.colorScheme.surface
+        },
         shadowElevation = 3.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -158,7 +174,11 @@ private fun PinBadge(isPinned: Boolean, onClick: () -> Unit, modifier: Modifier 
                     if (isPinned) Res.string.figure_detail_memorized_quote
                     else Res.string.figure_detail_memorize_quote
                 ),
-                tint = if (isPinned) ComicInk else MaterialTheme.colorScheme.onSurface,
+                tint = when {
+                    isPinned && isDark -> ComicCream
+                    isPinned -> ComicInk
+                    else -> MaterialTheme.colorScheme.onSurface
+                },
                 modifier = Modifier.size(18.dp),
             )
         }

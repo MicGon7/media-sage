@@ -60,14 +60,20 @@ val WarmDarkMuted = Color(0xFF9A8A72)      // warm tan — muted secondary text
 val WarmDarkBorder = Color(0xFF3D2E1E)     // subtle warm brown border
 
 // Comic / vintage-newspaper palette — sepia tones matching the app icon's hand-off-newspaper
-// illustration. Referenced directly by comic-styled reusable components (MediaSageComicButton,
-// MediaSageEntryCard) regardless of the active AppTheme/dark-mode selection, same precedent as
-// the Lens filter colors below.
+// illustration. Reusable comic surfaces (MediaSageComicButton, MediaSageEntryCard, MediaSageComicChip)
+// go through rememberComicSurfaceColors() (theme/ComicSurfaceColors.kt) to swap this fixed light-mode
+// sepia for a neutral dark-mode surface — ComicTan on its own reads as too bright against a dark
+// background. Call sites that render a fixed sepia tone directly (not via that helper) must branch on
+// MediaSageTheme.isDark themselves, e.g. with ComicTanDark below.
 val ComicCream = Color(0xFFFBF3E1)
 val ComicTan = Color(0xFFF0DFB8)
 val ComicBrown = Color(0xFF9C6B3E)
 val ComicInk = Color(0xFF2B1A0E)
 val ComicCaramel = Color(0xFFB8763A)
+
+// Dark-mode counterpart to ComicTan for call sites that can't use rememberComicSurfaceColors()
+// (e.g. a Switch track color, not a card background) — a muted warm brown instead of the bright tan.
+val ComicTanDark = Color(0xFF5C4630)
 
 // Lens filter theme colors
 val LensLove = Color(0xFFD4687A)

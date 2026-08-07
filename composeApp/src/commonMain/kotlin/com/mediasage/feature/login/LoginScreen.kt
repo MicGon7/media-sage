@@ -66,6 +66,7 @@ import com.mediasage.theme.Accent
 import com.mediasage.theme.CardBorder
 import com.mediasage.theme.ComicBrown
 import com.mediasage.theme.ComicTan
+import com.mediasage.theme.ComicTanDark
 import com.mediasage.theme.DarkBackground
 import com.mediasage.theme.Ink
 import com.mediasage.theme.InkLight
@@ -519,19 +520,20 @@ private fun SignInFields(
             text = stringResource(Res.string.login_remember_email),
             style = MaterialTheme.typography.bodySmall.copy(color = palette.muted)
         )
+        val checkedTrackColor = if (MediaSageTheme.isDark) ComicTanDark else ComicTan
         Switch(
             checked = state.rememberEmail,
             onCheckedChange = { onIntent(LoginContract.Intent.ToggleRememberEmail(it)) },
             enabled = !isLoading,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = ComicBrown,
-                checkedTrackColor = ComicTan,
+                checkedTrackColor = checkedTrackColor,
                 checkedBorderColor = ComicBrown,
                 uncheckedThumbColor = palette.muted,
                 uncheckedTrackColor = Color.Transparent,
                 uncheckedBorderColor = palette.border,
                 disabledCheckedThumbColor = ComicBrown,
-                disabledCheckedTrackColor = ComicTan,
+                disabledCheckedTrackColor = checkedTrackColor,
                 disabledCheckedBorderColor = ComicBrown,
                 disabledUncheckedThumbColor = palette.muted,
                 disabledUncheckedTrackColor = Color.Transparent,
