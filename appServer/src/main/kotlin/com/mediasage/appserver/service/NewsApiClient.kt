@@ -16,14 +16,14 @@ open class NewsApiClient(
     }
 
     suspend fun getTopHeadlines(
-        topic: String = "world",
+        category: String = "general",
         language: String = "en",
         country: String = "us",
         limit: Int = 10
     ): List<NewsArticle> {
         val response = httpClient.get("$BASE_URL/top-headlines") {
             parameter("token", apiKey)
-            parameter("topic", topic)
+            parameter("category", category)
             parameter("lang", language)
             parameter("country", country)
             parameter("max", limit)
@@ -38,7 +38,7 @@ open class NewsApiClient(
 
         return response.body<GNewsResponse>().articles
             .distinctBy { it.url }
-            .map { it.toNewsArticle(category = topic) }
+            .map { it.toNewsArticle(category = category) }
     }
 
     suspend fun searchNews(

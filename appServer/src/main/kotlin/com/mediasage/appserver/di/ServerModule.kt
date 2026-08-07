@@ -1,10 +1,12 @@
 package com.mediasage.appserver.di
 
 import com.mediasage.appserver.repository.FigureRepository
+import com.mediasage.appserver.repository.HeadlineRepository
 import com.mediasage.appserver.repository.QuoteRepository
 import com.mediasage.appserver.service.ArticleScraperService
 import com.mediasage.appserver.service.ClaudeApiClient
 import com.mediasage.appserver.service.DailyReflectionService
+import com.mediasage.appserver.service.HeadlineFetchService
 import com.mediasage.appserver.service.NewsApiClient
 import com.mediasage.appserver.service.ScriptureApiClient
 import io.ktor.client.*
@@ -43,5 +45,7 @@ fun serverModule(
     single { ArticleScraperService() }
     single { FigureRepository(baseUrl) }
     single { QuoteRepository() }
+    single { HeadlineRepository() }
     single { DailyReflectionService(get(), get()) }
+    single { HeadlineFetchService(get(), get(), get()) }
 }

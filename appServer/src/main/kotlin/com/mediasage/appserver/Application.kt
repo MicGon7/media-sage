@@ -4,9 +4,14 @@ import com.mediasage.appserver.db.ServerDatabase
 import com.mediasage.appserver.di.serverModule
 import com.mediasage.appserver.plugins.*
 import com.mediasage.appserver.routes.*
+import com.mediasage.appserver.service.HeadlineFetchService
+import com.mediasage.appserver.service.launchHeadlineFetchLoop
 import io.ktor.server.application.*
 import io.ktor.server.netty.EngineMain
 import io.ktor.server.routing.routing
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 
 fun main(args: Array<String>) {
@@ -31,6 +36,12 @@ fun Application.module() {
     configureRouting()
 
     initDatabase()
+    startHeadlineFetchScheduler()
+}
+
+private fun Application.startHeadlineFetchScheduler() {
+    val headlineFetchService by inject<HeadlineFetchService>()
+    CoroutineScope(Dispatchers.IO).launchHeadlineFetchLoop(headlineFetchService)
 }
 
 private fun Application.initDatabase() {

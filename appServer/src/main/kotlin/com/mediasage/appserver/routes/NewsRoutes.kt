@@ -1,5 +1,6 @@
 package com.mediasage.appserver.routes
 
+import com.mediasage.appserver.repository.HeadlineRepository
 import com.mediasage.appserver.service.ArticleScraperService
 import com.mediasage.appserver.service.NewsApiClient
 import io.ktor.server.response.*
@@ -9,17 +10,16 @@ import org.koin.ktor.ext.inject
 fun Route.newsRoutes() {
     val newsClient by inject<NewsApiClient>()
     val scraperService by inject<ArticleScraperService>()
+    val headlineRepository by inject<HeadlineRepository>()
 
     route("/api/news") {
         get("/headlines") {
-            val topic = call.parameters["topic"] ?: "world"
-            val language = call.parameters["language"] ?: "en"
+            val category = call.parameters["category"]
             val limit = call.parameters["limit"]?.toIntOrNull() ?: 10
 
-            val articles = newsClient.getTopHeadlines(topic = topic, language = language, limit = limit)
-
-            // Pre-scrape articles in the background so text is ready when user taps
-            scraperService.preScrape(articles.map { it.url })
+            // Served from the twice-daily cache populated by HeadlineFetchService — no live
+            // provider call here, so read volume never increases the number of GNews requests.
+            val articles = headlineRepository.getStored(category = category, limit = limit)
 
             call.respond(articles)
         }

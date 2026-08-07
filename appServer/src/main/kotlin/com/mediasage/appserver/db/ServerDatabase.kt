@@ -28,7 +28,7 @@ object ServerDatabase {
             )
         }
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(FigureTable, QuoteTable)
+            SchemaUtils.createMissingTablesAndColumns(FigureTable, QuoteTable, HeadlineTable)
         }
     }
 
