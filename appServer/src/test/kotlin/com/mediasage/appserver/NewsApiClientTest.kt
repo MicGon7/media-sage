@@ -187,19 +187,33 @@ class NewsApiClientTest {
     }
 
     @Test
-    fun getTopHeadlinesPassesTopicParam() = runTest {
-        val client = NewsApiClient(createMockClient(sampleResponse), "test-api-key")
+    fun getTopHeadlinesPassesCategoryParam() = runTest {
+        var capturedCategory: String? = null
+        val client = NewsApiClient(
+            HttpClient(MockEngine { request ->
+                capturedCategory = request.url.parameters["category"]
+                respond(
+                    content = sampleResponse,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json")
+                )
+            }) {
+                install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+            },
+            "test-api-key"
+        )
 
-        val articles = client.getTopHeadlines(topic = "world")
+        val articles = client.getTopHeadlines(category = "world")
 
         assertEquals(2, articles.size)
+        assertEquals("world", capturedCategory)
     }
 
     @Test
-    fun getTopHeadlinesTagsArticlesWithTopicAsCategory() = runTest {
+    fun getTopHeadlinesTagsArticlesWithCategoryAsCategory() = runTest {
         val client = NewsApiClient(createMockClient(sampleResponse), "test-api-key")
 
-        val articles = client.getTopHeadlines(topic = "business")
+        val articles = client.getTopHeadlines(category = "business")
 
         assertEquals(listOf("business"), articles[0].categories)
     }
