@@ -84,29 +84,28 @@ class HeadlinesViewModelTest {
     }
 
     @Test
-    fun defaultSelectionShowsAllHeadlinesUnfiltered() = runTest(testDispatcher) {
+    fun defaultSelectionShowsOnlyWorldHeadlines() = runTest(testDispatcher) {
         val world = Headline(1L, "World News", "Reuters", "https://example.com/1", null, 0L, 0L, category = "world")
         val business = Headline(2L, "Business News", "AP", "https://example.com/2", null, 0L, 0L, category = "business")
         val viewModel = buildViewModel(initialHeadlines = listOf(world, business))
 
         val state = viewModel.state.value as HeadlinesContract.UiState.Success
-        assertEquals(2, state.headlines.size)
-        assertTrue(state.selectedCategories.isEmpty())
+        assertEquals(setOf(1L), state.headlines.map { it.id }.toSet())
+        assertEquals("world", state.selectedCategory)
     }
 
     @Test
-    fun togglingCategoryFiltersHeadlinesByUnion() = runTest(testDispatcher) {
+    fun selectingCategoryFiltersHeadlinesToThatCategory() = runTest(testDispatcher) {
         val world = Headline(1L, "World News", "Reuters", "https://example.com/1", null, 0L, 0L, category = "world")
         val business = Headline(2L, "Business News", "AP", "https://example.com/2", null, 0L, 0L, category = "business")
         val health = Headline(3L, "Health News", "AP", "https://example.com/3", null, 0L, 0L, category = "health")
         val viewModel = buildViewModel(initialHeadlines = listOf(world, business, health))
 
-        viewModel.onIntent(HeadlinesContract.Intent.CategoryToggled("business"))
-        viewModel.onIntent(HeadlinesContract.Intent.CategoryToggled("health"))
+        viewModel.onIntent(HeadlinesContract.Intent.CategorySelected("business"))
 
         val state = viewModel.state.value as HeadlinesContract.UiState.Success
-        assertEquals(setOf("business", "health"), state.selectedCategories)
-        assertEquals(setOf(2L, 3L), state.headlines.map { it.id }.toSet())
+        assertEquals("business", state.selectedCategory)
+        assertEquals(setOf(2L), state.headlines.map { it.id }.toSet())
     }
 
     @Test
@@ -114,7 +113,7 @@ class HeadlinesViewModelTest {
         val world = Headline(1L, "World News", "Reuters", "https://example.com/1", null, 0L, 0L, category = "world")
         val viewModel = buildViewModel(initialHeadlines = listOf(world))
 
-        viewModel.onIntent(HeadlinesContract.Intent.CategoryToggled("science"))
+        viewModel.onIntent(HeadlinesContract.Intent.CategorySelected("science"))
 
         val state = viewModel.state.value as HeadlinesContract.UiState.Success
         assertTrue(state.headlines.isEmpty())
@@ -129,9 +128,9 @@ class HeadlinesViewModelTest {
             categoryPreferencesRepository = categoryPreferencesRepository,
         )
 
-        viewModel.onIntent(HeadlinesContract.Intent.CategoryToggled("world"))
+        viewModel.onIntent(HeadlinesContract.Intent.CategorySelected("world"))
 
-        assertEquals(setOf("world"), categoryPreferencesRepository.selectedCategories.first())
+        assertEquals("world", categoryPreferencesRepository.selectedCategory.first())
     }
 
     @Test
@@ -144,6 +143,7 @@ class HeadlinesViewModelTest {
             imageUrl = null,
             publishedAt = 0L,
             fetchedAt = 0L,
+            category = "world",
             isRead = true,
         )
         val encouragement = Encouragement(

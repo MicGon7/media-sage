@@ -49,8 +49,8 @@ class HeadlinesViewModel(
             is HeadlinesContract.Intent.ToggleBookmark -> {
                 viewModelScope.launch { encouragementRepository.toggleBookmark(intent.articleUrl) }
             }
-            is HeadlinesContract.Intent.CategoryToggled -> {
-                viewModelScope.launch { categoryPreferencesRepository.toggleCategory(intent.category) }
+            is HeadlinesContract.Intent.CategorySelected -> {
+                viewModelScope.launch { categoryPreferencesRepository.selectCategory(intent.category) }
             }
         }
     }
@@ -64,20 +64,24 @@ class HeadlinesViewModel(
         viewModelScope.launch {
             combine(
                 getHeadlinesFeed(),
-                categoryPreferencesRepository.selectedCategories,
-            ) { entries, selectedCategories -> entries to selectedCategories }
-                .collect { (entries, selectedCategories) ->
+                categoryPreferencesRepository.selectedCategory,
+            ) { entries, selectedCategory -> entries to selectedCategory }
+                .collect { (entries, selectedCategory) ->
                     if (entries.isNotEmpty()) {
                         val current = _state.value
                         val isRefreshing = current is HeadlinesContract.UiState.Success && current.isRefreshing
-                        val filtered = if (selectedCategories.isEmpty()) {
-                            entries
+                        // A persisted category can fall out of HeadlineCategoryFilter (e.g. a removed
+                        // tab like "technology") — fall back to the default rather than emitting a
+                        // category the tab row can't find an index for, which crashes the indicator.
+                        val validCategory = if (HeadlineCategoryFilter.entries.any { it.value == selectedCategory }) {
+                            selectedCategory
                         } else {
-                            entries.filter { it.headline.category in selectedCategories }
+                            HeadlineCategoryFilter.WORLD.value
                         }
+                        val filtered = entries.filter { it.headline.category == validCategory }
                         _state.value = HeadlinesContract.UiState.Success(
                             headlines = filtered.map { it.toItem() },
-                            selectedCategories = selectedCategories,
+                            selectedCategory = validCategory,
                             todayLabel = todayLabel(),
                             isRefreshing = isRefreshing
                         )

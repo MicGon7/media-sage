@@ -8,7 +8,7 @@ object HeadlinesContract {
         data class Loading(val todayLabel: String) : UiState
         data class Success(
             val headlines: List<HeadlineItem>,
-            val selectedCategories: Set<String> = emptySet(),
+            val selectedCategory: String = HeadlineCategoryFilter.WORLD.value,
             val todayLabel: String = "",
             val isRefreshing: Boolean = false
         ) : UiState
@@ -20,7 +20,7 @@ object HeadlinesContract {
         data object Refresh : Intent
         data class HeadlineClicked(val articleUrl: String) : Intent
         data class ToggleBookmark(val articleUrl: String) : Intent
-        data class CategoryToggled(val category: String) : Intent
+        data class CategorySelected(val category: String) : Intent
     }
 
     sealed interface SideEffect {
@@ -46,13 +46,17 @@ data class HeadlineItem(
     val isBookmarked: Boolean = false
 )
 
-/** Mirrors the categories tagged server-side (HeadlineFetchService.CATEGORIES) for the chip filter. */
+/**
+ * Categories shown as tabs on the Headlines screen. A subset of the categories tagged
+ * server-side (HeadlineFetchService.CATEGORIES) — General and Technology are fetched and cached
+ * like the others but hidden here (General is a catch-all similar to the removed "All" tab;
+ * Technology doesn't fit the app); the server continues fetching both so this can move to a
+ * backend-managed list without a re-fetch later.
+ */
 enum class HeadlineCategoryFilter(val value: String) {
-    GENERAL("general"),
     WORLD("world"),
     NATION("nation"),
     BUSINESS("business"),
-    TECHNOLOGY("technology"),
     SCIENCE("science"),
     HEALTH("health"),
 }
