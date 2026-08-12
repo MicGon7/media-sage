@@ -3,6 +3,7 @@ package com.mediasage.di
 import com.mediasage.AppViewModel
 import com.mediasage.data.ThemePreferencesRepository
 import com.mediasage.data.AuthPreferencesRepository
+import com.mediasage.data.HeadlineCategoryPreferencesRepository
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
@@ -49,6 +50,7 @@ val appModule = module {
             get<HeadlineRepository>(),
             get<EncouragementRepository>(),
             get<GetHeadlinesFeedUseCase>(),
+            get<HeadlineCategoryPreferencesRepository>(),
         )
     }
     viewModel { (articleUrl: String) -> HeadlineDetailViewModel(articleUrl, get(), get(), get(), get()) }

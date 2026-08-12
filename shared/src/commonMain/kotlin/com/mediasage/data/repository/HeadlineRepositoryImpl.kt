@@ -24,7 +24,10 @@ class HeadlineRepositoryImpl(
         headlineDao.getByUrl(url)?.toDomain()
 
     override suspend fun refreshHeadlines() {
-        val dtos = api.getHeadlines()
+        // Server tags each headline with one of 7 categories and self-limits via interleaveCategories —
+        // a generous client limit just returns everything cached without over-fetching, so the local
+        // pool holds enough per-category data for the Headlines screen's category filter to be meaningful.
+        val dtos = api.getHeadlines(limit = FETCH_LIMIT)
         val now = currentTimeMillis()
         val readUrls = headlineDao.getReadUrls().toSet()
         val entities = dtos.map { it.toEntity(fetchedAt = now).copy(isRead = it.url in readUrls) }
@@ -38,6 +41,10 @@ class HeadlineRepositoryImpl(
 
     override suspend fun markAsRead(url: String) {
         headlineDao.markRead(url)
+    }
+
+    private companion object {
+        const val FETCH_LIMIT = 100
     }
 }
 

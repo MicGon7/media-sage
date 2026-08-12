@@ -2,6 +2,7 @@
 
 package com.mediasage.feature.headlines
 
+import com.mediasage.data.HeadlineCategoryPreferencesRepository
 import com.mediasage.domain.model.Encouragement
 import com.mediasage.domain.model.Headline
 import com.mediasage.domain.repository.EncouragementRepository
@@ -9,9 +10,13 @@ import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.usecase.GetHeadlinesFeedUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -79,6 +84,56 @@ class HeadlinesViewModelTest {
     }
 
     @Test
+    fun defaultSelectionShowsOnlyWorldHeadlines() = runTest(testDispatcher) {
+        val world = Headline(1L, "World News", "Reuters", "https://example.com/1", null, 0L, 0L, category = "world")
+        val business = Headline(2L, "Business News", "AP", "https://example.com/2", null, 0L, 0L, category = "business")
+        val viewModel = buildViewModel(initialHeadlines = listOf(world, business))
+
+        val state = viewModel.state.value as HeadlinesContract.UiState.Success
+        assertEquals(setOf(1L), state.headlines.map { it.id }.toSet())
+        assertEquals("world", state.selectedCategory)
+    }
+
+    @Test
+    fun selectingCategoryFiltersHeadlinesToThatCategory() = runTest(testDispatcher) {
+        val world = Headline(1L, "World News", "Reuters", "https://example.com/1", null, 0L, 0L, category = "world")
+        val business = Headline(2L, "Business News", "AP", "https://example.com/2", null, 0L, 0L, category = "business")
+        val health = Headline(3L, "Health News", "AP", "https://example.com/3", null, 0L, 0L, category = "health")
+        val viewModel = buildViewModel(initialHeadlines = listOf(world, business, health))
+
+        viewModel.onIntent(HeadlinesContract.Intent.CategorySelected("business"))
+
+        val state = viewModel.state.value as HeadlinesContract.UiState.Success
+        assertEquals("business", state.selectedCategory)
+        assertEquals(setOf(2L), state.headlines.map { it.id }.toSet())
+    }
+
+    @Test
+    fun selectingCategoryWithNoMatchesShowsEmptyHeadlines() = runTest(testDispatcher) {
+        val world = Headline(1L, "World News", "Reuters", "https://example.com/1", null, 0L, 0L, category = "world")
+        val viewModel = buildViewModel(initialHeadlines = listOf(world))
+
+        viewModel.onIntent(HeadlinesContract.Intent.CategorySelected("science"))
+
+        val state = viewModel.state.value as HeadlinesContract.UiState.Success
+        assertTrue(state.headlines.isEmpty())
+    }
+
+    @Test
+    fun categorySelectionPersistsAcrossFlowCollection() = runTest(testDispatcher) {
+        val categoryPreferencesRepository = HeadlineCategoryPreferencesRepository(FakeCategoryPreferencesDataStore())
+        val world = Headline(1L, "World News", "Reuters", "https://example.com/1", null, 0L, 0L, category = "world")
+        val viewModel = buildViewModel(
+            initialHeadlines = listOf(world),
+            categoryPreferencesRepository = categoryPreferencesRepository,
+        )
+
+        viewModel.onIntent(HeadlinesContract.Intent.CategorySelected("world"))
+
+        assertEquals("world", categoryPreferencesRepository.selectedCategory.first())
+    }
+
+    @Test
     fun readHeadlineRendersWithMatchDataInSavedCardStyle() = runTest(testDispatcher) {
         val headline = Headline(
             id = 1L,
@@ -88,6 +143,7 @@ class HeadlinesViewModelTest {
             imageUrl = null,
             publishedAt = 0L,
             fetchedAt = 0L,
+            category = "world",
             isRead = true,
         )
         val encouragement = Encouragement(
@@ -121,11 +177,24 @@ class HeadlinesViewModelTest {
         headlinesFlow: MutableStateFlow<List<Headline>>? = null,
         headlineRepository: FakeHeadlineRepository = FakeHeadlineRepository(initialHeadlines, headlinesFlow),
         encouragementRepository: EncouragementRepository = FakeEncouragementRepository(emptyList()),
+        categoryPreferencesRepository: HeadlineCategoryPreferencesRepository =
+            HeadlineCategoryPreferencesRepository(FakeCategoryPreferencesDataStore()),
     ) = HeadlinesViewModel(
         headlineRepository = headlineRepository,
         encouragementRepository = encouragementRepository,
         getHeadlinesFeed = GetHeadlinesFeedUseCase(headlineRepository, encouragementRepository),
+        categoryPreferencesRepository = categoryPreferencesRepository,
     )
+}
+
+private class FakeCategoryPreferencesDataStore : DataStore<Preferences> {
+    private val state = MutableStateFlow(emptyPreferences())
+    override val data: Flow<Preferences> = state
+    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+        val updated = transform(state.value)
+        state.value = updated
+        return updated
+    }
 }
 
 private class FakeHeadlineRepository(

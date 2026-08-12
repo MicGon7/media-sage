@@ -2,6 +2,7 @@ package com.mediasage.feature.headlines
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mediasage.data.HeadlineCategoryPreferencesRepository
 import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.model.HeadlineFeedEntry
 import com.mediasage.domain.repository.EncouragementRepository
@@ -13,6 +14,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
@@ -23,6 +25,7 @@ class HeadlinesViewModel(
     private val headlineRepository: HeadlineRepository,
     private val encouragementRepository: EncouragementRepository,
     private val getHeadlinesFeed: GetHeadlinesFeedUseCase,
+    private val categoryPreferencesRepository: HeadlineCategoryPreferencesRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<HeadlinesContract.UiState>(
@@ -46,6 +49,9 @@ class HeadlinesViewModel(
             is HeadlinesContract.Intent.ToggleBookmark -> {
                 viewModelScope.launch { encouragementRepository.toggleBookmark(intent.articleUrl) }
             }
+            is HeadlinesContract.Intent.CategorySelected -> {
+                viewModelScope.launch { categoryPreferencesRepository.selectCategory(intent.category) }
+            }
         }
     }
 
@@ -56,17 +62,31 @@ class HeadlinesViewModel(
 
     private fun collectHeadlines() {
         viewModelScope.launch {
-            getHeadlinesFeed().collect { entries ->
-                if (entries.isNotEmpty()) {
-                    val current = _state.value
-                    val isRefreshing = current is HeadlinesContract.UiState.Success && current.isRefreshing
-                    _state.value = HeadlinesContract.UiState.Success(
-                        headlines = entries.map { it.toItem() },
-                        todayLabel = todayLabel(),
-                        isRefreshing = isRefreshing
-                    )
+            combine(
+                getHeadlinesFeed(),
+                categoryPreferencesRepository.selectedCategory,
+            ) { entries, selectedCategory -> entries to selectedCategory }
+                .collect { (entries, selectedCategory) ->
+                    if (entries.isNotEmpty()) {
+                        val current = _state.value
+                        val isRefreshing = current is HeadlinesContract.UiState.Success && current.isRefreshing
+                        // A persisted category can fall out of HeadlineCategoryFilter (e.g. a removed
+                        // tab like "technology") — fall back to the default rather than emitting a
+                        // category the tab row can't find an index for, which crashes the indicator.
+                        val validCategory = if (HeadlineCategoryFilter.entries.any { it.value == selectedCategory }) {
+                            selectedCategory
+                        } else {
+                            HeadlineCategoryFilter.WORLD.value
+                        }
+                        val filtered = entries.filter { it.headline.category == validCategory }
+                        _state.value = HeadlinesContract.UiState.Success(
+                            headlines = filtered.map { it.toItem() },
+                            selectedCategory = validCategory,
+                            todayLabel = todayLabel(),
+                            isRefreshing = isRefreshing
+                        )
+                    }
                 }
-            }
         }
     }
 

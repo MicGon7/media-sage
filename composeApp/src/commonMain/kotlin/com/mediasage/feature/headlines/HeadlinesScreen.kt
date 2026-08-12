@@ -20,14 +20,25 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
+import com.mediasage.ui.MediaSageEmptyState
 import com.mediasage.ui.MediaSageErrorDialog
 import com.mediasage.ui.MediaSageHeadlineCard
+import com.mediasage.ui.MediaSageTabRow
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.headline_category_business
+import mediasage.composeapp.generated.resources.headline_category_health
+import mediasage.composeapp.generated.resources.headline_category_nation
+import mediasage.composeapp.generated.resources.headline_category_science
+import mediasage.composeapp.generated.resources.headline_category_world
+import mediasage.composeapp.generated.resources.headlines_category_empty_subtitle
+import mediasage.composeapp.generated.resources.headlines_category_empty_title
 import mediasage.composeapp.generated.resources.home_error_generic
 import mediasage.composeapp.generated.resources.home_error_network
 import mediasage.composeapp.generated.resources.home_retry
@@ -59,7 +70,8 @@ fun HeadlinesScreen(
                 state = state,
                 onRefresh = { onIntent(HeadlinesContract.Intent.Refresh) },
                 onHeadlineClick = { onNavigateToDetail(it.articleUrl) },
-                onBookmarkClick = { onIntent(HeadlinesContract.Intent.ToggleBookmark(it.articleUrl)) }
+                onBookmarkClick = { onIntent(HeadlinesContract.Intent.ToggleBookmark(it.articleUrl)) },
+                onCategorySelected = { onIntent(HeadlinesContract.Intent.CategorySelected(it)) }
             )
         }
     }
@@ -70,7 +82,8 @@ private fun HeadlinesFeed(
     state: HeadlinesContract.UiState.Success,
     onRefresh: () -> Unit,
     onHeadlineClick: (HeadlineItem) -> Unit,
-    onBookmarkClick: (HeadlineItem) -> Unit
+    onBookmarkClick: (HeadlineItem) -> Unit,
+    onCategorySelected: (String) -> Unit
 ) {
     val listState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -100,30 +113,46 @@ private fun HeadlinesFeed(
                             todayLabel = state.todayLabel,
                             storyCount = state.headlines.size
                         )
-                    }) else null
+                    }) else null,
+                    stickyContent = {
+                        CategoryTabRow(
+                            selectedCategory = state.selectedCategory,
+                            onCategorySelected = onCategorySelected
+                        )
+                    }
                 )
             }
-            itemsIndexed(state.headlines, key = { _, it -> it.id }) { _, headline ->
-                MediaSageHeadlineCard(
-                    imageUrl = headline.imageUrl,
-                    headlineTitle = headline.title,
-                    grayscaleImage = false,
-                    onClick = { onHeadlineClick(headline) },
-                    source = headline.source,
-                    category = headline.category,
-                    publishedAtLabel = headline.publishedAtLabel,
-                    snippet = headline.snippet,
-                    figureName = headline.figureName.takeIf { headline.isRead },
-                    figureRole = headline.figureRole.takeIf { headline.isRead },
-                    quotePreview = headline.quotePreview.takeIf { headline.isRead },
-                    isBookmarked = headline.isBookmarked.takeIf { headline.isRead },
-                    onBookmarkClick = { onBookmarkClick(headline) }.takeIf { headline.isRead },
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 0.5.dp
-                )
+            if (state.headlines.isEmpty()) {
+                item {
+                    MediaSageEmptyState(
+                        title = stringResource(Res.string.headlines_category_empty_title),
+                        subtitle = stringResource(Res.string.headlines_category_empty_subtitle),
+                        modifier = Modifier.fillParentMaxHeight()
+                    )
+                }
+            } else {
+                itemsIndexed(state.headlines, key = { _, it -> it.id }) { _, headline ->
+                    MediaSageHeadlineCard(
+                        imageUrl = headline.imageUrl,
+                        headlineTitle = headline.title,
+                        grayscaleImage = false,
+                        onClick = { onHeadlineClick(headline) },
+                        source = headline.source,
+                        category = headline.category,
+                        publishedAtLabel = headline.publishedAtLabel,
+                        snippet = headline.snippet,
+                        figureName = headline.figureName.takeIf { headline.isRead },
+                        figureRole = headline.figureRole.takeIf { headline.isRead },
+                        quotePreview = headline.quotePreview.takeIf { headline.isRead },
+                        isBookmarked = headline.isBookmarked.takeIf { headline.isRead },
+                        onBookmarkClick = { onBookmarkClick(headline) }.takeIf { headline.isRead },
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 0.5.dp
+                    )
+                }
             }
         }
 
@@ -155,6 +184,56 @@ private fun DateCountRow(todayLabel: String, storyCount: Int) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+@Composable
+private fun CategoryTabRow(
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val selectedIndex = HeadlineCategoryFilter.entries.indexOfFirst { it.value == selectedCategory }
+
+    MediaSageTabRow(
+        selectedIndex = selectedIndex,
+        tabLabels = HeadlineCategoryFilter.entries.map { stringResource(it.labelRes()) },
+        onTabSelected = { index -> onCategorySelected(HeadlineCategoryFilter.entries[index].value) },
+        // Bleeds past ScreenHeader's 16dp horizontal inset so tabs run edge-to-edge like the
+        // headline card images below, instead of sitting inset like the title/subtitle above.
+        modifier = modifier.fillMaxWidth().horizontalBleed(16.dp),
+        showBackground = false,
+        singleBottomIndicator = true,
+        tabHeight = 36.dp,
+        // Smaller than Tab's default titleSmall so "Business", the longest label, fits on one
+        // line within its 1/5-width share instead of wrapping or truncating.
+        labelStyle = MaterialTheme.typography.labelMedium
+    )
+}
+
+/**
+ * Widens this composable's measured width by [amount] on each side while still reporting the
+ * original constrained width to the parent, letting it paint outside a padded parent's bounds.
+ * Safe alternative to `Modifier.padding` with a negative value, which throws
+ * IllegalArgumentException("Padding must be non-negative").
+ */
+private fun Modifier.horizontalBleed(amount: Dp): Modifier = layout { measurable, constraints ->
+    val bleedPx = amount.roundToPx()
+    val widened = constraints.copy(
+        minWidth = 0,
+        maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + bleedPx * 2 else constraints.maxWidth
+    )
+    val placeable = measurable.measure(widened)
+    layout(constraints.maxWidth, placeable.height) {
+        placeable.placeRelative(-bleedPx, 0)
+    }
+}
+
+private fun HeadlineCategoryFilter.labelRes() = when (this) {
+    HeadlineCategoryFilter.WORLD -> Res.string.headline_category_world
+    HeadlineCategoryFilter.NATION -> Res.string.headline_category_nation
+    HeadlineCategoryFilter.BUSINESS -> Res.string.headline_category_business
+    HeadlineCategoryFilter.SCIENCE -> Res.string.headline_category_science
+    HeadlineCategoryFilter.HEALTH -> Res.string.headline_category_health
 }
 
 @Preview(showBackground = true)
