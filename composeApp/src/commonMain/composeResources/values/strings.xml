@@ -141,6 +141,17 @@
         <item quantity="other">%1$d stories</item>
     </plurals>
 
+    <!-- Headlines category chip filter -->
+    <string name="headline_category_general">General</string>
+    <string name="headline_category_world">World</string>
+    <string name="headline_category_nation">Nation</string>
+    <string name="headline_category_business">Business</string>
+    <string name="headline_category_technology">Technology</string>
+    <string name="headline_category_science">Science</string>
+    <string name="headline_category_health">Health</string>
+    <string name="headlines_category_empty_title">No stories in this category</string>
+    <string name="headlines_category_empty_subtitle">Try selecting a different category or clearing your filters.</string>
+
     <string name="figure_detail_pin_to_home">Pin to Home</string>
     <string name="figure_detail_pinned_to_home">Pinned to Home</string>
     <string name="figure_detail_memorize_quote">Memorize this quote</string>

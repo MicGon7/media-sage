@@ -4,6 +4,7 @@ import android.app.Application
 import com.mediasage.di.MockConfig
 import com.mediasage.di.appModule
 import com.mediasage.di.databaseModule
+import com.mediasage.di.headlinesModule
 import com.mediasage.di.mockApiModule
 import com.mediasage.di.notificationModule
 import com.mediasage.di.sharedModule
@@ -21,6 +22,7 @@ class MediaSageApplication : Application() {
             add(databaseModule)
             add(themeModule)
             add(userModule)
+            add(headlinesModule)
             add(notificationModule)
             add(sharedModule(BuildConfig.SERVER_BASE_URL, BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_ANON_KEY))
             add(appModule)

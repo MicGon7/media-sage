@@ -8,6 +8,7 @@ object HeadlinesContract {
         data class Loading(val todayLabel: String) : UiState
         data class Success(
             val headlines: List<HeadlineItem>,
+            val selectedCategories: Set<String> = emptySet(),
             val todayLabel: String = "",
             val isRefreshing: Boolean = false
         ) : UiState
@@ -19,6 +20,7 @@ object HeadlinesContract {
         data object Refresh : Intent
         data class HeadlineClicked(val articleUrl: String) : Intent
         data class ToggleBookmark(val articleUrl: String) : Intent
+        data class CategoryToggled(val category: String) : Intent
     }
 
     sealed interface SideEffect {
@@ -43,3 +45,14 @@ data class HeadlineItem(
     val quotePreview: String? = null,
     val isBookmarked: Boolean = false
 )
+
+/** Mirrors the categories tagged server-side (HeadlineFetchService.CATEGORIES) for the chip filter. */
+enum class HeadlineCategoryFilter(val value: String) {
+    GENERAL("general"),
+    WORLD("world"),
+    NATION("nation"),
+    BUSINESS("business"),
+    TECHNOLOGY("technology"),
+    SCIENCE("science"),
+    HEALTH("health"),
+}

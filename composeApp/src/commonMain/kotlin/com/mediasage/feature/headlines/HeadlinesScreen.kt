@@ -1,6 +1,7 @@
 package com.mediasage.feature.headlines
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,10 +27,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.ui.ErrorType
+import com.mediasage.ui.MediaSageEmptyState
 import com.mediasage.ui.MediaSageErrorDialog
 import com.mediasage.ui.MediaSageHeadlineCard
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
+import mediasage.composeapp.generated.resources.headline_category_business
+import mediasage.composeapp.generated.resources.headline_category_general
+import mediasage.composeapp.generated.resources.headline_category_health
+import mediasage.composeapp.generated.resources.headline_category_nation
+import mediasage.composeapp.generated.resources.headline_category_science
+import mediasage.composeapp.generated.resources.headline_category_technology
+import mediasage.composeapp.generated.resources.headline_category_world
+import mediasage.composeapp.generated.resources.headlines_category_empty_subtitle
+import mediasage.composeapp.generated.resources.headlines_category_empty_title
 import mediasage.composeapp.generated.resources.home_error_generic
 import mediasage.composeapp.generated.resources.home_error_network
 import mediasage.composeapp.generated.resources.home_retry
@@ -59,7 +72,8 @@ fun HeadlinesScreen(
                 state = state,
                 onRefresh = { onIntent(HeadlinesContract.Intent.Refresh) },
                 onHeadlineClick = { onNavigateToDetail(it.articleUrl) },
-                onBookmarkClick = { onIntent(HeadlinesContract.Intent.ToggleBookmark(it.articleUrl)) }
+                onBookmarkClick = { onIntent(HeadlinesContract.Intent.ToggleBookmark(it.articleUrl)) },
+                onCategoryToggled = { onIntent(HeadlinesContract.Intent.CategoryToggled(it)) }
             )
         }
     }
@@ -70,7 +84,8 @@ private fun HeadlinesFeed(
     state: HeadlinesContract.UiState.Success,
     onRefresh: () -> Unit,
     onHeadlineClick: (HeadlineItem) -> Unit,
-    onBookmarkClick: (HeadlineItem) -> Unit
+    onBookmarkClick: (HeadlineItem) -> Unit,
+    onCategoryToggled: (String) -> Unit
 ) {
     val listState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -100,30 +115,46 @@ private fun HeadlinesFeed(
                             todayLabel = state.todayLabel,
                             storyCount = state.headlines.size
                         )
-                    }) else null
+                    }) else null,
+                    stickyContent = {
+                        CategoryChipRow(
+                            selectedCategories = state.selectedCategories,
+                            onCategoryToggled = onCategoryToggled
+                        )
+                    }
                 )
             }
-            itemsIndexed(state.headlines, key = { _, it -> it.id }) { _, headline ->
-                MediaSageHeadlineCard(
-                    imageUrl = headline.imageUrl,
-                    headlineTitle = headline.title,
-                    grayscaleImage = false,
-                    onClick = { onHeadlineClick(headline) },
-                    source = headline.source,
-                    category = headline.category,
-                    publishedAtLabel = headline.publishedAtLabel,
-                    snippet = headline.snippet,
-                    figureName = headline.figureName.takeIf { headline.isRead },
-                    figureRole = headline.figureRole.takeIf { headline.isRead },
-                    quotePreview = headline.quotePreview.takeIf { headline.isRead },
-                    isBookmarked = headline.isBookmarked.takeIf { headline.isRead },
-                    onBookmarkClick = { onBookmarkClick(headline) }.takeIf { headline.isRead },
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 0.5.dp
-                )
+            if (state.headlines.isEmpty()) {
+                item {
+                    MediaSageEmptyState(
+                        title = stringResource(Res.string.headlines_category_empty_title),
+                        subtitle = stringResource(Res.string.headlines_category_empty_subtitle),
+                        modifier = Modifier.fillParentMaxHeight()
+                    )
+                }
+            } else {
+                itemsIndexed(state.headlines, key = { _, it -> it.id }) { _, headline ->
+                    MediaSageHeadlineCard(
+                        imageUrl = headline.imageUrl,
+                        headlineTitle = headline.title,
+                        grayscaleImage = false,
+                        onClick = { onHeadlineClick(headline) },
+                        source = headline.source,
+                        category = headline.category,
+                        publishedAtLabel = headline.publishedAtLabel,
+                        snippet = headline.snippet,
+                        figureName = headline.figureName.takeIf { headline.isRead },
+                        figureRole = headline.figureRole.takeIf { headline.isRead },
+                        quotePreview = headline.quotePreview.takeIf { headline.isRead },
+                        isBookmarked = headline.isBookmarked.takeIf { headline.isRead },
+                        onBookmarkClick = { onBookmarkClick(headline) }.takeIf { headline.isRead },
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 0.5.dp
+                    )
+                }
             }
         }
 
@@ -155,6 +186,39 @@ private fun DateCountRow(todayLabel: String, storyCount: Int) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+@Composable
+private fun CategoryChipRow(
+    selectedCategories: Set<String>,
+    onCategoryToggled: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        HeadlineCategoryFilter.entries.forEach { category ->
+            FilterChip(
+                selected = category.value in selectedCategories,
+                onClick = { onCategoryToggled(category.value) },
+                label = { Text(text = stringResource(category.labelRes())) }
+            )
+        }
+    }
+}
+
+private fun HeadlineCategoryFilter.labelRes() = when (this) {
+    HeadlineCategoryFilter.GENERAL -> Res.string.headline_category_general
+    HeadlineCategoryFilter.WORLD -> Res.string.headline_category_world
+    HeadlineCategoryFilter.NATION -> Res.string.headline_category_nation
+    HeadlineCategoryFilter.BUSINESS -> Res.string.headline_category_business
+    HeadlineCategoryFilter.TECHNOLOGY -> Res.string.headline_category_technology
+    HeadlineCategoryFilter.SCIENCE -> Res.string.headline_category_science
+    HeadlineCategoryFilter.HEALTH -> Res.string.headline_category_health
 }
 
 @Preview(showBackground = true)
