@@ -3,14 +3,27 @@ package com.mediasage.feature.headlines
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -20,16 +33,17 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import com.mediasage.theme.ComicGradientOrientation
 import com.mediasage.theme.MediaSageTheme
+import com.mediasage.theme.rememberComicSurfaceColors
 import com.mediasage.ui.ErrorType
 import com.mediasage.ui.MediaSageEmptyState
 import com.mediasage.ui.MediaSageErrorDialog
 import com.mediasage.ui.MediaSageHeadlineCard
-import com.mediasage.ui.MediaSageTabRow
 import com.mediasage.ui.ScreenHeader
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.headline_category_business
@@ -100,27 +114,27 @@ private fun HeadlinesFeed(
     ) {
         LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
             stickyHeader {
-                ScreenHeader(
-                    title = stringResource(Res.string.nav_headlines),
-                    listState = listState,
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(horizontal = 16.dp),
-                    expandedTitleSize = 24f,
-                    showDivider = false,
-                    subtitle = if (state.headlines.isNotEmpty()) ({
-                        DateCountRow(
-                            todayLabel = state.todayLabel,
-                            storyCount = state.headlines.size
-                        )
-                    }) else null,
-                    stickyContent = {
-                        CategoryTabRow(
-                            selectedCategory = state.selectedCategory,
-                            onCategorySelected = onCategorySelected
-                        )
-                    }
-                )
+                // Chip row sits outside ScreenHeader's 16dp inset so it can scroll edge-to-edge;
+                // its own contentPadding aligns resting chips with the title above.
+                Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
+                    ScreenHeader(
+                        title = stringResource(Res.string.nav_headlines),
+                        listState = listState,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        expandedTitleSize = 24f,
+                        showDivider = false,
+                        subtitle = if (state.headlines.isNotEmpty()) ({
+                            DateCountRow(
+                                todayLabel = state.todayLabel,
+                                storyCount = state.headlines.size
+                            )
+                        }) else null
+                    )
+                    CategoryChipRow(
+                        selectedCategory = state.selectedCategory,
+                        onCategorySelected = onCategorySelected
+                    )
+                }
             }
             if (state.headlines.isEmpty()) {
                 item {
@@ -187,45 +201,80 @@ private fun DateCountRow(todayLabel: String, storyCount: Int) {
 }
 
 @Composable
-private fun CategoryTabRow(
+private fun CategoryChipRow(
     selectedCategory: String,
     onCategorySelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val selectedIndex = HeadlineCategoryFilter.entries.indexOfFirst { it.value == selectedCategory }
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(HeadlineCategoryFilter.entries) { category ->
+            CategoryChip(
+                label = stringResource(category.labelRes()),
+                selected = category.value == selectedCategory,
+                onClick = { onCategorySelected(category.value) }
+            )
+        }
+    }
+}
 
-    MediaSageTabRow(
-        selectedIndex = selectedIndex,
-        tabLabels = HeadlineCategoryFilter.entries.map { stringResource(it.labelRes()) },
-        onTabSelected = { index -> onCategorySelected(HeadlineCategoryFilter.entries[index].value) },
-        // Bleeds past ScreenHeader's 16dp horizontal inset so tabs run edge-to-edge like the
-        // headline card images below, instead of sitting inset like the title/subtitle above.
-        modifier = modifier.fillMaxWidth().horizontalBleed(16.dp),
-        showBackground = false,
-        singleBottomIndicator = true,
-        tabHeight = 36.dp,
-        // Smaller than Tab's default titleSmall so "Business", the longest label, fits on one
-        // line within its 1/5-width share instead of wrapping or truncating.
-        labelStyle = MaterialTheme.typography.labelMedium
+@Composable
+private fun CategoryChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    // FilterChip for its selected semantics and checkmark animation; the comic gradient can't be
+    // expressed through SelectableChipColors (flat Colors only), so the selected container is
+    // transparent and rememberComicSurfaceColors' background paints on a sibling Box behind it.
+    // The chip's 32dp pill renders centered inside its 48dp minimum touch target, so the gradient
+    // is inset to those visual bounds instead of filling the full (invisible) interactive layout.
+    val comicColors = rememberComicSurfaceColors(ComicGradientOrientation.Horizontal)
+    Box {
+        if (selected) {
+            SelectedChipBackground(background = comicColors.background)
+        }
+        FilterChip(
+            selected = selected,
+            onClick = onClick,
+            label = { Text(text = label, style = MaterialTheme.typography.labelMedium) },
+            leadingIcon = if (selected) ({ SelectedCheckIcon() }) else null,
+            shape = CircleShape,
+            colors = FilterChipDefaults.filterChipColors(
+                labelColor = comicColors.content.copy(alpha = 0.75f),
+                selectedContainerColor = Color.Transparent,
+                selectedLabelColor = comicColors.content,
+                selectedLeadingIconColor = comicColors.content
+            ),
+            border = FilterChipDefaults.filterChipBorder(
+                enabled = true,
+                selected = selected,
+                borderColor = comicColors.border.copy(alpha = 0.5f),
+                selectedBorderColor = comicColors.border,
+                selectedBorderWidth = 1.dp
+            )
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.SelectedChipBackground(background: Modifier) {
+    val touchTargetInset = (LocalMinimumInteractiveComponentSize.current - FilterChipDefaults.Height) / 2
+    Box(
+        modifier = Modifier
+            .matchParentSize()
+            .padding(vertical = touchTargetInset.coerceAtLeast(0.dp))
+            .clip(CircleShape)
+            .then(background)
     )
 }
 
-/**
- * Widens this composable's measured width by [amount] on each side while still reporting the
- * original constrained width to the parent, letting it paint outside a padded parent's bounds.
- * Safe alternative to `Modifier.padding` with a negative value, which throws
- * IllegalArgumentException("Padding must be non-negative").
- */
-private fun Modifier.horizontalBleed(amount: Dp): Modifier = layout { measurable, constraints ->
-    val bleedPx = amount.roundToPx()
-    val widened = constraints.copy(
-        minWidth = 0,
-        maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + bleedPx * 2 else constraints.maxWidth
+@Composable
+private fun SelectedCheckIcon() {
+    Icon(
+        imageVector = Icons.Filled.Check,
+        contentDescription = null,
+        modifier = Modifier.size(FilterChipDefaults.IconSize)
     )
-    val placeable = measurable.measure(widened)
-    layout(constraints.maxWidth, placeable.height) {
-        placeable.placeRelative(-bleedPx, 0)
-    }
 }
 
 private fun HeadlineCategoryFilter.labelRes() = when (this) {
