@@ -87,6 +87,7 @@ class DailyReflectionRepositoryImpl(
             inspiration = response.inspiration,
             sources = response.sources,
             synced = false,
+            challenge = response.challenge,
         )
         dao.upsert(entity)
         pushRow(entity.id)
@@ -115,6 +116,7 @@ class DailyReflectionRepositoryImpl(
             inspiration = row.inspiration,
             sources = row.sources,
             synced = true,
+            challenge = row.challenge,
         )
         dao.upsert(entity)
         return entity.toDomain()
@@ -185,6 +187,7 @@ class DailyReflectionRepositoryImpl(
                     implication = row.implication,
                     inspiration = row.inspiration,
                     sources = row.sources,
+                    challenge = row.challenge,
                 )
             )
             dao.markSynced(id)
@@ -230,6 +233,7 @@ class DailyReflectionRepositoryImpl(
                 inspiration = row.inspiration,
                 sources = row.sources,
                 synced = true,
+                challenge = row.challenge,
             )
         )
     }
@@ -247,5 +251,6 @@ private fun DailyReflectionEntity.toDomain() = DailyReflection(
     inspiration = inspiration,
     sources = sources,
     tone = tone,
-    theme = theme.takeIf { it != "NEWS" }
+    theme = theme.takeIf { it != "NEWS" },
+    challenge = challenge
 )

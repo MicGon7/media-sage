@@ -17,4 +17,5 @@ data class DailyReflectionEntity(
     val inspiration: String,
     val sources: List<String>,
     val synced: Boolean = false,
+    val challenge: String? = null,
 )
