@@ -440,26 +440,26 @@ private class FakeAgentLauncher : AgentLauncher {
     var lastUnblockedTicket: String? = null
     var lastBlockerKey: String? = null
 
-    override fun launch(ticketKey: String, dryRun: Boolean) = false
+    override suspend fun launch(ticketKey: String, dryRun: Boolean) = false
 
-    override fun launchForPrReview(prNumber: Int): Boolean {
+    override suspend fun launchForPrReview(prNumber: Int): Boolean {
         agentLaunches++
         lastPrNumber = prNumber
         return true
     }
 
-    override fun launchForConflictResolution(prNumber: Int): Boolean {
+    override suspend fun launchForConflictResolution(prNumber: Int): Boolean {
         conflictResolutionLaunches++
         lastPrNumber = prNumber
         return true
     }
 
-    override fun launchForQualityReview(prNumber: Int, jiraTicketKey: String): Boolean {
+    override suspend fun launchForQualityReview(prNumber: Int, jiraTicketKey: String): Boolean {
         lastPrNumber = prNumber
         return true
     }
 
-    override fun launchForUnblockedTicket(ticketKey: String, blockerKey: String): Boolean {
+    override suspend fun launchForUnblockedTicket(ticketKey: String, blockerKey: String): Boolean {
         unblockedLaunches++
         lastUnblockedTicket = ticketKey
         lastBlockerKey = blockerKey
