@@ -18,7 +18,14 @@ private data class DispatchOptions(
 /**
  * Dispatches autonomous Claude Code agents via Cloud Run Jobs.
  * Guards against double-firing: a second launch call for the same key is a no-op
- * until the first dispatch coroutine completes.
+ * until the first dispatch attempt completes.
+ *
+ * Dispatch runs on the calling coroutine rather than a detached background one, so a
+ * caller on a request path (e.g. a webhook route) that awaits a launch method keeps
+ * the request open for the duration of the dispatch. This matters under Cloud Run's
+ * request-based CPU billing: once an HTTP response is sent, Cloud Run may freeze CPU
+ * for work still running outside the request, silently stalling a detached dispatch
+ * before it reaches the Cloud Run Jobs API.
  *
  * The orchestrator is a pure dispatcher: each launch method passes only the minimum
  * job identifiers as env vars. The worker and its skills own all framing and context
@@ -53,14 +60,14 @@ class AgentLaunchService(
      * @param dryRun If true, inserts a job row but skips execution dispatch.
      * @return true if an agent was dispatched; false if the call was deduplicated or Cloud Run is not configured.
      */
-    override fun launch(ticketKey: String, dryRun: Boolean): Boolean {
+    override suspend fun launch(ticketKey: String, dryRun: Boolean): Boolean {
         val cloudRun = cloudRun ?: return false
         val payload = json.encodeToString(mapOf("ticketKey" to ticketKey))
         val identifiers = mapOf("TICKET_KEY" to ticketKey)
         return dispatchToCloudRun(ticketKey, "ticket-work", payload, identifiers, cloudRun, DispatchOptions(dryRun = dryRun))
     }
 
-    private fun dispatchToCloudRun(
+    private suspend fun dispatchToCloudRun(
         ticketKey: String,
         jobType: String,
         payload: String,
@@ -75,12 +82,10 @@ class AgentLaunchService(
             log.info("[$ticketKey] already in flight — ignoring duplicate webhook")
             return false
         }
-        scope.launch {
-            try {
-                doDispatch(ticketKey, jobType, payload, identifiers, cloudRun, options)
-            } finally {
-                activeKeys.remove(ticketKey)
-            }
+        try {
+            doDispatch(ticketKey, jobType, payload, identifiers, cloudRun, options)
+        } finally {
+            activeKeys.remove(ticketKey)
         }
         return true
     }
@@ -154,7 +159,7 @@ class AgentLaunchService(
      * @param prNumber GitHub PR number. Used as the dedup key and passed as `PR_NUMBER`.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    override fun launchForPrReview(prNumber: Int): Boolean {
+    override suspend fun launchForPrReview(prNumber: Int): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "PR-$prNumber"
         val payload = json.encodeToString(mapOf("prNumber" to prNumber.toString()))
@@ -171,7 +176,7 @@ class AgentLaunchService(
      * @param prNumber GitHub PR number. Used as the dedup key and passed as `PR_NUMBER`.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    override fun launchForConflictResolution(prNumber: Int): Boolean {
+    override suspend fun launchForConflictResolution(prNumber: Int): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "CONFLICT-$prNumber"
         val payload = json.encodeToString(mapOf("prNumber" to prNumber.toString()))
@@ -193,7 +198,7 @@ class AgentLaunchService(
      * @param jiraTicketKey Real Jira key of the ticket whose `ticket-work` opened the PR.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    override fun launchForQualityReview(prNumber: Int, jiraTicketKey: String): Boolean {
+    override suspend fun launchForQualityReview(prNumber: Int, jiraTicketKey: String): Boolean {
         val cloudRun = cloudRun ?: return false
         val key = "QUALITY-$prNumber"
         val payload = json.encodeToString(mapOf("prNumber" to prNumber.toString(), "jiraTicketKey" to jiraTicketKey))
@@ -215,7 +220,7 @@ class AgentLaunchService(
      * @param blockerKey Blocker ticket key whose PR just merged (e.g. "MS-520").
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    override fun launchForUnblockedTicket(ticketKey: String, blockerKey: String): Boolean {
+    override suspend fun launchForUnblockedTicket(ticketKey: String, blockerKey: String): Boolean {
         val cloudRun = cloudRun ?: return false
         val payload = json.encodeToString(mapOf("ticketKey" to ticketKey))
         val identifiers = mapOf("TICKET_KEY" to ticketKey)

@@ -11,9 +11,12 @@ import com.mediasage.agentruntime.service.JiraApiClient
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import java.util.UUID
 import kotlin.test.Test
@@ -57,7 +60,12 @@ class JobDispatchTest {
             runningJobs.firstOrNull { it.ticketKey == ticketKey }
     }
 
-    private class FakeJobDispatcher(private val recoverResult: Boolean = true) : JobDispatcher {
+    private class FakeJobDispatcher(
+        private val recoverResult: Boolean = true,
+        // Lets a test hold executeJob suspended mid-flight to simulate a genuinely concurrent
+        // duplicate webhook delivery arriving while the first dispatch hasn't finished yet.
+        private val beforeExecute: suspend () -> Unit = {},
+    ) : JobDispatcher {
         val executions = mutableListOf<String>()
         val jobTypes = mutableListOf<String>()
         var lastIdentifiers: Map<String, String> = emptyMap()
@@ -66,6 +74,7 @@ class JobDispatchTest {
         override suspend fun executeJob(
             jobId: UUID, ticketKey: String, jobType: String, identifiers: Map<String, String>, jobNameOverride: String?
         ): Boolean {
+            beforeExecute()
             executions.add(ticketKey)
             jobTypes.add(jobType)
             lastIdentifiers = identifiers
@@ -445,11 +454,17 @@ class JobDispatchTest {
     @Test
     fun `duplicate launchForQualityReview for same PR is ignored`() = runTest {
         val registry = FakeJobRegistry(shouldDispatchResult = true)
-        val dispatcher = FakeJobDispatcher()
+        val gate = CompletableDeferred<Unit>()
+        val dispatcher = FakeJobDispatcher(beforeExecute = { gate.await() })
         val service = cloudRunService(registry, dispatcher, scope = this)
 
-        val first = service.launchForQualityReview(42, "MS-545")
+        // First dispatch is held mid-flight (blocked in executeJob) to simulate a genuinely
+        // concurrent duplicate webhook delivery, not just two sequential calls.
+        val firstDeferred = async { service.launchForQualityReview(42, "MS-545") }
+        runCurrent()
         val second = service.launchForQualityReview(42, "MS-545")
+        gate.complete(Unit)
+        val first = firstDeferred.await()
         advanceUntilIdle()
 
         assertTrue(first, "First launch must return true")
@@ -460,11 +475,15 @@ class JobDispatchTest {
     @Test
     fun `duplicate launchForPrReview for same PR is ignored`() = runTest {
         val registry = FakeJobRegistry(shouldDispatchResult = true)
-        val dispatcher = FakeJobDispatcher()
+        val gate = CompletableDeferred<Unit>()
+        val dispatcher = FakeJobDispatcher(beforeExecute = { gate.await() })
         val service = cloudRunService(registry, dispatcher, scope = this)
 
-        val first = service.launchForPrReview(42)
+        val firstDeferred = async { service.launchForPrReview(42) }
+        runCurrent()
         val second = service.launchForPrReview(42)
+        gate.complete(Unit)
+        val first = firstDeferred.await()
         advanceUntilIdle()
 
         assertTrue(first, "First launch must return true")
@@ -513,13 +532,19 @@ class JobDispatchTest {
     @Test
     fun `launchForUnblockedTicket is deduplicated by activeKeys for re-entrant Jira webhook`() = runTest {
         val registry = FakeJobRegistry(shouldDispatchResult = true)
-        val dispatcher = FakeJobDispatcher()
+        val gate = CompletableDeferred<Unit>()
+        val dispatcher = FakeJobDispatcher(beforeExecute = { gate.await() })
         val service = cloudRunService(registry, dispatcher, scope = this)
 
-        // Simulate: GitHub webhook calls launchForUnblockedTicket and activeKeys is set synchronously.
-        // A re-entrant Jira webhook then calls launch for the same key — the activeKeys gate rejects it.
-        val first = service.launchForUnblockedTicket("MS-521", "MS-520")
-        val reentrant = service.launch("MS-521") // simulates Jira webhook fired by In Progress transition
+        // Simulate: GitHub webhook calls launchForUnblockedTicket and activeKeys is set synchronously,
+        // then held mid-flight (blocked in executeJob) while a re-entrant Jira webhook — fired by the
+        // bot-initiated In Progress transition — calls launch for the same key concurrently.
+        // The activeKeys gate must reject the re-entrant call while the first is still in flight.
+        val firstDeferred = async { service.launchForUnblockedTicket("MS-521", "MS-520") }
+        runCurrent()
+        val reentrant = service.launch("MS-521")
+        gate.complete(Unit)
+        val first = firstDeferred.await()
         advanceUntilIdle()
 
         assertTrue(first, "Initial dispatch must succeed")

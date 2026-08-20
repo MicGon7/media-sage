@@ -4,7 +4,10 @@ package com.mediasage.agentruntime.service
  * Dispatches Claude Code agents in response to Jira and GitHub webhook events.
  *
  * Implemented by [AgentLaunchService], which routes each call to a Cloud Run Job.
- * All methods are synchronous: they enqueue a coroutine and return immediately.
+ * All methods are suspend functions that complete only once the dispatch attempt
+ * (Cloud Run API call, or dedup rejection) has finished — callers on a request path
+ * should await them before responding, so the caller's request stays open for the
+ * duration of the dispatch rather than racing a detached background coroutine.
  *
  * The orchestrator is a pure dispatcher: it passes only the minimum job identifiers
  * as env vars. The worker's skill fetches all context (ticket content, PR diff, review
@@ -23,7 +26,7 @@ interface AgentLauncher {
      * @param dryRun When true, inserts a job row but skips Cloud Run dispatch.
      * @return true if an agent was dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    fun launch(ticketKey: String, dryRun: Boolean = false): Boolean
+    suspend fun launch(ticketKey: String, dryRun: Boolean = false): Boolean
 
     /**
      * Launches a Cloud Run Job to respond to a PR review.
@@ -34,7 +37,7 @@ interface AgentLauncher {
      * @param prNumber GitHub PR number. Used as the dedup key and passed as `PR_NUMBER`.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    fun launchForPrReview(prNumber: Int): Boolean
+    suspend fun launchForPrReview(prNumber: Int): Boolean
 
     /**
      * Launches a Cloud Run Job to rebase a branch ejected from the merge queue due to a conflict.
@@ -45,7 +48,7 @@ interface AgentLauncher {
      * @param prNumber GitHub PR number. Used as the dedup key and passed as `PR_NUMBER`.
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    fun launchForConflictResolution(prNumber: Int): Boolean
+    suspend fun launchForConflictResolution(prNumber: Int): Boolean
 
     /**
      * Launches a Cloud Run Job that independently reviews a bot-authored PR for code quality.
@@ -61,7 +64,7 @@ interface AgentLauncher {
      * @param jiraTicketKey Real Jira key of the ticket whose `ticket-work` opened the PR (e.g. "MS-545").
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    fun launchForQualityReview(prNumber: Int, jiraTicketKey: String): Boolean
+    suspend fun launchForQualityReview(prNumber: Int, jiraTicketKey: String): Boolean
 
     /**
      * Launches a Cloud Run Job for [ticketKey] after its last blocker merged.
@@ -75,6 +78,6 @@ interface AgentLauncher {
      * @param blockerKey Jira issue key of the blocker whose PR just merged (e.g. "MS-520").
      * @return true if dispatched; false if deduplicated or Cloud Run is not configured.
      */
-    fun launchForUnblockedTicket(ticketKey: String, blockerKey: String): Boolean
+    suspend fun launchForUnblockedTicket(ticketKey: String, blockerKey: String): Boolean
 
 }
