@@ -114,6 +114,42 @@ class DailyReflectionRepositoryTest {
     }
 
     @Test
+    fun getOrFetch_persistsAndPushesTheChallengeFromTheApiResponse() = runTest {
+        val dao = FakeDailyReflectionDao()
+        val remote = FakeDailyReflectionRemoteDataSource()
+        val api = FakeReflectionApi(
+            response = DailyReflectionResponseDto(
+                scriptureReference = "ref", scriptureText = "text", insight = "insight",
+                implication = "implication", inspiration = "inspiration", sources = emptyList(),
+                tone = "morning", challenge = "What will you carry into today?"
+            )
+        )
+
+        val result = repo(dao = dao, api = api, remote = remote).getOrFetch(
+            figureId = augustine.id, figureName = augustine.name, headlines = emptyList(), tone = "morning"
+        )
+
+        assertEquals("What will you carry into today?", result.challenge)
+        assertEquals("What will you carry into today?", dao.upsertCalls.first().challenge)
+        assertEquals("What will you carry into today?", remote.pushedRows.first().challenge)
+    }
+
+    @Test
+    fun getOrFetch_leavesChallengeNullForReflectionsGeneratedBeforeThisChange() = runTest {
+        val todayEpochDay = localEpochDay(epochMillis())
+        val dao = FakeDailyReflectionDao()
+        dao.upsert(
+            reflection(figureId = augustine.id, epochDay = todayEpochDay, tone = "morning", synced = true)
+        )
+
+        val result = repo(dao = dao).getOrFetch(
+            figureId = augustine.id, figureName = augustine.name, headlines = emptyList(), tone = "morning"
+        )
+
+        assertNull(result.challenge)
+    }
+
+    @Test
     fun isResolved_isFalseBeforeResolveIsCalled() = runTest {
         assertFalse(repo().isResolved.value)
     }

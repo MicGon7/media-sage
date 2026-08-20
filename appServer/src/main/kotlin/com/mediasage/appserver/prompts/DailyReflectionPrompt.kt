@@ -44,6 +44,7 @@ object DailyReflectionPrompt {
         appendLine("Each section must be exactly 1-2 sentences. Stop after 2 sentences — do not continue.")
         appendLine("- Include a scripture reference and the full verse text")
         appendLine("- List the source titles you drew from")
+        appendLine(buildChallengeInstruction(params.tone))
         appendLine()
         appendLine(RESPONSE_FORMAT)
     }
@@ -76,6 +77,17 @@ object DailyReflectionPrompt {
         "You may revisit a theme if the headlines call for it, but bring a fresh angle, " +
         "a different application, or a deeper dimension — avoid repeating the same argument:"
 
+    private fun buildChallengeInstruction(tone: String): String {
+        val framing = if (tone.equals("evening", ignoreCase = true)) {
+            "retrospective — inviting the reader to look back on their day"
+        } else {
+            "anticipatory — inviting the reader to look ahead to their day"
+        }
+        return "- Include a reflection challenge: one open-ended question, 1-2 sentences, " +
+            "addressed to the reader in second person, drawn from the insight/implication/inspiration " +
+            "above. Make it $framing."
+    }
+
     private val RESPONSE_FORMAT = """
         Respond ONLY with JSON in this exact format:
         {
@@ -84,7 +96,8 @@ object DailyReflectionPrompt {
           "insight": "<1-2 sentences max>",
           "implication": "<1-2 sentences max>",
           "inspiration": "<1-2 sentences max>",
-          "sources": ["<source title>"]
+          "sources": ["<source title>"],
+          "challenge": "<one open-ended question, 1-2 sentences, second person>"
         }
     """.trimIndent()
 }

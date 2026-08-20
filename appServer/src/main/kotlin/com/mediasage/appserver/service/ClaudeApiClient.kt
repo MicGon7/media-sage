@@ -93,6 +93,7 @@ open class ClaudeApiClient(
             implication = parsed.implication,
             inspiration = parsed.inspiration,
             sources = parsed.sources,
+            challenge = parsed.challenge,
             tone = tone
         )
     }
@@ -165,7 +166,8 @@ data class DailyReflectionRaw(
     val insight: String,
     val implication: String,
     val inspiration: String,
-    val sources: List<String>
+    val sources: List<String>,
+    val challenge: String? = null
 )
 
 @Serializable

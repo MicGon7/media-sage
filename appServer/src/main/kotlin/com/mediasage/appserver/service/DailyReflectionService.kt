@@ -67,5 +67,6 @@ data class DailyReflectionResult(
     val implication: String,
     val inspiration: String,
     val sources: List<String>,
-    val tone: String
+    val tone: String,
+    val challenge: String? = null
 )

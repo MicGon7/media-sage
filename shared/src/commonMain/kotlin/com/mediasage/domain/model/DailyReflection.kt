@@ -8,5 +8,6 @@ data class DailyReflection(
     val inspiration: String,
     val sources: List<String>,
     val tone: String,
-    val theme: String? = null
+    val theme: String? = null,
+    val challenge: String? = null
 )

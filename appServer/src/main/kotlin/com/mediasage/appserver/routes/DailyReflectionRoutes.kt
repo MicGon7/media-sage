@@ -56,7 +56,8 @@ data class DailyReflectionResponse(
     val implication: String,
     val inspiration: String,
     val sources: List<String>,
-    val tone: String
+    val tone: String,
+    val challenge: String? = null
 )
 
 private fun DailyReflectionResult.toResponse() = DailyReflectionResponse(
@@ -66,5 +67,6 @@ private fun DailyReflectionResult.toResponse() = DailyReflectionResponse(
     implication = implication,
     inspiration = inspiration,
     sources = sources,
-    tone = tone
+    tone = tone,
+    challenge = challenge
 )

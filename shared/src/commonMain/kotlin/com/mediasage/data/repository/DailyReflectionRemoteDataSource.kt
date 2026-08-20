@@ -27,4 +27,5 @@ data class DailyReflectionRow(
     val implication: String,
     val inspiration: String,
     val sources: List<String>,
+    val challenge: String? = null,
 )
