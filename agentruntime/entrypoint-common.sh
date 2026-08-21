@@ -1,6 +1,11 @@
 # Sourced by worker-entrypoint.sh and lite-entrypoint.sh.
 # Do not run directly. Caller must set -eo pipefail before sourcing.
 
+# Recorded as early as possible so Claude Code (a child process of this shell, inheriting
+# this export) can compute its own remaining time budget against JOB_TIMEOUT_SECONDS
+# before starting the UI render step — see ticket-work.md step 5.
+export JOB_START_EPOCH=$(date +%s)
+
 git config --global user.name "${GITHUB_BOT_NAME:-media-sage-worker}"
 # GitHub App noreply email — deterministic from the App ID, no env var needed
 git config --global user.email "${GITHUB_APP_ID}+media-sage-worker[bot]@users.noreply.github.com"

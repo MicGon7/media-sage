@@ -84,14 +84,14 @@ Because these are the worker's own static env vars, they are *not* dispatch-time
 
 **Env var overrides append, not replace.** When dispatching a Cloud Run Job with per-run env var overrides (`containerOverrides.env`), the values are appended to the job's existing env vars — they do NOT replace them. If the same key exists in both the static job definition and the per-run override, the static value takes precedence. Rule: never set per-target or per-run values as static env vars on the job definition. Inject them exclusively at dispatch time via `DispatchConfig`. The job definition should only hold env vars that are truly static across all runs (e.g. `ANTHROPIC_BASE_URL`, `GCP_PROJECT_ID`).
 
-**Dispatch model:** The orchestrator is a pure dispatcher — it passes only the minimum job identifiers as env vars. No prompt strings are constructed in the orchestrator. Per-run env vars at dispatch time:
+**Dispatch model:** The orchestrator is a pure dispatcher — it passes only the minimum job identifiers as env vars. No prompt strings are constructed in the orchestrator. Every dispatch also carries `JOB_TIMEOUT_SECONDS`, mirroring the Cloud Run Jobs Admin API `timeout` override (`WORKER_JOB_TIMEOUT_SECONDS` in `CloudRunJobsClient.kt`) so the worker can compute its own remaining time budget — see `entrypoint-common.sh`'s `JOB_START_EPOCH` and `ticket-work.md` step 5. Per-run env vars at dispatch time:
 
 | Job type | Env vars passed |
 |---|---|
-| `ticket-work` | `JOB_TYPE`, `JOB_ID`, `TICKET_KEY` |
-| `pr-review-work` | `JOB_TYPE`, `JOB_ID`, `PR_NUMBER` |
-| `conflict-resolution-work` | `JOB_TYPE`, `JOB_ID`, `PR_NUMBER` |
-| `pr-quality-work` | `JOB_TYPE`, `JOB_ID`, `PR_NUMBER`, `TICKET_KEY` (=`QUALITY-{n}`), `JIRA_TICKET_KEY` |
+| `ticket-work` | `JOB_TYPE`, `JOB_ID`, `JOB_TIMEOUT_SECONDS`, `TICKET_KEY` |
+| `pr-review-work` | `JOB_TYPE`, `JOB_ID`, `JOB_TIMEOUT_SECONDS`, `PR_NUMBER` |
+| `conflict-resolution-work` | `JOB_TYPE`, `JOB_ID`, `JOB_TIMEOUT_SECONDS`, `PR_NUMBER` |
+| `pr-quality-work` | `JOB_TYPE`, `JOB_ID`, `JOB_TIMEOUT_SECONDS`, `PR_NUMBER`, `TICKET_KEY` (=`QUALITY-{n}`), `JIRA_TICKET_KEY` |
 
 The worker entrypoint runs `claude -p "/$JOB_TYPE"` — the skill is the entry point and owns all framing and context fetching.
 
