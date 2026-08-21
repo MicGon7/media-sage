@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.mediasage.theme.AppTheme
+import com.mediasage.theme.BrandAmber
 import com.mediasage.theme.MediaSageTheme
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.nav_back
@@ -297,9 +298,11 @@ private fun TextScaleRow(
             valueRange = TEXT_SCALE_MIN_PERCENT.toFloat()..TEXT_SCALE_MAX_PERCENT.toFloat(),
             steps = TEXT_SCALE_STEPS,
             colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
+                thumbColor = BrandAmber,
+                activeTrackColor = BrandAmber,
+                activeTickColor = BrandAmber,
                 inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                inactiveTickColor = MaterialTheme.colorScheme.outlineVariant,
             ),
         )
     }
