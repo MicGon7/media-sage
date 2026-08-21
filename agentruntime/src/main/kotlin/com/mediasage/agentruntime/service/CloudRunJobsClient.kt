@@ -29,7 +29,7 @@ private data class ContainerOverride(
 private data class Overrides(
     @SerialName("containerOverrides") val containerOverrides: List<ContainerOverride>,
     @SerialName("taskCount") val taskCount: Int = 1,
-    @SerialName("timeout") val timeout: String = "1800s"
+    @SerialName("timeout") val timeout: String = "2700s"
 )
 
 @Serializable
