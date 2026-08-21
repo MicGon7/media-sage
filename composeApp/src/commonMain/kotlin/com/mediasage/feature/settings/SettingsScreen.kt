@@ -24,6 +24,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -35,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.mediasage.theme.AppTheme
+import com.mediasage.theme.BrandAmber
 import com.mediasage.theme.MediaSageTheme
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.nav_back
@@ -47,11 +50,20 @@ import mediasage.composeapp.generated.resources.settings_send_feedback
 import mediasage.composeapp.generated.resources.settings_developer_credit
 import mediasage.composeapp.generated.resources.settings_sign_out
 import mediasage.composeapp.generated.resources.settings_terms_of_service
+import mediasage.composeapp.generated.resources.settings_text_size_label
 import mediasage.composeapp.generated.resources.settings_theme_label
 import mediasage.composeapp.generated.resources.settings_dark_mode_label
 import mediasage.composeapp.generated.resources.settings_version_label
 import mediasage.composeapp.generated.resources.title_settings
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
+
+private const val TEXT_SCALE_MIN_PERCENT = 85
+private const val TEXT_SCALE_MAX_PERCENT = 150
+private const val TEXT_SCALE_DEFAULT_PERCENT = 100
+private const val TEXT_SCALE_STEP_PERCENT = 5
+private const val TEXT_SCALE_STEPS =
+    (TEXT_SCALE_MAX_PERCENT - TEXT_SCALE_MIN_PERCENT) / TEXT_SCALE_STEP_PERCENT - 1
 
 @Composable
 fun SettingsScreen(
@@ -123,6 +135,11 @@ fun SettingsScreen(
                         )
                     }
                 }
+
+                TextScaleRow(
+                    percent = ready?.textScalePercent ?: TEXT_SCALE_DEFAULT_PERCENT,
+                    onPercentChange = { onIntent(SettingsContract.Intent.SetTextScalePercent(it)) },
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -253,6 +270,44 @@ private fun SettingsRow(
     }
 }
 
+@Composable
+private fun TextScaleRow(
+    percent: Int,
+    onPercentChange: (Int) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(Res.string.settings_text_size_label),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = "$percent%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Slider(
+            value = percent.toFloat(),
+            onValueChange = { onPercentChange(it.roundToInt()) },
+            valueRange = TEXT_SCALE_MIN_PERCENT.toFloat()..TEXT_SCALE_MAX_PERCENT.toFloat(),
+            steps = TEXT_SCALE_STEPS,
+            colors = SliderDefaults.colors(
+                thumbColor = BrandAmber,
+                activeTrackColor = BrandAmber,
+                activeTickColor = BrandAmber,
+                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                inactiveTickColor = MaterialTheme.colorScheme.outlineVariant,
+            ),
+        )
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun SettingsScreenPreview() {
@@ -292,6 +347,17 @@ private fun SettingsScreenWarmPreview() {
     MediaSageTheme(theme = AppTheme.WARM) {
         SettingsScreen(
             state = SettingsContract.UiState.Ready(appTheme = AppTheme.WARM),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsScreenLargeTextPreview() {
+    MediaSageTheme(textScalePercent = 130) {
+        SettingsScreen(
+            state = SettingsContract.UiState.Ready(textScalePercent = 130),
             onIntent = {},
         )
     }

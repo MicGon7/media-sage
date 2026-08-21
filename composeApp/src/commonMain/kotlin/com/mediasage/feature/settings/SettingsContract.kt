@@ -8,6 +8,7 @@ object SettingsContract {
         data class Ready(
             val appTheme: AppTheme = AppTheme.CLASSIC,
             val darkMode: Boolean = false,
+            val textScalePercent: Int = 100,
             val appVersion: String = "1.0",
             val displayName: String = "",
         ) : UiState
@@ -16,6 +17,7 @@ object SettingsContract {
     sealed interface Intent {
         data class SetAppTheme(val theme: AppTheme) : Intent
         data class ToggleDarkMode(val enabled: Boolean) : Intent
+        data class SetTextScalePercent(val percent: Int) : Intent
         data object SignOut : Intent
     }
 

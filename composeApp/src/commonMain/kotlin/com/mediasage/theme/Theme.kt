@@ -194,6 +194,7 @@ internal fun warmDarkAppColors() = AppColors(
 fun MediaSageTheme(
     theme: AppTheme = AppTheme.CLASSIC,
     darkTheme: Boolean = isSystemInDarkTheme(),
+    textScalePercent: Int = 100,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when (theme) {
@@ -209,7 +210,7 @@ fun MediaSageTheme(
     CompositionLocalProvider(LocalAppColors provides appColors, LocalIsDarkMode provides darkTheme) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = mediaSageTypography(),
+            typography = mediaSageTypography(scale = textScalePercent / 100f),
             content = content,
         )
     }
