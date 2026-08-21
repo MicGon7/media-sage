@@ -14,6 +14,12 @@ import java.io.ByteArrayInputStream
 import java.util.UUID
 import org.slf4j.LoggerFactory
 
+// Single source of truth for the worker job's execution timeout: both the Cloud Run
+// Jobs Admin API "timeout" override below and the JOB_TIMEOUT_SECONDS env var the
+// worker uses to compute its own remaining time budget (see ticket-work.md step 5)
+// must agree, or the worker could believe it has more time than Cloud Run will allow.
+private const val WORKER_JOB_TIMEOUT_SECONDS = 2700
+
 @Serializable
 private data class EnvVar(
     @SerialName("name") val name: String,
@@ -29,7 +35,7 @@ private data class ContainerOverride(
 private data class Overrides(
     @SerialName("containerOverrides") val containerOverrides: List<ContainerOverride>,
     @SerialName("taskCount") val taskCount: Int = 1,
-    @SerialName("timeout") val timeout: String = "2700s"
+    @SerialName("timeout") val timeout: String = "${WORKER_JOB_TIMEOUT_SECONDS}s"
 )
 
 @Serializable
@@ -82,8 +88,10 @@ class CloudRunJobsClient(
      * Dispatches a Cloud Run Job execution via the Admin API and marks the job RUNNING.
      *
      * Posts to `v2/projects/{project}/locations/{region}/jobs/{jobName}:run` with per-run env var
-     * overrides: `JOB_TYPE`, `JOB_ID`, and one entry per [identifiers] key. The worker entrypoint
-     * runs `claude -p "/$JOB_TYPE"` — the skill owns all framing and context fetching.
+     * overrides: `JOB_TYPE`, `JOB_ID`, `JOB_TIMEOUT_SECONDS` (mirrors the `timeout` override below
+     * so the worker can compute its own remaining time budget), and one entry per [identifiers] key.
+     * The worker entrypoint runs `claude -p "/$JOB_TYPE"` — the skill owns all framing and context
+     * fetching.
      *
      * The API response includes an operation name used as the execution name — saved via
      * [JobRepository.markRunning] so [recoverJob] can look it up after a restart. Returns
@@ -104,6 +112,7 @@ class CloudRunJobsClient(
         val envVars = buildList {
             add(EnvVar("JOB_TYPE", jobType))
             add(EnvVar("JOB_ID", jobId.toString()))
+            add(EnvVar("JOB_TIMEOUT_SECONDS", WORKER_JOB_TIMEOUT_SECONDS.toString()))
             identifiers.forEach { (k, v) -> add(EnvVar(k, v)) }
         }
 
