@@ -20,13 +20,14 @@ fun App(isDebugBuild: Boolean = false, appVersion: String = "") {
     val appViewModel = koinViewModel<AppViewModel>()
     val darkMode by appViewModel.darkMode.collectAsState()
     val appTheme by appViewModel.appTheme.collectAsState()
+    val textScalePercent by appViewModel.textScalePercent.collectAsState()
     val authState by appViewModel.authState.collectAsState()
 
     CompositionLocalProvider(
         LocalIsDebugBuild provides isDebugBuild,
         LocalAppVersion provides appVersion,
     ) {
-        MediaSageTheme(theme = appTheme, darkTheme = darkMode ?: false) {
+        MediaSageTheme(theme = appTheme, darkTheme = darkMode ?: false, textScalePercent = textScalePercent) {
             when (authState) {
                 is AuthUiState.Loading -> Unit
                 is AuthUiState.Unauthenticated -> {

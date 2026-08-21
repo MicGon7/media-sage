@@ -28,11 +28,13 @@ class SettingsViewModel(
             combine(
                 themePreferencesRepository.appTheme,
                 themePreferencesRepository.darkMode,
+                themePreferencesRepository.textScalePercent,
                 authRepository.observeAuthState(),
-            ) { theme, dark, session ->
+            ) { theme, dark, textScalePercent, session ->
                 SettingsContract.UiState.Ready(
                     appTheme = theme,
                     darkMode = dark,
+                    textScalePercent = textScalePercent,
                     displayName = session?.displayName.orEmpty(),
                 )
             }.collect { _state.value = it }
@@ -46,6 +48,9 @@ class SettingsViewModel(
             }
             is SettingsContract.Intent.ToggleDarkMode -> viewModelScope.launch {
                 themePreferencesRepository.setDarkMode(intent.enabled)
+            }
+            is SettingsContract.Intent.SetTextScalePercent -> viewModelScope.launch {
+                themePreferencesRepository.setTextScalePercent(intent.percent)
             }
             is SettingsContract.Intent.SignOut -> viewModelScope.launch {
                 authRepository.signOut()

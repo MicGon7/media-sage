@@ -43,6 +43,9 @@ class AppViewModel(
     val appTheme: StateFlow<AppTheme> = themePreferencesRepository.appTheme
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppTheme.CLASSIC)
 
+    val textScalePercent: StateFlow<Int> = themePreferencesRepository.textScalePercent
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ThemePreferencesRepository.DEFAULT_TEXT_SCALE_PERCENT)
+
     private val _authBypass = MutableStateFlow(false)
 
     val authState: StateFlow<AuthUiState> = combine(

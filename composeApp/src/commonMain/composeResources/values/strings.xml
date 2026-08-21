@@ -85,6 +85,7 @@
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_theme_label">Theme</string>
     <string name="settings_dark_mode_label">Dark Mode</string>
+    <string name="settings_text_size_label">Text Size</string>
     <string name="settings_section_account">Account</string>
     <string name="settings_edit_profile">Edit Profile</string>
     <string name="settings_version_label">Version</string>
