@@ -13,6 +13,7 @@ import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.ProfileRepository
 import com.mediasage.domain.repository.QuoteRepository
+import com.mediasage.domain.repository.UserReflectionNoteRepository
 import com.mediasage.domain.usecase.GetDayDetailUseCase
 import com.mediasage.domain.usecase.GetHeadlinesFeedUseCase
 import com.mediasage.domain.usecase.GetReaderCalendarUseCase
@@ -44,7 +45,15 @@ val appModule = module {
             get<AuthRepository>(),
         )
     }
-    viewModel { BriefingViewModel(get<DayAssignmentRepository>(), get<DailyReflectionRepository>(), get<FigureRepository>(), get<HeadlineRepository>()) }
+    viewModel {
+        BriefingViewModel(
+            get<DayAssignmentRepository>(),
+            get<DailyReflectionRepository>(),
+            get<FigureRepository>(),
+            get<HeadlineRepository>(),
+            get<UserReflectionNoteRepository>(),
+        )
+    }
     viewModel {
         HeadlinesViewModel(
             get<HeadlineRepository>(),
@@ -78,7 +87,7 @@ val appModule = module {
     }
     viewModel { ReaderHistoryViewModel(get<GetReaderCalendarUseCase>(), get<DailyReflectionRepository>()) }
     viewModel { (epochDay: Long, figureName: String?, figureImageUrl: String?) ->
-        DayDetailViewModel(epochDay, figureName, figureImageUrl, get<GetDayDetailUseCase>())
+        DayDetailViewModel(epochDay, figureName, figureImageUrl, get<GetDayDetailUseCase>(), get<UserReflectionNoteRepository>())
     }
     viewModel { HistoryViewModel(get<EncouragementRepository>()) }
     viewModel { BookmarksViewModel(get<EncouragementRepository>()) }

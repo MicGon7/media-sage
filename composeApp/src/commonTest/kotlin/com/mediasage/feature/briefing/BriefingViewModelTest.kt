@@ -14,6 +14,7 @@ import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
+import com.mediasage.domain.repository.UserReflectionNoteRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -110,6 +111,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = reflectionRepo,
             figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
             headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
         )
         val sideEffects = mutableListOf<BriefingContract.SideEffect>()
@@ -143,6 +145,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = FakeDailyReflectionRepository(),
             figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
             headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
@@ -174,6 +177,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = FakeDailyReflectionRepository(isResolved = isResolved),
             figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
             headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
@@ -207,6 +211,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = FakeDailyReflectionRepository(),
             figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
             headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
@@ -244,6 +249,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = reflectionRepo,
             figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
             headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = toneScheduler,
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
@@ -258,6 +264,96 @@ class BriefingViewModelTest {
         assertIs<BriefingContract.CardState.Ready>(state.card)
     }
 
+    @Test
+    fun reflectTapped_opensSheetWithChallengeAndSavedNote() = runTest(testDispatcher) {
+        val noteRepo = FakeUserReflectionNoteRepository()
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),
+            dailyReflectionRepository = FakeDailyReflectionRepository(challenge = "What is one way to show love today?"),
+            figureRepository = FakeFigureRepository(listOf(judson)),
+            headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = noteRepo,
+            toneScheduler = FakeBriefingToneScheduler(),
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        advanceUntilIdle()
+
+        viewModel.onIntent(BriefingContract.Intent.ReflectTapped)
+        advanceUntilIdle()
+
+        val state = viewModel.state.value as BriefingContract.UiState.Success
+        val sheet = requireNotNull(state.reflectSheet)
+        assertEquals("What is one way to show love today?", sheet.challenge)
+        assertEquals("", sheet.noteText)
+    }
+
+    @Test
+    fun reflectNoteSaved_persistsNoteAndUpdatesSavedText() = runTest(testDispatcher) {
+        val noteRepo = FakeUserReflectionNoteRepository()
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),
+            dailyReflectionRepository = FakeDailyReflectionRepository(challenge = "What is one way to show love today?"),
+            figureRepository = FakeFigureRepository(listOf(judson)),
+            headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = noteRepo,
+            toneScheduler = FakeBriefingToneScheduler(),
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        advanceUntilIdle()
+
+        viewModel.onIntent(BriefingContract.Intent.ReflectTapped)
+        advanceUntilIdle()
+        viewModel.onIntent(BriefingContract.Intent.ReflectNoteChanged("Called my neighbor."))
+        viewModel.onIntent(BriefingContract.Intent.ReflectNoteSaved)
+        advanceUntilIdle()
+
+        val state = viewModel.state.value as BriefingContract.UiState.Success
+        val sheet = requireNotNull(state.reflectSheet)
+        assertEquals("Called my neighbor.", sheet.savedNoteText)
+        assertEquals(1, noteRepo.savedNotes.size)
+    }
+
+    @Test
+    fun reflectDismissed_closesSheet() = runTest(testDispatcher) {
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),
+            dailyReflectionRepository = FakeDailyReflectionRepository(challenge = "What is one way to show love today?"),
+            figureRepository = FakeFigureRepository(listOf(judson)),
+            headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
+            toneScheduler = FakeBriefingToneScheduler(),
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        advanceUntilIdle()
+
+        viewModel.onIntent(BriefingContract.Intent.ReflectTapped)
+        advanceUntilIdle()
+        viewModel.onIntent(BriefingContract.Intent.ReflectDismissed)
+
+        val state = viewModel.state.value as BriefingContract.UiState.Success
+        assertEquals(null, state.reflectSheet)
+    }
+
+    @Test
+    fun reflectTapped_doesNothingWhenNoChallengeOnReflection() = runTest(testDispatcher) {
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),
+            dailyReflectionRepository = FakeDailyReflectionRepository(),
+            figureRepository = FakeFigureRepository(listOf(judson)),
+            headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
+            toneScheduler = FakeBriefingToneScheduler(),
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        advanceUntilIdle()
+
+        viewModel.onIntent(BriefingContract.Intent.ReflectTapped)
+        advanceUntilIdle()
+
+        val state = viewModel.state.value as BriefingContract.UiState.Success
+        assertEquals(null, state.reflectSheet)
+    }
+
     private fun TestScope.briefingViewModel(
         figures: List<Figure>,
         assignments: Map<Int, DayAssignment>,
@@ -268,6 +364,7 @@ class BriefingViewModelTest {
             dailyReflectionRepository = FakeDailyReflectionRepository(),
             figureRepository = FakeFigureRepository(figures),
             headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
@@ -304,6 +401,7 @@ private class FakeDayAssignmentRepository(
 
 private class FakeDailyReflectionRepository(
     private val fetchDelayMs: Long = 0,
+    private val challenge: String? = null,
     override val isResolved: StateFlow<Boolean> = MutableStateFlow(true),
 ) : DailyReflectionRepository {
     var fetchCount = 0
@@ -327,6 +425,7 @@ private class FakeDailyReflectionRepository(
             sources = emptyList(),
             tone = tone,
             theme = theme,
+            challenge = challenge,
         )
     }
     override fun observeByEpochDayRange(startEpochDay: Long, endEpochDay: Long): Flow<List<BriefingDay>> =
@@ -353,4 +452,13 @@ private class FakeBriefingToneScheduler : BriefingToneScheduler {
         boundaryCrossed.receive()
     }
     suspend fun crossBoundary() = boundaryCrossed.send(Unit)
+}
+
+private class FakeUserReflectionNoteRepository : UserReflectionNoteRepository {
+    private val notes = mutableMapOf<String, String>()
+    val savedNotes: Map<String, String> get() = notes
+    override suspend fun getNote(reflectionId: String): String? = notes[reflectionId]
+    override suspend fun saveNote(reflectionId: String, noteText: String) {
+        notes[reflectionId] = noteText
+    }
 }

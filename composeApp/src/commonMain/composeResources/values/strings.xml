@@ -124,6 +124,13 @@
     <string name="day_detail_share_action">Share</string>
     <string name="briefing_card_reflect_action">Reflect</string>
     <string name="briefing_card_study_action">Study</string>
+    <string name="reflect_sheet_title">Reflection Question</string>
+    <string name="reflect_note_hint">Write your reflection here…</string>
+    <string name="reflect_save_action">Save</string>
+    <string name="reflect_discard_title">Discard changes?</string>
+    <string name="reflect_discard_message">Your reflection note hasn't been saved yet. Discard it?</string>
+    <string name="reflect_discard_confirm">Discard</string>
+    <string name="reflect_discard_cancel">Keep Editing</string>
 
     <!-- Reader screen calendar card -->
     <string name="you_calendar_no_data">—</string>

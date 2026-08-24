@@ -146,6 +146,15 @@ val MIGRATION_32_33 = object : Migration(32, 33) {
     }
 }
 
+val MIGRATION_33_34 = object : Migration(33, 34) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS user_reflection_note " +
+                "(id TEXT NOT NULL, noteText TEXT NOT NULL, updatedAtMillis INTEGER NOT NULL, PRIMARY KEY(id))"
+        )
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

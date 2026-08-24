@@ -11,6 +11,14 @@ object DayDetailContract {
         val sources: List<String>,
         val tone: String,
         val theme: String? = null,
+        val challenge: String? = null,
+    )
+
+    /** Always read-only — reached only from past briefings, never the active tone slot. */
+    data class ReflectSheetState(
+        val tone: String,
+        val challenge: String,
+        val noteText: String,
     )
 
     sealed interface UiState {
@@ -20,10 +28,13 @@ object DayDetailContract {
             val figureImageUrl: String? = null,
             val selectedTone: String? = null,
             val briefings: List<BriefingSummary> = emptyList(),
+            val reflectSheet: ReflectSheetState? = null,
         ) : UiState
     }
 
     sealed interface Intent {
         data class BriefingToneSelected(val tone: String) : Intent
+        data class ReflectTapped(val tone: String) : Intent
+        data object ReflectDismissed : Intent
     }
 }
