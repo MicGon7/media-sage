@@ -3,6 +3,7 @@ package com.mediasage.feature.briefing
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.LensFilter
@@ -90,7 +91,7 @@ class BriefingViewModel(
     }
 
     private fun reflectionId(tone: String, theme: String?): String =
-        "${todayEpochDay()}_${tone}_${theme ?: "NEWS"}"
+        DailyReflection.id(todayEpochDay(), tone, theme)
 
     /**
      * Reloads once at each tone boundary so a screen left open across the 5pm/midnight transition
