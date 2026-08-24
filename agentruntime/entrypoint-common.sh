@@ -233,7 +233,10 @@ print(json.dumps({'messages': [{'data': data}]}))
     || echo "Warning: Failed to publish Pub/Sub completion event — orchestrator will recover on restart"
 }
 
-# Cloud Run sends SIGTERM when a task exceeds its timeout (default 1800s).
+# Cloud Run sends SIGTERM when a task exceeds its timeout (this job's --task-timeout,
+# declared in build-worker-image.yml — see WORKER_JOB_TIMEOUT_SECONDS's comment in
+# CloudRunJobsClient.kt for why both must stay in sync; 1800s is only Cloud Run's
+# platform default when a job declares no timeout at all, not this job's actual value).
 # Without an explicit TERM trap, bash may exit with code 0 (the last successful
 # command's exit code), causing publish_completion to report status=success even
 # though the job was cancelled. Exiting with 143 (128 + SIGTERM) ensures the

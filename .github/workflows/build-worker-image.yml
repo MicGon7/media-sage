@@ -134,10 +134,15 @@ jobs:
             JIRA_BOT_API_TOKEN=orchestrator-jira-bot-api-token:latest
             SUPABASE_SERVICE_ROLE_KEY=supabase-service-role-key:latest
           secrets_update_strategy: overwrite
+          # --task-timeout is the job resource's static ceiling — the per-run dispatch
+          # override (WORKER_JOB_TIMEOUT_SECONDS in CloudRunJobsClient.kt) cannot exceed it.
+          # Confirmed empirically on MS-728: after MS-725 widened the override alone to
+          # 2700s, a real run was still killed at ~1800s by this static value. Keep both
+          # in sync — this is the one that actually governs the ceiling.
           flags: >-
             --service-account=media-sage-orchestrator@media-sage-agent.iam.gserviceaccount.com
             --cpu=8
             --memory=16Gi
-            --task-timeout=1800
+            --task-timeout=2700
             --max-retries=0
             --tasks=1
