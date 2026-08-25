@@ -29,6 +29,24 @@ class DayDetailScreenRenderTest {
             }
         }
     }
+
+    @Test
+    fun rendersReadOnlyReflectSheet() {
+        captureRoboImage("build/outputs/roborazzi/day_detail_screen_reflect_sheet.png") {
+            MediaSageTheme {
+                DayDetailScreen(
+                    state = sampleState().copy(
+                        reflectSheet = DayDetailContract.ReflectSheetState(
+                            tone = "morning",
+                            challenge = "How has love moved you to act today?",
+                            noteText = "I called an old friend who was struggling.",
+                        ),
+                    ),
+                    onIntent = {},
+                )
+            }
+        }
+    }
 }
 
 private fun sampleState(): DayDetailContract.UiState.Ready = DayDetailContract.UiState.Ready(
@@ -46,6 +64,7 @@ private fun sampleState(): DayDetailContract.UiState.Ready = DayDetailContract.U
             sources = listOf("Mere Christianity, Book IV"),
             tone = "morning",
             theme = "LOVE",
+            challenge = "How has love moved you to act today?",
         ),
         DayDetailContract.BriefingSummary(
             scriptureReference = "Psalm 23:1",

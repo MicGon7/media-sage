@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayDetailData
+import com.mediasage.domain.repository.UserReflectionNoteRepository
 import com.mediasage.domain.usecase.GetDayDetailUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,23 +15,27 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Read-only detail for a single day's briefings, pushed from
- * [com.mediasage.feature.you.ReaderHistoryScreen]. Which briefing tab is selected is local-only state
- * combined with the live [GetDayDetailUseCase] stream — the reactive state-holder pattern, since the
- * briefing list can change while this screen is open. Morning | Evening tabs: exactly one tone is
- * selected at a time, starting with morning; a single briefing has no tab row and is always shown
- * directly (see `DayDetailScreen`).
+ * [com.mediasage.feature.you.ReaderHistoryScreen]. Which briefing tab is selected, and which one's
+ * reflect sheet is open, are local-only state combined with the live [GetDayDetailUseCase] stream —
+ * the reactive state-holder pattern, since the briefing list can change while this screen is open.
+ * Morning | Evening tabs: exactly one tone is selected at a time, starting with morning; a single
+ * briefing has no tab row and is always shown directly (see `DayDetailScreen`).
  */
 class DayDetailViewModel(
     private val epochDay: Long,
     private val figureName: String?,
     private val figureImageUrl: String?,
     getDayDetail: GetDayDetailUseCase,
+    private val userReflectionNoteRepository: UserReflectionNoteRepository,
 ) : ViewModel() {
 
     private val selectedTone = MutableStateFlow(TONE_MORNING)
+    private val openReflectTone = MutableStateFlow<String?>(null)
 
     val state: StateFlow<DayDetailContract.UiState> =
-        combine(selectedTone, getDayDetail(epochDay)) { selected, data -> buildReady(selected, data) }
+        combine(selectedTone, openReflectTone, getDayDetail(epochDay)) { selected, openTone, data ->
+            buildReady(Inputs(selected, openTone, data))
+        }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -44,18 +49,39 @@ class DayDetailViewModel(
     fun onIntent(intent: DayDetailContract.Intent) {
         when (intent) {
             is DayDetailContract.Intent.BriefingToneSelected -> selectedTone.update { intent.tone }
+            is DayDetailContract.Intent.ReflectTapped -> openReflectTone.update { intent.tone }
+            is DayDetailContract.Intent.ReflectDismissed -> openReflectTone.update { null }
         }
     }
 
-    private fun buildReady(
-        selectedTone: String,
-        data: DayDetailData,
-    ): DayDetailContract.UiState.Ready = DayDetailContract.UiState.Ready(
-        epochDay = epochDay,
-        figureName = figureName,
-        figureImageUrl = figureImageUrl,
-        selectedTone = selectedTone,
-        briefings = listOfNotNull(data.morningReflection, data.eveningReflection).map { it.toBriefingSummary() },
+    private suspend fun buildReady(inputs: Inputs): DayDetailContract.UiState.Ready {
+        val briefings = listOfNotNull(inputs.data.morningReflection, inputs.data.eveningReflection)
+            .map { it.toBriefingSummary() }
+        return DayDetailContract.UiState.Ready(
+            epochDay = epochDay,
+            figureName = figureName,
+            figureImageUrl = figureImageUrl,
+            selectedTone = inputs.selectedTone,
+            briefings = briefings,
+            reflectSheet = inputs.openReflectTone?.let { tone -> buildReflectSheet(tone, briefings) },
+        )
+    }
+
+    private suspend fun buildReflectSheet(
+        tone: String,
+        briefings: List<DayDetailContract.BriefingSummary>,
+    ): DayDetailContract.ReflectSheetState? {
+        val summary = briefings.firstOrNull { it.tone == tone } ?: return null
+        val challenge = summary.challenge ?: return null
+        val noteId = DailyReflection.id(epochDay, tone, summary.theme)
+        val note = userReflectionNoteRepository.getNote(noteId).orEmpty()
+        return DayDetailContract.ReflectSheetState(tone = tone, challenge = challenge, noteText = note)
+    }
+
+    private data class Inputs(
+        val selectedTone: String,
+        val openReflectTone: String?,
+        val data: DayDetailData,
     )
 
     private companion object {
@@ -73,4 +99,5 @@ private fun DailyReflection.toBriefingSummary() = DayDetailContract.BriefingSumm
     sources = sources,
     tone = tone,
     theme = theme,
+    challenge = challenge,
 )

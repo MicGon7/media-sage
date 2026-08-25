@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.mediasage.ui.MediaSageBackRow
 import com.mediasage.ui.MediaSageBriefingCard
 import com.mediasage.ui.MediaSageTabRow
+import com.mediasage.ui.ReflectionSheet
 import kotlinx.datetime.LocalDate
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.briefing_card_evening
@@ -29,6 +31,7 @@ import org.jetbrains.compose.resources.stringResource
 
 private const val TONE_MORNING = "morning"
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DayDetailScreen(
     state: DayDetailContract.UiState,
@@ -49,12 +52,16 @@ fun DayDetailScreen(
             ) {
                 when {
                     ready.briefings.isEmpty() -> BriefingsEmptyState(ready.epochDay)
-                    else -> SingleBriefingContent(
-                        briefing = ready.briefings.firstOrNull { it.tone == ready.selectedTone }
-                            ?: ready.briefings.first(),
-                        figureName = ready.figureName,
-                        figureImageUrl = ready.figureImageUrl,
-                    )
+                    else -> {
+                        val briefing = ready.briefings.firstOrNull { it.tone == ready.selectedTone }
+                            ?: ready.briefings.first()
+                        SingleBriefingContent(
+                            briefing = briefing,
+                            figureName = ready.figureName,
+                            figureImageUrl = ready.figureImageUrl,
+                            onReflectTapped = { onIntent(DayDetailContract.Intent.ReflectTapped(briefing.tone)) },
+                        )
+                    }
                 }
             }
             if (ready.briefings.size > 1) {
@@ -67,6 +74,18 @@ fun DayDetailScreen(
                 )
             }
         }
+    }
+    val sheet = ready.reflectSheet
+    if (sheet != null) {
+        ReflectionSheet(
+            challenge = sheet.challenge,
+            noteText = sheet.noteText,
+            editable = false,
+            hasUnsavedChanges = false,
+            onNoteChange = {},
+            onSave = {},
+            onDismiss = { onIntent(DayDetailContract.Intent.ReflectDismissed) },
+        )
     }
 }
 
@@ -95,6 +114,7 @@ private fun SingleBriefingContent(
     briefing: DayDetailContract.BriefingSummary,
     figureName: String?,
     figureImageUrl: String?,
+    onReflectTapped: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         MediaSageBriefingCard(
@@ -107,6 +127,7 @@ private fun SingleBriefingContent(
             inspiration = briefing.inspiration,
             theme = briefing.theme,
             sources = briefing.sources,
+            onReflectClick = briefing.challenge?.let { { onReflectTapped() } },
         )
     }
 }

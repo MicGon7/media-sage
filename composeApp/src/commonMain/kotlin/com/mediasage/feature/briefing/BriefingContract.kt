@@ -8,7 +8,8 @@ object BriefingContract {
         data class Loading(val todayLabel: String) : UiState
         data class Success(
             val todayLabel: String,
-            val card: CardState
+            val card: CardState,
+            val reflectSheet: ReflectSheetState? = null,
         ) : UiState
         data class Error(val errorType: ErrorType) : UiState
     }
@@ -33,12 +34,25 @@ object BriefingContract {
             val inspiration: String,
             val sources: List<String>,
             val tone: String,
-            val theme: String? = null
+            val theme: String? = null,
+            val challenge: String? = null,
         ) : CardState
     }
 
+    /** [editable] is always true here — the live Briefing screen only ever shows the active tone. */
+    data class ReflectSheetState(
+        val challenge: String,
+        val noteText: String,
+        val savedNoteText: String,
+        val editable: Boolean = true,
+    )
+
     sealed interface Intent {
         data object Retry : Intent
+        data object ReflectTapped : Intent
+        data object ReflectDismissed : Intent
+        data class ReflectNoteChanged(val noteText: String) : Intent
+        data object ReflectNoteSaved : Intent
     }
 
     sealed interface SideEffect {

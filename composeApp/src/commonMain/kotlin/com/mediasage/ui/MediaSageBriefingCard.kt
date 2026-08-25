@@ -125,6 +125,7 @@ fun MediaSageBriefingBody(
     inspiration: String,
     modifier: Modifier = Modifier,
     sources: List<String> = emptyList(),
+    onReflectClick: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (sources.isNotEmpty()) {
@@ -151,28 +152,31 @@ fun MediaSageBriefingBody(
 
         Spacer(modifier = Modifier.height(12.dp))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-        BriefingActionsRow()
+        BriefingActionsRow(onReflectClick = onReflectClick)
     }
 }
 
 /**
  * Reflect/Study/Share actions shown beneath every briefing's reflection text — built into
  * [MediaSageBriefingBody] itself (rather than a customizable trailing slot) since every screen
- * that renders a briefing wants the same row.
+ * that renders a briefing wants the same row. The Reflect chip only renders when [onReflectClick]
+ * is non-null — reflections generated before the challenge question existed have nothing to reflect on.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BriefingActionsRow() {
+private fun BriefingActionsRow(onReflectClick: (() -> Unit)? = null) {
     FlowRow(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        MediaSageComicChip(
-            icon = Icons.AutoMirrored.Outlined.StickyNote2,
-            label = stringResource(Res.string.briefing_card_reflect_action),
-            onClick = {},
-        )
+        if (onReflectClick != null) {
+            MediaSageComicChip(
+                icon = Icons.AutoMirrored.Outlined.StickyNote2,
+                label = stringResource(Res.string.briefing_card_reflect_action),
+                onClick = onReflectClick,
+            )
+        }
         MediaSageComicChip(
             icon = Icons.Outlined.MenuBook,
             label = stringResource(Res.string.briefing_card_study_action),
@@ -204,6 +208,7 @@ fun MediaSageBriefingCard(
     onFigureTap: (() -> Unit)? = null,
     theme: String? = null,
     sources: List<String> = emptyList(),
+    onReflectClick: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
         MediaSageBriefingHeader(
@@ -219,6 +224,7 @@ fun MediaSageBriefingCard(
             implication = implication,
             inspiration = inspiration,
             sources = sources,
+            onReflectClick = onReflectClick,
         )
     }
 }

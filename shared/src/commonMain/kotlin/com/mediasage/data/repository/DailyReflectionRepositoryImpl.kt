@@ -75,7 +75,7 @@ class DailyReflectionRepositoryImpl(
             )
         )
         val entity = DailyReflectionEntity(
-            id = "${epochDay}_${tone}_$resolvedTheme",
+            id = DailyReflection.id(epochDay, tone, resolvedTheme),
             figureId = figureId,
             epochDay = epochDay,
             tone = tone,
@@ -104,7 +104,7 @@ class DailyReflectionRepositoryImpl(
         } ?: return null
         val figure = figureDao.getByServerId(row.figureServerId) ?: return null
         val entity = DailyReflectionEntity(
-            id = "${epochDay}_${tone}_$theme",
+            id = DailyReflection.id(epochDay, tone, theme),
             figureId = figure.id,
             epochDay = epochDay,
             tone = tone,
@@ -221,7 +221,7 @@ class DailyReflectionRepositoryImpl(
         val figure = figureDao.getByServerId(row.figureServerId) ?: return
         dao.insertIfAbsent(
             DailyReflectionEntity(
-                id = "${row.epochDay}_${row.tone}_${row.theme}",
+                id = DailyReflection.id(row.epochDay, row.tone, row.theme),
                 figureId = figure.id,
                 epochDay = row.epochDay,
                 tone = row.tone,

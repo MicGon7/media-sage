@@ -5,6 +5,7 @@ package com.mediasage.feature.daydetail
 import com.mediasage.domain.model.BriefingDay
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.repository.DailyReflectionRepository
+import com.mediasage.domain.repository.UserReflectionNoteRepository
 import com.mediasage.domain.usecase.GetDayDetailUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -123,6 +125,65 @@ class DayDetailViewModelTest {
         assertEquals("morning", state.selectedTone)
     }
 
+    @Test
+    fun reflectTapped_opensReadOnlySheetWhenChallengePresent() = runTest(testDispatcher) {
+        val morning = DailyReflection(
+            scriptureReference = "John 3:16",
+            scriptureText = "For God so loved the world",
+            insight = "insight-morning",
+            implication = "implication-morning",
+            inspiration = "inspiration-morning",
+            sources = emptyList(),
+            tone = "morning",
+            challenge = "How has love moved you to act today?",
+        )
+        val noteRepo = FakeUserReflectionNoteRepository()
+        noteRepo.saveNote("10_morning_NEWS", "I called an old friend.")
+        val viewModel = dayDetailViewModel(morning = morning, evening = null, noteRepo = noteRepo)
+
+        viewModel.onIntent(DayDetailContract.Intent.ReflectTapped("morning"))
+        advanceUntilIdle()
+
+        val state = viewModel.state.value as DayDetailContract.UiState.Ready
+        val sheet = requireNotNull(state.reflectSheet)
+        assertEquals("How has love moved you to act today?", sheet.challenge)
+        assertEquals("I called an old friend.", sheet.noteText)
+    }
+
+    @Test
+    fun reflectTapped_doesNothingWhenNoChallengeOnBriefing() = runTest(testDispatcher) {
+        val viewModel = dayDetailViewModel(morning = briefing("morning"), evening = null)
+
+        viewModel.onIntent(DayDetailContract.Intent.ReflectTapped("morning"))
+        advanceUntilIdle()
+
+        val state = viewModel.state.value as DayDetailContract.UiState.Ready
+        assertEquals(null, state.reflectSheet)
+    }
+
+    @Test
+    fun reflectDismissed_closesSheet() = runTest(testDispatcher) {
+        val morning = DailyReflection(
+            scriptureReference = "John 3:16",
+            scriptureText = "For God so loved the world",
+            insight = "insight-morning",
+            implication = "implication-morning",
+            inspiration = "inspiration-morning",
+            sources = emptyList(),
+            tone = "morning",
+            challenge = "How has love moved you to act today?",
+        )
+        val viewModel = dayDetailViewModel(morning = morning, evening = null)
+
+        viewModel.onIntent(DayDetailContract.Intent.ReflectTapped("morning"))
+        advanceUntilIdle()
+        viewModel.onIntent(DayDetailContract.Intent.ReflectDismissed)
+        advanceUntilIdle()
+
+        val state = viewModel.state.value as DayDetailContract.UiState.Ready
+        assertEquals(null, state.reflectSheet)
+    }
+
     /**
      * Builds the ViewModel and starts collecting its state. `stateIn(WhileSubscribed)` is cold
      * until a subscriber is present, so an active collector in [backgroundScope] is required for
@@ -131,6 +192,7 @@ class DayDetailViewModelTest {
     private fun TestScope.dayDetailViewModel(
         morning: DailyReflection? = null,
         evening: DailyReflection? = null,
+        noteRepo: FakeUserReflectionNoteRepository = FakeUserReflectionNoteRepository(),
     ): DayDetailViewModel {
         val reflectionRepo = FakeDailyReflectionRepository(morning, evening)
         val viewModel = DayDetailViewModel(
@@ -138,6 +200,7 @@ class DayDetailViewModelTest {
             figureName = "Augustine of Hippo",
             figureImageUrl = null,
             getDayDetail = GetDayDetailUseCase(reflectionRepo),
+            userReflectionNoteRepository = noteRepo,
         )
         backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
         return viewModel
@@ -168,4 +231,12 @@ private class FakeDailyReflectionRepository(
 
     override val isResolved: StateFlow<Boolean> = MutableStateFlow(true)
     override suspend fun resolve(userId: String?) = Unit
+}
+
+private class FakeUserReflectionNoteRepository : UserReflectionNoteRepository {
+    private val notes = mutableMapOf<String, String>()
+    override suspend fun getNote(reflectionId: String): String? = notes[reflectionId]
+    override suspend fun saveNote(reflectionId: String, noteText: String) {
+        notes[reflectionId] = noteText
+    }
 }

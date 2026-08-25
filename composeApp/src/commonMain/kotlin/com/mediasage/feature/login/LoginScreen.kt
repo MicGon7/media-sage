@@ -42,8 +42,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.paint
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Brush
@@ -74,6 +72,7 @@ import com.mediasage.theme.MediaSageTheme
 import com.mediasage.theme.Navy
 import com.mediasage.theme.NavyLight
 import com.mediasage.theme.Slate
+import com.mediasage.ui.paperSurface
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.login_background_comic
 import mediasage.composeapp.generated.resources.login_bypass
@@ -88,7 +87,6 @@ import mediasage.composeapp.generated.resources.login_masthead_line2
 import mediasage.composeapp.generated.resources.login_member_edition
 import mediasage.composeapp.generated.resources.login_otp_code_label
 import mediasage.composeapp.generated.resources.login_otp_subtitle
-import mediasage.composeapp.generated.resources.login_paper_white
 import mediasage.composeapp.generated.resources.login_password_label
 import mediasage.composeapp.generated.resources.login_remember_email
 import mediasage.composeapp.generated.resources.login_show_password
@@ -205,17 +203,9 @@ private fun LoginScreenContent(
                 // panel, rather than just the input fields — the masthead and version text need
                 // the same ink-on-white treatment as the form once they're printed on the page.
                 val paperModifier = if (formOnPaper) {
-                    // The image's own alpha channel defines the deckled paper silhouette now,
-                    // so no clip shape here — a rounded-rect clip would slice its natural
-                    // irregular edges into a hard rounded corner.
                     Modifier
                         .fillMaxWidth()
-                        .shadow(elevation = 8.dp, shape = MaterialTheme.shapes.medium, clip = false)
-                        .paint(
-                            painter = painterResource(Res.drawable.login_paper_white),
-                            contentScale = ContentScale.FillBounds,
-                            alpha = 0.95f,
-                        )
+                        .paperSurface()
                         .padding(14.dp)
                 } else {
                     Modifier.fillMaxWidth()

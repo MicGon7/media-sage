@@ -31,6 +31,7 @@ internal fun classicLightColors(): ColorScheme = lightColorScheme(
     outlineVariant = RuleLine,
     error = Error,
     onError = White,
+    surfaceTint = Navy,
 )
 
 internal fun classicDarkColors(): ColorScheme = darkColorScheme(
@@ -54,6 +55,7 @@ internal fun classicDarkColors(): ColorScheme = darkColorScheme(
     outlineVariant = RuleLineDark,
     error = ErrorDark,
     onError = DarkSurface,
+    surfaceTint = ReaderAmber,
 )
 
 internal fun classicLightAppColors() = AppColors(
@@ -91,6 +93,7 @@ internal fun modernLightColors(): ColorScheme = lightColorScheme(
     outlineVariant = ModernLightBorder,
     error = Error,
     onError = White,
+    surfaceTint = ModernAmber,
 )
 
 internal fun modernDarkColors(): ColorScheme = darkColorScheme(
@@ -114,6 +117,7 @@ internal fun modernDarkColors(): ColorScheme = darkColorScheme(
     outlineVariant = ModernDarkBorder,
     error = ErrorDark,
     onError = ModernDarkBg,
+    surfaceTint = ModernAmber,
 )
 
 internal fun modernLightAppColors() = AppColors(
@@ -151,6 +155,7 @@ internal fun warmLightColors(): ColorScheme = lightColorScheme(
     outlineVariant = RuleLine,
     error = Error,
     onError = White,
+    surfaceTint = ReaderPrimary,
 )
 
 internal fun warmDarkColors(): ColorScheme = darkColorScheme(
@@ -174,6 +179,7 @@ internal fun warmDarkColors(): ColorScheme = darkColorScheme(
     outlineVariant = WarmDarkBorder,
     error = ErrorDark,
     onError = WarmDarkBg,
+    surfaceTint = ReaderAmber,
 )
 
 internal fun warmLightAppColors() = AppColors(

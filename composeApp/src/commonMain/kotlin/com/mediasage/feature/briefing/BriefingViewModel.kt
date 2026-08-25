@@ -3,6 +3,7 @@ package com.mediasage.feature.briefing
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.LensFilter
@@ -10,6 +11,7 @@ import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
+import com.mediasage.domain.repository.UserReflectionNoteRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -31,6 +33,7 @@ class BriefingViewModel(
     private val dailyReflectionRepository: DailyReflectionRepository,
     private val figureRepository: FigureRepository,
     private val headlineRepository: HeadlineRepository,
+    private val userReflectionNoteRepository: UserReflectionNoteRepository,
     private val toneScheduler: BriefingToneScheduler = RealBriefingToneScheduler(),
 ) : ViewModel() {
 
@@ -52,8 +55,44 @@ class BriefingViewModel(
     fun onIntent(intent: BriefingContract.Intent) {
         when (intent) {
             is BriefingContract.Intent.Retry -> loadCard()
+            is BriefingContract.Intent.ReflectTapped -> openReflectSheet()
+            is BriefingContract.Intent.ReflectDismissed -> updateReflectSheet(null)
+            is BriefingContract.Intent.ReflectNoteChanged -> {
+                val success = _state.value as? BriefingContract.UiState.Success ?: return
+                val noteText = intent.noteText.take(MAX_NOTE_LENGTH)
+                updateReflectSheet(success.reflectSheet?.copy(noteText = noteText))
+            }
+            is BriefingContract.Intent.ReflectNoteSaved -> saveReflectNote()
         }
     }
+
+    private fun updateReflectSheet(sheet: BriefingContract.ReflectSheetState?) {
+        val success = _state.value as? BriefingContract.UiState.Success ?: return
+        _state.value = success.copy(reflectSheet = sheet)
+    }
+
+    private fun openReflectSheet() {
+        val success = _state.value as? BriefingContract.UiState.Success ?: return
+        val ready = success.card as? BriefingContract.CardState.Ready ?: return
+        val challenge = ready.challenge ?: return
+        viewModelScope.launch {
+            val saved = userReflectionNoteRepository.getNote(reflectionId(ready.tone, ready.theme)).orEmpty()
+            updateReflectSheet(BriefingContract.ReflectSheetState(challenge, saved, saved))
+        }
+    }
+
+    private fun saveReflectNote() {
+        val success = _state.value as? BriefingContract.UiState.Success ?: return
+        val ready = success.card as? BriefingContract.CardState.Ready ?: return
+        val sheet = success.reflectSheet ?: return
+        viewModelScope.launch {
+            userReflectionNoteRepository.saveNote(reflectionId(ready.tone, ready.theme), sheet.noteText)
+            updateReflectSheet(sheet.copy(savedNoteText = sheet.noteText))
+        }
+    }
+
+    private fun reflectionId(tone: String, theme: String?): String =
+        DailyReflection.id(todayEpochDay(), tone, theme)
 
     /**
      * Reloads once at each tone boundary so a screen left open across the 5pm/midnight transition
@@ -163,7 +202,8 @@ class BriefingViewModel(
                     inspiration = reflection.inspiration,
                     sources = reflection.sources,
                     tone = reflection.tone,
-                    theme = themeLabel
+                    theme = themeLabel,
+                    challenge = reflection.challenge,
                 )
             )
         }.onFailure { e ->
@@ -212,3 +252,5 @@ class BriefingViewModel(
         Instant.fromEpochMilliseconds(epochMillis())
             .toLocalDateTime(TimeZone.currentSystemDefault()).date.toEpochDays().toLong()
 }
+
+private const val MAX_NOTE_LENGTH = 4_000

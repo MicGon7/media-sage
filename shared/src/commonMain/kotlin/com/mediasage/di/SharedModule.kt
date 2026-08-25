@@ -24,6 +24,7 @@ import com.mediasage.data.repository.ProfileRemoteDataSource
 import com.mediasage.data.repository.ProfileRepositoryImpl
 import com.mediasage.data.repository.QuoteRepositoryImpl
 import com.mediasage.data.repository.SavedInsightRemoteDataSource
+import com.mediasage.data.repository.UserReflectionNoteRepositoryImpl
 import com.mediasage.data.repository.WikipediaRepositoryImpl
 import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.DailyReflectionRepository
@@ -33,6 +34,7 @@ import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.ProfileRepository
 import com.mediasage.domain.repository.QuoteRepository
+import com.mediasage.domain.repository.UserReflectionNoteRepository
 import com.mediasage.domain.repository.WikipediaRepository
 import com.mediasage.domain.usecase.GetDayDetailUseCase
 import com.mediasage.domain.usecase.GetHeadlinesFeedUseCase
@@ -79,6 +81,7 @@ fun sharedModule(
     single { get<MediaSageDatabase>().dailyReflectionDao() }
     single { get<MediaSageDatabase>().dayAssignmentDao() }
     single { get<MediaSageDatabase>().discoveredQuoteDao() }
+    single { get<MediaSageDatabase>().userReflectionNoteDao() }
 
     // Repositories — interface bound to implementation
     single<FigureRepository> { FigureRepositoryImpl(get(), get(), get()) }
@@ -96,6 +99,7 @@ fun sharedModule(
     single<DayAssignmentRepository> {
         DayAssignmentRepositoryImpl(get(), get(), get(), get(), getOrNull(), get(), get())
     }
+    single<UserReflectionNoteRepository> { UserReflectionNoteRepositoryImpl(get()) }
 
     // Domain use cases — combine/transform data from multiple repositories (NiA domain layer)
     single { GetReaderCalendarUseCase(get(), get(), get(), get()) }

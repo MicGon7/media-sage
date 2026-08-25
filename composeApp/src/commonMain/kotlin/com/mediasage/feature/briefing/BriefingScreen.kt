@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +47,7 @@ import com.mediasage.ui.FigurePlaceholder
 import com.mediasage.ui.MediaSageBriefingCard
 import com.mediasage.ui.MediaSageDateDivider
 import com.mediasage.ui.MediaSageErrorDialog
+import com.mediasage.ui.ReflectionSheet
 import com.mediasage.ui.SepiaColorFilter
 import com.mediasage.ui.ThemeChip
 import mediasage.composeapp.generated.resources.Res
@@ -57,6 +59,7 @@ import mediasage.composeapp.generated.resources.home_retry
 import mediasage.composeapp.generated.resources.home_tagline
 import org.jetbrains.compose.resources.stringResource
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BriefingScreen(
     state: BriefingContract.UiState,
@@ -79,7 +82,22 @@ fun BriefingScreen(
             is BriefingContract.UiState.Success -> BriefingContent(
                 todayLabel = state.todayLabel,
                 card = state.card,
-                onFigureTap = onNavigateToFigureDetail
+                onFigureTap = onNavigateToFigureDetail,
+                onReflectTapped = { onIntent(BriefingContract.Intent.ReflectTapped) }
+            )
+        }
+    }
+    if (state is BriefingContract.UiState.Success) {
+        val sheet = state.reflectSheet
+        if (sheet != null) {
+            ReflectionSheet(
+                challenge = sheet.challenge,
+                noteText = sheet.noteText,
+                editable = sheet.editable,
+                hasUnsavedChanges = sheet.noteText != sheet.savedNoteText,
+                onNoteChange = { onIntent(BriefingContract.Intent.ReflectNoteChanged(it)) },
+                onSave = { onIntent(BriefingContract.Intent.ReflectNoteSaved) },
+                onDismiss = { onIntent(BriefingContract.Intent.ReflectDismissed) },
             )
         }
     }
@@ -97,7 +115,8 @@ private fun BriefingLoading(todayLabel: String) {
 private fun BriefingContent(
     todayLabel: String,
     card: BriefingContract.CardState,
-    onFigureTap: (Long) -> Unit
+    onFigureTap: (Long) -> Unit,
+    onReflectTapped: () -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item { Masthead() }
@@ -112,7 +131,7 @@ private fun BriefingContent(
                 when (cardState) {
                     is BriefingContract.CardState.Loading -> BriefingCardSkeleton()
                     is BriefingContract.CardState.LoadingWithFigure -> BriefingCardLoadingWithFigure(cardState, onFigureTap)
-                    is BriefingContract.CardState.Ready -> BriefingCard(cardState, onFigureTap)
+                    is BriefingContract.CardState.Ready -> BriefingCard(cardState, onFigureTap, onReflectTapped)
                     is BriefingContract.CardState.Hidden -> Box(Modifier.fillMaxWidth())
                 }
             }
@@ -145,7 +164,8 @@ private fun Masthead() {
 @Composable
 private fun BriefingCard(
     card: BriefingContract.CardState.Ready,
-    onFigureTap: (Long) -> Unit
+    onFigureTap: (Long) -> Unit,
+    onReflectTapped: () -> Unit
 ) {
     MediaSageBriefingCard(
         figureName = card.figureName,
@@ -158,6 +178,7 @@ private fun BriefingCard(
         onFigureTap = { onFigureTap(card.figureId) },
         theme = card.theme,
         sources = card.sources,
+        onReflectClick = card.challenge?.let { { onReflectTapped() } },
     )
 }
 

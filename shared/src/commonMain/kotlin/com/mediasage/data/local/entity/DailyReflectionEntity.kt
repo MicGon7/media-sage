@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "daily_reflection")
 data class DailyReflectionEntity(
-    @PrimaryKey val id: String, // "${epochDay}_${tone}_${theme}" — only one figure is ever locked per epochDay
+    @PrimaryKey val id: String, // com.mediasage.domain.model.DailyReflection.id() — only one figure is ever locked per epochDay
     val figureId: Long,
     val epochDay: Long,
     val tone: String,
