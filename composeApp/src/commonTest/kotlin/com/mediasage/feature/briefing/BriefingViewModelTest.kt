@@ -314,6 +314,28 @@ class BriefingViewModelTest {
     }
 
     @Test
+    fun reflectNoteChanged_capsAtMaxLength() = runTest(testDispatcher) {
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),
+            dailyReflectionRepository = FakeDailyReflectionRepository(challenge = "What is one way to show love today?"),
+            figureRepository = FakeFigureRepository(listOf(judson)),
+            headlineRepository = FakeHeadlineRepository(),
+            userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
+            toneScheduler = FakeBriefingToneScheduler(),
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        advanceUntilIdle()
+
+        viewModel.onIntent(BriefingContract.Intent.ReflectTapped)
+        advanceUntilIdle()
+        viewModel.onIntent(BriefingContract.Intent.ReflectNoteChanged("a".repeat(5_000)))
+
+        val state = viewModel.state.value as BriefingContract.UiState.Success
+        val sheet = requireNotNull(state.reflectSheet)
+        assertEquals(4_000, sheet.noteText.length)
+    }
+
+    @Test
     fun reflectDismissed_closesSheet() = runTest(testDispatcher) {
         val viewModel = BriefingViewModel(
             dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),

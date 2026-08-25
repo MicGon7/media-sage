@@ -59,7 +59,8 @@ class BriefingViewModel(
             is BriefingContract.Intent.ReflectDismissed -> updateReflectSheet(null)
             is BriefingContract.Intent.ReflectNoteChanged -> {
                 val success = _state.value as? BriefingContract.UiState.Success ?: return
-                updateReflectSheet(success.reflectSheet?.copy(noteText = intent.noteText))
+                val noteText = intent.noteText.take(MAX_NOTE_LENGTH)
+                updateReflectSheet(success.reflectSheet?.copy(noteText = noteText))
             }
             is BriefingContract.Intent.ReflectNoteSaved -> saveReflectNote()
         }
@@ -251,3 +252,5 @@ class BriefingViewModel(
         Instant.fromEpochMilliseconds(epochMillis())
             .toLocalDateTime(TimeZone.currentSystemDefault()).date.toEpochDays().toLong()
 }
+
+private const val MAX_NOTE_LENGTH = 4_000
