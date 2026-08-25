@@ -85,7 +85,10 @@ object DailyReflectionPrompt {
         }
         return "- Include a reflection challenge: one open-ended question, 1-2 sentences, " +
             "addressed to the reader in second person, drawn from the insight/implication/inspiration " +
-            "above. Make it $framing."
+            "above. Make it $framing. " +
+            "Phrase the challenge in plain, everyday language — words a middle schooler would understand. " +
+            "Avoid theological or academic vocabulary here, even though the rest of the reflection stays " +
+            "in the figure's voice. Keep the underlying idea the same; just make the question itself simple and direct."
     }
 
     private val RESPONSE_FORMAT = """
