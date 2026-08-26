@@ -6,13 +6,13 @@ import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Figure
+import com.mediasage.domain.model.HeadlineCategoryFilter
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.UserReflectionNoteRepository
-import com.mediasage.feature.headlines.HeadlineCategoryFilter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
