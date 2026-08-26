@@ -208,7 +208,7 @@ private fun ReflectionSheetContent(
         }
         Text(
             text = stringResource(Res.string.reflect_sheet_subtitle),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = mutedColor,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
