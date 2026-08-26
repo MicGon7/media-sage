@@ -6,6 +6,7 @@ import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
 import com.mediasage.domain.model.Figure
+import com.mediasage.domain.model.HeadlineCategoryFilter
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DailyReflectionRepository
 import com.mediasage.domain.repository.DayAssignmentRepository
@@ -168,7 +169,9 @@ class BriefingViewModel(
         val tone = currentTone()
         val effectiveLens = lens ?: LensFilter.NEWS
         val headlines = if (effectiveLens == LensFilter.NEWS) {
-            headlineRepository.observeHeadlines().first().map { it.title }
+            headlineRepository.observeHeadlines().first()
+                .filter { it.category in BRIEFING_NEWS_CATEGORIES }
+                .map { it.title }
         } else {
             emptyList()
         }
@@ -254,3 +257,10 @@ class BriefingViewModel(
 }
 
 private const val MAX_NOTE_LENGTH = 4_000
+
+/**
+ * The full set of categories the app surfaces to users, independent of whatever the user
+ * currently has selected on the Headlines screen (HeadlineCategoryPreferencesRepository) —
+ * that selection is a single-select browsing filter, not a briefing preference.
+ */
+private val BRIEFING_NEWS_CATEGORIES = HeadlineCategoryFilter.entries.map { it.value }.toSet()

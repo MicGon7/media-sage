@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mediasage.data.HeadlineCategoryPreferencesRepository
 import com.mediasage.data.repository.epochMillis
+import com.mediasage.domain.model.HeadlineCategoryFilter
 import com.mediasage.domain.model.HeadlineFeedEntry
 import com.mediasage.domain.repository.EncouragementRepository
 import com.mediasage.domain.repository.HeadlineRepository
