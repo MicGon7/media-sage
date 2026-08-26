@@ -1,5 +1,7 @@
 package com.mediasage.appserver.di
 
+import com.mediasage.appserver.repository.ClaudeCallLimitRepository
+import com.mediasage.appserver.repository.EncouragementCacheRepository
 import com.mediasage.appserver.repository.FigureRepository
 import com.mediasage.appserver.repository.HeadlineRepository
 import com.mediasage.appserver.repository.QuoteRepository
@@ -15,13 +17,15 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 fun serverModule(
     claudeApiKey: String,
     newsApiKey: String,
     scriptureApiKey: String,
-    baseUrl: String
+    baseUrl: String,
+    dailyClaudeCallLimit: Int
 ) = module {
     single {
         HttpClient(OkHttp) {
@@ -46,6 +50,9 @@ fun serverModule(
     single { FigureRepository(baseUrl) }
     single { QuoteRepository() }
     single { HeadlineRepository() }
+    single { EncouragementCacheRepository() }
+    single { ClaudeCallLimitRepository() }
+    single<Int>(named("dailyClaudeCallLimit")) { dailyClaudeCallLimit }
     single { DailyReflectionService(get(), get()) }
     single { HeadlineFetchService(get(), get(), get()) }
 }

@@ -37,7 +37,7 @@ local.properties
 
 # Server SQLite DB files (runtime artefacts)
 *.db
-server/:memory:
+appServer/:memory:
 
 # Generated figure portraits (produced by GenerateFigureImages script — not committed)
 server/generated-images/*.webp
