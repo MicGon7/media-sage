@@ -265,6 +265,34 @@ class BriefingViewModelTest {
     }
 
     @Test
+    fun loadCard_filtersNewsLensHeadlinesToTheFiveNonExcludedCategories() = runTest(testDispatcher) {
+        // AC: the NEWS lens must draw from world/nation/business/science/health only —
+        // general and technology are fetched/tagged server-side but excluded from the briefing.
+        val reflectionRepo = FakeDailyReflectionRepository()
+        val headlines = listOf(
+            Headline(id = 1L, title = "World story", source = "src", url = "u1", imageUrl = null, publishedAt = 0, fetchedAt = 0, category = "world"),
+            Headline(id = 2L, title = "General story", source = "src", url = "u2", imageUrl = null, publishedAt = 0, fetchedAt = 0, category = "general"),
+            Headline(id = 3L, title = "Tech story", source = "src", url = "u3", imageUrl = null, publishedAt = 0, fetchedAt = 0, category = "technology"),
+            Headline(id = 4L, title = "Health story", source = "src", url = "u4", imageUrl = null, publishedAt = 0, fetchedAt = 0, category = "health"),
+        )
+        val viewModel = BriefingViewModel(
+            dayAssignmentRepository = FakeDayAssignmentRepository(
+                MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = LensFilter.NEWS))),
+                resolveReporterResult = 1L,
+            ),
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = FakeFigureRepository(listOf(judson)),
+            headlineRepository = FakeHeadlineRepository(headlines),
+            userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
+            toneScheduler = FakeBriefingToneScheduler(),
+        )
+        backgroundScope.launch(testDispatcher) { viewModel.state.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(listOf("World story", "Health story"), reflectionRepo.lastHeadlines)
+    }
+
+    @Test
     fun reflectTapped_opensSheetWithChallengeAndSavedNote() = runTest(testDispatcher) {
         val noteRepo = FakeUserReflectionNoteRepository()
         val viewModel = BriefingViewModel(
@@ -428,6 +456,8 @@ private class FakeDailyReflectionRepository(
 ) : DailyReflectionRepository {
     var fetchCount = 0
         private set
+    var lastHeadlines: List<String> = emptyList()
+        private set
 
     override suspend fun getOrFetch(
         figureId: Long,
@@ -437,6 +467,7 @@ private class FakeDailyReflectionRepository(
         theme: String?,
     ): DailyReflection {
         fetchCount++
+        lastHeadlines = headlines
         if (fetchDelayMs > 0) delay(fetchDelayMs)
         return DailyReflection(
             scriptureReference = "John 3:16",
@@ -458,8 +489,8 @@ private class FakeDailyReflectionRepository(
     override suspend fun resolve(userId: String?) = Unit
 }
 
-private class FakeHeadlineRepository : HeadlineRepository {
-    override fun observeHeadlines(): Flow<List<Headline>> = MutableStateFlow(emptyList())
+private class FakeHeadlineRepository(private val headlines: List<Headline> = emptyList()) : HeadlineRepository {
+    override fun observeHeadlines(): Flow<List<Headline>> = MutableStateFlow(headlines)
     override suspend fun getHeadlineById(id: Long): Headline? = null
     override suspend fun getHeadlineByUrl(url: String): Headline? = null
     override suspend fun refreshHeadlines() = Unit
