@@ -19,6 +19,11 @@ val CharcoalLight = Color(0xFFE0E0E0)
 val Slate = Color(0xFF6B6B6B)
 val SlateLight = Color(0xFFB0B0B0)
 
+// Slate's cool gray sits right at the edge of legible contrast against a warm tan/paper
+// surface (e.g. ReflectionSheet's comic-paper background) — this warmer, darker muted tone
+// is for muted text drawn directly on that kind of surface.
+val SlateOnPaper = Color(0xFF4A3F35)
+
 val CardBorder = Color(0xFFE0E0E0)
 
 val RuleLine = Color(0xFFD0D0D0)

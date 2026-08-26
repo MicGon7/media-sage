@@ -53,7 +53,7 @@ import com.mediasage.theme.CardBorder
 import com.mediasage.theme.Ink
 import com.mediasage.theme.MediaSageTheme
 import com.mediasage.theme.Navy
-import com.mediasage.theme.Slate
+import com.mediasage.theme.SlateOnPaper
 import kotlinx.coroutines.launch
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.comic_paper
@@ -64,7 +64,7 @@ import mediasage.composeapp.generated.resources.reflect_discard_message
 import mediasage.composeapp.generated.resources.reflect_discard_title
 import mediasage.composeapp.generated.resources.reflect_note_hint
 import mediasage.composeapp.generated.resources.reflect_paper_light
-import mediasage.composeapp.generated.resources.reflect_privacy_subtitle
+import mediasage.composeapp.generated.resources.reflect_sheet_subtitle
 import mediasage.composeapp.generated.resources.reflect_save_action
 import mediasage.composeapp.generated.resources.reflect_saved_confirmation
 import mediasage.composeapp.generated.resources.reflect_sheet_title
@@ -156,12 +156,12 @@ private fun ReflectionSheetContent(
     // LoginScreen's formOnPaper convention. Only the painted texture itself switches on theme.
     val titleColor = Navy
     val bodyColor = Ink
-    val mutedColor = Slate
+    val mutedColor = SlateOnPaper
     val borderColor = CardBorder
     val paperImage = if (MediaSageTheme.isDark) Res.drawable.comic_paper else Res.drawable.reflect_paper_light
     val background = Modifier
         .shadow(elevation = 0.dp, shape = MaterialTheme.shapes.medium, clip = false)
-        .paint(painter = painterResource(paperImage), contentScale = ContentScale.FillBounds, alpha = 0.95f)
+        .paint(painter = painterResource(paperImage), contentScale = ContentScale.FillBounds)
 
     // "Saved" reflects a real comparison against the last-saved text, not a one-shot flag from
     // the save action — so editing away from and then back to the saved value (e.g. deleting and
@@ -207,7 +207,7 @@ private fun ReflectionSheetContent(
             }
         }
         Text(
-            text = stringResource(Res.string.reflect_privacy_subtitle),
+            text = stringResource(Res.string.reflect_sheet_subtitle),
             style = MaterialTheme.typography.bodySmall,
             color = mutedColor,
             textAlign = TextAlign.Center,
