@@ -2,11 +2,12 @@ package com.mediasage.appserver.db
 
 import org.jetbrains.exposed.sql.Table
 
-/** Shared cache of Claude-generated encouragements, keyed by article URL, so the same
- * article never triggers a second Claude call across any user or device. */
+/** Shared cache of Claude-generated encouragements, keyed by article URL + locale, so the same
+ * article never triggers a second Claude call across any user or device requesting the same locale. */
 object EncouragementCacheTable : Table("encouragement_cache") {
     val id = long("id").autoIncrement()
-    val articleUrl = varchar("article_url", 1024).uniqueIndex()
+    val articleUrl = varchar("article_url", 1024)
+    val locale = varchar("locale", 16)
     val summary = text("summary").nullable()
     val quoteText = text("quote_text")
     val quoteSource = varchar("quote_source", 512)
@@ -21,4 +22,8 @@ object EncouragementCacheTable : Table("encouragement_cache") {
     val cachedAt = long("cached_at").default(0L)
 
     override val primaryKey = PrimaryKey(id)
+
+    init {
+        uniqueIndex(articleUrl, locale)
+    }
 }

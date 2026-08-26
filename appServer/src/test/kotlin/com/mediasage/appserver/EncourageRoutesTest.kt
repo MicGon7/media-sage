@@ -13,6 +13,8 @@ import com.mediasage.appserver.routes.analysisRoutes
 import com.mediasage.appserver.service.ArticleScraperService
 import com.mediasage.appserver.service.ClaudeApiClient
 import com.mediasage.appserver.service.DailyLimitExceededException
+import com.mediasage.appserver.service.EncourageResult
+import com.mediasage.appserver.service.EncourageTone
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -30,6 +32,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.insert
@@ -52,6 +55,20 @@ private fun claudeResponseBody(quoteId: Long) = """
     "usage": {"input_tokens": 10, "output_tokens": 10}
 }
 """
+
+private fun sampleEncourageResult(figureName: String) = EncourageResult(
+    summary = "Stay hopeful",
+    quoteText = "Be still and know that I am God.",
+    quoteSource = "Psalms",
+    figureName = figureName,
+    figureRole = "Prophet",
+    scriptureReference = "Psalm 46:10",
+    scriptureText = "Be still, and know that I am God.",
+    explanation = "A call to trust.",
+    connectionThemes = listOf("peace"),
+    matchTheme = "peace",
+    tone = EncourageTone.COMFORT
+)
 
 private fun mockClaudeApiClient(quoteId: Long, onCall: () -> Unit): ClaudeApiClient {
     val httpClient = HttpClient(MockEngine { _ ->
@@ -124,6 +141,21 @@ class EncourageRoutesTest {
         transaction {
             SchemaUtils.drop(FigureTable, QuoteTable, EncouragementCacheTable, ClaudeCallLimitTable)
         }
+    }
+
+    @Test
+    fun cacheLookupIsScopedPerLocaleNotJustArticleUrl() = runTest {
+        val repository = EncouragementCacheRepository()
+        val enResult = sampleEncourageResult(figureName = "English Figure")
+        val esResult = sampleEncourageResult(figureName = "Spanish Figure")
+        val articleUrl = "https://example.com/locale"
+
+        repository.insert(articleUrl, "en", enResult, cachedAt = 1L)
+        repository.insert(articleUrl, "es", esResult, cachedAt = 2L)
+
+        assertEquals("English Figure", repository.getByArticleUrlAndLocale(articleUrl, "en")?.figureName)
+        assertEquals("Spanish Figure", repository.getByArticleUrlAndLocale(articleUrl, "es")?.figureName)
+        assertEquals(null, repository.getByArticleUrlAndLocale(articleUrl, "fr"))
     }
 
     @Test

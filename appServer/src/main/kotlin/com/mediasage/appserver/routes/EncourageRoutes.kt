@@ -66,24 +66,44 @@ private fun Route.encourageRoute(
             return@post
         }
 
-        val cached = request.articleUrl?.let { encouragementCacheRepository.getByArticleUrl(it) }
+        val cached = request.articleUrl?.let {
+            encouragementCacheRepository.getByArticleUrlAndLocale(it, request.locale)
+        }
         if (cached != null) {
-            val figureImageUrl = figureRepository.getPortraitUrl(cached.figureName)
-            call.respond(cached.copy(figureImageUrl = figureImageUrl))
+            call.respond(cached.copy(figureImageUrl = figureRepository.getPortraitUrl(cached.figureName)))
             return@post
         }
 
-        val callDate = LocalDate.now(ZoneOffset.UTC).toString()
-        if (!claudeCallLimitRepository.tryConsumeCall(callDate, dailyClaudeCallLimit)) {
-            throw DailyLimitExceededException()
-        }
-
-        val result = generateEncouragement(request, claudeClient, scraperService)
-        request.articleUrl?.let { encouragementCacheRepository.insert(it, result, System.currentTimeMillis()) }
-
-        val figureImageUrl = figureRepository.getPortraitUrl(result.figureName)
-        call.respond(result.copy(figureImageUrl = figureImageUrl))
+        val result = generateAndCacheEncouragement(
+            request,
+            claudeClient,
+            scraperService,
+            encouragementCacheRepository,
+            claudeCallLimitRepository,
+            dailyClaudeCallLimit
+        )
+        call.respond(result.copy(figureImageUrl = figureRepository.getPortraitUrl(result.figureName)))
     }
+}
+
+private suspend fun generateAndCacheEncouragement(
+    request: EncourageRequest,
+    claudeClient: ClaudeApiClient,
+    scraperService: ArticleScraperService,
+    encouragementCacheRepository: EncouragementCacheRepository,
+    claudeCallLimitRepository: ClaudeCallLimitRepository,
+    dailyClaudeCallLimit: Int
+): EncourageResult {
+    val callDate = LocalDate.now(ZoneOffset.UTC).toString()
+    if (!claudeCallLimitRepository.tryConsumeCall(callDate, dailyClaudeCallLimit)) {
+        throw DailyLimitExceededException()
+    }
+
+    val result = generateEncouragement(request, claudeClient, scraperService)
+    request.articleUrl?.let {
+        encouragementCacheRepository.insert(it, request.locale, result, System.currentTimeMillis())
+    }
+    return result
 }
 
 private suspend fun generateEncouragement(

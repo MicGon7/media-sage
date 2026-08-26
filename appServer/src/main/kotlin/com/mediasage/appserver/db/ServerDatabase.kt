@@ -11,6 +11,19 @@ import java.io.File
 object ServerDatabase {
 
     fun init(dbPath: String = "mediasage-server.db", postgresUrl: String? = null) {
+        connect(dbPath, postgresUrl)
+        transaction {
+            SchemaUtils.createMissingTablesAndColumns(
+                FigureTable,
+                QuoteTable,
+                HeadlineTable,
+                EncouragementCacheTable,
+                ClaudeCallLimitTable
+            )
+        }
+    }
+
+    private fun connect(dbPath: String, postgresUrl: String?) {
         if (postgresUrl != null) {
             val uri = java.net.URI(postgresUrl)
             val (user, password) = uri.userInfo.split(":", limit = 2)
@@ -25,15 +38,6 @@ object ServerDatabase {
             Database.connect(
                 url = "jdbc:sqlite:${dbFile.absolutePath}",
                 driver = "org.sqlite.JDBC"
-            )
-        }
-        transaction {
-            SchemaUtils.createMissingTablesAndColumns(
-                FigureTable,
-                QuoteTable,
-                HeadlineTable,
-                EncouragementCacheTable,
-                ClaudeCallLimitTable
             )
         }
     }
