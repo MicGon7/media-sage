@@ -294,7 +294,7 @@ private fun EncouragementContent(
         Text(
             text = encouragement.summary,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurface,
             lineHeight = 22.sp,
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -394,7 +394,7 @@ private fun EncouragementContent(
                 text = encouragement.scriptureText,
                 style = MaterialTheme.typography.bodyLarge,
                 fontStyle = FontStyle.Italic,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 lineHeight = 20.sp,
             )
         }
@@ -406,7 +406,7 @@ private fun EncouragementContent(
         Text(
             text = encouragement.matchExplanation,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurface,
             lineHeight = 20.sp,
         )
     }
@@ -472,7 +472,7 @@ private fun FigureProfileSheetContent(profile: HeadlineDetailContract.FigureProf
             Text(
                 text = profile.bio,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 lineHeight = 24.sp,
             )
         }
