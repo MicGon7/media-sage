@@ -124,8 +124,8 @@
     <string name="day_detail_share_action">Share</string>
     <string name="briefing_card_reflect_action">Reflect</string>
     <string name="briefing_card_study_action">Study</string>
-    <string name="reflect_sheet_title">Private Reflection</string>
-    <string name="reflect_privacy_subtitle">Only you can see this</string>
+    <string name="reflect_sheet_title">Reflection</string>
+    <string name="reflect_sheet_subtitle">Save a response to this briefing for future reference</string>
     <string name="reflect_close_action">Close</string>
     <string name="reflect_note_hint">Write your reflection here…</string>
     <string name="reflect_save_action">Save</string>
