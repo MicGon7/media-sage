@@ -14,7 +14,7 @@ appServer/src/main/kotlin/com/mediasage/appserver/
 ## Conventions
 
 - JVM-only Ktor server (Netty, port 8080). Never import Ktor client here — that lives in `:shared`.
-- `serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl)` wires HttpClient and all API services via Koin.
+- `serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl, dailyClaudeCallLimit)` wires HttpClient and all API services via Koin.
 - API keys read from `application.conf` via environment variables — never hardcoded.
 - Routes are thin: parse the request, call a service, return the response. No business logic in route handlers.
 - StatusPages plugin handles all error mapping — do not catch and re-throw in routes.

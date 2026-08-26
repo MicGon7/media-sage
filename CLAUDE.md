@@ -40,7 +40,7 @@ Server JSON → Client DTO → Room Entity → Domain Model → UI
 ### Dependency Injection
 
 Koin is used across all modules. Define modules per feature, not per layer.
-- **appServer**: `serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl)` — HttpClient, API services
+- **appServer**: `serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl, dailyClaudeCallLimit)` — HttpClient, API services
 - **Orchestrator**: `agentModule(config, scope)` — HttpClient, AgentLaunchService, JiraApiClient
 - **Shared**: `sharedModule(serverBaseUrl)` — HttpClient, MediaSageApi, repositories
 

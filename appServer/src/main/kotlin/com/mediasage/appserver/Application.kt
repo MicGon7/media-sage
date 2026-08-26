@@ -14,6 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 
+private const val DEFAULT_DAILY_CLAUDE_CALL_LIMIT = 300
+
 fun main(args: Array<String>) {
     EngineMain.main(args)
 }
@@ -24,9 +26,11 @@ fun Application.module() {
     val newsApiKey = environment.config.propertyOrNull("app.news.apiKey")?.getString() ?: ""
     val scriptureApiKey = environment.config.propertyOrNull("app.scripture.apiKey")?.getString() ?: ""
     val baseUrl = environment.config.propertyOrNull("app.baseUrl")?.getString() ?: "http://localhost:8080"
+    val dailyClaudeCallLimit = environment.config.propertyOrNull("app.claude.dailyCallLimit")
+        ?.getString()?.toIntOrNull() ?: DEFAULT_DAILY_CLAUDE_CALL_LIMIT
 
     install(Koin) {
-        modules(serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl))
+        modules(serverModule(claudeApiKey, newsApiKey, scriptureApiKey, baseUrl, dailyClaudeCallLimit))
     }
 
     configureContentNegotiation()

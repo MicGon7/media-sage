@@ -28,7 +28,13 @@ object ServerDatabase {
             )
         }
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(FigureTable, QuoteTable, HeadlineTable)
+            SchemaUtils.createMissingTablesAndColumns(
+                FigureTable,
+                QuoteTable,
+                HeadlineTable,
+                EncouragementCacheTable,
+                ClaudeCallLimitTable
+            )
         }
     }
 
