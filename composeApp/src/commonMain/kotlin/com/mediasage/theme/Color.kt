@@ -45,7 +45,9 @@ val ModernAmber = Color(0xFFC8A96E)        // amber accent (from mockup)
 val ModernDarkBg = Color(0xFF0F0F1A)       // near-black background (dark)
 val ModernDarkCard = Color(0xFF1E1E35)     // dark purple card surface
 val ModernDarkBorder = Color(0xFF2A2A4A)   // dark purple border / outline
-val ModernDarkMuted = Color(0xFF6A6A8A)    // muted purple-gray text (dark)
+val ModernDarkMuted = Color(0xFF8989B3)    // muted purple-gray text (dark) — lightened to clear WCAG
+                                            // AA 4.5:1 against both ModernDarkCard (4.87:1) and
+                                            // ModernDarkBg (5.70:1); the original #6A6A8A only hit ~3.1:1
 val ModernDarkText = Color(0xFFE8E0D0)     // warm off-white text (dark)
 val ModernLightCard = Color(0xFFF0EBE0)    // warm cream card surface (light)
 val ModernLightBorder = Color(0xFFD8D0C0)  // warm border (light)

@@ -208,7 +208,7 @@ private fun ReflectionSheetContent(
         }
         Text(
             text = stringResource(Res.string.reflect_sheet_subtitle),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = mutedColor,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
@@ -217,6 +217,7 @@ private fun ReflectionSheetContent(
             text = challenge,
             style = MaterialTheme.typography.bodyLarge,
             fontStyle = FontStyle.Italic,
+            fontWeight = FontWeight.Medium,
             color = bodyColor,
             modifier = Modifier.padding(top = 8.dp),
         )

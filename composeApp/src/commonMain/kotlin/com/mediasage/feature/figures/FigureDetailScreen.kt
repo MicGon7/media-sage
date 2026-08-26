@@ -242,7 +242,7 @@ private fun BiographyTabContent(state: FigureDetailContract.UiState.Success, onP
                 Text(
                     text = state.bio,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurface,
                     lineHeight = 24.sp,
                 )
             }
