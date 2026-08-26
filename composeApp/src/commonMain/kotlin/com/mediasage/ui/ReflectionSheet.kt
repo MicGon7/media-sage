@@ -217,6 +217,7 @@ private fun ReflectionSheetContent(
             text = challenge,
             style = MaterialTheme.typography.bodyLarge,
             fontStyle = FontStyle.Italic,
+            fontWeight = FontWeight.Medium,
             color = bodyColor,
             modifier = Modifier.padding(top = 8.dp),
         )
