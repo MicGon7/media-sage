@@ -83,12 +83,13 @@ object DailyReflectionPrompt {
         } else {
             "anticipatory — inviting the reader to look ahead to their day"
         }
-        return "- Include a reflection challenge: one open-ended question, 1-2 sentences, " +
-            "addressed to the reader in second person, drawn from the insight/implication/inspiration " +
-            "above. Make it $framing. " +
+        return "- Include a reflection challenge: one open-ended question, exactly 1 sentence and " +
+            "under 25 words, addressed to the reader in second person, drawn from the " +
+            "insight/implication/inspiration above. Make it $framing. " +
             "Phrase the challenge in plain, everyday language — words a middle schooler would understand. " +
             "Avoid theological or academic vocabulary here, even though the rest of the reflection stays " +
-            "in the figure's voice. Keep the underlying idea the same; just make the question itself simple and direct."
+            "in the figure's voice. Keep the underlying idea the same; just make the question itself simple, " +
+            "short, and direct."
     }
 
     private val RESPONSE_FORMAT = """
@@ -100,7 +101,7 @@ object DailyReflectionPrompt {
           "implication": "<1-2 sentences max>",
           "inspiration": "<1-2 sentences max>",
           "sources": ["<source title>"],
-          "challenge": "<one open-ended question, 1-2 sentences, second person>"
+          "challenge": "<one open-ended question, 1 sentence, under 25 words, second person>"
         }
     """.trimIndent()
 }
