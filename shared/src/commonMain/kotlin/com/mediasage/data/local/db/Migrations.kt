@@ -216,6 +216,28 @@ fun migration35To36(cipher: ReflectionNoteCipher): Migration = object : Migratio
     }
 }
 
+val MIGRATION_36_37 = object : Migration(36, 37) {
+    override fun migrate(connection: SQLiteConnection) {
+        // Composite (userId, id) key so two accounts on the same device can never read or
+        // overwrite each other's note (MS-736) — mirrors read_headlines' (userId, url) fix for
+        // the same class of leak (MS-734). Pre-existing notes predate any account association,
+        // so they're bucketed under an anonymous '' userId, same precedent as MIGRATION_34_35 —
+        // they become invisible once a real account is signed in, rather than visible to it.
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS user_reflection_note_new " +
+                "(userId TEXT NOT NULL, id TEXT NOT NULL, noteText TEXT NOT NULL, " +
+                "updatedAtMillis INTEGER NOT NULL, synced INTEGER NOT NULL DEFAULT 0, " +
+                "PRIMARY KEY(userId, id))"
+        )
+        connection.execSQL(
+            "INSERT INTO user_reflection_note_new (userId, id, noteText, updatedAtMillis, synced) " +
+                "SELECT '', id, noteText, updatedAtMillis, 0 FROM user_reflection_note"
+        )
+        connection.execSQL("DROP TABLE user_reflection_note")
+        connection.execSQL("ALTER TABLE user_reflection_note_new RENAME TO user_reflection_note")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

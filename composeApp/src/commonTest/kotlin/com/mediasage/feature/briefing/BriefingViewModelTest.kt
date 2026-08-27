@@ -514,4 +514,5 @@ private class FakeUserReflectionNoteRepository : UserReflectionNoteRepository {
     override suspend fun saveNote(reflectionId: String, noteText: String) {
         notes[reflectionId] = noteText
     }
+    override suspend fun resolve(userId: String?) = Unit
 }
