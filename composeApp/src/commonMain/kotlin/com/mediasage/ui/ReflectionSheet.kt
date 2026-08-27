@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -170,12 +173,17 @@ private fun ReflectionSheetContent(
 
     val scrollState = rememberScrollState()
     var isFieldFocused by remember { mutableStateOf(false) }
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
     // The note field grows with its content instead of scrolling internally, so once it's taller
-    // than the visible area the newest typed line can end up behind the keyboard — only while the
-    // field is actually focused, not on the initial load of an existing note, keep the bottom (the
-    // cursor's end) in view as each keystroke grows it further.
-    LaunchedEffect(noteText) {
-        if (isFieldFocused) scrollState.animateScrollTo(scrollState.maxValue)
+    // than the visible area the newest typed line — and the cursor on it — can end up behind the
+    // keyboard. BringIntoViewRequester asks the framework to scroll just enough to reveal the
+    // field's current bounds, rather than a manually computed scrollState.animateScrollTo(maxValue)
+    // on every keystroke — that approach raced the field's own height/cursor recalculation and was
+    // the source of the visible cursor lagging behind newly typed characters once the note wrapped
+    // past one line. Only while the field is actually focused, not on the initial load of an
+    // existing note.
+    LaunchedEffect(noteText, isFieldFocused) {
+        if (isFieldFocused) bringIntoViewRequester.bringIntoView()
     }
 
     Column(
@@ -222,30 +230,30 @@ private fun ReflectionSheetContent(
             modifier = Modifier.padding(top = 8.dp),
         )
         Column(modifier = Modifier.padding(top = 16.dp)) {
-            OutlinedTextField(
-                value = noteText,
-                onValueChange = onNoteChange,
-                readOnly = !editable,
-                placeholder = { Text(stringResource(Res.string.reflect_note_hint)) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = bodyColor,
-                    unfocusedTextColor = bodyColor,
-                    disabledTextColor = bodyColor,
-                    focusedBorderColor = titleColor,
-                    unfocusedBorderColor = borderColor,
-                    focusedLabelColor = titleColor,
-                    unfocusedLabelColor = mutedColor,
-                    focusedPlaceholderColor = mutedColor,
-                    unfocusedPlaceholderColor = mutedColor,
-                    cursorColor = titleColor,
-                ),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp)
-                    .onFocusChanged {
-                        isFieldFocused = it.isFocused
-                        if (it.isFocused) onFieldFocused()
-                    },
-            )
             if (editable) {
+                OutlinedTextField(
+                    value = noteText,
+                    onValueChange = onNoteChange,
+                    placeholder = { Text(stringResource(Res.string.reflect_note_hint)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = bodyColor,
+                        unfocusedTextColor = bodyColor,
+                        disabledTextColor = bodyColor,
+                        focusedBorderColor = titleColor,
+                        unfocusedBorderColor = borderColor,
+                        focusedLabelColor = titleColor,
+                        unfocusedLabelColor = mutedColor,
+                        focusedPlaceholderColor = mutedColor,
+                        unfocusedPlaceholderColor = mutedColor,
+                        cursorColor = titleColor,
+                    ),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp)
+                        .bringIntoViewRequester(bringIntoViewRequester)
+                        .onFocusChanged {
+                            isFieldFocused = it.isFocused
+                            if (it.isFocused) onFieldFocused()
+                        },
+                )
                 MediaSageSurface(
                     onClick = onSave,
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 20.dp),
@@ -265,6 +273,8 @@ private fun ReflectionSheetContent(
                         )
                     }
                 }
+            } else if (noteText.isNotBlank()) {
+                ReflectionAnswerText(noteText = noteText, bodyColor = bodyColor, dividerColor = borderColor)
             }
         }
     }
@@ -284,6 +294,24 @@ private fun ReflectionSheetHandle(color: Color) {
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(color),
+        )
+    }
+}
+
+/**
+ * The read-only presentation of a past reflection's saved note — plain text, no text-field
+ * chrome, set off from the AI-generated [challenge] above it by a divider and a bolder weight so
+ * the human-written answer visually stands out.
+ */
+@Composable
+private fun ReflectionAnswerText(noteText: String, bodyColor: Color, dividerColor: Color) {
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+        HorizontalDivider(color = dividerColor, thickness = 1.dp, modifier = Modifier.padding(bottom = 12.dp))
+        Text(
+            text = noteText,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = bodyColor,
         )
     }
 }
