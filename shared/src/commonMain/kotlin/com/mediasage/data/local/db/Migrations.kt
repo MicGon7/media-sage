@@ -3,6 +3,7 @@ package com.mediasage.data.local.db
 import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import com.mediasage.data.crypto.ReflectionNoteCipher
 
 val MIGRATION_19_20 = object : Migration(19, 20) {
     override fun migrate(connection: SQLiteConnection) {
@@ -181,6 +182,37 @@ val MIGRATION_34_35 = object : Migration(34, 35) {
         )
         connection.execSQL("DROP TABLE headlines")
         connection.execSQL("ALTER TABLE headlines_new RENAME TO headlines")
+    }
+}
+
+// Takes the cipher as a param (unlike the other migrations here) because it encrypts existing
+// plaintext note rows in place rather than just running static SQL.
+fun migration35To36(cipher: ReflectionNoteCipher): Migration = object : Migration(35, 36) {
+    override fun migrate(connection: SQLiteConnection) {
+        val plaintextNotesById = readPlaintextNotes(connection)
+        plaintextNotesById.forEach { (id, plaintext) ->
+            val statement = connection.prepare("UPDATE user_reflection_note SET noteText = ? WHERE id = ?")
+            try {
+                statement.bindText(1, cipher.encrypt(plaintext))
+                statement.bindText(2, id)
+                statement.step()
+            } finally {
+                statement.close()
+            }
+        }
+    }
+
+    private fun readPlaintextNotes(connection: SQLiteConnection): List<Pair<String, String>> {
+        val notes = mutableListOf<Pair<String, String>>()
+        val statement = connection.prepare("SELECT id, noteText FROM user_reflection_note")
+        try {
+            while (statement.step()) {
+                notes += statement.getText(0) to statement.getText(1)
+            }
+        } finally {
+            statement.close()
+        }
+        return notes
     }
 }
 

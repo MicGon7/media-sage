@@ -1,5 +1,7 @@
 package com.mediasage.di
 
+import com.mediasage.data.crypto.ReflectionNoteCipher
+import com.mediasage.data.crypto.createReflectionNoteCipher
 import com.mediasage.data.local.db.MediaSageDatabase
 import com.mediasage.data.remote.MediaSageApi
 import com.mediasage.data.remote.MediaSageApiImpl
@@ -99,7 +101,8 @@ fun sharedModule(
     single<DayAssignmentRepository> {
         DayAssignmentRepositoryImpl(get(), get(), get(), get(), getOrNull(), get(), get())
     }
-    single<UserReflectionNoteRepository> { UserReflectionNoteRepositoryImpl(get()) }
+    single<ReflectionNoteCipher> { createReflectionNoteCipher() }
+    single<UserReflectionNoteRepository> { UserReflectionNoteRepositoryImpl(get(), get()) }
 
     // Domain use cases — combine/transform data from multiple repositories (NiA domain layer)
     single { GetReaderCalendarUseCase(get(), get(), get(), get()) }

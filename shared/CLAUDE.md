@@ -46,3 +46,23 @@ Rules:
 ## Dependency Injection
 
 `sharedModule(serverBaseUrl)` — wires HttpClient, MediaSageApi, and all repositories. Define modules per feature, not per layer.
+
+## Encrypting a field at rest
+
+`ReflectionNoteCipher` (`data/crypto/`) is the reference pattern for encrypting one column's
+value client-side, established in MS-737. Reuse this shape for any other field that needs the
+same "only the device can read this" guarantee:
+- A common `interface` with `encrypt`/`decrypt`, plus an `expect fun create...(): Interface`
+  factory — no `Context`/setup object needed since both platforms' key stores (Android Keystore,
+  iOS Keychain) are reachable with no arguments.
+- Android: a non-exportable AES-256-GCM key generated in `AndroidKeyStore` via
+  `KeyGenParameterSpec`; `javax.crypto.Cipher` does the encrypt/decrypt.
+- iOS: an EC key pair generated in the Keychain via `SecKeyCreateRandomKey`; encrypt/decrypt goes
+  through `SecKeyCreateEncryptedData`/`SecKeyCreateDecryptedData` with
+  `kSecKeyAlgorithmECIESEncryptionStandardX963SHA256AESGCM` (AES-GCM under the hood, reached via
+  Apple's `Security` framework — no CryptoKit, no CommonCrypto cinterop, no new dependency).
+- The seam is the repository (encrypt on save, decrypt on read) — DAO and entity stay
+  crypto-unaware.
+- The `actual` implementations get no unit tests (Keystore/Keychain aren't available in
+  `commonTest`); test the repository's encrypt/decrypt orchestration with a `Fake...Cipher`
+  instead.
