@@ -22,10 +22,12 @@ import com.mediasage.data.repository.PostgrestDiscoveredQuoteRemoteDataSource
 import com.mediasage.data.repository.PostgrestMemorizedQuoteRemoteDataSource
 import com.mediasage.data.repository.PostgrestProfileRemoteDataSource
 import com.mediasage.data.repository.PostgrestSavedInsightRemoteDataSource
+import com.mediasage.data.repository.PostgrestUserReflectionNoteRemoteDataSource
 import com.mediasage.data.repository.ProfileRemoteDataSource
 import com.mediasage.data.repository.ProfileRepositoryImpl
 import com.mediasage.data.repository.QuoteRepositoryImpl
 import com.mediasage.data.repository.SavedInsightRemoteDataSource
+import com.mediasage.data.repository.UserReflectionNoteRemoteDataSource
 import com.mediasage.data.repository.UserReflectionNoteRepositoryImpl
 import com.mediasage.data.repository.WikipediaRepositoryImpl
 import com.mediasage.domain.repository.AuthRepository
@@ -66,6 +68,7 @@ fun sharedModule(
         single<MemorizedQuoteRemoteDataSource> { PostgrestMemorizedQuoteRemoteDataSource(get()) }
         single<DiscoveredQuoteRemoteDataSource> { PostgrestDiscoveredQuoteRemoteDataSource(get()) }
         single<ProfileRemoteDataSource> { PostgrestProfileRemoteDataSource(get()) }
+        single<UserReflectionNoteRemoteDataSource> { PostgrestUserReflectionNoteRemoteDataSource(get()) }
     }
 
     // HTTP client for communicating with the Media Sage server
@@ -102,7 +105,7 @@ fun sharedModule(
         DayAssignmentRepositoryImpl(get(), get(), get(), get(), getOrNull(), get(), get())
     }
     single<ReflectionNoteCipher> { createReflectionNoteCipher() }
-    single<UserReflectionNoteRepository> { UserReflectionNoteRepositoryImpl(get(), get()) }
+    single<UserReflectionNoteRepository> { UserReflectionNoteRepositoryImpl(get(), get(), getOrNull(), get()) }
 
     // Domain use cases — combine/transform data from multiple repositories (NiA domain layer)
     single { GetReaderCalendarUseCase(get(), get(), get(), get()) }

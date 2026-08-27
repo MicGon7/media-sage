@@ -41,6 +41,7 @@ val appModule = module {
             get<DailyReflectionRepository>(),
             get<EncouragementRepository>(),
             get<QuoteRepository>(),
+            get<UserReflectionNoteRepository>(),
             get<ThemePreferencesRepository>(),
             get<AuthRepository>(),
         )
