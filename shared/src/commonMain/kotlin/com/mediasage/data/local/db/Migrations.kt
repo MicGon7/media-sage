@@ -155,6 +155,35 @@ val MIGRATION_33_34 = object : Migration(33, 34) {
     }
 }
 
+val MIGRATION_34_35 = object : Migration(34, 35) {
+    override fun migrate(connection: SQLiteConnection) {
+        // isRead moves off the shared headlines cache into its own per-user table — headlines
+        // gets wiped/reinserted independently of any account, so a column on it can never be
+        // scoped to a user and previously leaked read status across accounts on the same device.
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS read_headlines " +
+                "(userId TEXT NOT NULL, url TEXT NOT NULL, PRIMARY KEY(userId, url))"
+        )
+        // Preserve existing read state under an anonymous bucket rather than silently dropping it —
+        // per-account attribution only becomes possible going forward.
+        connection.execSQL(
+            "INSERT INTO read_headlines (userId, url) SELECT '', url FROM headlines WHERE isRead = 1"
+        )
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS headlines_new " +
+                "(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, title TEXT NOT NULL, source TEXT NOT NULL, " +
+                "url TEXT NOT NULL, imageUrl TEXT, publishedAt INTEGER NOT NULL, fetchedAt INTEGER NOT NULL, " +
+                "snippet TEXT, category TEXT NOT NULL DEFAULT '')"
+        )
+        connection.execSQL(
+            "INSERT INTO headlines_new (id, title, source, url, imageUrl, publishedAt, fetchedAt, snippet, category) " +
+                "SELECT id, title, source, url, imageUrl, publishedAt, fetchedAt, snippet, category FROM headlines"
+        )
+        connection.execSQL("DROP TABLE headlines")
+        connection.execSQL("ALTER TABLE headlines_new RENAME TO headlines")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

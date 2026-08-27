@@ -128,7 +128,8 @@ class EntityMappersTest {
             url = "https://example.com", imageUrl = null,
             publishedAt = 1000L, fetchedAt = 2000L
         )
-        val domain = entity.toDomain()
+        val domain = entity.toDomain(isRead = true)
+        assertEquals(true, domain.isRead)
         val backToEntity = domain.toEntity()
         assertEquals(entity, backToEntity)
     }

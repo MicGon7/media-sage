@@ -87,8 +87,9 @@ fun NewsArticleDto.toEntity(fetchedAt: Long = 0L) = HeadlineEntity(
     category = categories.firstOrNull().orEmpty()
 )
 
-// Headline
-fun HeadlineEntity.toDomain() = Headline(
+// Headline — isRead lives in a separate per-user read_headlines table (MS-734), not on the
+// entity, so it's always passed in explicitly rather than round-tripped through the entity.
+fun HeadlineEntity.toDomain(isRead: Boolean = false) = Headline(
     id = id,
     title = title,
     source = source,
@@ -110,8 +111,7 @@ fun Headline.toEntity() = HeadlineEntity(
     publishedAt = publishedAt,
     fetchedAt = fetchedAt,
     snippet = snippet,
-    category = category,
-    isRead = isRead
+    category = category
 )
 
 // Encourage DTO → Domain

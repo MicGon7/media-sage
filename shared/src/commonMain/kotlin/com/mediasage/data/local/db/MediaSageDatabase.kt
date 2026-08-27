@@ -21,6 +21,7 @@ import com.mediasage.data.local.entity.EncouragementEntity
 import com.mediasage.data.local.entity.FigureEntity
 import com.mediasage.data.local.entity.HeadlineEntity
 import com.mediasage.data.local.entity.QuoteEntity
+import com.mediasage.data.local.entity.ReadHeadlineEntity
 import com.mediasage.data.local.entity.SyncMetaEntity
 import com.mediasage.data.local.entity.UserReflectionNoteEntity
 
@@ -35,8 +36,9 @@ import com.mediasage.data.local.entity.UserReflectionNoteEntity
         DayAssignmentEntity::class,
         DiscoveredQuoteEntity::class,
         UserReflectionNoteEntity::class,
+        ReadHeadlineEntity::class,
     ],
-    version = 34,
+    version = 35,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.mediasage.data.local.entity.HeadlineEntity
+import com.mediasage.data.local.entity.ReadHeadlineEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -33,9 +34,12 @@ interface HeadlineDao {
     @Query("DELETE FROM headlines")
     suspend fun deleteAll()
 
-    @Query("UPDATE headlines SET isRead = 1 WHERE url = :url")
-    suspend fun markRead(url: String)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun markRead(readHeadline: ReadHeadlineEntity)
 
-    @Query("SELECT url FROM headlines WHERE isRead = 1")
-    suspend fun getReadUrls(): List<String>
+    @Query("SELECT url FROM read_headlines WHERE userId = :userId")
+    fun observeReadUrls(userId: String): Flow<List<String>>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM read_headlines WHERE userId = :userId AND url = :url)")
+    suspend fun isRead(userId: String, url: String): Boolean
 }
