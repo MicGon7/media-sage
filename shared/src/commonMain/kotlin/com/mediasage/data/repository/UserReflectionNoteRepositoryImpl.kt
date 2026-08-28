@@ -6,6 +6,8 @@ import com.mediasage.data.local.entity.UserReflectionNoteEntity
 import com.mediasage.domain.repository.AuthRepository
 import com.mediasage.domain.repository.UserReflectionNoteRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class UserReflectionNoteRepositoryImpl(
     private val dao: UserReflectionNoteDao,
@@ -14,19 +16,33 @@ class UserReflectionNoteRepositoryImpl(
     private val authRepository: AuthRepository,
 ) : UserReflectionNoteRepository {
 
-    override suspend fun getNote(reflectionId: String): String? =
-        dao.get(currentUserId(), reflectionId)?.noteText?.let(cipher::decrypt)
+    override suspend fun getNote(reflectionId: String): String? = withContext(Dispatchers.Default) {
+        try {
+            dao.get(currentUserId(), reflectionId)?.noteText?.let(cipher::decrypt)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Keystore/Keychain decrypt failure — treat as "no note" rather than crashing
+            null
+        }
+    }
 
-    override suspend fun saveNote(reflectionId: String, noteText: String) {
-        val entity = UserReflectionNoteEntity(
-            userId = currentUserId(),
-            id = reflectionId,
-            noteText = cipher.encrypt(noteText),
-            updatedAtMillis = epochMillis(),
-            synced = false,
-        )
-        dao.upsert(entity)
-        pushNote(entity)
+    override suspend fun saveNote(reflectionId: String, noteText: String) = withContext(Dispatchers.Default) {
+        try {
+            val entity = UserReflectionNoteEntity(
+                userId = currentUserId(),
+                id = reflectionId,
+                noteText = cipher.encrypt(noteText),
+                updatedAtMillis = epochMillis(),
+                synced = false,
+            )
+            dao.upsert(entity)
+            pushNote(entity)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Keystore/Keychain encrypt failure — the note isn't saved, but must never crash the app
+        }
     }
 
     override suspend fun resolve(userId: String?) {

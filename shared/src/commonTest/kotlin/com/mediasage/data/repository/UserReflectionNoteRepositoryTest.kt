@@ -52,6 +52,24 @@ class UserReflectionNoteRepositoryTest {
     }
 
     @Test
+    fun `getNote returns null instead of crashing when the cipher throws on decrypt`() = runTest {
+        // Regression test (MS-739): Keychain/Keystore decrypt can legitimately fail (e.g. a
+        // Keychain access error on iOS) — that must never crash the app.
+        val dao = FakeUserReflectionNoteDao()
+        dao.upsert(note(userId = USER_A, id = "5_morning_NEWS", text = "undecryptable"))
+
+        val note = repo(dao = dao, cipher = ThrowingCipher()).getNote("5_morning_NEWS")
+
+        assertNull(note)
+    }
+
+    @Test
+    fun `saveNote does not crash when the cipher throws on encrypt`() = runTest {
+        // Regression test (MS-739): same failure mode as decrypt, on the write path.
+        repo(cipher = ThrowingCipher()).saveNote("6_morning_NEWS", "won't be saved")
+    }
+
+    @Test
     fun `a note saved under one account is never visible to a different account on the same device`() = runTest {
         val dao = FakeUserReflectionNoteDao()
         repo(dao = dao, authRepository = FakeAuthRepositoryForNoteSync(USER_A))
@@ -193,6 +211,11 @@ private class FakeReflectionNoteCipher : ReflectionNoteCipher {
             else -> char
         }
     }.joinToString("")
+}
+
+private class ThrowingCipher : ReflectionNoteCipher {
+    override fun encrypt(plaintext: String): String = throw IllegalStateException("Keychain/Keystore failure")
+    override fun decrypt(ciphertext: String): String = throw IllegalStateException("Keychain/Keystore failure")
 }
 
 private class FakeAuthRepositoryForNoteSync(private val userId: String?) : AuthRepository {
