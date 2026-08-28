@@ -16,7 +16,7 @@ class UserReflectionNoteRepositoryImpl(
     private val authRepository: AuthRepository,
 ) : UserReflectionNoteRepository {
 
-    override suspend fun getNote(reflectionId: String): String? = withContext(Dispatchers.IO) {
+    override suspend fun getNote(reflectionId: String): String? = withContext(Dispatchers.Default) {
         try {
             dao.get(currentUserId(), reflectionId)?.noteText?.let(cipher::decrypt)
         } catch (e: CancellationException) {
@@ -27,7 +27,7 @@ class UserReflectionNoteRepositoryImpl(
         }
     }
 
-    override suspend fun saveNote(reflectionId: String, noteText: String) = withContext(Dispatchers.IO) {
+    override suspend fun saveNote(reflectionId: String, noteText: String) = withContext(Dispatchers.Default) {
         try {
             val entity = UserReflectionNoteEntity(
                 userId = currentUserId(),
