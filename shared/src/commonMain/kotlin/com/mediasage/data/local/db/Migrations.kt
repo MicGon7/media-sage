@@ -238,6 +238,15 @@ val MIGRATION_36_37 = object : Migration(36, 37) {
     }
 }
 
+val MIGRATION_37_38 = object : Migration(37, 38) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS local_account_key " +
+                "(userId TEXT NOT NULL, wrappedKeyBase64 TEXT NOT NULL, PRIMARY KEY(userId))"
+        )
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(

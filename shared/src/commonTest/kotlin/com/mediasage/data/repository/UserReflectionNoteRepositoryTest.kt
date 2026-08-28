@@ -1,7 +1,9 @@
 package com.mediasage.data.repository
 
 import com.mediasage.data.crypto.ReflectionNoteCipher
+import com.mediasage.data.local.dao.LocalAccountKeyDao
 import com.mediasage.data.local.dao.UserReflectionNoteDao
+import com.mediasage.data.local.entity.LocalAccountKeyEntity
 import com.mediasage.data.local.entity.UserReflectionNoteEntity
 import com.mediasage.domain.model.UserSession
 import com.mediasage.domain.repository.AuthRepository
@@ -23,7 +25,9 @@ class UserReflectionNoteRepositoryTest {
         cipher: ReflectionNoteCipher = FakeReflectionNoteCipher(),
         remote: FakeUserReflectionNoteRemoteDataSource? = FakeUserReflectionNoteRemoteDataSource(),
         authRepository: FakeAuthRepositoryForNoteSync = FakeAuthRepositoryForNoteSync(USER_A),
-    ) = UserReflectionNoteRepositoryImpl(dao, cipher, remote, authRepository)
+        localAccountKeyDao: FakeLocalAccountKeyDao = FakeLocalAccountKeyDao(),
+        keyRemote: FakeReflectionNoteKeyRemoteDataSource? = FakeReflectionNoteKeyRemoteDataSource(),
+    ) = UserReflectionNoteRepositoryImpl(dao, cipher, remote, authRepository, localAccountKeyDao, keyRemote)
 
     @Test
     fun `saveNote stores ciphertext not plaintext`() = runTest {
@@ -33,7 +37,7 @@ class UserReflectionNoteRepositoryTest {
         repository.saveNote("2026-08-27_encouraged_news", "Only I should be able to read this.")
 
         val stored = dao.get(USER_A, "2026-08-27_encouraged_news")
-        assertEquals("ROT13:Bayl V fubhyq or noyr gb ernq guvf.", stored?.noteText)
+        assertTrue(stored != null && stored.noteText != "Only I should be able to read this.")
     }
 
     @Test
@@ -52,21 +56,20 @@ class UserReflectionNoteRepositoryTest {
     }
 
     @Test
-    fun `getNote returns null instead of crashing when the cipher throws on decrypt`() = runTest {
-        // Regression test (MS-739): Keychain/Keystore decrypt can legitimately fail (e.g. a
-        // Keychain access error on iOS) — that must never crash the app.
+    fun `getNote returns null instead of crashing when the local cipher throws wrapping the account key`() = runTest {
+        // Regression test (MS-739): Keychain/Keystore failure must never crash the app — still
+        // true now that the local cipher's job is wrapping the cached shared key, not the note.
         val dao = FakeUserReflectionNoteDao()
         dao.upsert(note(userId = USER_A, id = "5_morning_NEWS", text = "undecryptable"))
 
-        val note = repo(dao = dao, cipher = ThrowingCipher()).getNote("5_morning_NEWS")
+        val note = repo(dao = dao, cipher = ThrowingCipher(), keyRemote = null).getNote("5_morning_NEWS")
 
         assertNull(note)
     }
 
     @Test
-    fun `saveNote does not crash when the cipher throws on encrypt`() = runTest {
-        // Regression test (MS-739): same failure mode as decrypt, on the write path.
-        repo(cipher = ThrowingCipher()).saveNote("6_morning_NEWS", "won't be saved")
+    fun `saveNote does not crash when the local cipher throws`() = runTest {
+        repo(cipher = ThrowingCipher(), keyRemote = null).saveNote("6_morning_NEWS", "won't be saved")
     }
 
     @Test
@@ -126,22 +129,6 @@ class UserReflectionNoteRepositoryTest {
     }
 
     @Test
-    fun `resolve adopts a note saved from another device`() = runTest {
-        val dao = FakeUserReflectionNoteDao()
-        val remote = FakeUserReflectionNoteRemoteDataSource(
-            initialRows = listOf(
-                UserReflectionNoteRow(userId = USER_A, id = "2_morning_NEWS", noteText = "ROT13:sebz nabgure qrivpr", updatedAtMillis = 100L)
-            )
-        )
-
-        repo(dao = dao, remote = remote).resolve(USER_A)
-
-        val pulled = dao.get(USER_A, "2_morning_NEWS")
-        assertEquals("ROT13:sebz nabgure qrivpr", pulled?.noteText)
-        assertTrue(pulled!!.synced)
-    }
-
-    @Test
     fun `resolve keeps the newer local edit instead of an older remote row`() = runTest {
         val dao = FakeUserReflectionNoteDao()
         dao.upsert(note(userId = USER_A, id = "3_morning_NEWS", text = "Newer local edit", updatedAtMillis = 200L, synced = true))
@@ -171,6 +158,65 @@ class UserReflectionNoteRepositoryTest {
         assertEquals("Newer remote edit", dao.get(USER_A, "4_morning_NEWS")?.noteText)
     }
 
+    @Test
+    fun `a note saved on one device is readable on a second device signed into the same account`() = runTest {
+        // The actual MS-740 regression test: two independent local caches (separate note DAO and
+        // separate local-account-key DAO — standing in for two physical devices) sharing only the
+        // remote note table and the remote key table, exercising the real AES-GCM SharedNoteCipher.
+        val sharedNotesRemote = FakeUserReflectionNoteRemoteDataSource()
+        val sharedKeyRemote = FakeReflectionNoteKeyRemoteDataSource()
+        val deviceA = repo(remote = sharedNotesRemote, keyRemote = sharedKeyRemote)
+        val deviceB = repo(remote = sharedNotesRemote, keyRemote = sharedKeyRemote)
+
+        deviceA.saveNote("7_morning_NEWS", "Written on device A")
+        deviceB.resolve(USER_A)
+
+        assertEquals("Written on device A", deviceB.getNote("7_morning_NEWS"))
+    }
+
+    @Test
+    fun `two devices racing to provision the account key converge on one winner and can read each other's notes`() = runTest {
+        val sharedNotesRemote = FakeUserReflectionNoteRemoteDataSource()
+        // Both devices' first key fetch races ahead of either device's write and sees nothing —
+        // a real unique-constraint conflict then decides exactly one winner.
+        val sharedKeyRemote = FakeReflectionNoteKeyRemoteDataSource(forceFetchNullForFirstNCalls = 2)
+        val deviceA = repo(remote = sharedNotesRemote, keyRemote = sharedKeyRemote)
+        val deviceB = repo(remote = sharedNotesRemote, keyRemote = sharedKeyRemote)
+
+        deviceA.saveNote("8_morning_NEWS", "From device A")
+        deviceB.saveNote("9_morning_NEWS", "From device B")
+
+        assertEquals(1, sharedKeyRemote.pushedKeys.size)
+
+        deviceB.resolve(USER_A)
+        assertEquals("From device A", deviceB.getNote("8_morning_NEWS"))
+        deviceA.resolve(USER_A)
+        assertEquals("From device B", deviceA.getNote("9_morning_NEWS"))
+    }
+
+    @Test
+    fun `a note encrypted under the old per-device cipher is still readable and migrates onto the shared key on next save`() = runTest {
+        val dao = FakeUserReflectionNoteDao()
+        val legacyCipher = FakeReflectionNoteCipher()
+        dao.upsert(note(userId = USER_A, id = "legacy_note", text = legacyCipher.encrypt("Before MS-740")))
+        val sharedKeyRemote = FakeReflectionNoteKeyRemoteDataSource()
+        val repository = repo(dao = dao, cipher = legacyCipher, keyRemote = sharedKeyRemote)
+
+        assertEquals("Before MS-740", repository.getNote("legacy_note"))
+
+        repository.saveNote("legacy_note", "After MS-740")
+
+        // A second device with its own local cipher (never having seen the legacy ciphertext at
+        // all) must still read the re-saved note purely via the shared account key.
+        val deviceB = repo(
+            dao = dao,
+            cipher = FakeReflectionNoteCipher(),
+            keyRemote = sharedKeyRemote,
+            authRepository = FakeAuthRepositoryForNoteSync(USER_A),
+        )
+        assertEquals("After MS-740", deviceB.getNote("legacy_note"))
+    }
+
     private fun note(
         userId: String,
         id: String,
@@ -196,6 +242,16 @@ private class FakeUserReflectionNoteDao : UserReflectionNoteDao {
 
     override suspend fun markSynced(userId: String, id: String) {
         notesByKey[userId to id]?.let { notesByKey[userId to id] = it.copy(synced = true) }
+    }
+}
+
+private class FakeLocalAccountKeyDao : LocalAccountKeyDao {
+    private val entries = mutableMapOf<String, LocalAccountKeyEntity>()
+
+    override suspend fun get(userId: String): LocalAccountKeyEntity? = entries[userId]
+
+    override suspend fun upsert(entity: LocalAccountKeyEntity) {
+        entries[entity.userId] = entity
     }
 }
 
@@ -244,4 +300,26 @@ private class FakeUserReflectionNoteRemoteDataSource(
 
     override suspend fun fetchAll(userId: String): List<UserReflectionNoteRow> =
         rows.values.filter { it.userId == userId }
+}
+
+private class FakeReflectionNoteKeyRemoteDataSource(
+    private val forceFetchNullForFirstNCalls: Int = 0,
+) : ReflectionNoteKeyRemoteDataSource {
+    private val keysByUser = mutableMapOf<String, String>()
+    private var fetchCallCount = 0
+    val pushedKeys = mutableListOf<Pair<String, String>>()
+
+    override suspend fun push(userId: String, keyMaterialBase64: String) {
+        // A plain insert with userId as the primary key — a second push for the same user is a
+        // real unique-constraint violation, exactly like the Supabase table this fakes.
+        if (keysByUser.containsKey(userId)) throw RuntimeException("duplicate key value violates unique constraint")
+        keysByUser[userId] = keyMaterialBase64
+        pushedKeys.add(userId to keyMaterialBase64)
+    }
+
+    override suspend fun fetch(userId: String): String? {
+        fetchCallCount++
+        if (fetchCallCount <= forceFetchNullForFirstNCalls) return null
+        return keysByUser[userId]
+    }
 }

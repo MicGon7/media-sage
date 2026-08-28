@@ -44,6 +44,7 @@ mcp = "0.9.0"
 shadow = "8.3.9"
 roborazzi = "1.69.0"
 robolectric = "4.16"
+cryptography-kotlin = "0.6.0"
 
 [libraries]
 # Coil (KMP image loading)
@@ -123,6 +124,10 @@ exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "e
 exposed-java-time = { module = "org.jetbrains.exposed:exposed-java-time", version.ref = "exposed" }
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
 postgresql-jdbc = { module = "org.postgresql:postgresql", version.ref = "postgresql-jdbc" }
+
+# cryptography-kotlin (KMP AES-GCM — shared reflection-note-key encryption, MS-740)
+cryptography-core = { module = "dev.whyoleg.cryptography:cryptography-core", version.ref = "cryptography-kotlin" }
+cryptography-provider-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "cryptography-kotlin" }
 
 # Supabase (KMP client)
 supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt", version.ref = "supabase" }
