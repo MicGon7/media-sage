@@ -46,6 +46,10 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.serialization.json)
 
+            // cryptography-kotlin — portable AES-GCM for the shared reflection-note-key (MS-740)
+            implementation(libs.cryptography.core)
+            implementation(libs.cryptography.provider.optimal)
+
             // Ktor Client
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
