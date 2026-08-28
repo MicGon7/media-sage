@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -189,6 +190,12 @@ private fun ReflectionSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // Wraps content height by default, which is shorter than the sheet's full drag
+            // range — with the transparent ModalBottomSheet container, dragging past that
+            // point (e.g. to Expanded with the keyboard up, shrinking the visible content
+            // area further) reveals the screen behind through the un-painted gap below this
+            // Column. fillMaxHeight keeps the painted background spanning the whole sheet.
+            .fillMaxHeight()
             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
             .then(background)
             .padding(horizontal = 20.dp)
