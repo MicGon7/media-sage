@@ -2,11 +2,8 @@ package com.mediasage.ui
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,8 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.StickyNote2
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,8 +38,6 @@ import com.mediasage.theme.LensRepentance
 import mediasage.composeapp.generated.resources.Res
 import mediasage.composeapp.generated.resources.briefing_card_based_on
 import mediasage.composeapp.generated.resources.briefing_card_reflect_action
-import mediasage.composeapp.generated.resources.briefing_card_study_action
-import mediasage.composeapp.generated.resources.day_detail_share_action
 import mediasage.composeapp.generated.resources.you_lens_today
 import org.jetbrains.compose.resources.stringResource
 
@@ -157,35 +150,21 @@ fun MediaSageBriefingBody(
 }
 
 /**
- * Reflect/Study/Share actions shown beneath every briefing's reflection text — built into
+ * The Reflect action shown beneath every briefing's reflection text — built into
  * [MediaSageBriefingBody] itself (rather than a customizable trailing slot) since every screen
- * that renders a briefing wants the same row. The Reflect chip only renders when [onReflectClick]
- * is non-null — reflections generated before the challenge question existed have nothing to reflect on.
+ * that renders a briefing wants the same row. Renders nothing when [onReflectClick] is null —
+ * reflections generated before the challenge question existed have nothing to reflect on. Study
+ * and Share are hidden until they have real actions behind them, rather than shown as no-ops.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BriefingActionsRow(onReflectClick: (() -> Unit)? = null) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        if (onReflectClick != null) {
-            MediaSageComicChip(
-                icon = Icons.AutoMirrored.Outlined.StickyNote2,
-                label = stringResource(Res.string.briefing_card_reflect_action),
-                onClick = onReflectClick,
-            )
-        }
+    if (onReflectClick != null) {
         MediaSageComicChip(
-            icon = Icons.Outlined.MenuBook,
-            label = stringResource(Res.string.briefing_card_study_action),
-            onClick = {},
-        )
-        MediaSageComicChip(
-            icon = Icons.Outlined.Share,
-            label = stringResource(Res.string.day_detail_share_action),
-            onClick = {},
+            icon = Icons.AutoMirrored.Outlined.StickyNote2,
+            label = stringResource(Res.string.briefing_card_reflect_action),
+            onClick = onReflectClick,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            centered = true,
         )
     }
 }

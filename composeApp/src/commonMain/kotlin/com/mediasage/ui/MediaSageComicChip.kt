@@ -1,7 +1,9 @@
 package com.mediasage.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,9 +23,11 @@ import com.mediasage.theme.MediaSageTheme
 
 /**
  * A pill styled after the app's comic / vintage-newspaper illustration for a mobile action row
- * (e.g. Reflect/Study/Share beneath a briefing's reflection text) — a vertical sepia gradient,
- * ink text, and brown border via [MediaSageSurface], distinguishing it from the plain white card
- * it sits on.
+ * (e.g. Reflect beneath a briefing's reflection text) — a vertical sepia gradient, ink text, and
+ * brown border via [MediaSageSurface], distinguishing it from the plain white card it sits on.
+ * Content stays left-aligned and content-sized by default; pass [centered] when [modifier]
+ * widens the chip (e.g. `Modifier.fillMaxWidth()`) so the icon/label center within it instead of
+ * hugging the left edge.
  */
 @Composable
 fun MediaSageComicChip(
@@ -31,6 +35,7 @@ fun MediaSageComicChip(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    centered: Boolean = false,
 ) {
     MediaSageSurface(
         onClick = onClick,
@@ -40,7 +45,9 @@ fun MediaSageComicChip(
         bordered = true,
     ) { contentColor ->
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.then(if (centered) Modifier.fillMaxWidth() else Modifier)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = if (centered) Arrangement.Center else Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(imageVector = icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
