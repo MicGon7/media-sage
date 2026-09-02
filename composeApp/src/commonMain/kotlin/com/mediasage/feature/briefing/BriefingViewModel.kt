@@ -76,9 +76,19 @@ class BriefingViewModel(
         val success = _state.value as? BriefingContract.UiState.Success ?: return
         val ready = success.card as? BriefingContract.CardState.Ready ?: return
         val challenge = ready.challenge ?: return
+        // Sheet appears immediately with the challenge text; the note field shows a loading state
+        // (noteText == null) until getNote resolves — decoupled so a first-time shared-key fetch
+        // (MS-740) never delays the sheet itself from opening.
+        updateReflectSheet(BriefingContract.ReflectSheetState(challenge, noteText = null, savedNoteText = null))
         viewModelScope.launch {
             val saved = userReflectionNoteRepository.getNote(reflectionId(ready.tone, ready.theme)).orEmpty()
-            updateReflectSheet(BriefingContract.ReflectSheetState(challenge, saved, saved))
+            // Only apply the fetch if the sheet is still open and still on its initial loading
+            // state — otherwise the user dismissed it while this was in flight, and applying a
+            // stale result now would reopen a sheet they already closed.
+            val sheet = (_state.value as? BriefingContract.UiState.Success)?.reflectSheet
+            if (sheet != null && sheet.noteText == null) {
+                updateReflectSheet(BriefingContract.ReflectSheetState(challenge, saved, saved))
+            }
         }
     }
 
@@ -86,9 +96,10 @@ class BriefingViewModel(
         val success = _state.value as? BriefingContract.UiState.Success ?: return
         val ready = success.card as? BriefingContract.CardState.Ready ?: return
         val sheet = success.reflectSheet ?: return
+        val noteText = sheet.noteText ?: return
         viewModelScope.launch {
-            userReflectionNoteRepository.saveNote(reflectionId(ready.tone, ready.theme), sheet.noteText)
-            updateReflectSheet(sheet.copy(savedNoteText = sheet.noteText))
+            userReflectionNoteRepository.saveNote(reflectionId(ready.tone, ready.theme), noteText)
+            updateReflectSheet(sheet.copy(savedNoteText = noteText))
         }
     }
 

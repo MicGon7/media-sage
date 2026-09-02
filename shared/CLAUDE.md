@@ -92,11 +92,21 @@ originating device.
   dependency in this codebase; it exists because Apple's native `Security` framework (used by
   `ReflectionNoteCipher` above) has no clean way to run AES-GCM with an arbitrary caller-supplied
   key, which a *shared* key fundamentally requires.
-- Back-compat: a note encrypted before MS-740 (or before this device had ever provisioned the
-  account key) falls back to `ReflectionNoteCipher.decrypt` directly on read, and migrates onto the
-  shared key the next time it's saved. It is only ever readable that way on the original device
-  that wrote it — the whole point of MS-740 was that this fallback is not a substitute for a
-  portable key.
+- Ciphertext is tagged at write time (`SHARED_KEY_PREFIX` in `UserReflectionNoteRepositoryImpl`),
+  never sniffed by trying one cipher and catching a failure (MS-741) — a real decrypt or
+  key-provisioning failure must never be indistinguishable from "this is actually the other
+  format." Back-compat: a note encrypted before MS-740 (or before this device had ever provisioned
+  the account key) carries no prefix, decrypts via `ReflectionNoteCipher.decrypt` directly, and
+  migrates onto the shared key the next time it's saved. It is only ever readable that way on the
+  original device that wrote it — the whole point of MS-740 was that this fallback is not a
+  substitute for a portable key.
+- A transient failure to reach the shared key (network error, `keyRemote` not configured, etc.)
+  makes `getOrProvisionAccountKey` return `null` for *that attempt only* — `saveNote` then falls
+  back to the legacy per-device cipher, tagged by the absence of `SHARED_KEY_PREFIX` exactly like
+  a genuinely pre-MS-740 note, and self-heals on the next save that does reach the key. Do not
+  "fix" this by making a fetch failure abort the save outright (tried in MS-741 and reverted) —
+  that leaves the note entirely unwritten instead of degrading to single-device-readable, which is
+  worse on a flaky connection.
 - Test the provisioning race (two `Fake...RemoteDataSource` clients backed by the same in-memory
   map, one `push` throwing on conflict) and a genuine two-"device" round trip (two repository
   instances with separate `Fake` local DAOs sharing only the remote fakes) — a single shared fake

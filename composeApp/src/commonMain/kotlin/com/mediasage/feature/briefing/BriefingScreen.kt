@@ -94,7 +94,7 @@ fun BriefingScreen(
                 challenge = sheet.challenge,
                 noteText = sheet.noteText,
                 editable = sheet.editable,
-                hasUnsavedChanges = sheet.noteText != sheet.savedNoteText,
+                hasUnsavedChanges = sheet.noteText != null && sheet.noteText != sheet.savedNoteText,
                 onNoteChange = { onIntent(BriefingContract.Intent.ReflectNoteChanged(it)) },
                 onSave = { onIntent(BriefingContract.Intent.ReflectNoteSaved) },
                 onDismiss = { onIntent(BriefingContract.Intent.ReflectDismissed) },

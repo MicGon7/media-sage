@@ -360,7 +360,7 @@ class BriefingViewModelTest {
 
         val state = viewModel.state.value as BriefingContract.UiState.Success
         val sheet = requireNotNull(state.reflectSheet)
-        assertEquals(4_000, sheet.noteText.length)
+        assertEquals(4_000, sheet.noteText?.length)
     }
 
     @Test

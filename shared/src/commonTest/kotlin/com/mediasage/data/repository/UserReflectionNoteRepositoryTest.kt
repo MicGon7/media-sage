@@ -1,12 +1,14 @@
 package com.mediasage.data.repository
 
 import com.mediasage.data.crypto.ReflectionNoteCipher
+import com.mediasage.data.crypto.SharedNoteCipher
 import com.mediasage.data.local.dao.LocalAccountKeyDao
 import com.mediasage.data.local.dao.UserReflectionNoteDao
 import com.mediasage.data.local.entity.LocalAccountKeyEntity
 import com.mediasage.data.local.entity.UserReflectionNoteEntity
 import com.mediasage.domain.model.UserSession
 import com.mediasage.domain.repository.AuthRepository
+import kotlin.io.encoding.Base64
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
@@ -195,6 +197,53 @@ class UserReflectionNoteRepositoryTest {
     }
 
     @Test
+    fun `getNote returns null instead of the raw ciphertext when a shared-key note fails to decrypt`() = runTest {
+        // Regression test (MS-741): decrypt routing is read off SHARED_KEY_PREFIX, never guessed
+        // by trying SharedNoteCipher and catching a failure — so a genuinely corrupted shared-key
+        // note must never be silently (mis)treated as legacy-format ciphertext.
+        val dao = FakeUserReflectionNoteDao()
+        val repository = repo(dao = dao)
+        repository.saveNote("10_morning_NEWS", "Corrupt me")
+        val tagged = dao.get(USER_A, "10_morning_NEWS")!!
+        dao.upsert(tagged.copy(noteText = tagged.noteText + "-tampered"))
+
+        assertNull(repository.getNote("10_morning_NEWS"))
+    }
+
+    @Test
+    fun `saveNote falls back to the device-local cipher and still round-trips when the account key is unfetchable`() = runTest {
+        // Regression test (MS-741): a transient failure to reach the shared account key must never
+        // abort the save outright — it degrades to the legacy per-device cipher for this attempt
+        // (tagged deterministically by the absence of SHARED_KEY_PREFIX, not guessed on read) so
+        // the note is still readable on this device, and migrates onto the shared key next save.
+        val dao = FakeUserReflectionNoteDao()
+        val keyRemote = FakeReflectionNoteKeyRemoteDataSource(shouldThrowOnFetch = true)
+        val repository = repo(dao = dao, keyRemote = keyRemote)
+
+        repository.saveNote("11_morning_NEWS", "Should still save locally")
+
+        assertEquals("Should still save locally", repository.getNote("11_morning_NEWS"))
+    }
+
+    @Test
+    fun `getNote decrypts an untagged shared-key note saved by the already-shipped MS-740 format`() = runTest {
+        // Regression test (MS-741): MS-740 shipped before SHARED_KEY_PREFIX existed — it wrote
+        // SharedNoteCipher ciphertext directly whenever an account key was available, with no
+        // marker at all. Any note already saved that way must still decrypt correctly; it must
+        // never be misrouted to the legacy per-device cipher just because it lacks a tag.
+        val dao = FakeUserReflectionNoteDao()
+        val keyRemote = FakeReflectionNoteKeyRemoteDataSource()
+        val key = SharedNoteCipher.generateKey()
+        keyRemote.push(USER_A, Base64.encode(key))
+        val untaggedCiphertext = SharedNoteCipher.encrypt("Saved before MS-741 shipped", key)
+        dao.upsert(note(userId = USER_A, id = "12_morning_NEWS", text = untaggedCiphertext))
+
+        val note = repo(dao = dao, keyRemote = keyRemote).getNote("12_morning_NEWS")
+
+        assertEquals("Saved before MS-741 shipped", note)
+    }
+
+    @Test
     fun `a note encrypted under the old per-device cipher is still readable and migrates onto the shared key on next save`() = runTest {
         val dao = FakeUserReflectionNoteDao()
         val legacyCipher = FakeReflectionNoteCipher()
@@ -304,6 +353,7 @@ private class FakeUserReflectionNoteRemoteDataSource(
 
 private class FakeReflectionNoteKeyRemoteDataSource(
     private val forceFetchNullForFirstNCalls: Int = 0,
+    private val shouldThrowOnFetch: Boolean = false,
 ) : ReflectionNoteKeyRemoteDataSource {
     private val keysByUser = mutableMapOf<String, String>()
     private var fetchCallCount = 0
@@ -318,6 +368,7 @@ private class FakeReflectionNoteKeyRemoteDataSource(
     }
 
     override suspend fun fetch(userId: String): String? {
+        if (shouldThrowOnFetch) throw RuntimeException("Network error fetching account key")
         fetchCallCount++
         if (fetchCallCount <= forceFetchNullForFirstNCalls) return null
         return keysByUser[userId]
