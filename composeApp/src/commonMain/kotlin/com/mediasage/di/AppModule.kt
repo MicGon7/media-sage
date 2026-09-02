@@ -14,6 +14,7 @@ import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.ProfileRepository
 import com.mediasage.domain.repository.QuoteRepository
 import com.mediasage.domain.repository.UserReflectionNoteRepository
+import com.mediasage.domain.usecase.GetBriefingLoadInputsUseCase
 import com.mediasage.domain.usecase.GetDayDetailUseCase
 import com.mediasage.domain.usecase.GetHeadlinesFeedUseCase
 import com.mediasage.domain.usecase.GetReaderCalendarUseCase
@@ -48,6 +49,7 @@ val appModule = module {
     }
     viewModel {
         BriefingViewModel(
+            get<GetBriefingLoadInputsUseCase>(),
             get<DayAssignmentRepository>(),
             get<DailyReflectionRepository>(),
             get<FigureRepository>(),

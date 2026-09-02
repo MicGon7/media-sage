@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.mediasage.data.repository.epochMillis
 import com.mediasage.domain.model.DailyReflection
 import com.mediasage.domain.model.DayAssignment
-import com.mediasage.domain.model.Figure
 import com.mediasage.domain.model.HeadlineCategoryFilter
 import com.mediasage.domain.model.LensFilter
 import com.mediasage.domain.repository.DailyReflectionRepository
@@ -13,13 +12,13 @@ import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.UserReflectionNoteRepository
+import com.mediasage.domain.usecase.GetBriefingLoadInputsUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -30,6 +29,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
 class BriefingViewModel(
+    private val getBriefingLoadInputs: GetBriefingLoadInputsUseCase,
     private val dayAssignmentRepository: DayAssignmentRepository,
     private val dailyReflectionRepository: DailyReflectionRepository,
     private val figureRepository: FigureRepository,
@@ -76,9 +76,19 @@ class BriefingViewModel(
         val success = _state.value as? BriefingContract.UiState.Success ?: return
         val ready = success.card as? BriefingContract.CardState.Ready ?: return
         val challenge = ready.challenge ?: return
+        // Sheet appears immediately with the challenge text; the note field shows a loading state
+        // (noteText == null) until getNote resolves — decoupled so a first-time shared-key fetch
+        // (MS-740) never delays the sheet itself from opening.
+        updateReflectSheet(BriefingContract.ReflectSheetState(challenge, noteText = null, savedNoteText = null))
         viewModelScope.launch {
             val saved = userReflectionNoteRepository.getNote(reflectionId(ready.tone, ready.theme)).orEmpty()
-            updateReflectSheet(BriefingContract.ReflectSheetState(challenge, saved, saved))
+            // Only apply the fetch if the sheet is still open and still on its initial loading
+            // state — otherwise the user dismissed it while this was in flight, and applying a
+            // stale result now would reopen a sheet they already closed.
+            val sheet = (_state.value as? BriefingContract.UiState.Success)?.reflectSheet
+            if (sheet != null && sheet.noteText == null) {
+                updateReflectSheet(BriefingContract.ReflectSheetState(challenge, saved, saved))
+            }
         }
     }
 
@@ -86,9 +96,10 @@ class BriefingViewModel(
         val success = _state.value as? BriefingContract.UiState.Success ?: return
         val ready = success.card as? BriefingContract.CardState.Ready ?: return
         val sheet = success.reflectSheet ?: return
+        val noteText = sheet.noteText ?: return
         viewModelScope.launch {
-            userReflectionNoteRepository.saveNote(reflectionId(ready.tone, ready.theme), sheet.noteText)
-            updateReflectSheet(sheet.copy(savedNoteText = sheet.noteText))
+            userReflectionNoteRepository.saveNote(reflectionId(ready.tone, ready.theme), noteText)
+            updateReflectSheet(sheet.copy(savedNoteText = noteText))
         }
     }
 
@@ -114,17 +125,11 @@ class BriefingViewModel(
             // isResolved is a *live* input here, not a one-time gate — a cold start on a fresh
             // install can flip it true once for a signed-out fallback-defaults seed, then false
             // again moments later while the real signed-in schedule/reflections are pulled down
-            // and correct that seeded data. Folding it into the combine (rather than awaiting it
-            // once before subscribing) means that correction shows a loading state again instead
-            // of silently swapping the fallback figure for the real one after the fact.
-            combine(
-                dayAssignmentRepository.isResolved,
-                dailyReflectionRepository.isResolved,
-                dayAssignmentRepository.observeAssignments(),
-                figureRepository.observeAllFigures(),
-            ) { dayResolved, reflectionResolved, assignments, figures ->
-                LoadInputs(dayResolved && reflectionResolved, assignments, figures)
-            }
+            // and correct that seeded data. Folding it into the use case's combine (rather than
+            // awaiting it once before subscribing) means that correction shows a loading state
+            // again instead of silently swapping the fallback figure for the real one after the
+            // fact.
+            getBriefingLoadInputs()
                 .distinctUntilChanged()
                 .collectLatest { inputs ->
                     if (!inputs.isResolved) {
@@ -143,12 +148,6 @@ class BriefingViewModel(
                 }
         }
     }
-
-    private data class LoadInputs(
-        val isResolved: Boolean,
-        val assignments: Map<Int, DayAssignment>,
-        val figures: List<Figure>,
-    )
 
     /**
      * Once today is locked to a figure, a newer weekday reassignment may no longer describe that
