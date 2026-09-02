@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -80,7 +81,9 @@ import org.jetbrains.compose.resources.stringResource
  * it. Opens partially expanded with the briefing still visible behind it, draggable to full
  * height; [Modifier.imePadding] on the content keeps the keyboard from covering the field at
  * either height. When [editable] is false (a past briefing whose tone slot is no longer active),
- * the note renders as read-only text and no save/discard affordance is shown.
+ * the note renders as read-only text and no save/discard affordance is shown. [noteText] is
+ * `null` while the saved note is still loading (the sheet opens on [challenge] alone, without
+ * waiting on it) — the body shows a loading indicator in place of the field until it resolves.
  *
  * [SheetState]'s `confirmValueChange` — not `onDismissRequest` — is what gates a *drag* to
  * hidden: a swipe-to-dismiss settles the sheet to [SheetValue.Hidden] before `onDismissRequest`
@@ -92,7 +95,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ReflectionSheet(
     challenge: String,
-    noteText: String,
+    noteText: String?,
     editable: Boolean,
     hasUnsavedChanges: Boolean,
     onNoteChange: (String) -> Unit,
@@ -147,7 +150,7 @@ fun ReflectionSheet(
 @Composable
 private fun ReflectionSheetContent(
     challenge: String,
-    noteText: String,
+    noteText: String?,
     editable: Boolean,
     hasUnsavedChanges: Boolean,
     onNoteChange: (String) -> Unit,
@@ -170,7 +173,7 @@ private fun ReflectionSheetContent(
     // "Saved" reflects a real comparison against the last-saved text, not a one-shot flag from
     // the save action — so editing away from and then back to the saved value (e.g. deleting and
     // retyping the last character) correctly reads as saved again, with no separate state to sync.
-    val showSavedLabel = !hasUnsavedChanges && noteText.isNotBlank()
+    val showSavedLabel = !hasUnsavedChanges && noteText?.isNotBlank() == true
 
     val scrollState = rememberScrollState()
     var isFieldFocused by remember { mutableStateOf(false) }
@@ -237,7 +240,9 @@ private fun ReflectionSheetContent(
             modifier = Modifier.padding(top = 8.dp),
         )
         Column(modifier = Modifier.padding(top = 16.dp)) {
-            if (editable) {
+            if (noteText == null) {
+                NoteLoadingIndicator(color = titleColor)
+            } else if (editable) {
                 OutlinedTextField(
                     value = noteText,
                     onValueChange = onNoteChange,
@@ -302,6 +307,14 @@ private fun ReflectionSheetHandle(color: Color) {
                 .clip(RoundedCornerShape(2.dp))
                 .background(color),
         )
+    }
+}
+
+/** Shown in place of the note field/answer text while the saved note is still loading. */
+@Composable
+private fun NoteLoadingIndicator(color: Color) {
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = color, modifier = Modifier.size(28.dp))
     }
 }
 

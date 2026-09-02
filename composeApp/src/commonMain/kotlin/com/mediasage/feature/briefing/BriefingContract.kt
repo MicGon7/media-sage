@@ -39,11 +39,16 @@ object BriefingContract {
         ) : CardState
     }
 
-    /** [editable] is always true here — the live Briefing screen only ever shows the active tone. */
+    /**
+     * [editable] is always true here — the live Briefing screen only ever shows the active tone.
+     * [noteText]/[savedNoteText] are null while the existing note is still loading — the sheet
+     * opens immediately on tap with [challenge] visible, and the note field shows a loading state
+     * until these resolve (see `BriefingViewModel.openReflectSheet`).
+     */
     data class ReflectSheetState(
         val challenge: String,
-        val noteText: String,
-        val savedNoteText: String,
+        val noteText: String?,
+        val savedNoteText: String?,
         val editable: Boolean = true,
     )
 

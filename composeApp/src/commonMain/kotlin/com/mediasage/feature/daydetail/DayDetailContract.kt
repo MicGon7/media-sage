@@ -14,11 +14,15 @@ object DayDetailContract {
         val challenge: String? = null,
     )
 
-    /** Always read-only — reached only from past briefings, never the active tone slot. */
+    /**
+     * Always read-only — reached only from past briefings, never the active tone slot. [noteText]
+     * is null while the saved note is still loading — the sheet opens immediately on tap with
+     * [challenge] visible (see `DayDetailViewModel.openReflectSheet`).
+     */
     data class ReflectSheetState(
         val tone: String,
         val challenge: String,
-        val noteText: String,
+        val noteText: String?,
     )
 
     sealed interface UiState {
