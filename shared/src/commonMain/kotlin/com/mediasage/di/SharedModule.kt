@@ -42,6 +42,7 @@ import com.mediasage.domain.repository.ProfileRepository
 import com.mediasage.domain.repository.QuoteRepository
 import com.mediasage.domain.repository.UserReflectionNoteRepository
 import com.mediasage.domain.repository.WikipediaRepository
+import com.mediasage.domain.usecase.GetBriefingLoadInputsUseCase
 import com.mediasage.domain.usecase.GetDayDetailUseCase
 import com.mediasage.domain.usecase.GetHeadlinesFeedUseCase
 import com.mediasage.domain.usecase.GetReaderCalendarUseCase
@@ -117,4 +118,5 @@ fun sharedModule(
     single { GetReaderCalendarUseCase(get(), get(), get(), get()) }
     single { GetDayDetailUseCase(get()) }
     single { GetHeadlinesFeedUseCase(get(), get()) }
+    single { GetBriefingLoadInputsUseCase(get(), get(), get()) }
 }

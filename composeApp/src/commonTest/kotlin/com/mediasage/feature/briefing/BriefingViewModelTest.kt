@@ -15,6 +15,7 @@ import com.mediasage.domain.repository.DayAssignmentRepository
 import com.mediasage.domain.repository.FigureRepository
 import com.mediasage.domain.repository.HeadlineRepository
 import com.mediasage.domain.repository.UserReflectionNoteRepository
+import com.mediasage.domain.usecase.GetBriefingLoadInputsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -106,10 +107,13 @@ class BriefingViewModelTest {
         // and the final, settled emission must still complete and render a Ready card.
         val assignmentsFlow = MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = null)))
         val reflectionRepo = FakeDailyReflectionRepository(fetchDelayMs = 50)
+        val dayAssignmentRepo = FakeDayAssignmentRepository(assignmentsFlow, resolveReporterResult = null)
+        val figureRepo = FakeFigureRepository(listOf(judson, lincoln))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(assignmentsFlow, resolveReporterResult = null),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
             dailyReflectionRepository = reflectionRepo,
-            figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
@@ -136,14 +140,18 @@ class BriefingViewModelTest {
         // signal rather than resolving against an empty/mid-flight table and locking in the
         // first-in-list figure as a fallback.
         val isResolved = MutableStateFlow(false)
+        val dayAssignmentRepo = FakeDayAssignmentRepository(
+            assignmentsFlow = MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 2L, lens = null))),
+            resolveReporterResult = null,
+            isResolved = isResolved,
+        )
+        val reflectionRepo = FakeDailyReflectionRepository()
+        val figureRepo = FakeFigureRepository(listOf(judson, lincoln))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(
-                assignmentsFlow = MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 2L, lens = null))),
-                resolveReporterResult = null,
-                isResolved = isResolved,
-            ),
-            dailyReflectionRepository = FakeDailyReflectionRepository(),
-            figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
@@ -169,13 +177,17 @@ class BriefingViewModelTest {
         // or a second device could read an empty local table and generate its own, different
         // reflection for a day another device already briefed.
         val isResolved = MutableStateFlow(false)
+        val dayAssignmentRepo = FakeDayAssignmentRepository(
+            assignmentsFlow = MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 2L, lens = null))),
+            resolveReporterResult = null,
+        )
+        val reflectionRepo = FakeDailyReflectionRepository(isResolved = isResolved)
+        val figureRepo = FakeFigureRepository(listOf(judson, lincoln))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(
-                assignmentsFlow = MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 2L, lens = null))),
-                resolveReporterResult = null,
-            ),
-            dailyReflectionRepository = FakeDailyReflectionRepository(isResolved = isResolved),
-            figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
@@ -202,14 +214,18 @@ class BriefingViewModelTest {
         // figure flashes visibly before silently being swapped for the real one.
         val assignmentsFlow = MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = null)))
         val isResolved = MutableStateFlow(true)
+        val dayAssignmentRepo = FakeDayAssignmentRepository(
+            assignmentsFlow = assignmentsFlow,
+            resolveReporterResult = null,
+            isResolved = isResolved,
+        )
+        val reflectionRepo = FakeDailyReflectionRepository()
+        val figureRepo = FakeFigureRepository(listOf(judson, lincoln))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(
-                assignmentsFlow = assignmentsFlow,
-                resolveReporterResult = null,
-                isResolved = isResolved,
-            ),
-            dailyReflectionRepository = FakeDailyReflectionRepository(),
-            figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
@@ -241,13 +257,16 @@ class BriefingViewModelTest {
         // firing it should trigger exactly one more reflection fetch, with no navigation or retry.
         val toneScheduler = FakeBriefingToneScheduler()
         val reflectionRepo = FakeDailyReflectionRepository()
+        val dayAssignmentRepo = FakeDayAssignmentRepository(
+            MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = null))),
+            resolveReporterResult = null,
+        )
+        val figureRepo = FakeFigureRepository(listOf(judson, lincoln))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(
-                MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = null))),
-                resolveReporterResult = null,
-            ),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
             dailyReflectionRepository = reflectionRepo,
-            figureRepository = FakeFigureRepository(listOf(judson, lincoln)),
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = toneScheduler,
@@ -275,13 +294,16 @@ class BriefingViewModelTest {
             Headline(id = 3L, title = "Tech story", source = "src", url = "u3", imageUrl = null, publishedAt = 0, fetchedAt = 0, category = "technology"),
             Headline(id = 4L, title = "Health story", source = "src", url = "u4", imageUrl = null, publishedAt = 0, fetchedAt = 0, category = "health"),
         )
+        val dayAssignmentRepo = FakeDayAssignmentRepository(
+            MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = LensFilter.NEWS))),
+            resolveReporterResult = 1L,
+        )
+        val figureRepo = FakeFigureRepository(listOf(judson))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(
-                MutableStateFlow(mapOf(todayOrdinal to DayAssignment(figureId = 1L, lens = LensFilter.NEWS))),
-                resolveReporterResult = 1L,
-            ),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
             dailyReflectionRepository = reflectionRepo,
-            figureRepository = FakeFigureRepository(listOf(judson)),
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(headlines),
             userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
@@ -295,10 +317,14 @@ class BriefingViewModelTest {
     @Test
     fun reflectTapped_opensSheetWithChallengeAndSavedNote() = runTest(testDispatcher) {
         val noteRepo = FakeUserReflectionNoteRepository()
+        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L)
+        val reflectionRepo = FakeDailyReflectionRepository(challenge = "What is one way to show love today?")
+        val figureRepo = FakeFigureRepository(listOf(judson))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),
-            dailyReflectionRepository = FakeDailyReflectionRepository(challenge = "What is one way to show love today?"),
-            figureRepository = FakeFigureRepository(listOf(judson)),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = noteRepo,
             toneScheduler = FakeBriefingToneScheduler(),
@@ -318,10 +344,14 @@ class BriefingViewModelTest {
     @Test
     fun reflectNoteSaved_persistsNoteAndUpdatesSavedText() = runTest(testDispatcher) {
         val noteRepo = FakeUserReflectionNoteRepository()
+        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L)
+        val reflectionRepo = FakeDailyReflectionRepository(challenge = "What is one way to show love today?")
+        val figureRepo = FakeFigureRepository(listOf(judson))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),
-            dailyReflectionRepository = FakeDailyReflectionRepository(challenge = "What is one way to show love today?"),
-            figureRepository = FakeFigureRepository(listOf(judson)),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = noteRepo,
             toneScheduler = FakeBriefingToneScheduler(),
@@ -343,10 +373,14 @@ class BriefingViewModelTest {
 
     @Test
     fun reflectNoteChanged_capsAtMaxLength() = runTest(testDispatcher) {
+        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L)
+        val reflectionRepo = FakeDailyReflectionRepository(challenge = "What is one way to show love today?")
+        val figureRepo = FakeFigureRepository(listOf(judson))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),
-            dailyReflectionRepository = FakeDailyReflectionRepository(challenge = "What is one way to show love today?"),
-            figureRepository = FakeFigureRepository(listOf(judson)),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
@@ -365,10 +399,14 @@ class BriefingViewModelTest {
 
     @Test
     fun reflectDismissed_closesSheet() = runTest(testDispatcher) {
+        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L)
+        val reflectionRepo = FakeDailyReflectionRepository(challenge = "What is one way to show love today?")
+        val figureRepo = FakeFigureRepository(listOf(judson))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),
-            dailyReflectionRepository = FakeDailyReflectionRepository(challenge = "What is one way to show love today?"),
-            figureRepository = FakeFigureRepository(listOf(judson)),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
@@ -386,10 +424,14 @@ class BriefingViewModelTest {
 
     @Test
     fun reflectTapped_doesNothingWhenNoChallengeOnReflection() = runTest(testDispatcher) {
+        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L)
+        val reflectionRepo = FakeDailyReflectionRepository()
+        val figureRepo = FakeFigureRepository(listOf(judson))
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(emptyMap()), resolveReporterResult = 1L),
-            dailyReflectionRepository = FakeDailyReflectionRepository(),
-            figureRepository = FakeFigureRepository(listOf(judson)),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
@@ -409,10 +451,14 @@ class BriefingViewModelTest {
         assignments: Map<Int, DayAssignment>,
         resolveReporterResult: Long?,
     ): BriefingViewModel {
+        val dayAssignmentRepo = FakeDayAssignmentRepository(MutableStateFlow(assignments), resolveReporterResult)
+        val reflectionRepo = FakeDailyReflectionRepository()
+        val figureRepo = FakeFigureRepository(figures)
         val viewModel = BriefingViewModel(
-            dayAssignmentRepository = FakeDayAssignmentRepository(MutableStateFlow(assignments), resolveReporterResult),
-            dailyReflectionRepository = FakeDailyReflectionRepository(),
-            figureRepository = FakeFigureRepository(figures),
+            getBriefingLoadInputs = GetBriefingLoadInputsUseCase(dayAssignmentRepo, reflectionRepo, figureRepo),
+            dayAssignmentRepository = dayAssignmentRepo,
+            dailyReflectionRepository = reflectionRepo,
+            figureRepository = figureRepo,
             headlineRepository = FakeHeadlineRepository(),
             userReflectionNoteRepository = FakeUserReflectionNoteRepository(),
             toneScheduler = FakeBriefingToneScheduler(),
