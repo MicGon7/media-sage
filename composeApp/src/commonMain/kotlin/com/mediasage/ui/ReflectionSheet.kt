@@ -179,6 +179,22 @@ private fun ReflectionSheetContent(
 
     val scrollState = rememberScrollState()
     var isFieldFocused by remember { mutableStateOf(false) }
+    // The field displays its own locally-owned text, not `noteText` directly. `noteText` round-trips
+    // through the ViewModel's StateFlow on every keystroke (onNoteChange copies the whole
+    // UiState.Success tree, which recomposes back down as a new noteText) — on iOS, Compose
+    // Multiplatform's software-keyboard input reconciles against the field's `value` each
+    // recomposition, and driving that off a StateFlow round trip instead of local state made fast
+    // typing outrun recomposition and skip characters. Seeding once, when the note finishes loading
+    // (null -> non-null), keeps the field's displayed text purely local while still forwarding every
+    // change to the ViewModel for save/unsaved-changes tracking.
+    var fieldText by remember { mutableStateOf(noteText.orEmpty()) }
+    var hasSeededFieldText by remember { mutableStateOf(false) }
+    LaunchedEffect(noteText) {
+        if (noteText != null && !hasSeededFieldText) {
+            fieldText = noteText
+            hasSeededFieldText = true
+        }
+    }
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     // The note field grows with its content instead of scrolling internally, so once it's taller
     // than the visible area the newest typed line — and the cursor on it — can end up behind the
@@ -246,8 +262,11 @@ private fun ReflectionSheetContent(
                 NoteLoadingIndicator(color = titleColor)
             } else if (editable) {
                 OutlinedTextField(
-                    value = noteText,
-                    onValueChange = onNoteChange,
+                    value = fieldText,
+                    onValueChange = {
+                        fieldText = it
+                        onNoteChange(it)
+                    },
                     placeholder = { Text(stringResource(Res.string.reflect_note_hint)) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = bodyColor,
